@@ -1,0 +1,117 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         String   @default("STUDENT")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile           StudentProfile?
+  schoolConnection  SchoolConnection?
+  courses     Course[]
+  grades      Grade[]
+  assignments Assignment[]
+}
+
+model StudentProfile {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique
+  studentId      String   @unique
+  gradeLevel     Int
+  graduationYear Int
+  futureDecision String?
+  satScore       Int?
+  actScore       Float?
+  counselorName  String?
+  weightedGpa    Float    @default(0.0)
+  unweightedGpa  Float    @default(0.0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Course {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  name        String
+  teacher     String
+  period      Int
+  semester    String
+  courseType  String   @default("STANDARD")
+  creditHours Float    @default(1.0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grades Grade[]
+}
+
+model Grade {
+  id            Int      @id @default(autoincrement())
+  courseId      Int
+  userId        Int
+  letterGrade   String
+  percentage    Float
+  gradingPeriod String   @default("CURRENT")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Assignment {
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  title            String
+  subject          String
+  dueDate          DateTime
+  estimatedMinutes Int
+  completed        Boolean   @default(false)
+  completedAt      DateTime?
+  source           String    @default("SEED")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dueDate])
+  @@index([userId, completed])
+}
+
+model SchoolConnection {
+  id             Int       @id @default(autoincrement())
+  userId         Int       @unique
+  systemType     String    // 'HAC' | 'PowerSchool'
+  districtUrl    String
+  lastSynced     DateTime?
+  // TODO: encrypt in production
+  cachedSession  String?   // Serialized cookie jar JSON
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ComplianceAuditLog {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  resourceType String
+  resourceId   String?
+  action       String
+  ipAddress    String
+  timestamp    DateTime @default(now())
+
+  @@index([userId, timestamp])
+}
