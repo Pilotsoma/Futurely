@@ -7,6 +7,9 @@ import {
   getTranscript as hacTranscript,
   getSchedule,
   getStudentInfo,
+  getReportCard,
+  getProgressReport,
+  getContactTeachers,
 } from './hacClient'
 import {
   loginPowerSchool,
@@ -166,6 +169,39 @@ function requireSession(userId: number, res: Response): ReturnType<typeof getSes
       },
     })
 
+    return null
+  }
+
+  return entry
+}
+
+// ── Session resolution with DB fallback ───────────────────────────────────────
+
+async function resolveSession(userId: number, res: Response): Promise<ReturnType<typeof getSessionByUserId>> {
+  let entry = getSessionByUserId(userId)
+
+  if (!entry) {
+    const connection = await prisma.schoolConnection.findUnique({ where: { userId } }).catch(() => null)
+    if (connection?.cachedSession) {
+      console.log('[GRADES ROUTER] Restoring session from DB cache for userId:', userId)
+      const restoredToken = restoreSessionFromCache(
+        userId,
+        connection.systemType as SchoolSystemType,
+        connection.districtUrl,
+        connection.cachedSession,
+      )
+      if (restoredToken) entry = getSessionByUserId(userId)
+    }
+  }
+
+  if (!entry) {
+    res.status(401).json({
+      data: null,
+      error: {
+        code: 'NO_SCHOOL_SESSION',
+        message: 'No active school session. Please log in to your school portal first.',
+      },
+    })
     return null
   }
 
@@ -408,7 +444,7 @@ router.post('/powerschool/login', async (req: AuthRequest, res: Response): Promi
 
 router.get('/current', async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId!
-  const entry = requireSession(userId, res)
+  const entry = await resolveSession(userId, res)
   if (!entry) return
 
   try {
@@ -493,7 +529,7 @@ router.get('/current', async (req: AuthRequest, res: Response): Promise<void> =>
 })
 
 router.get('/transcript', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = requireSession(req.userId!, res)
+  const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
   try {
@@ -517,7 +553,7 @@ router.get('/transcript', async (req: AuthRequest, res: Response): Promise<void>
 })
 
 router.get('/schedule', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = requireSession(req.userId!, res)
+  const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
   if (entry.session.systemType !== 'HAC') {
@@ -546,7 +582,7 @@ router.get('/schedule', async (req: AuthRequest, res: Response): Promise<void> =
 })
 
 router.get('/gpa', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = requireSession(req.userId!, res)
+  const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
   try {
@@ -574,7 +610,7 @@ router.get('/gpa', async (req: AuthRequest, res: Response): Promise<void> => {
 })
 
 router.get('/info', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = requireSession(req.userId!, res)
+  const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
   if (entry.session.systemType !== 'HAC') {
@@ -667,6 +703,60 @@ router.get('/status', async (req: AuthRequest, res: Response): Promise<void> => 
         : 0,
     },
   })
+})
+
+router.get('/report-card', async (req: AuthRequest, res: Response): Promise<void> => {
+  const entry = await resolveSession(req.userId!, res)
+  if (!entry) return
+
+  if (entry.session.systemType !== 'HAC') {
+    res.status(400).json({ data: null, error: { code: 'UNSUPPORTED', message: 'Report card is only available for HAC districts' } })
+    return
+  }
+
+  try {
+    touchSession(req.userId!)
+    const data = await getReportCard(entry.token)
+    res.json({ data })
+  } catch (err: unknown) {
+    sendError(res, 'FETCH_REPORT_CARD', err, 'FETCH_ERROR')
+  }
+})
+
+router.get('/progress-report', async (req: AuthRequest, res: Response): Promise<void> => {
+  const entry = await resolveSession(req.userId!, res)
+  if (!entry) return
+
+  if (entry.session.systemType !== 'HAC') {
+    res.status(400).json({ data: null, error: { code: 'UNSUPPORTED', message: 'Progress report is only available for HAC districts' } })
+    return
+  }
+
+  try {
+    touchSession(req.userId!)
+    const data = await getProgressReport(entry.token)
+    res.json({ data })
+  } catch (err: unknown) {
+    sendError(res, 'FETCH_PROGRESS_REPORT', err, 'FETCH_ERROR')
+  }
+})
+
+router.get('/contact-teachers', async (req: AuthRequest, res: Response): Promise<void> => {
+  const entry = await resolveSession(req.userId!, res)
+  if (!entry) return
+
+  if (entry.session.systemType !== 'HAC') {
+    res.status(400).json({ data: null, error: { code: 'UNSUPPORTED', message: 'Contact teachers is only available for HAC districts' } })
+    return
+  }
+
+  try {
+    touchSession(req.userId!)
+    const data = await getContactTeachers(entry.token)
+    res.json({ data })
+  } catch (err: unknown) {
+    sendError(res, 'FETCH_CONTACT_TEACHERS', err, 'FETCH_ERROR')
+  }
 })
 
 export default router

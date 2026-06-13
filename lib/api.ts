@@ -56,6 +56,7 @@ interface StudentData {
     estimatedMinutes: number
     completed: boolean
     completedAt: string | null
+    priority?: string | null
   }>
   stats: {
     totalCourses: number
@@ -148,9 +149,43 @@ export const api = {
     }>('/api/integrations/grades/current'),
 
   portalTranscript: () =>
-    request<{ systemType: string; transcript: unknown }>(
-      '/api/integrations/grades/transcript',
-    ),
+    request<{
+      systemType: string
+      transcript: {
+        semesters: Array<{
+          year: string
+          semester: string
+          courses: Array<{ name: string; grade: string; credits: string }>
+        }>
+        cumulativeGPA: string | null
+        classRank: string | null
+      }
+    }>('/api/integrations/grades/transcript'),
+
+  portalSchedule: () =>
+    request<{ schedule: Record<string, string>[] }>('/api/integrations/grades/schedule'),
+
+  portalReportCard: () =>
+    request<{
+      courses: Array<{ name: string; period: string; grade: string; letterGrade: string; credits: string }>
+    }>('/api/integrations/grades/report-card'),
+
+  portalGpa: () =>
+    request<{
+      gpa: number | null
+      courseCount: number
+      systemType: string
+    }>('/api/integrations/grades/gpa'),
+
+  portalProgressReport: () =>
+    request<{
+      courses: Array<{ name: string; period: string; average: string; letterGrade: string; teacher: string }>
+    }>('/api/integrations/grades/progress-report'),
+
+  portalContactTeachers: () =>
+    request<{
+      teachers: Array<{ name: string; courseName: string; period: string; email: null; emailNote: string; emailHint: string }>
+    }>('/api/integrations/grades/contact-teachers'),
 
   // ── Study Feed ──────────────────────────────────────────────────────────────
 
@@ -229,7 +264,7 @@ export const api = {
     ),
 
   feedResetTag: (targetUserId: number) =>
-    request<{ id: number; name: string | null; email: string; tag: string | null }>(
+    request<{ id: number; name: string | null; email: string; tag: string | null; tagColor: string | null }>(
       `/api/feed/users/${targetUserId}/tag`,
       { method: 'DELETE' },
     ),

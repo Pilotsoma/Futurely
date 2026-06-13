@@ -4,24 +4,21 @@ import { useEffect, useState } from 'react'
 import { api, type StudentData } from '../../../lib/api'
 
 type Assignment = StudentData['assignments'][number]
-
 type GroupKey = 'Overdue' | 'Today' | 'Tomorrow' | 'This Week' | 'Later' | 'Completed'
+interface Group { key: GroupKey; items: Assignment[] }
 
-interface Group {
-  key: GroupKey
-  items: Assignment[]
+const GROUP_META: Partial<Record<GroupKey, { color: string; bg: string }>> = {
+  Overdue: { color: '#EF4444', bg: 'rgba(239,68,68,0.08)' },
+  Today:   { color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
 }
+const PRIORITY_COLOR: Record<string, string> = { HIGH: '#EF4444', MEDIUM: '#F59E0B', LOW: 'var(--text-muted)' }
 
 function groupAssignments(assignments: Assignment[]): Group[] {
   const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const todayStart    = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const tomorrowStart = new Date(todayStart.getTime() + 86400000)
-  const weekEnd = new Date(todayStart.getTime() + 7 * 86400000)
-
-  const groups: Record<GroupKey, Assignment[]> = {
-    Overdue: [], Today: [], Tomorrow: [], 'This Week': [], Later: [], Completed: [],
-  }
-
+  const weekEnd       = new Date(todayStart.getTime() + 7 * 86400000)
+  const groups: Record<GroupKey, Assignment[]> = { Overdue: [], Today: [], Tomorrow: [], 'This Week': [], Later: [], Completed: [] }
   for (const a of assignments) {
     if (a.completed) { groups.Completed.push(a); continue }
     const due = new Date(a.dueDate)
@@ -31,18 +28,13 @@ function groupAssignments(assignments: Assignment[]): Group[] {
     else if (due < weekEnd) groups['This Week'].push(a)
     else groups.Later.push(a)
   }
-
   const ORDER: GroupKey[] = ['Overdue', 'Today', 'Tomorrow', 'This Week', 'Later', 'Completed']
   return ORDER.filter(k => groups[k].length > 0).map(k => ({ key: k, items: groups[k] }))
 }
 
-const GROUP_COLORS: Partial<Record<GroupKey, string>> = {
-  Overdue: 'var(--error)', Today: 'var(--warning)',
-}
-
 export default function PlannerPage() {
-  const [data, setData] = useState<StudentData | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [data, setData]         = useState<StudentData | null>(null)
+  const [error, setError]       = useState<string | null>(null)
   const [toggling, setToggling] = useState<Set<number>>(new Set())
   const [studyPlan, setStudyPlan] = useState<Array<{ id: number; title: string; subject: string; priority: string }>>([])
 
@@ -61,76 +53,89 @@ export default function PlannerPage() {
       const token = localStorage.getItem('ns_token')
       await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/assignments/${id}/toggle`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ completed }),
       })
-    } catch { /* optimistic — leave it */ }
+    } catch { /* optimistic */ }
     finally {
-      setToggling(prev => { const next = new Set(prev); next.delete(id); return next })
+      setToggling(prev => { const n = new Set(prev); n.delete(id); return n })
     }
   }
 
-  if (error) return <p style={{ color: 'var(--error)' }}>{error}</p>
-  if (!data) return <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
+  if (error) return <div style={{ padding: 40, color: 'var(--error)' }}>{error}</div>
+  if (!data)  return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading planner…</div>
 
   const groups = groupAssignments(data.assignments)
-  const PRIORITY_COLORS: Record<string, string> = { HIGH: 'var(--error)', MEDIUM: 'var(--warning)', LOW: 'var(--text-muted)' }
 
   return (
-    <div style={styles.layout}>
-      {/* Left: assignments */}
-      <div style={{ flex: 2 }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '24px' }}>Planner</h1>
+    <div className="fade-up" style={S.layout}>
+      {/* Left: assignment list */}
+      <div style={{ flex: 2, minWidth: 0 }}>
+        <h1 style={S.title}>Planner</h1>
+
         {groups.length === 0 ? (
-          <div style={styles.emptyState}>
-            <p style={{ fontSize: '24px', marginBottom: '8px' }}>You're all caught up!</p>
-            <p style={{ color: 'var(--text-secondary)' }}>No assignments due.</p>
+          <div style={S.empty}>
+            <div style={S.emptyIcon}>✓</div>
+            <p style={S.emptyTitle}>All caught up!</p>
+            <p style={S.emptySub}>No assignments pending.</p>
           </div>
-        ) : groups.map(group => (
-          <div key={group.key} style={{ marginBottom: '24px' }}>
-            <div style={{ ...styles.groupHeader, color: GROUP_COLORS[group.key] ?? 'var(--text-secondary)' }}>
-              {group.key} <span style={styles.groupCount}>{group.items.length}</span>
-            </div>
-            {group.items.map(a => (
-              <div key={a.id} style={styles.assignmentRow}>
-                <input
-                  type="checkbox"
-                  checked={a.completed}
-                  disabled={toggling.has(a.id)}
-                  onChange={() => void handleToggle(a.id, !a.completed)}
-                  style={styles.checkbox}
-                />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', textDecoration: a.completed ? 'line-through' : 'none', color: a.completed ? 'var(--text-muted)' : 'var(--text)' }}>
-                    {a.title}
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                    {a.subject} · {a.estimatedMinutes}m · Due {new Date(a.dueDate).toLocaleDateString()}
-                  </div>
-                </div>
+        ) : groups.map(group => {
+          const meta = GROUP_META[group.key]
+          return (
+            <div key={group.key} style={{ marginBottom: 28 }}>
+              <div style={S.groupHeader}>
+                <span style={{ color: meta?.color ?? 'var(--text-secondary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px' }}>
+                  {group.key}
+                </span>
+                <span style={{ ...S.groupCount, background: meta?.bg ?? 'var(--surface-2)', color: meta?.color ?? 'var(--text-secondary)' }}>
+                  {group.items.length}
+                </span>
               </div>
-            ))}
-          </div>
-        ))}
+              {group.items.map(a => (
+                <div key={a.id} className="ns-card" style={{ ...S.card, opacity: a.completed ? 0.6 : 1 }}>
+                  <label style={S.cardInner}>
+                    <div style={{ ...S.checkbox, borderColor: a.completed ? 'var(--primary)' : 'var(--border)', background: a.completed ? 'var(--primary)' : 'transparent' }}>
+                      {a.completed && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="#060D10" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <input type="checkbox" checked={a.completed} disabled={toggling.has(a.id)}
+                      onChange={() => void handleToggle(a.id, !a.completed)} style={{ display: 'none' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ ...S.cardTitle, textDecoration: a.completed ? 'line-through' : 'none', color: a.completed ? 'var(--text-muted)' : 'var(--text)' }}>
+                        {a.title}
+                      </div>
+                      <div style={S.cardMeta}>
+                        {a.subject} · {a.estimatedMinutes}m · Due {new Date(a.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                    </div>
+                    {a.priority && (
+                      <span style={{ ...S.priorityDot, background: PRIORITY_COLOR[a.priority] ?? 'var(--text-muted)' }} title={a.priority} />
+                    )}
+                  </label>
+                </div>
+              ))}
+            </div>
+          )
+        })}
       </div>
 
-      {/* Right: study plan */}
-      <div style={{ flex: 1, minWidth: '240px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>AI Study Plan</h2>
+      {/* Right: AI study plan */}
+      <div style={{ width: 260, flexShrink: 0 }}>
+        <h2 style={S.panelTitle}>AI Study Plan</h2>
         {studyPlan.length === 0 ? (
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>No upcoming assignments.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No upcoming assignments.</p>
         ) : studyPlan.map(item => (
-          <div key={item.id} style={styles.studyItem}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '600' }}>{item.title}</span>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: PRIORITY_COLORS[item.priority] }}>
+          <div key={item.id} className="ns-card" style={S.studyItem}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', flex: 1 }}>{item.title}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: PRIORITY_COLOR[item.priority] ?? 'var(--text-muted)', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: 4, flexShrink: 0 }}>
                 {item.priority}
               </span>
             </div>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{item.subject}</span>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 5 }}>{item.subject}</div>
           </div>
         ))}
       </div>
@@ -138,12 +143,21 @@ export default function PlannerPage() {
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  layout: { display: 'flex', gap: '32px', alignItems: 'flex-start' },
-  groupHeader: { fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' },
-  groupCount: { background: 'var(--border)', borderRadius: '100px', padding: '2px 8px', fontSize: '11px', color: 'var(--text-secondary)' },
-  assignmentRow: { display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', marginBottom: '8px' },
-  checkbox: { marginTop: '2px', accentColor: 'var(--primary)', width: '18px', height: '18px' },
-  emptyState: { textAlign: 'center', padding: '60px 20px' },
-  studyItem: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', marginBottom: '8px' },
+const S: Record<string, React.CSSProperties> = {
+  layout:     { display: 'flex', gap: 32, alignItems: 'flex-start' },
+  title:      { fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 24 },
+  panelTitle: { fontSize: 15, fontWeight: 700, marginBottom: 14, color: 'var(--text)' },
+  groupHeader:{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 },
+  groupCount: { borderRadius: 100, padding: '2px 8px', fontSize: 11, fontWeight: 700 },
+  card:       { padding: '13px 14px', marginBottom: 8 },
+  cardInner:  { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' },
+  checkbox:   { width: 18, height: 18, borderRadius: 5, border: '1.5px solid', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s, border-color 0.15s' },
+  cardTitle:  { fontSize: 13.5, fontWeight: 500, transition: 'color 0.15s' },
+  cardMeta:   { fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 3 },
+  priorityDot:{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0 },
+  studyItem:  { padding: '12px 14px', marginBottom: 8 },
+  empty:      { textAlign: 'center' as const, padding: '60px 20px' },
+  emptyIcon:  { width: 48, height: 48, borderRadius: '50%', background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, margin: '0 auto 14px' },
+  emptyTitle: { fontSize: 17, fontWeight: 700, marginBottom: 5 },
+  emptySub:   { fontSize: 13, color: 'var(--text-secondary)' },
 }

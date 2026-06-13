@@ -4,6 +4,7 @@
  */
 
 import fs from 'fs'
+import path from 'path'
 import axios from 'axios'
 import { wrapper } from 'axios-cookiejar-support'
 import { CookieJar } from 'tough-cookie'
@@ -12,6 +13,14 @@ import type { AnyNode } from 'domhandler'
 import { saveSession, getSessionByToken, StoredSession } from './sessionStore'
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+function dumpDebugHtml(filename: string, html: string): void {
+  try {
+    const debugPath = path.resolve('C:/Users/srika/Futurely-main/backend', `debug_${filename}.html`)
+    fs.writeFileSync(debugPath, html, 'utf8')
+    console.log(`[DEBUG] Wrote ${debugPath}`)
+  } catch { /* ignore */ }
+}
 
 export interface HACClass {
   name: string
@@ -540,7 +549,7 @@ export async function getGrades(sessionToken: string): Promise<HACClass[]> {
   const origin = stored.baseUrl // already cleaned to https://hostname/
 
   // The correct URL for grades and classwork in PowerSchool HAC
-  const classworkUrl = `${origin}HomeAccess/Classes/Classwork`
+  const classworkUrl = `${origin}HomeAccess/Content/Student/Assignments.aspx`
 
   console.log('[HAC CLIENT] Fetching classwork from:', classworkUrl)
 
@@ -604,11 +613,7 @@ export async function getGrades(sessionToken: string): Promise<HACClass[]> {
 
   const $final = cheerio.load(pageHtml)
 
-  // Save raw HTML for debugging
-  try {
-    fs.writeFileSync('hac_classwork_debug.html', pageHtml, 'utf8')
-    console.log('[HAC CLIENT] Saved classwork HTML to hac_classwork_debug.html')
-  } catch { /* ignore */ }
+  dumpDebugHtml('classwork', pageHtml)
 
   // Log page structure to understand the HTML
   console.log('[HAC CLIENT] Classwork page structure check:', {
@@ -685,8 +690,8 @@ function parseClassBlock(
   $: cheerio.CheerioAPI,
   $el: cheerio.Cheerio<AnyNode>
 ): HACClass {
-  // Course name — strip period suffix
-  const rawName = $el.find('.sg-header-heading, [id*="lblHeading"], h3, .course-title, a[id*="lnkCourse"]').first().text().trim()
+  // Course name — prefer heading NOT marked .sg-right (which is the average side)
+  const rawName = $el.find('.sg-header .sg-header-heading:not(.sg-right), .sg-header-heading:not(.sg-right), [id*="lblHeading"], h3, .course-title, a[id*="lnkCourse"]').first().text().trim()
   const name = rawName
     .replace(/\s*[-–]\s*Period\s*\d+.*$/i, '')
     .replace(/\s*[-–]\s*Pd\.?\s*\d+.*$/i, '')
@@ -696,11 +701,16 @@ function parseClassBlock(
   // Period
   const periodText = $el.find('.sg-header-period, [id*="lblPeriod"]').text().replace(/Period/i, '').trim()
 
-  // Average
-  const avgRaw = $el.find('.sg-header-average, [id*="lblAverage"], [id*="lblHdrAverage"]').text()
-    .replace(/Student\s*Avg[:.]\s*/i, '')
-    .replace(/Classwork\s*Average\s*/i, '')
-    .trim()
+  // Average — gradexis: the right-aligned heading holds the average as last word
+  const sgRightText = $el.find('.sg-header .sg-header-heading.sg-right').text().trim()
+  const sgRightVal  = sgRightText ? sgRightText.split(' ').pop()?.replace('%', '').trim() : undefined
+  const avgFromRight = (sgRightVal && sgRightVal !== '--' && sgRightVal !== 'N/A' && !isNaN(parseFloat(sgRightVal)))
+    ? sgRightVal : undefined
+  const avgRaw = avgFromRight
+    ?? $el.find('.sg-header-average, [id*="lblAverage"], [id*="lblHdrAverage"]').text()
+        .replace(/Student\s*Avg[:.]\s*/i, '')
+        .replace(/Classwork\s*Average\s*/i, '')
+        .trim()
   const average = avgRaw && avgRaw !== '--' && avgRaw !== 'N/A' ? avgRaw : null
 
   // Teacher
@@ -729,16 +739,17 @@ function parseClassBlock(
 
   const scores: HACScore[] = []
 
-  $el.find('tr.sg-asp-table-data-row, tbody tr').each((_j, row) => {
+  $el.find('.sg-content-grid > .sg-asp-table > tbody > .sg-asp-table-data-row, tr.sg-asp-table-data-row, tbody tr').each((_j, row) => {
     const cells = $(row).find('td')
     if (cells.length < 2) return
 
-    const aName    = nameIdx  >= 0 ? cells.eq(nameIdx).text().trim()  : cells.eq(0).text().trim()
-    const dateDue  = dateIdx  >= 0 ? cells.eq(dateIdx).text().trim()  : cells.eq(1).text().trim()
-    const category = catIdx   >= 0 ? cells.eq(catIdx).text().trim()   : cells.eq(2).text().trim()
+    // Gradexis column order: 0=dateDue, 1=dateAssigned, 2=name, 3=category, 4=score, 5=totalPoints, 9=percentage
+    const aName    = nameIdx  >= 0 ? cells.eq(nameIdx).text().trim()  : cells.eq(2).children().first().text().trim() || cells.eq(2).text().trim()
+    const dateDue  = dateIdx  >= 0 ? cells.eq(dateIdx).text().trim()  : cells.eq(0).text().trim()
+    const category = catIdx   >= 0 ? cells.eq(catIdx).text().trim()   : cells.eq(3).text().trim()
     const scoreRaw = scoreIdx >= 0 ? cells.eq(scoreIdx).text().trim() : cells.eq(4).text().trim()
     const totalRaw = totalIdx >= 0 ? cells.eq(totalIdx).text().trim() : cells.eq(5).text().trim()
-    const pctRaw   = pctIdx   >= 0 ? cells.eq(pctIdx).text().trim()  : cells.eq(6).text().trim()
+    const pctRaw   = pctIdx   >= 0 ? cells.eq(pctIdx).text().trim()  : cells.eq(9).text().trim() || cells.eq(6).text().trim()
 
     if (!aName || aName.toLowerCase().includes('no assignment')) return
 
@@ -763,28 +774,42 @@ export async function getTranscript(sessionToken: string): Promise<HACTranscript
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400) // 0.8–1.2s delay
-  const res = await http.get(`${origin}HomeAccess/Grades/Transcript`, {
+  const res = await http.get(`${origin}HomeAccess/Content/Student/Transcript.aspx`, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
-  const $ = cheerio.load(res.data as string)
+  const transcriptHtml = res.data as string
+  dumpDebugHtml('transcript', transcriptHtml)
+  const $ = cheerio.load(transcriptHtml)
 
   const semesters: HACTranscriptEntry[] = []
 
-  // Try new PowerSchool HAC selectors first
-  $('.sg-transcript-group, [id*="TranscriptGroup"], [id*="rptGroup"] > td').each((_i, group) => {
-    const header = $(group).find('.sg-transcript-group-heading, [id*="lblHeading"]').text().trim()
-      || $(group).find('th').first().text().trim()
+  // Strategy 1: gradexis — container is a <td> element with class sg-transcript-group
+  $('td.sg-transcript-group').each((_i, group) => {
+    const $group = $(group)
+    let year = ''
+    let semester = ''
 
-    const yearMatch = header.match(/(\d{4})/g)
-    const semMatch  = header.match(/Semester\s*(\d)/i) || header.match(/(1st|2nd|First|Second)/i)
+    $group.find('span').each((_j, span) => {
+      const id = $(span).attr('id') ?? ''
+      if (id.includes('YearValue')) year = $(span).text().trim()
+      if (id.includes('GroupValue')) semester = $(span).text().trim()
+    })
+
+    if (!year || !semester) {
+      const header = $group.find('.sg-transcript-group-heading, [id*="lblHeading"], th').first().text().trim()
+      const yearMatch = header.match(/(\d{4})/g)
+      const semMatch  = header.match(/Semester\s*(\d)/i) || header.match(/(1st|2nd|First|Second)/i)
+      if (!year && yearMatch) year = yearMatch[yearMatch.length - 1]
+      if (!semester && semMatch) semester = semMatch[1] ?? String(_i + 1)
+    }
 
     const courses: Array<{ name: string; grade: string; credits: string }> = []
 
-    $(group).find('tr').each((_j, row) => {
+    $group.find('table:nth-child(2) > tbody > tr.sg-asp-table-data-row, tr.sg-asp-table-data-row').each((_j, row) => {
       const cells = $(row).find('td')
       if (cells.length < 2) return
       const courseName = cells.eq(0).text().trim()
-      if (!courseName || courseName.toLowerCase().includes('course')) return
+      if (!courseName || /^(course|class|subject)/i.test(courseName)) return
       courses.push({
         name: courseName,
         grade: cells.eq(1).text().trim(),
@@ -793,21 +818,130 @@ export async function getTranscript(sessionToken: string): Promise<HACTranscript
     })
 
     if (courses.length > 0) {
-      semesters.push({
-        year: yearMatch ? yearMatch[yearMatch.length - 1] : '',
-        semester: semMatch ? semMatch[1] : String(_i + 1),
-        courses,
-      })
+      semesters.push({ year, semester: semester || String(_i + 1), courses })
     }
   })
 
-  // GPA from page
-  const gpaMatch = $('body').text().match(/Cum(?:ulative)?\s+GPA[:\s]+([\d.]+)/i)
-    || $('[id*="CumGPA"], [id*="lblGPA"]').text().match(/([\d.]+)/)
+  // Strategy 2: broader selectors fallback
+  if (semesters.length === 0) {
+    $('.sg-transcript-group, [id*="TranscriptGroup"], [id*="rptGroup"] > td').each((_i, group) => {
+      const header = $(group).find('.sg-transcript-group-heading, [id*="lblHeading"]').text().trim()
+        || $(group).find('th').first().text().trim()
+
+      const yearMatch = header.match(/(\d{4})/g)
+      const semMatch  = header.match(/Semester\s*(\d)/i) || header.match(/(1st|2nd|First|Second)/i)
+
+      const courses: Array<{ name: string; grade: string; credits: string }> = []
+
+      $(group).find('tr').each((_j, row) => {
+        const cells = $(row).find('td')
+        if (cells.length < 2) return
+        const courseName = cells.eq(0).text().trim()
+        if (!courseName || courseName.toLowerCase().includes('course')) return
+        courses.push({
+          name: courseName,
+          grade: cells.eq(1).text().trim(),
+          credits: cells.eq(2).text().trim(),
+        })
+      })
+
+      if (courses.length > 0) {
+        semesters.push({
+          year: yearMatch ? yearMatch[yearMatch.length - 1] : '',
+          semester: semMatch ? semMatch[1] : String(_i + 1),
+          courses,
+        })
+      }
+    })
+  }
+
+  // Fallback: if no group selectors matched, scan all tables for course data
+  if (semesters.length === 0) {
+    console.warn('[TRANSCRIPT] No groups found with standard selectors — trying generic table scan')
+    $('table').each((_tIdx, table) => {
+      const rows = $(table).find('tr')
+      if (rows.length < 2) return
+      const courses: Array<{ name: string; grade: string; credits: string }> = []
+      rows.each((_j, row) => {
+        const cells = $(row).find('td')
+        if (cells.length < 2) return
+        const name = cells.eq(0).text().trim()
+        if (!name || /^(course|class|subject|total|gpa|grade)/i.test(name) || name.length < 4) return
+        courses.push({
+          name,
+          grade: cells.eq(1).text().trim(),
+          credits: cells.eq(2).text().trim() || '0.5',
+        })
+      })
+      if (courses.length > 0) {
+        semesters.push({ year: `Table ${_tIdx + 1}`, semester: String(_tIdx + 1), courses })
+      }
+    })
+  }
+
+  // Multi-strategy GPA extraction
+  let cumulativeGPA: string | null = null
+
+  // Strategy 1: direct element selectors
+  const gpaSelectors = [
+    '[id*="GPACum"]', '[id*="CumGPA"]', '[id*="lblCumGPA"]', '[id*="CumulativeGPA"]',
+    '[id*="lblGPA"]', '.sg-transcript-gpa', 'span[id$="GPA"]',
+  ]
+  for (const sel of gpaSelectors) {
+    const text = $(sel).text().trim()
+    const match = text.match(/([\d]+\.[\d]+)/)
+    if (match) {
+      cumulativeGPA = match[1]
+      console.log(`[TRANSCRIPT] GPA found via selector "${sel}": ${cumulativeGPA}`)
+      break
+    }
+  }
+
+  // Strategy 2: body text regex scan
+  if (!cumulativeGPA) {
+    const bodyText = $('body').text()
+    const patterns = [
+      /Cumulative\s+GPA[:\s]+([\d]+\.[\d]+)/i,
+      /Cum(?:ulative)?\s+GPA[:\s]+([\d]+\.[\d]+)/i,
+      /GPA[:\s]+([\d]+\.[\d]+)/i,
+      /Grade\s+Point\s+Average[:\s]+([\d]+\.[\d]+)/i,
+    ]
+    for (const pattern of patterns) {
+      const match = bodyText.match(pattern)
+      if (match) {
+        cumulativeGPA = match[1]
+        console.log(`[TRANSCRIPT] GPA found via text scan: ${cumulativeGPA}`)
+        break
+      }
+    }
+  }
+
+  // Strategy 3: table cell scan for GPA-adjacent float
+  if (!cumulativeGPA) {
+    $('td, th').each((_i, el) => {
+      const text = $(el).text().trim()
+      if (text.match(/^[0-4]\.\d{1,4}$/) && parseFloat(text) > 0) {
+        const prev = $(el).prev().text().toLowerCase()
+        const prevRow = $(el).closest('tr').prev().text().toLowerCase()
+        if (prev.includes('gpa') || prevRow.includes('gpa') || prev.includes('average')) {
+          cumulativeGPA = text
+          console.log(`[TRANSCRIPT] GPA found via table scan: ${cumulativeGPA}`)
+          return false
+        }
+      }
+    })
+  }
+
+  if (!cumulativeGPA) {
+    console.warn('[TRANSCRIPT] Could not extract GPA — table previews:')
+    $('table').each((_i, table) => {
+      console.warn('[TRANSCRIPT TABLE]', $(table).text().replace(/\s+/g, ' ').trim().substring(0, 200))
+    })
+  }
 
   return {
     semesters,
-    cumulativeGPA: gpaMatch?.[1] ?? null,
+    cumulativeGPA,
     classRank: null,
   }
 }
@@ -819,33 +953,257 @@ export async function getSchedule(sessionToken: string): Promise<object[]> {
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
 
-  await sleep(800 + Math.random() * 400) // 0.8–1.2s delay
-  const res = await http.get(`${origin}HomeAccess/Classes/Schedule`, {
+  await sleep(800 + Math.random() * 400)
+  const res = await http.get(`${origin}HomeAccess/Content/Student/Classes.aspx`, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
-  const $ = cheerio.load(res.data as string)
+
+  const html = res.data as string
+  dumpDebugHtml('schedule', html)
+  const $ = cheerio.load(html)
 
   const headers: string[] = []
 
+  // Strategy 1: standard sg-asp-table headers
   $('tr.sg-asp-table-header-row th').each((_i, th) => {
     headers.push($(th).text().trim())
   })
 
+  // Strategy 2: generic thead/th if no sg-asp headers
+  if (headers.length === 0) {
+    $('thead th, table:first th').each((_i, th) => {
+      const t = $(th).text().trim()
+      if (t) headers.push(t)
+    })
+  }
+
   const schedule: object[] = []
 
+  // Strategy 1: gradexis fixed column positions — courseCode(0), courseName link(1), period(2), teacher(3), room(4)
   $('tr.sg-asp-table-data-row').each((_i, row) => {
-    const entry: Record<string, string> = {}
+    const $row = $(row)
+    const children = $row.children()
+    const code    = children.first().text().trim()
+    const name    = children.eq(1).find('a').text().trim() || children.eq(1).text().trim()
+    const period  = children.eq(2).text().trim().substring(0, 1)
+    const teacher = children.eq(3).text().trim()
+    const room    = children.eq(4).text().trim()
 
-    $(row)
-      .find('td')
-      .each((j, td) => {
-        if (headers[j]) entry[headers[j]] = $(td).text().trim()
+    if (name || code) {
+      const entry: Record<string, string> = { courseCode: code, courseName: name, period, teacher, room }
+      headers.forEach((h, j) => {
+        const cell = $row.find('td').eq(j)
+        if (h && !(h in entry)) entry[h] = cell.text().trim()
       })
-
-    schedule.push(entry)
+      schedule.push(entry)
+    }
   })
 
+  // Strategy 2: generic tbody rows when sg-asp rows not found
+  if (schedule.length === 0 && headers.length > 0) {
+    $('tbody tr').each((_i, row) => {
+      const cells = $(row).find('td')
+      if (cells.length < 2) return
+      const entry: Record<string, string> = {}
+      cells.each((j, td) => {
+        if (headers[j]) entry[headers[j]] = $(td).text().trim()
+      })
+      if (Object.keys(entry).length > 0) schedule.push(entry)
+    })
+  }
+
+  // Strategy 3: no headers found — infer from first row
+  if (schedule.length === 0) {
+    $('table').each((_tIdx, table) => {
+      const rows = $(table).find('tr')
+      if (rows.length < 2) return
+      const hdrs: string[] = []
+      rows.first().find('th, td').each((_j, cell) => {
+        hdrs.push($(cell).text().trim() || `Col${_j + 1}`)
+      })
+      rows.slice(1).each((_j, row) => {
+        const cells = $(row).find('td')
+        if (cells.length < 2) return
+        const entry: Record<string, string> = {}
+        cells.each((k, td) => { if (hdrs[k]) entry[hdrs[k]] = $(td).text().trim() })
+        if (Object.keys(entry).length > 0) schedule.push(entry)
+      })
+      if (schedule.length > 0) return false
+    })
+  }
+
+  console.log(`[SCHEDULE] Parsed ${schedule.length} rows`)
+  if (schedule.length === 0) console.warn('[SCHEDULE] No rows found — check debug_schedule.html')
   return schedule
+}
+
+export async function getReportCard(sessionToken: string): Promise<{
+  courses: Array<{ name: string; period: string; grade: string; letterGrade: string; credits: string }>
+}> {
+  const stored = getSessionByToken(sessionToken)
+  if (!stored) throw new Error('School session expired — please log in again')
+
+  const { http } = restoreSession(stored)
+  const origin = stored.baseUrl
+
+  await sleep(800 + Math.random() * 400)
+  const res = await http.get(`${origin}HomeAccess/Content/Student/ReportCards.aspx`, {
+    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
+  })
+
+  const html = res.data as string
+  const $ = cheerio.load(html)
+  dumpDebugHtml('reportcard', html)
+
+  const courses: Array<{ name: string; period: string; grade: string; letterGrade: string; credits: string }> = []
+
+  // Try selectors in priority order; stop at first one that yields rows
+  const rowSelectors = [
+    '.sg-asp-table-data-row',
+    'table.sg-asp-table tr',
+    '[id*="ReportCard"] tr',
+    '[id*="dgReport"] tr',
+    'table tr',
+  ]
+
+  for (const sel of rowSelectors) {
+    const rows = $(sel)
+    if (rows.length < 2) continue
+    rows.each((_i, row) => {
+      const cells = $(row).find('td')
+      if (cells.length < 3) return
+      const name = cells.eq(0).text().trim()
+      if (!name || /^(course|class|subject|period|name)/i.test(name)) return
+      courses.push({
+        name,
+        period: cells.eq(1).text().trim(),
+        grade: cells.eq(2).text().trim(),
+        letterGrade: cells.eq(3).text().trim(),
+        credits: cells.eq(4).text().trim() || '',
+      })
+    })
+    if (courses.length > 0) break
+  }
+
+  console.log(`[REPORT CARD] Parsed ${courses.length} courses`)
+  if (courses.length === 0) console.warn('[REPORT CARD] No courses found — check debug_reportcard.html')
+  return { courses }
+}
+
+export async function getProgressReport(sessionToken: string): Promise<{
+  courses: Array<{ name: string; period: string; average: string; letterGrade: string; teacher: string }>
+}> {
+  const stored = getSessionByToken(sessionToken)
+  if (!stored) throw new Error('School session expired — please log in again')
+
+  const { http } = restoreSession(stored)
+  const origin = stored.baseUrl
+
+  await sleep(800 + Math.random() * 400)
+  const res = await http.get(`${origin}HomeAccess/Content/Student/InterimProgress.aspx`, {
+    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
+  })
+
+  const html = res.data as string
+  const $ = cheerio.load(html)
+  dumpDebugHtml('ipr', html)
+
+  const courses: Array<{ name: string; period: string; average: string; letterGrade: string; teacher: string }> = []
+
+  // Strategy 0: gradexis — #plnMain_dgIPR rows (cols: 0=course, 1=desc, 2=period, 3=teacher, 4=room, 5=grade)
+  const dgIPRRows = $('#plnMain_dgIPR .sg-asp-table-data-row, #plnMain_dgIPR tr.sg-asp-table-data-row')
+  if (dgIPRRows.length > 0) {
+    dgIPRRows.each((_i, row) => {
+      const cells = $(row).find('td')
+      if (cells.length < 3) return
+      const name = cells.eq(0).text().trim()
+      if (!name || /^(course|class)/i.test(name)) return
+      courses.push({
+        name,
+        period: cells.eq(2).text().trim(),
+        average: cells.eq(5).text().trim(),
+        letterGrade: cells.eq(5).text().trim(),
+        teacher: cells.eq(3).text().trim(),
+      })
+    })
+  }
+
+  // Strategy 0b: any .sg-asp-table-data-row on the IPR page (same column order)
+  if (courses.length === 0) {
+    $('.sg-asp-table-data-row').each((_i, row) => {
+      const cells = $(row).find('td')
+      if (cells.length < 3) return
+      const name = cells.eq(0).text().trim()
+      if (!name || /^(course|class)/i.test(name)) return
+      courses.push({
+        name,
+        period: cells.eq(2).text().trim(),
+        average: cells.eq(5).text().trim(),
+        letterGrade: cells.eq(5).text().trim(),
+        teacher: cells.eq(3).text().trim(),
+      })
+    })
+  }
+
+  // Strategy 1: AssignmentClass blocks (same framework as classwork page)
+  if (courses.length === 0 && $('.AssignmentClass').length > 0) {
+    $('.AssignmentClass').each((_i, el) => {
+      const rawName = $(el).find('.sg-header-heading, [id*="lblCourseName"]').first().text().trim()
+      const name = rawName.replace(/\s*[-–]\s*Period\s*\d+.*$/i, '').trim() || rawName
+      const period = $(el).find('.sg-header-period, [id*="lblPeriod"]').text().replace(/Period/i, '').trim()
+      const average = $(el).find('.sg-header-average, [id*="lblAverage"]').text()
+        .replace(/Student\s*Avg[:.]\s*/i, '').trim()
+      const teacher = $(el).find('.sg-header-teacher, [id*="lblTeacher"]').text().trim()
+      if (name) courses.push({ name, period, average, letterGrade: '', teacher })
+    })
+  }
+
+  // Strategy 2: generic table row scan
+  if (courses.length === 0) {
+    $('table tr').each((_i, row) => {
+      const cells = $(row).find('td')
+      if (cells.length < 2) return
+      const name = cells.eq(0).text().trim()
+      if (!name || /^(course|class|subject|teacher)/i.test(name)) return
+      courses.push({
+        name,
+        period: cells.eq(1).text().trim(),
+        average: cells.eq(2).text().trim(),
+        letterGrade: cells.eq(3).text().trim(),
+        teacher: cells.eq(4).text().trim() || '',
+      })
+    })
+  }
+
+  console.log(`[IPR] Parsed ${courses.length} courses`)
+  if (courses.length === 0) console.warn('[IPR] No courses found — check debug_ipr.html')
+  return { courses }
+}
+
+export async function getContactTeachers(sessionToken: string): Promise<{
+  teachers: Array<{ name: string; courseName: string; period: string; email: null; emailNote: string; emailHint: string }>
+}> {
+  const classes = await getGrades(sessionToken)
+
+  const teachers = classes
+    .filter(c => c.teacher && c.teacher.trim() !== '')
+    .map(c => {
+      const parts = c.teacher.trim().split(/\s+/)
+      const emailHint = parts.length >= 2
+        ? `${parts[0].toLowerCase()}.${parts[parts.length - 1].toLowerCase()}@katyisd.org`
+        : `${c.teacher.toLowerCase().replace(/\s+/g, '.')}@katyisd.org`
+      return {
+        name: c.teacher,
+        courseName: c.name,
+        period: c.period,
+        email: null as null,
+        emailNote: 'Contact via school directory or Katy ISD staff search',
+        emailHint,
+      }
+    })
+    .filter((t, i, arr) => arr.findIndex(x => x.name === t.name) === i)
+
+  return { teachers }
 }
 
 export async function getStudentInfo(sessionToken: string): Promise<HACStudentInfo> {

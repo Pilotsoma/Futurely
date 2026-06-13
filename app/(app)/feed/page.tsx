@@ -1,14 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { api, FeedPost, FeedComment, FeedUserProfile, FeedUser } from '@/lib/api'
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
+import { api, FeedPost, FeedComment, FeedUserProfile } from '@/lib/api'
 
 function timeAgo(dateStr: string): string {
-  const now = Date.now()
-  const then = new Date(dateStr).getTime()
-  const diff = Math.floor((now - then) / 1000)
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
   if (diff < 60) return 'just now'
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
@@ -24,17 +20,9 @@ function initials(user: { name: string | null; email: string }): string {
   return n.slice(0, 2).toUpperCase()
 }
 
-// ── User Profile Overlay ─────────────────────────────────────────────────────
+// ── User Profile Overlay ──────────────────────────────────────────────────────
 
-function UserProfileOverlay({
-  userId,
-  onClose,
-  currentUserId,
-}: {
-  userId: number
-  onClose: () => void
-  currentUserId: number
-}) {
+function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number; onClose: () => void; currentUserId: number }) {
   const [profile, setProfile] = useState<FeedUserProfile | null>(null)
   const [userPosts, setUserPosts] = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,23 +31,12 @@ function UserProfileOverlay({
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
     api.feedUserProfile(userId).then((data) => {
-      if (!cancelled) {
-        setProfile(data)
-        setFollowing(data.isFollowing)
-        setLoading(false)
-      }
+      if (!cancelled) { setProfile(data); setFollowing(data.isFollowing); setLoading(false) }
     }).catch(() => { if (!cancelled) setLoading(false) })
-
-    setPostsLoading(true)
     api.feedUserPosts(userId).then((data) => {
-      if (!cancelled) {
-        setUserPosts(data.posts)
-        setPostsLoading(false)
-      }
+      if (!cancelled) { setUserPosts(data.posts); setPostsLoading(false) }
     }).catch(() => { if (!cancelled) setPostsLoading(false) })
-
     return () => { cancelled = true }
   }, [userId])
 
@@ -67,211 +44,127 @@ function UserProfileOverlay({
     try {
       const result = await api.feedToggleFollow(userId)
       setFollowing(result.following)
-      setProfile((prev) => prev ? {
-        ...prev,
-        isFollowing: result.following,
-        _count: {
-          ...prev._count,
-          followers: result.following ? prev._count.followers + 1 : prev._count.followers - 1,
-        },
-      } : prev)
-    } catch (err) {
-      console.error('Failed to toggle follow:', err)
-    }
+      setProfile((prev) => prev ? { ...prev, isFollowing: result.following, _count: { ...prev._count, followers: result.following ? prev._count.followers + 1 : prev._count.followers - 1 } } : prev)
+    } catch { /* ignore */ }
   }
 
   async function handleLike(postId: number) {
     try {
       const result = await api.feedToggleLike(postId)
-      setUserPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId
-            ? {
-                ...p,
-                likedByMe: result.liked,
-                _count: {
-                  ...p._count,
-                  likes: result.liked ? p._count.likes + 1 : p._count.likes - 1,
-                },
-              }
-            : p
-        )
-      )
-      setProfile((prev) => prev ? {
-        ...prev,
-        totalLikes: result.liked ? prev.totalLikes + 1 : prev.totalLikes - 1,
-      } : prev)
-    } catch (err) {
-      console.error('Failed to toggle like:', err)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div style={styles.profileOverlay} onClick={onClose}>
-        <div style={styles.profilePanel} onClick={(e) => e.stopPropagation()}>
-          <div style={styles.emptyText}>Loading profile...</div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!profile) {
-    return (
-      <div style={styles.profileOverlay} onClick={onClose}>
-        <div style={styles.profilePanel} onClick={(e) => e.stopPropagation()}>
-          <div style={styles.emptyText}>User not found</div>
-        </div>
-      </div>
-    )
+      setUserPosts((prev) => prev.map((p) => p.id === postId ? { ...p, likedByMe: result.liked, _count: { ...p._count, likes: result.liked ? p._count.likes + 1 : p._count.likes - 1 } } : p))
+    } catch { /* ignore */ }
   }
 
   return (
-    <div style={styles.profileOverlay} onClick={onClose}>
-      <div style={styles.profilePanel} onClick={(e) => e.stopPropagation()}>
-        <div style={styles.profileHeader}>
-          <div style={styles.profileAvatar}>{initials(profile)}</div>
-          <div style={{ flex: 1 }}>
-            <div style={styles.profileName}>{displayName(profile)}</div>
-            {profile.tag && (
-              <div
-                className={profile.tag === 'DEV' ? 'tag-rainbow' : ''}
-                style={profile.tag === 'DEV' ? { ...styles.profileTag, ...styles.tagDev, display: 'inline-block', marginTop: '2px' } : { ...styles.profileTag, color: profile.tagColor || 'var(--primary)', background: profile.tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : profile.tagColor ? `${profile.tagColor}22` : 'rgba(0,200,150,0.1)' }}
-              >
-                [{profile.tag}]
-              </div>
-            )}
-            <div style={styles.profileEmail}>{profile.email}</div>
-          </div>
-          <button style={styles.closeBtn} onClick={onClose}>✕</button>
-        </div>
-
-        {/* Stats */}
-        <div style={styles.profileStats}>
-          <div style={styles.profileStat}>
-            <div style={styles.profileStatNum}>{profile._count.followers}</div>
-            <div style={styles.profileStatLabel}>Followers</div>
-          </div>
-          <div style={styles.profileStat}>
-            <div style={styles.profileStatNum}>{profile._count.following}</div>
-            <div style={styles.profileStatLabel}>Following</div>
-          </div>
-          <div style={styles.profileStat}>
-            <div style={styles.profileStatNum}>{profile._count.posts}</div>
-            <div style={styles.profileStatLabel}>Posts</div>
-          </div>
-          <div style={styles.profileStat}>
-            <div style={styles.profileStatNum}>{profile.totalLikes}</div>
-            <div style={styles.profileStatLabel}>Likes</div>
-          </div>
-        </div>
-
-        {/* Follow button */}
-        {userId !== currentUserId && (
-          <button
-            style={{
-              ...styles.profileFollowBtn,
-              background: following ? 'transparent' : 'var(--primary)',
-              color: following ? 'var(--primary)' : '#000',
-              borderColor: 'var(--primary)',
-            }}
-            onClick={handleFollow}
-          >
-            {following ? 'Following' : 'Follow'}
-          </button>
-        )}
-
-        {/* ── Admin: Award/Edit Tag ── */}
-        {(() => {
-          const AdminTagPanel = () => {
-            const [localTagInput, setLocalTagInput] = useState(profile.tag || '')
-            const [localColorInput, setLocalColorInput] = useState(profile.tagColor || '')
-            const [saving, setSaving] = useState(false)
-            const [myRole, setMyRole] = useState<string | null>(null)
-
-            useEffect(() => {
-              api.feedUserProfile(currentUserId).then((p) => setMyRole(p.role)).catch(() => {})
-            }, [])
-
-            async function handleAwardTag() {
-              if (!localTagInput.trim() || saving) return
-              setSaving(true)
-              try {
-                const updated = await api.feedAwardTag(userId, localTagInput.trim(), localColorInput.trim() || undefined)
-                setProfile((prev) => prev ? { ...prev, tag: updated.tag, tagColor: updated.tagColor } : prev)
-              } catch (err) {
-                console.error('Failed to award tag:', err)
-              } finally {
-                setSaving(false)
-              }
-            }
-
-            async function handleResetTag() {
-              if (saving) return
-              setSaving(true)
-              try {
-                const updated = await api.feedResetTag(userId)
-                setProfile((prev) => prev ? { ...prev, tag: updated.tag, tagColor: null } : prev)
-                setLocalTagInput(updated.tag || '')
-                setLocalColorInput('')
-              } catch (err) {
-                console.error('Failed to reset tag:', err)
-              } finally {
-                setSaving(false)
-              }
-            }
-
-            if (myRole !== 'ADMIN') return null
-            return (
-              <div style={styles.adminTagSection}>
-                <h4 style={styles.adminTagTitle}>👑 Admin — Manage Tag</h4>
-                <div style={styles.adminTagRow}>
-                  <input
-                    style={styles.adminTagInput}
-                    placeholder="Tag (e.g. DEV, VIP, Staff)"
-                    value={localTagInput}
-                    onChange={(e) => setLocalTagInput(e.target.value)}
-                  />
-                  <input
-                    style={{ ...styles.adminTagInput, width: '80px' }}
-                    placeholder="Color"
-                    value={localColorInput}
-                    onChange={(e) => setLocalColorInput(e.target.value)}
-                  />
-                  <button style={styles.adminSaveBtn} onClick={handleAwardTag} disabled={saving}>
-                    {saving ? '...' : 'Set'}
-                  </button>
-                  <button style={styles.adminResetBtn} onClick={handleResetTag} disabled={saving}>
-                    Reset
-                  </button>
-                </div>
-              </div>
-            )
-          }
-          return <AdminTagPanel />
-        })()}
-
-        {/* User's posts */}
-        <div style={styles.profilePostsSection}>
-          <h3 style={styles.profilePostsTitle}>Posts</h3>
-          {postsLoading ? (
-            <div style={styles.emptyText}>Loading posts...</div>
-          ) : userPosts.length === 0 ? (
-            <div style={styles.emptyText}>No posts yet.</div>
-          ) : (
-            userPosts.map((post) => (
-              <div key={post.id} style={styles.profilePostCard}>
-                <div style={styles.profilePostBody}>{post.body}</div>
-                <div style={styles.profilePostMeta}>
-                  <span style={styles.profilePostTime}>{timeAgo(post.createdAt)}</span>
-                  <span style={styles.profilePostLikes}>
-                    {post.likedByMe ? '❤️' : '🤍'} {post._count.likes}
+    <div style={O.overlay} onClick={onClose}>
+      <div style={O.panel} onClick={e => e.stopPropagation()}>
+        {loading ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: 20 }}>Loading profile…</div>
+        ) : !profile ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: 20 }}>User not found</div>
+        ) : (
+          <>
+            <div style={O.header}>
+              <div style={O.avatar}>{initials(profile)}</div>
+              <div style={{ flex: 1 }}>
+                <div style={O.name}>{displayName(profile)}</div>
+                {profile.tag && (
+                  <span className={profile.tag === 'DEV' ? 'tag-rainbow' : ''} style={profile.tag === 'DEV' ? O.tagDev : { ...O.tag, color: profile.tagColor || 'var(--primary)', background: profile.tagColor ? `${profile.tagColor}22` : 'rgba(0,200,150,0.1)' }}>
+                    [{profile.tag}]
                   </span>
-                </div>
+                )}
+                <div style={O.email}>{profile.email}</div>
               </div>
-            ))
-          )}
-        </div>
+              <button style={O.closeBtn} onClick={onClose}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <div style={O.stats}>
+              {[{ v: profile._count.followers, l: 'Followers' }, { v: profile._count.following, l: 'Following' }, { v: profile._count.posts, l: 'Posts' }, { v: profile.totalLikes, l: 'Likes' }].map((s, i) => (
+                <div key={i} style={{ textAlign: 'center' as const }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{s.v}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, textTransform: 'uppercase' as const, letterSpacing: '0.4px' }}>{s.l}</div>
+                </div>
+              ))}
+            </div>
+
+            {userId !== currentUserId && (
+              <button className={following ? 'ns-btn-ghost' : 'ns-btn-primary'} style={{ width: '100%', height: 40, marginBottom: 20, fontSize: 14 }} onClick={handleFollow}>
+                {following ? 'Following' : 'Follow'}
+              </button>
+            )}
+
+            {/* Admin tag panel */}
+            <AdminTagPanel profile={profile} userId={userId} currentUserId={currentUserId} onUpdate={updated => setProfile(prev => prev ? { ...prev, tag: updated.tag, tagColor: updated.tagColor } : prev)} />
+
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+              <p style={O.postsTitle}>Posts</p>
+              {postsLoading ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading posts…</div>
+              ) : userPosts.length === 0 ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No posts yet.</div>
+              ) : userPosts.map(post => (
+                <div key={post.id} style={O.postCard}>
+                  <div style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--text)', whiteSpace: 'pre-wrap' as const }}>{post.body}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12 }}>
+                    <span style={{ color: 'var(--text-muted)' }}>{timeAgo(post.createdAt)}</span>
+                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: post.likedByMe ? '#EF4444' : 'var(--text-secondary)', padding: 0 }} onClick={() => void handleLike(post.id)}>
+                      {post.likedByMe ? '♥' : '♡'} {post._count.likes}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function AdminTagPanel({ profile, userId, currentUserId, onUpdate }: { profile: FeedUserProfile; userId: number; currentUserId: number; onUpdate: (u: { tag: string | null; tagColor: string | null }) => void }) {
+  const [localTag, setLocalTag] = useState(profile.tag || '')
+  const [localColor, setLocalColor] = useState(profile.tagColor || '')
+  const [saving, setSaving] = useState(false)
+  const [myRole, setMyRole] = useState<string | null>(null)
+
+  useEffect(() => {
+    api.feedUserProfile(currentUserId).then((p) => setMyRole(p.role)).catch(() => {})
+  }, [currentUserId])
+
+  if (myRole !== 'ADMIN') return null
+
+  async function handleSet() {
+    if (!localTag.trim() || saving) return
+    setSaving(true)
+    try {
+      const updated = await api.feedAwardTag(userId, localTag.trim(), localColor.trim() || undefined)
+      onUpdate(updated)
+    } catch { /* ignore */ }
+    finally { setSaving(false) }
+  }
+
+  async function handleReset() {
+    if (saving) return
+    setSaving(true)
+    try {
+      const updated = await api.feedResetTag(userId)
+      onUpdate(updated)
+      setLocalTag(updated.tag || '')
+      setLocalColor('')
+    } catch { /* ignore */ }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div style={{ background: 'rgba(255,200,50,0.06)', border: '1px solid rgba(255,200,50,0.2)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+      <p style={{ fontSize: 12, fontWeight: 700, color: '#ffc832', marginBottom: 8 }}>Admin — Manage Tag</p>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const }}>
+        <input className="ns-input" style={{ flex: 1, minWidth: 80, height: 34, fontSize: 12 }} placeholder="Tag (DEV, VIP…)" value={localTag} onChange={e => setLocalTag(e.target.value)} />
+        <input className="ns-input" style={{ width: 80, height: 34, fontSize: 12 }} placeholder="Color" value={localColor} onChange={e => setLocalColor(e.target.value)} />
+        <button style={{ background: '#ffc832', color: '#000', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={handleSet} disabled={saving}>{saving ? '…' : 'Set'}</button>
+        <button className="ns-btn-ghost" style={{ height: 34, padding: '0 10px', fontSize: 12 }} onClick={handleReset} disabled={saving}>Reset</button>
       </div>
     </div>
   )
@@ -279,99 +172,56 @@ function UserProfileOverlay({
 
 // ── Post Card ────────────────────────────────────────────────────────────────
 
-function PostCard({
-  post,
-  onLike,
-  onDelete,
-  onOpenComments,
-  onOpenProfile,
-  onFollow,
-  currentUserId,
-}: {
-  post: FeedPost
-  onLike: (id: number) => void
-  onDelete: (id: number) => void
-  onOpenComments: (id: number) => void
-  onOpenProfile: (userId: number) => void
-  onFollow: (userId: number) => void
-  currentUserId: number
-}) {
-  const tagColor = (post.user as any).tagColor || 'grey'
+function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFollow, currentUserId }: { post: FeedPost; onLike: (id: number) => void; onDelete: (id: number) => void; onOpenComments: (id: number) => void; onOpenProfile: (userId: number) => void; onFollow: (userId: number) => void; currentUserId: number }) {
+  const tagColor = (post.user as { tagColor?: string }).tagColor || 'grey'
   const isDevTag = post.user.tag === 'DEV'
   return (
-    <div style={styles.card}>
-      <div style={styles.cardHeader}>
-        <div style={styles.avatar}>{initials(post.user)}</div>
-        <div>
-          <div style={styles.authorNameRow}>
-            <span
-              style={styles.authorNameClickable}
-              onClick={() => onOpenProfile(post.user.id)}
-            >
-              {displayName(post.user)}
-            </span>
+    <div className="ns-card" style={{ padding: 16, marginBottom: 12 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <div style={P.avatar}>{initials(post.user)}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
+            <span style={P.authorName} onClick={() => onOpenProfile(post.user.id)}>{displayName(post.user)}</span>
             {post.user.tag && (
-              <span
-                className={isDevTag ? 'tag-rainbow' : ''}
-                style={isDevTag ? styles.tagDev : { ...styles.postTag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}
-              >
+              <span className={isDevTag ? 'tag-rainbow' : ''} style={isDevTag ? P.tagDev : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
                 [{post.user.tag}]
               </span>
             )}
             {post.userId !== currentUserId && (
-              <button
-                style={styles.followBtnSmall}
-                onClick={(e) => { e.stopPropagation(); onFollow(post.userId) }}
-              >
-                Follow
-              </button>
+              <button style={P.followBtn} onClick={e => { e.stopPropagation(); onFollow(post.userId) }}>Follow</button>
             )}
           </div>
-          <div style={styles.time}>{timeAgo(post.createdAt)}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{timeAgo(post.createdAt)}</div>
         </div>
         {post.userId === currentUserId && (
-          <button
-            style={styles.deleteBtn}
-            onClick={() => onDelete(post.id)}
-            title="Delete post"
-          >
-            ✕
+          <button style={P.deleteBtn} onClick={() => onDelete(post.id)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         )}
       </div>
-      <div style={styles.cardBody}>{post.body}</div>
-      <div style={styles.cardActions}>
-        <button
-          style={{
-            ...styles.actionBtn,
-            color: post.likedByMe ? 'var(--error)' : 'var(--text-secondary)',
-          }}
-          onClick={() => onLike(post.id)}
-        >
-          {post.likedByMe ? '❤️' : '🤍'} {post._count.likes}
+
+      {/* Body */}
+      <div style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--text)', marginBottom: 14, whiteSpace: 'pre-wrap' as const }}>{post.body}</div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 4, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+        <button style={{ ...P.actionBtn, color: post.likedByMe ? '#EF4444' : 'var(--text-secondary)' }} onClick={() => onLike(post.id)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={post.likedByMe ? '#EF4444' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          {post._count.likes}
         </button>
-        <button
-          style={styles.actionBtn}
-          onClick={() => onOpenComments(post.id)}
-        >
-          💬 {post._count.comments}
+        <button style={P.actionBtn} onClick={() => onOpenComments(post.id)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          {post._count.comments}
         </button>
       </div>
     </div>
   )
 }
 
-// ── Comment Section ──────────────────────────────────────────────────────────
+// ── Comment Section ───────────────────────────────────────────────────────────
 
-function CommentSection({
-  postId,
-  onClose,
-  onCommentAdded,
-}: {
-  postId: number
-  onClose: () => void
-  onCommentAdded: () => void
-}) {
+function CommentSection({ postId, onClose, onCommentAdded }: { postId: number; onClose: () => void; onCommentAdded: () => void }) {
   const [comments, setComments] = useState<FeedComment[]>([])
   const [newComment, setNewComment] = useState('')
   const [loading, setLoading] = useState(true)
@@ -379,101 +229,63 @@ function CommentSection({
   useEffect(() => {
     let cancelled = false
     const token = localStorage.getItem('ns_token')
-    fetch(`${typeof window !== 'undefined' ? 'http://localhost:3001' : ''}/api/feed/posts/${postId}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    })
-      .then((r) => r.json())
-      .then((res) => {
-        if (!cancelled) {
-          setComments(res.data?.comments || [])
-          setLoading(false)
-        }
-      })
-      .catch(() => { if (!cancelled) setLoading(false) })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/feed/posts/${postId}`, {
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    }).then(r => r.json()).then(res => { if (!cancelled) { setComments(res.data?.comments || []); setLoading(false) } }).catch(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [postId])
 
-  async function handleAddComment() {
+  async function handleAdd() {
     if (!newComment.trim()) return
     const token = localStorage.getItem('ns_token')
     try {
-      const res = await fetch(`http://localhost:3001/api/feed/posts/${postId}/comments`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/feed/posts/${postId}/comments`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ body: newComment.trim() }),
       })
       const json = await res.json()
-      if (json.data) {
-        setComments((prev) => [...prev, json.data])
-        setNewComment('')
-        onCommentAdded()
-      }
-    } catch (err) {
-      console.error('Failed to add comment:', err)
-    }
+      if (json.data) { setComments(prev => [...prev, json.data]); setNewComment(''); onCommentAdded() }
+    } catch { /* ignore */ }
   }
 
   return (
-    <div style={styles.commentOverlay} onClick={onClose}>
-      <div style={styles.commentPanel} onClick={(e) => e.stopPropagation()}>
-        <div style={styles.commentHeader}>
-          <h3 style={{ margin: 0 }}>Comments</h3>
-          <button style={styles.closeBtn} onClick={onClose}>✕</button>
+    <div style={O.overlay} onClick={onClose}>
+      <div style={{ ...O.panel, maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700 }}>Comments</h3>
+          <button style={O.closeBtn} onClick={onClose}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
-        <div style={styles.commentList}>
+        <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16 }}>
           {loading ? (
-            <div style={styles.emptyText}>Loading...</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
           ) : comments.length === 0 ? (
-            <div style={styles.emptyText}>No comments yet. Be the first!</div>
-          ) : (
-            comments.map((c) => (
-              <div key={c.id} style={styles.commentItem}>
-                <div style={styles.commentAuthor}>
-                  {displayName(c.user)}
-                  {c.user.tag && <span style={styles.commentTag}> [{c.user.tag}]</span>}
-                </div>
-                <div style={styles.commentBody}>{c.body}</div>
-                <div style={styles.commentTime}>{timeAgo(c.createdAt)}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No comments yet. Be the first!</div>
+          ) : comments.map(c => (
+            <div key={c.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{displayName(c.user)}</span>
+                {c.user.tag && <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>[{c.user.tag}]</span>}
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{timeAgo(c.createdAt)}</span>
               </div>
-            ))
-          )}
+              <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text)' }}>{c.body}</div>
+            </div>
+          ))}
         </div>
-        <div style={styles.commentInputRow}>
-          <input
-            style={styles.commentInput}
-            placeholder="Write a comment..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
-          />
-          <button style={styles.commentSendBtn} onClick={handleAddComment}>
-            Send
-          </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <input className="ns-input" style={{ flex: 1, height: 42 }} placeholder="Write a comment…" value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && void handleAdd()} />
+          <button className="ns-btn-primary" style={{ height: 42, padding: '0 18px' }} onClick={handleAdd}>Send</button>
         </div>
       </div>
     </div>
   )
 }
 
-// ── User Search ──────────────────────────────────────────────────────────────
+// ── User Search ───────────────────────────────────────────────────────────────
 
-function UserSearch({
-  currentUserId,
-  onOpenProfile,
-  followedUsers,
-  onFollow,
-}: {
-  currentUserId: number
-  onOpenProfile: (userId: number) => void
-  followedUsers: Set<number>
-  onFollow: (userId: number) => void
-}) {
+function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: { currentUserId: number; onOpenProfile: (userId: number) => void; followedUsers: Set<number>; onFollow: (userId: number) => void }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Array<{ id: number; name: string | null; email: string; tag: string | null }>>([])
   const [searching, setSearching] = useState(false)
@@ -482,49 +294,33 @@ function UserSearch({
     if (!query.trim()) { setResults([]); return }
     const timer = setTimeout(() => {
       setSearching(true)
-      api.feedSearchUsers(query.trim()).then((data) => {
-        setResults(data)
-        setSearching(false)
-      }).catch(() => setSearching(false))
+      api.feedSearchUsers(query.trim()).then((data) => { setResults(data); setSearching(false) }).catch(() => setSearching(false))
     }, 300)
     return () => clearTimeout(timer)
   }, [query])
 
   return (
-    <div style={styles.searchSection}>
-      <input
-        style={styles.searchInput}
-        placeholder="Search users to follow..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-      {searching && <div style={styles.emptyText}>Searching...</div>}
-      {results.map((u) => (
-        <div key={u.id} style={styles.searchResult}>
-          <div
-            style={{ ...styles.avatarSmall, cursor: 'pointer' }}
-            onClick={() => onOpenProfile(u.id)}
-          >
+    <div>
+      <div style={{ position: 'relative', marginBottom: 16 }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input className="ns-input" style={{ paddingLeft: 40, height: 44 }} placeholder="Search users to follow…" value={query} onChange={e => setQuery(e.target.value)} />
+      </div>
+      {searching && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Searching…</div>}
+      {results.map(u => (
+        <div key={u.id} className="ns-card" style={{ padding: '12px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ ...P.avatar, width: 36, height: 36, fontSize: 12, cursor: 'pointer' }} onClick={() => onOpenProfile(u.id)}>
             {initials(u)}
           </div>
-          <div
-            style={{ flex: 1, cursor: 'pointer' }}
-            onClick={() => onOpenProfile(u.id)}
-          >
-            <div style={styles.authorNameRow}>
-              <span style={styles.authorName}>{displayName(u)}</span>
-              {u.tag && <span style={styles.postTag}>[{u.tag}]</span>}
+          <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => onOpenProfile(u.id)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>{displayName(u)}</span>
+              {u.tag && <span style={{ fontSize: 11, color: 'var(--primary)', background: 'rgba(0,200,150,0.1)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>[{u.tag}]</span>}
             </div>
-            <div style={styles.time}>{u.email}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{u.email}</div>
           </div>
-          <button
-            style={{
-              ...styles.followBtn,
-              background: followedUsers.has(u.id) ? 'var(--primary)' : 'transparent',
-              color: followedUsers.has(u.id) ? '#000' : 'var(--primary)',
-            }}
-            onClick={() => onFollow(u.id)}
-          >
+          <button style={{ ...P.followBtn, padding: '6px 14px', fontSize: 12.5, background: followedUsers.has(u.id) ? 'var(--primary)' : 'transparent', color: followedUsers.has(u.id) ? '#060D10' : 'var(--primary)' }} onClick={() => onFollow(u.id)}>
             {followedUsers.has(u.id) ? 'Following' : 'Follow'}
           </button>
         </div>
@@ -533,7 +329,7 @@ function UserSearch({
   )
 }
 
-// ── Main Page ────────────────────────────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function StudyFeedPage() {
   const [posts, setPosts] = useState<FeedPost[]>([])
@@ -547,47 +343,28 @@ export default function StudyFeedPage() {
   const [tab, setTab] = useState<'feed' | 'search'>('feed')
   const [profileUserId, setProfileUserId] = useState<number | null>(null)
   const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set())
-  const [tagInput, setTagInput] = useState('')
-  const [myTag, setMyTag] = useState<string | null>(null)
-  const [editingTag, setEditingTag] = useState(false)
 
   const loadPosts = useCallback(async (p: number) => {
     try {
       const token = localStorage.getItem('ns_token')
-      const res = await fetch(`http://localhost:3001/api/feed/posts?page=${p}&limit=20`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/feed/posts?page=${p}&limit=20`, {
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
       const json = await res.json()
       const data = json.data
-      if (p === 1) {
-        setPosts(data.posts)
-      } else {
-        setPosts((prev) => [...prev, ...data.posts])
-      }
+      if (p === 1) setPosts(data.posts)
+      else setPosts((prev) => [...prev, ...data.posts])
       setHasMore(data.hasMore)
-    } catch (err) {
-      console.error('Failed to load posts:', err)
-    } finally {
-      setLoading(false)
-    }
+    } catch { /* ignore */ }
+    finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
-    // Get current user ID from token
     try {
       const token = localStorage.getItem('ns_token')
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1]))
-        const userId = payload.sub || 0
-        setCurrentUserId(userId)
-        // Load current user's profile to get their tag
-        api.feedUserProfile(userId).then((data) => {
-          setMyTag(data.tag)
-          setTagInput(data.tag || '')
-        }).catch(() => {})
+        setCurrentUserId(payload.sub || 0)
       }
     } catch { /* ignore */ }
     loadPosts(1)
@@ -598,179 +375,95 @@ export default function StudyFeedPage() {
     setPosting(true)
     const token = localStorage.getItem('ns_token')
     try {
-      const res = await fetch('http://localhost:3001/api/feed/posts', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/feed/posts`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ body: newPostBody.trim() }),
       })
       const json = await res.json()
-      if (json.data) {
-        setPosts((prev) => [json.data, ...prev])
-        setNewPostBody('')
-      }
-    } catch (err) {
-      console.error('Failed to create post:', err)
-    } finally {
-      setPosting(false)
-    }
+      if (json.data) { setPosts(prev => [json.data, ...prev]); setNewPostBody('') }
+    } catch { /* ignore */ }
+    finally { setPosting(false) }
   }
 
   async function handleLike(postId: number) {
     const token = localStorage.getItem('ns_token')
     try {
-      const res = await fetch(`http://localhost:3001/api/feed/posts/${postId}/like`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/feed/posts/${postId}/like`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
       const json = await res.json()
       const result = json.data
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId
-            ? {
-                ...p,
-                likedByMe: result.liked,
-                _count: {
-                  ...p._count,
-                  likes: result.liked ? p._count.likes + 1 : p._count.likes - 1,
-                },
-              }
-            : p
-        )
-      )
-    } catch (err) {
-      console.error('Failed to toggle like:', err)
-    }
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, likedByMe: result.liked, _count: { ...p._count, likes: result.liked ? p._count.likes + 1 : p._count.likes - 1 } } : p))
+    } catch { /* ignore */ }
   }
 
   async function handleDelete(postId: number) {
     try {
       await api.feedDeletePost(postId)
-      setPosts((prev) => prev.filter((p) => p.id !== postId))
-    } catch (err) {
-      console.error('Failed to delete post:', err)
-    }
+      setPosts(prev => prev.filter(p => p.id !== postId))
+    } catch { /* ignore */ }
   }
 
   async function handleFollow(userId: number) {
     try {
       const result = await api.feedToggleFollow(userId)
-      setFollowedUsers((prev) => {
-        const next = new Set(prev)
-        if (result.following) {
-          next.add(userId)
-        } else {
-          next.delete(userId)
-        }
-        return next
-      })
-    } catch (err) {
-      console.error('Failed to toggle follow:', err)
-    }
-  }
-
-  async function handleSaveTag() {
-    if (!tagInput.trim()) return
-    try {
-      const updated = await api.feedUpdateTag(tagInput.trim())
-      setMyTag(updated.tag)
-      setEditingTag(false)
-      // Update posts to reflect new tag
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.userId === currentUserId
-            ? { ...p, user: { ...p.user, tag: updated.tag } }
-            : p
-        )
-      )
-    } catch (err) {
-      console.error('Failed to update tag:', err)
-    }
+      setFollowedUsers(prev => { const n = new Set(prev); result.following ? n.add(userId) : n.delete(userId); return n })
+    } catch { /* ignore */ }
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Study Feed</h1>
-        <div style={styles.tabs}>
-          <button
-            style={{ ...styles.tab, ...(tab === 'feed' ? styles.tabActive : {}) }}
-            onClick={() => setTab('feed')}
-          >
-            📝 Feed
+    <div className="fade-up" style={{ padding: '0 var(--page-px) 32px' }}>
+      {/* Tab bar */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 16, gap: 0 }}>
+        {([['feed', 'Feed'], ['search', 'Find People']] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', padding: '14px 16px', fontSize: 14, fontWeight: tab === key ? 600 : 500, color: tab === key ? 'var(--primary)' : 'var(--text-secondary)', borderBottom: tab === key ? '2px solid var(--primary)' : '2px solid transparent', marginBottom: -1, cursor: 'pointer' }}>
+            {label}
           </button>
-          <button
-            style={{ ...styles.tab, ...(tab === 'search' ? styles.tabActive : {}) }}
-            onClick={() => setTab('search')}
-          >
-            🔍 Find People
-          </button>
-        </div>
+        ))}
       </div>
 
       {tab === 'feed' ? (
         <>
-          {/* New Post */}
-          <div style={styles.newPostCard}>
-            <textarea
-              style={styles.newPostInput}
+          {/* New post composer */}
+          <div className="ns-card" style={{ padding: 16, marginBottom: 20 }}>
+            <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, height: 'auto', minHeight: 80, fontSize: 14, lineHeight: 1.6, padding: 14 }}
               placeholder="What are you studying today?"
               value={newPostBody}
-              onChange={(e) => setNewPostBody(e.target.value)}
+              onChange={e => setNewPostBody(e.target.value)}
               rows={3}
             />
-            <div style={styles.newPostActions}>
-              <span style={styles.charCount}>{newPostBody.length}/500</span>
-              <button
-                style={{
-                  ...styles.postBtn,
-                  opacity: newPostBody.trim() && !posting ? 1 : 0.5,
-                }}
-                onClick={handleCreatePost}
-                disabled={!newPostBody.trim() || posting}
-              >
-                {posting ? 'Posting...' : 'Post'}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{newPostBody.length}/500</span>
+              <button className="ns-btn-primary" style={{ height: 38, padding: '0 20px', opacity: newPostBody.trim() && !posting ? 1 : 0.5 }}
+                onClick={handleCreatePost} disabled={!newPostBody.trim() || posting}>
+                {posting ? 'Posting…' : 'Post'}
               </button>
             </div>
           </div>
 
           {/* Posts */}
           {loading ? (
-            <div style={styles.emptyText}>Loading feed...</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading feed…</div>
           ) : posts.length === 0 ? (
-            <div style={styles.emptyState}>
-              <div style={styles.emptyIcon}>📝</div>
-              <div style={styles.emptyTitle}>No posts yet</div>
-              <div style={styles.emptyText}>Be the first to share what you're studying!</div>
+            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+              <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No posts yet</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Be the first to share what you&apos;re studying!</p>
             </div>
           ) : (
             <>
-              {posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onLike={handleLike}
-                  onDelete={handleDelete}
-                  onOpenComments={(id) => setCommentPostId(id)}
-                  onOpenProfile={(id) => setProfileUserId(id)}
-                  onFollow={handleFollow}
-                  currentUserId={currentUserId}
-                />
+              {posts.map(post => (
+                <PostCard key={post.id} post={post} onLike={handleLike} onDelete={handleDelete}
+                  onOpenComments={id => setCommentPostId(id)} onOpenProfile={id => setProfileUserId(id)}
+                  onFollow={handleFollow} currentUserId={currentUserId} />
               ))}
               {hasMore && (
-                <button
-                  style={styles.loadMoreBtn}
-                  onClick={() => {
-                    setPage((p) => p + 1)
-                    loadPosts(page + 1)
-                  }}
-                >
+                <button className="ns-btn-ghost" style={{ width: '100%', height: 42, marginTop: 8 }}
+                  onClick={() => { setPage(p => p + 1); loadPosts(page + 1) }}>
                   Load more
                 </button>
               )}
@@ -778,349 +471,45 @@ export default function StudyFeedPage() {
           )}
         </>
       ) : (
-        <UserSearch
-          currentUserId={currentUserId}
-          onOpenProfile={(id) => setProfileUserId(id)}
-          followedUsers={followedUsers}
-          onFollow={handleFollow}
-        />
+        <UserSearch currentUserId={currentUserId} onOpenProfile={id => setProfileUserId(id)}
+          followedUsers={followedUsers} onFollow={handleFollow} />
       )}
 
-      {/* Comment overlay */}
       {commentPostId !== null && (
-        <CommentSection
-          postId={commentPostId}
-          onClose={() => setCommentPostId(null)}
-          onCommentAdded={() => {
-            setPosts((prev) =>
-              prev.map((p) =>
-                p.id === commentPostId
-                  ? { ...p, _count: { ...p._count, comments: p._count.comments + 1 } }
-                  : p
-              )
-            )
-          }}
-        />
+        <CommentSection postId={commentPostId} onClose={() => setCommentPostId(null)}
+          onCommentAdded={() => setPosts(prev => prev.map(p => p.id === commentPostId ? { ...p, _count: { ...p._count, comments: p._count.comments + 1 } } : p))} />
       )}
 
-      {/* Profile overlay */}
       {profileUserId !== null && (
-        <UserProfileOverlay
-          userId={profileUserId}
-          onClose={() => setProfileUserId(null)}
-          currentUserId={currentUserId}
-        />
+        <UserProfileOverlay userId={profileUserId} onClose={() => setProfileUserId(null)} currentUserId={currentUserId} />
       )}
     </div>
   )
 }
 
-// ── Styles ───────────────────────────────────────────────────────────────────
+// ── Style objects ──────────────────────────────────────────────────────────────
 
-const styles: Record<string, React.CSSProperties> = {
-  page: { maxWidth: '680px', margin: '0 auto' },
-  header: { marginBottom: '24px' },
-  title: { fontSize: '28px', fontWeight: '700', marginBottom: '16px' },
-  tabs: { display: 'flex', gap: '8px' },
-  tab: {
-    padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)',
-    background: 'transparent', color: 'var(--text-secondary)', fontSize: '14px',
-    fontWeight: '500', cursor: 'pointer',
-  },
-  tabActive: {
-    background: 'rgba(0,200,150,0.12)', color: 'var(--primary)',
-    borderColor: 'var(--primary)',
-  },
+const P: Record<string, React.CSSProperties> = {
+  avatar:     { width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 },
+  authorName: { fontSize: 14, fontWeight: 700, color: 'var(--text)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 },
+  tag:        { fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4 },
+  tagDev:     { fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' },
+  followBtn:  { padding: '2px 9px', borderRadius: 5, border: '1px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontWeight: 600, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' as const },
+  deleteBtn:  { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center' },
+  actionBtn:  { background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 6, fontWeight: 600 },
+}
 
-  // Tag management
-  tagBar: {
-    background: 'var(--surface)', border: '1px solid var(--border)',
-    borderRadius: '10px', padding: '10px 14px', marginBottom: '16px',
-    fontSize: '13px',
-  },
-  tagDisplayRow: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  },
-  tagLabel: { color: 'var(--text-secondary)' },
-  tagBadge: { color: 'var(--primary)', fontWeight: '600' },
-  tagNone: { color: 'var(--text-muted)', fontStyle: 'italic' },
-  tagEditBtn: {
-    padding: '4px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-    background: 'transparent', color: 'var(--text-secondary)', fontSize: '12px',
-    cursor: 'pointer',
-  },
-  tagEditRow: {
-    display: 'flex', gap: '8px', alignItems: 'center',
-  },
-  tagInput: {
-    flex: 1, padding: '6px 10px', borderRadius: '6px',
-    border: '1px solid var(--border)', background: 'var(--bg)',
-    color: 'var(--text)', fontSize: '13px',
-  },
-  tagSaveBtn: {
-    padding: '6px 12px', borderRadius: '6px', border: 'none',
-    background: 'var(--primary)', color: '#000', fontWeight: '600',
-    fontSize: '12px', cursor: 'pointer',
-  },
-  tagCancelBtn: {
-    padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-    background: 'transparent', color: 'var(--text-secondary)',
-    fontSize: '12px', cursor: 'pointer',
-  },
-
-  // New post
-  newPostCard: {
-    background: 'var(--surface)', border: '1px solid var(--border)',
-    borderRadius: '12px', padding: '16px', marginBottom: '20px',
-  },
-  newPostInput: {
-    width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
-    borderRadius: '8px', padding: '12px', color: 'var(--text)',
-    resize: 'vertical' as const, minHeight: '80px', fontSize: '14px',
-  },
-  newPostActions: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginTop: '10px',
-  },
-  charCount: { fontSize: '12px', color: 'var(--text-muted)' },
-  postBtn: {
-    padding: '8px 20px', borderRadius: '8px', border: 'none',
-    background: 'var(--primary)', color: '#000', fontWeight: '600',
-    fontSize: '14px', cursor: 'pointer',
-  },
-
-  // Post card
-  card: {
-    background: 'var(--surface)', border: '1px solid var(--border)',
-    borderRadius: '12px', padding: '16px', marginBottom: '12px',
-  },
-  cardHeader: {
-    display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px',
-  },
-  avatar: {
-    width: '40px', height: '40px', borderRadius: '50%',
-    background: 'var(--primary)', color: '#000',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontWeight: '700', fontSize: '14px', flexShrink: 0,
-  },
-  avatarSmall: {
-    width: '32px', height: '32px', borderRadius: '50%',
-    background: 'var(--primary)', color: '#000',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontWeight: '700', fontSize: '12px', flexShrink: 0,
-  },
-  authorNameRow: {
-    display: 'flex', alignItems: 'center', gap: '6px',
-  },
-  authorNameClickable: {
-    fontSize: '14px', fontWeight: '600', color: 'var(--text)',
-    cursor: 'pointer', textDecoration: 'underline',
-    textUnderlineOffset: '2px',
-  },
-  authorName: { fontSize: '14px', fontWeight: '600', color: 'var(--text)' },
-  postTag: {
-    fontSize: '12px', fontWeight: '600', color: 'var(--primary)',
-    background: 'rgba(0,200,150,0.1)', padding: '1px 6px',
-    borderRadius: '4px',
-  },
-  tagDev: {
-    fontSize: '12px', fontWeight: '700', padding: '1px 6px',
-    borderRadius: '4px', border: '1px solid #ff6b6b',
-    color: '#ff6b6b', background: 'rgba(255,107,107,0.12)',
-  },
-  time: { fontSize: '12px', color: 'var(--text-muted)' },
-  deleteBtn: {
-    marginLeft: 'auto', background: 'transparent', border: 'none',
-    color: 'var(--text-muted)', fontSize: '16px', cursor: 'pointer',
-    padding: '4px 8px',
-  },
-  cardBody: {
-    fontSize: '15px', lineHeight: '1.6', color: 'var(--text)',
-    marginBottom: '12px', whiteSpace: 'pre-wrap' as const,
-  },
-  cardActions: { display: 'flex', gap: '16px' },
-  actionBtn: {
-    background: 'transparent', border: 'none', color: 'var(--text-secondary)',
-    fontSize: '14px', cursor: 'pointer', padding: '4px 8px',
-    display: 'flex', alignItems: 'center', gap: '4px',
-  },
-
-  // Comments overlay
-  commentOverlay: {
-    position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.6)', zIndex: 1000,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
-  commentPanel: {
-    background: 'var(--surface)', border: '1px solid var(--border)',
-    borderRadius: '12px', width: '90%', maxWidth: '500px',
-    maxHeight: '80vh', display: 'flex', flexDirection: 'column' as const,
-    overflow: 'hidden',
-  },
-  commentHeader: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    padding: '16px', borderBottom: '1px solid var(--border)',
-  },
-  closeBtn: {
-    background: 'transparent', border: 'none', color: 'var(--text-secondary)',
-    fontSize: '18px', cursor: 'pointer',
-  },
-  commentList: { flex: 1, overflowY: 'auto' as const, padding: '12px 16px' },
-  commentItem: {
-    padding: '10px 0', borderBottom: '1px solid var(--border)',
-  },
-  commentAuthor: { fontSize: '13px', fontWeight: '600', color: 'var(--text)' },
-  commentTag: { fontSize: '11px', color: 'var(--primary)', fontWeight: '600' },
-  commentBody: { fontSize: '14px', color: 'var(--text)', marginTop: '4px' },
-  commentTime: { fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' },
-  commentInputRow: {
-    display: 'flex', gap: '8px', padding: '12px 16px',
-    borderTop: '1px solid var(--border)',
-  },
-  commentInput: {
-    flex: 1, background: 'var(--bg)', border: '1px solid var(--border)',
-    borderRadius: '8px', padding: '8px 12px', color: 'var(--text)',
-    fontSize: '14px',
-  },
-  commentSendBtn: {
-    padding: '8px 16px', borderRadius: '8px', border: 'none',
-    background: 'var(--primary)', color: '#000', fontWeight: '600',
-    fontSize: '14px', cursor: 'pointer',
-  },
-
-  // Search
-  searchSection: { marginTop: '8px' },
-  searchInput: {
-    width: '100%', background: 'var(--surface)', border: '1px solid var(--border)',
-    borderRadius: '8px', padding: '12px 16px', color: 'var(--text)',
-    fontSize: '14px', marginBottom: '12px',
-  },
-  searchResult: {
-    display: 'flex', alignItems: 'center', gap: '10px',
-    padding: '12px', background: 'var(--surface)',
-    border: '1px solid var(--border)', borderRadius: '10px', marginBottom: '8px',
-  },
-  followBtn: {
-    padding: '6px 14px', borderRadius: '6px', border: '1px solid var(--primary)',
-    background: 'transparent', color: 'var(--primary)', fontWeight: '600',
-    fontSize: '13px', cursor: 'pointer',
-  },
-  followBtnSmall: {
-    padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--primary)',
-    background: 'transparent', color: 'var(--primary)', fontWeight: '500',
-    fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap' as const,
-  },
-
-  // Profile overlay
-  profileOverlay: {
-    position: 'fixed' as const, top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.6)', zIndex: 1000,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
-  profilePanel: {
-    background: 'var(--surface)', border: '1px solid var(--border)',
-    borderRadius: '12px', width: '90%', maxWidth: '480px',
-    maxHeight: '85vh', overflow: 'auto' as const, padding: '24px',
-  },
-  profileHeader: {
-    display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px',
-  },
-  profileAvatar: {
-    width: '56px', height: '56px', borderRadius: '50%',
-    background: 'var(--primary)', color: '#000',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontWeight: '700', fontSize: '20px', flexShrink: 0,
-  },
-  profileName: {
-    fontSize: '20px', fontWeight: '700', color: 'var(--text)',
-  },
-  profileTag: {
-    fontSize: '13px', fontWeight: '600', color: 'var(--primary)',
-    background: 'rgba(0,200,150,0.1)', padding: '2px 8px',
-    borderRadius: '4px', display: 'inline-block', marginTop: '2px',
-  },
-  profileEmail: {
-    fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px',
-  },
-  profileStats: {
-    display: 'flex', justifyContent: 'space-around', marginBottom: '16px',
-    padding: '12px 0', borderTop: '1px solid var(--border)',
-    borderBottom: '1px solid var(--border)',
-  },
-  profileStat: { textAlign: 'center' as const },
-  profileStatNum: {
-    fontSize: '20px', fontWeight: '700', color: 'var(--text)',
-  },
-  profileStatLabel: {
-    fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px',
-  },
-  profileFollowBtn: {
-    width: '100%', padding: '10px', borderRadius: '8px',
-    border: '1px solid var(--primary)', fontWeight: '600',
-    fontSize: '14px', cursor: 'pointer', marginBottom: '20px',
-  },
-  profilePostsSection: {
-    borderTop: '1px solid var(--border)', paddingTop: '16px',
-  },
-  profilePostsTitle: {
-    fontSize: '16px', fontWeight: '600', color: 'var(--text)',
-    marginBottom: '12px',
-  },
-  profilePostCard: {
-    padding: '12px', background: 'var(--bg)',
-    border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '8px',
-  },
-  profilePostBody: {
-    fontSize: '14px', color: 'var(--text)', lineHeight: '1.5',
-    whiteSpace: 'pre-wrap' as const,
-  },
-  profilePostMeta: {
-    display: 'flex', justifyContent: 'space-between', marginTop: '8px',
-    fontSize: '12px',
-  },
-  profilePostTime: { color: 'var(--text-muted)' },
-  profilePostLikes: { color: 'var(--text-secondary)' },
-
-  // Admin tag management
-  adminTagSection: {
-    background: 'rgba(255, 200, 50, 0.06)',
-    border: '1px solid rgba(255, 200, 50, 0.25)',
-    borderRadius: '8px', padding: '12px', marginBottom: '16px',
-  },
-  adminTagTitle: {
-    fontSize: '13px', fontWeight: '600', color: '#ffc832',
-    marginBottom: '8px',
-  },
-  adminTagRow: {
-    display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' as const,
-  },
-  adminTagInput: {
-    flex: 1, minWidth: '80px', padding: '6px 8px', borderRadius: '6px',
-    border: '1px solid var(--border)', background: 'var(--bg)',
-    color: 'var(--text)', fontSize: '12px',
-  },
-  adminSaveBtn: {
-    padding: '6px 12px', borderRadius: '6px', border: 'none',
-    background: '#ffc832', color: '#000', fontWeight: '600',
-    fontSize: '12px', cursor: 'pointer',
-  },
-  adminResetBtn: {
-    padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-    background: 'transparent', color: 'var(--text-secondary)',
-    fontSize: '12px', cursor: 'pointer',
-  },
-
-  // Empty state
-  emptyState: {
-    textAlign: 'center' as const, padding: '60px 20px',
-  },
-  emptyIcon: { fontSize: '48px', marginBottom: '12px' },
-  emptyTitle: { fontSize: '18px', fontWeight: '600', marginBottom: '8px' },
-  emptyText: { fontSize: '14px', color: 'var(--text-secondary)' },
-  loadMoreBtn: {
-    width: '100%', padding: '12px', borderRadius: '8px',
-    border: '1px solid var(--border)', background: 'transparent',
-    color: 'var(--text-secondary)', fontSize: '14px', cursor: 'pointer',
-    marginTop: '8px',
-  },
+const O: Record<string, React.CSSProperties> = {
+  overlay:    { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  panel:      { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, width: '90%', maxWidth: 480, maxHeight: '85vh', overflow: 'auto', padding: 24, display: 'flex', flexDirection: 'column' as const },
+  header:     { display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid var(--border)' },
+  avatar:     { width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0 },
+  name:       { fontSize: 19, fontWeight: 800, color: 'var(--text)', marginBottom: 3 },
+  tag:        { fontSize: 12, fontWeight: 700, color: 'var(--primary)', background: 'rgba(0,200,150,0.1)', padding: '2px 8px', borderRadius: 4, display: 'inline-block' },
+  tagDev:     { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)', display: 'inline-block' },
+  email:      { fontSize: 12, color: 'var(--text-muted)', marginTop: 3 },
+  closeBtn:   { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: 6, display: 'flex', alignItems: 'center', flexShrink: 0 },
+  stats:      { display: 'flex', justifyContent: 'space-around', padding: '14px 0', borderBottom: '1px solid var(--border)', marginBottom: 16 },
+  postsTitle: { fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 },
+  postCard:   { padding: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 8 },
 }
