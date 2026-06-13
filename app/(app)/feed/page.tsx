@@ -134,7 +134,12 @@ function UserProfileOverlay({
           <div style={{ flex: 1 }}>
             <div style={styles.profileName}>{displayName(profile)}</div>
             {profile.tag && (
-              <div style={styles.profileTag}>[{profile.tag}]</div>
+              <div
+                className={profile.tag === 'DEV' ? 'tag-rainbow' : ''}
+                style={profile.tag === 'DEV' ? { ...styles.profileTag, ...styles.tagDev, display: 'inline-block', marginTop: '2px' } : { ...styles.profileTag, color: profile.tagColor || 'var(--primary)', background: profile.tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : profile.tagColor ? `${profile.tagColor}22` : 'rgba(0,200,150,0.1)' }}
+              >
+                [{profile.tag}]
+              </div>
             )}
             <div style={styles.profileEmail}>{profile.email}</div>
           </div>
@@ -280,6 +285,7 @@ function PostCard({
   onDelete,
   onOpenComments,
   onOpenProfile,
+  onFollow,
   currentUserId,
 }: {
   post: FeedPost
@@ -287,6 +293,7 @@ function PostCard({
   onDelete: (id: number) => void
   onOpenComments: (id: number) => void
   onOpenProfile: (userId: number) => void
+  onFollow: (userId: number) => void
   currentUserId: number
 }) {
   const tagColor = (post.user as any).tagColor || 'grey'
@@ -310,6 +317,14 @@ function PostCard({
               >
                 [{post.user.tag}]
               </span>
+            )}
+            {post.userId !== currentUserId && (
+              <button
+                style={styles.followBtnSmall}
+                onClick={(e) => { e.stopPropagation(); onFollow(post.userId) }}
+              >
+                Follow
+              </button>
             )}
           </div>
           <div style={styles.time}>{timeAgo(post.createdAt)}</div>
@@ -744,6 +759,7 @@ export default function StudyFeedPage() {
                   onDelete={handleDelete}
                   onOpenComments={(id) => setCommentPostId(id)}
                   onOpenProfile={(id) => setProfileUserId(id)}
+                  onFollow={handleFollow}
                   currentUserId={currentUserId}
                 />
               ))}
@@ -988,6 +1004,11 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '6px 14px', borderRadius: '6px', border: '1px solid var(--primary)',
     background: 'transparent', color: 'var(--primary)', fontWeight: '600',
     fontSize: '13px', cursor: 'pointer',
+  },
+  followBtnSmall: {
+    padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--primary)',
+    background: 'transparent', color: 'var(--primary)', fontWeight: '500',
+    fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap' as const,
   },
 
   // Profile overlay
