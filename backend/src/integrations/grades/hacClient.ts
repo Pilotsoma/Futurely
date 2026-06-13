@@ -491,6 +491,48 @@ export async function loginHAC(
   return sessionToken
 }
 
+// ── Iframe helper ─────────────────────────────────────────────────────────────
+
+/**
+ * Many HAC pages (Transcript, Report Card, Attendance) load their actual data
+ * inside a legacy iframe.  Fetch the outer page, detect the iframe src, then
+ * return the iframe's content HTML so the scraper sees real data tables.
+ */
+async function fetchWithIframeFallback(
+  http: ReturnType<typeof wrapper>,
+  outerUrl: string,
+  referer: string,
+  debugLabel: string,
+): Promise<string> {
+  const outerRes = await http.get(outerUrl, {
+    headers: { Referer: referer, Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+  })
+  const outerHtml = outerRes.data as string
+  const $outer = cheerio.load(outerHtml)
+
+  const iframeSrc = $outer('#sg-legacy-iframe, .sg-legacy-iframe, iframe[id*="legacy"]').attr('src')
+  if (!iframeSrc) {
+    dumpDebugHtml(debugLabel, outerHtml)
+    return outerHtml
+  }
+
+  let iframeUrl: string
+  try {
+    iframeUrl = iframeSrc.startsWith('http') ? iframeSrc : new URL(iframeSrc, outerUrl).toString()
+  } catch {
+    iframeUrl = iframeSrc
+  }
+
+  console.log(`[HAC CLIENT] ${debugLabel}: following iframe to`, iframeUrl)
+  await sleep(400 + Math.random() * 200)
+  const iframeRes = await http.get(iframeUrl, {
+    headers: { Referer: outerUrl, Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+  })
+  const iframeHtml = iframeRes.data as string
+  dumpDebugHtml(debugLabel, iframeHtml)
+  return iframeHtml
+}
+
 // ── Scraping helpers ───────────────────────────────────────────────────────────
 
 /**
@@ -773,12 +815,9 @@ export async function getTranscript(sessionToken: string): Promise<HACTranscript
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
 
-  await sleep(800 + Math.random() * 400) // 0.8–1.2s delay
-  const res = await http.get(`${origin}HomeAccess/Grades/Transcript`, {
-    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
-  })
-  const transcriptHtml = res.data as string
-  dumpDebugHtml('transcript', transcriptHtml)
+  await sleep(800 + Math.random() * 400)
+  const outerUrl = `${origin}HomeAccess/Grades/Transcript`
+  const transcriptHtml = await fetchWithIframeFallback(http, outerUrl, `${origin}HomeAccess/Home.aspx`, 'transcript')
   const $ = cheerio.load(transcriptHtml)
 
   const semesters: HACTranscriptEntry[] = []
@@ -882,10 +921,14 @@ export async function getTranscript(sessionToken: string): Promise<HACTranscript
   // Multi-strategy GPA extraction
   let cumulativeGPA: string | null = null
 
-  // Strategy 1: direct element selectors
+  // Strategy 1: direct element selectors (includes FriscoISDHACAPI patterns)
   const gpaSelectors = [
+    '#plnMain_rpTranscriptGroup_lblCumGPA_0',
+    '#plnMain_lblCumGPA',
+    '[id*="rpTranscriptGroup"][id*="CumGPA"]',
+    '[id*="rpTranscriptGroup"][id*="lblGPA"]',
     '[id*="GPACum"]', '[id*="CumGPA"]', '[id*="lblCumGPA"]', '[id*="CumulativeGPA"]',
-    '[id*="lblGPA"]', '.sg-transcript-gpa', 'span[id$="GPA"]',
+    '[id*="lblGPA"]', '[id*="Gpa"]', '.sg-transcript-gpa', 'span[id$="GPA"]', '[id*="gpa"]',
   ]
   for (const sel of gpaSelectors) {
     const text = $(sel).text().trim()
@@ -946,6 +989,32 @@ export async function getTranscript(sessionToken: string): Promise<HACTranscript
   }
 }
 
+/**
+ * Verify that a restored HAC session cookie is still accepted by the server.
+ * Makes one lightweight GET to the Demographic page and returns true if not redirected to login.
+ */
+export async function verifySession(sessionToken: string): Promise<boolean> {
+  const stored = getSessionByToken(sessionToken)
+  if (!stored) return false
+
+  const { http } = restoreSession(stored)
+  const origin = stored.baseUrl
+
+  try {
+    const res = await http.get(`${origin}HomeAccess/Registration/Demographic`, {
+      headers: { Referer: `${origin}HomeAccess/Home.aspx` },
+      timeout: 15_000,
+      validateStatus: (s: number) => s >= 200 && s < 500,
+    })
+    const finalUrl = (res.request as { res?: { responseUrl?: string } })?.res?.responseUrl ?? ''
+    const expired = finalUrl.includes('Account/LogOn') || finalUrl.includes('Account/Login')
+    console.log(`[HAC CLIENT] verifySession → expired=${expired}`)
+    return !expired
+  } catch {
+    return false
+  }
+}
+
 export async function getSchedule(sessionToken: string): Promise<object[]> {
   const stored = getSessionByToken(sessionToken)
   if (!stored) throw new Error('School session expired or not found — please log in again')
@@ -954,12 +1023,8 @@ export async function getSchedule(sessionToken: string): Promise<object[]> {
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400)
-  const res = await http.get(`${origin}HomeAccess/Classes/Schedule`, {
-    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
-  })
-
-  const html = res.data as string
-  dumpDebugHtml('schedule', html)
+  const outerUrl = `${origin}HomeAccess/Classes/Schedule`
+  const html = await fetchWithIframeFallback(http, outerUrl, `${origin}HomeAccess/Home.aspx`, 'schedule')
   const $ = cheerio.load(html)
 
   const headers: string[] = []
@@ -1049,11 +1114,31 @@ export async function getReportCard(sessionToken: string, period?: string): Prom
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400)
-  const initialRes = await http.get(`${origin}HomeAccess/Grades/ReportCard`, {
-    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
-  })
+  const outerUrl = `${origin}HomeAccess/Grades/ReportCard`
 
-  let html = initialRes.data as string
+  // Report Card page loads data inside a legacy iframe
+  // First fetch the outer page to detect the iframe URL, then fetch iframe content
+  const outerRes = await http.get(outerUrl, {
+    headers: { Referer: `${origin}HomeAccess/Home.aspx`, Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+  })
+  const outerHtml = outerRes.data as string
+  const $outer = cheerio.load(outerHtml)
+  const rcIframeSrc = $outer('#sg-legacy-iframe, .sg-legacy-iframe').attr('src')
+
+  let iframeBaseUrl = outerUrl
+  if (rcIframeSrc) {
+    try {
+      iframeBaseUrl = rcIframeSrc.startsWith('http') ? rcIframeSrc : new URL(rcIframeSrc, outerUrl).toString()
+    } catch { iframeBaseUrl = rcIframeSrc }
+    console.log('[REPORT CARD] Following iframe to:', iframeBaseUrl)
+    await sleep(400 + Math.random() * 200)
+  }
+
+  const iframeRes = rcIframeSrc
+    ? await http.get(iframeBaseUrl, { headers: { Referer: outerUrl } })
+    : outerRes
+
+  let html = iframeRes.data as string
   let $ = cheerio.load(html)
 
   // Extract reporting period dropdown options (#plnMain_ddlRCRuns)
@@ -1067,7 +1152,7 @@ export async function getReportCard(sessionToken: string, period?: string): Prom
     }
   })
 
-  // If a specific period is requested, POST back to HAC selecting it
+  // If a specific period is requested, POST back to the iframe URL selecting it
   if (period && period !== currentPeriod && reportingPeriods.includes(period)) {
     let requestedValue = ''
     $('[id*="ddlRCRuns"] option, #plnMain_ddlRCRuns option').each((_i, opt) => {
@@ -1082,8 +1167,8 @@ export async function getReportCard(sessionToken: string, period?: string): Prom
       __VIEWSTATEGENERATOR: ($('[id="__VIEWSTATEGENERATOR"]').val() as string) ?? '',
       [dropdownName]: requestedValue,
     })
-    const postRes = await http.post(`${origin}HomeAccess/Grades/ReportCard`, formData.toString(), {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: `${origin}HomeAccess/Grades/ReportCard` },
+    const postRes = await http.post(iframeBaseUrl, formData.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: iframeBaseUrl },
     })
     html = postRes.data as string
     $ = cheerio.load(html)
@@ -1184,26 +1269,32 @@ export async function getProgressReport(sessionToken: string, date?: string): Pr
 
   const courses: Array<{ name: string; period: string; average: string; letterGrade: string; teacher: string }> = []
 
-  // Strategy 0: #plnMain_dgIPR rows (cols: 0=course, 1=desc, 2=period, 3=teacher, 4=room, 5=grade)
-  const dgIPRRows = $('#plnMain_dgIPR .sg-asp-table-data-row, #plnMain_dgIPR tr.sg-asp-table-data-row')
-  if (dgIPRRows.length > 0) {
-    dgIPRRows.each((_i, row) => {
-      const cells = $(row).find('td')
-      if (cells.length < 3) return
-      const name = cells.eq(0).text().trim()
-      if (!name || /^(course|class)/i.test(name)) return
-      courses.push({ name, period: cells.eq(2).text().trim(), average: cells.eq(5).text().trim(), letterGrade: cells.eq(5).text().trim(), teacher: cells.eq(3).text().trim() })
+  // Katy ISD IPR columns: 0=courseCode, 1=courseName, 2=period, 3=teacher, 4=room, 5=grade
+  // Filter out comment legend rows (where col 0 is a short numeric code like "21", "22")
+  const parseIPRRow = (row: AnyNode) => {
+    const cells = $(row).find('td')
+    if (cells.length < 3) return
+    const courseCode = cells.eq(0).text().trim()
+    const name = cells.eq(1).text().trim() || courseCode
+    // Skip header-like rows and comment legend rows (code is just 1-2 digits)
+    if (!name || /^(course|class)/i.test(name) || /^\d{1,2}$/.test(courseCode)) return
+    const grade = cells.eq(5).text().trim()
+    courses.push({
+      name,
+      period: cells.eq(2).text().trim(),
+      average: grade,
+      letterGrade: grade,
+      teacher: cells.eq(3).text().trim(),
     })
   }
 
+  const dgIPRRows = $('#plnMain_dgIPR .sg-asp-table-data-row, #plnMain_dgIPR tr.sg-asp-table-data-row')
+  if (dgIPRRows.length > 0) {
+    dgIPRRows.each((_i, row) => parseIPRRow(row))
+  }
+
   if (courses.length === 0) {
-    $('.sg-asp-table-data-row').each((_i, row) => {
-      const cells = $(row).find('td')
-      if (cells.length < 3) return
-      const name = cells.eq(0).text().trim()
-      if (!name || /^(course|class)/i.test(name)) return
-      courses.push({ name, period: cells.eq(2).text().trim(), average: cells.eq(5).text().trim(), letterGrade: cells.eq(5).text().trim(), teacher: cells.eq(3).text().trim() })
-    })
+    $('.sg-asp-table-data-row').each((_i, row) => parseIPRRow(row))
   }
 
   if (courses.length === 0 && $('.AssignmentClass').length > 0) {
@@ -1220,10 +1311,11 @@ export async function getProgressReport(sessionToken: string, date?: string): Pr
   if (courses.length === 0) {
     $('table tr').each((_i, row) => {
       const cells = $(row).find('td')
-      if (cells.length < 2) return
-      const name = cells.eq(0).text().trim()
-      if (!name || /^(course|class|subject|teacher)/i.test(name)) return
-      courses.push({ name, period: cells.eq(1).text().trim(), average: cells.eq(2).text().trim(), letterGrade: cells.eq(3).text().trim(), teacher: cells.eq(4).text().trim() || '' })
+      if (cells.length < 4) return
+      const courseCode = cells.eq(0).text().trim()
+      const name = cells.eq(1).text().trim() || courseCode
+      if (!name || /^(course|class|subject|teacher)/i.test(name) || /^\d{1,2}$/.test(courseCode)) return
+      courses.push({ name, period: cells.eq(2).text().trim(), average: cells.eq(5).text().trim(), letterGrade: cells.eq(5).text().trim(), teacher: cells.eq(3).text().trim() })
     })
   }
 
@@ -1328,16 +1420,34 @@ export async function getAttendance(sessionToken: string, monthOffset: number = 
 
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
+  const outerAttUrl = `${origin}HomeAccess/Attendance/MonthView`
 
   await sleep(800 + Math.random() * 400)
-  const initialRes = await http.get(`${origin}HomeAccess/Attendance/MonthView`, {
-    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
-  })
 
-  let html = initialRes.data as string
+  // Attendance page loads data inside a legacy iframe at /HomeAccess/Content/Attendance/MonthlyView.aspx
+  const outerRes = await http.get(outerAttUrl, {
+    headers: { Referer: `${origin}HomeAccess/Home.aspx`, Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+  })
+  const outerAttHtml = outerRes.data as string
+  const $outerAtt = cheerio.load(outerAttHtml)
+  const attIframeSrc = $outerAtt('#sg-legacy-iframe, .sg-legacy-iframe').attr('src')
+
+  let attIframeUrl = outerAttUrl
+  if (attIframeSrc) {
+    try {
+      attIframeUrl = attIframeSrc.startsWith('http') ? attIframeSrc : new URL(attIframeSrc, outerAttUrl).toString()
+    } catch { attIframeUrl = attIframeSrc }
+    console.log('[ATTENDANCE] Following iframe to:', attIframeUrl)
+    await sleep(400 + Math.random() * 200)
+  }
+
+  const iframeRes = attIframeSrc
+    ? await http.get(attIframeUrl, { headers: { Referer: outerAttUrl } })
+    : outerRes
+  let html = iframeRes.data as string
   dumpDebugHtml('attendance', html)
 
-  // Navigate months via ASP.NET postback if offset != 0
+  // Navigate months via ASP.NET postback against the iframe URL
   if (monthOffset !== 0) {
     const steps = Math.abs(monthOffset)
     for (let s = 0; s < steps; s++) {
@@ -1352,8 +1462,8 @@ export async function getAttendance(sessionToken: string, monthOffset: number = 
         __EVENTVALIDATION: ($nav('[id="__EVENTVALIDATION"]').val() as string) ?? '',
         __VIEWSTATEGENERATOR: ($nav('[id="__VIEWSTATEGENERATOR"]').val() as string) ?? '',
       })
-      const navRes = await http.post(`${origin}HomeAccess/Attendance/MonthView`, formData.toString(), {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: `${origin}HomeAccess/Attendance/MonthView` },
+      const navRes = await http.post(attIframeUrl, formData.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: attIframeUrl },
       })
       html = navRes.data as string
       await sleep(300)

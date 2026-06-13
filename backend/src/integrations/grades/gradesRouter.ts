@@ -11,6 +11,7 @@ import {
   getProgressReport,
   getContactTeachers,
   getAttendance,
+  verifySession,
 } from './hacClient'
 import {
   loginPowerSchool,
@@ -21,6 +22,7 @@ import { buildSessionWithCLCookie } from './classLinkHelper'
 import { getSessionByUserId, getSessionByToken, deleteSessionByUserId, restoreSessionFromCache, touchSession, type SchoolSystemType } from './sessionStore'
 import { prisma } from '../../lib/prisma'
 import { normalizeHacGrades, normalizePsGrades } from './normalizeGrades'
+import { encryptPassword, decryptPassword } from './credentialCrypto'
 
 const router = Router()
 
@@ -176,37 +178,79 @@ function requireSession(userId: number, res: Response): ReturnType<typeof getSes
   return entry
 }
 
-// ── Session resolution with DB fallback ───────────────────────────────────────
+// ── Session resolution — 3-tier hybrid ───────────────────────────────────────
+// Tier 1: In-memory session (hot path — no DB query)
+// Tier 2: Restore cookie jar from DB + verify against HAC
+// Tier 3: Silent fresh re-login using encrypted stored credentials
 
 async function resolveSession(userId: number, res: Response): Promise<ReturnType<typeof getSessionByUserId>> {
+  // Tier 1: in-memory
   let entry = getSessionByUserId(userId)
+  if (entry) return entry
 
-  if (!entry) {
-    const connection = await prisma.schoolConnection.findUnique({ where: { userId } }).catch(() => null)
-    if (connection?.cachedSession) {
-      console.log('[GRADES ROUTER] Restoring session from DB cache for userId:', userId)
-      const restoredToken = restoreSessionFromCache(
-        userId,
-        connection.systemType as SchoolSystemType,
-        connection.districtUrl,
-        connection.cachedSession,
-      )
-      if (restoredToken) entry = getSessionByUserId(userId)
+  const connection = await prisma.schoolConnection.findUnique({ where: { userId } }).catch(() => null)
+
+  // Tier 2: restore cookie jar from DB and verify it's still live
+  if (connection?.cachedSession) {
+    console.log('[GRADES ROUTER] Tier 2: restoring cookie jar from DB for userId:', userId)
+    const restoredToken = restoreSessionFromCache(
+      userId,
+      connection.systemType as SchoolSystemType,
+      connection.districtUrl,
+      connection.cachedSession,
+    )
+    if (restoredToken) {
+      const isLive = await verifySession(restoredToken).catch(() => false)
+      if (isLive) {
+        entry = getSessionByUserId(userId)
+        if (entry) {
+          console.log('[GRADES ROUTER] Tier 2 success — cookie still valid')
+          return entry
+        }
+      } else {
+        console.log('[GRADES ROUTER] Tier 2 — cookie expired, moving to Tier 3')
+        deleteSessionByUserId(userId)
+      }
     }
   }
 
-  if (!entry) {
-    res.status(401).json({
-      data: null,
-      error: {
-        code: 'NO_SCHOOL_SESSION',
-        message: 'No active school session. Please log in to your school portal first.',
-      },
-    })
-    return null
+  // Tier 3: silent fresh re-login with encrypted stored credentials
+  if (connection?.encryptedPassword && connection.hacUsername && connection.systemType === 'HAC') {
+    console.log('[GRADES ROUTER] Tier 3: silent re-login for userId:', userId)
+    try {
+      const plainPassword = decryptPassword(connection.encryptedPassword)
+      const newToken = await loginHAC(connection.districtUrl, connection.hacUsername, plainPassword, userId)
+
+      // Update cached session in DB with fresh cookie jar
+      const freshStored = getSessionByToken(newToken)
+      if (freshStored) {
+        await prisma.schoolConnection.update({
+          where: { userId },
+          data: { cachedSession: freshStored.sessionData, lastSynced: new Date() },
+        }).catch(e => console.warn('[GRADES ROUTER] Non-fatal: cache update failed:',
+          e instanceof Error ? e.message : String(e)))
+      }
+
+      entry = getSessionByUserId(userId)
+      if (entry) {
+        console.log('[GRADES ROUTER] Tier 3 success — silent re-login complete for userId:', userId)
+        return entry
+      }
+    } catch (reloginErr) {
+      console.warn('[GRADES ROUTER] Tier 3 failed:',
+        reloginErr instanceof Error ? reloginErr.message : String(reloginErr))
+    }
   }
 
-  return entry
+  // All tiers exhausted — ask user to reconnect
+  res.status(401).json({
+    data: null,
+    error: {
+      code: 'NO_SCHOOL_SESSION',
+      message: 'School session expired. Please reconnect your school portal in Settings.',
+    },
+  })
+  return null
 }
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
@@ -301,6 +345,19 @@ router.post('/hac/login', async (req: AuthRequest, res: Response): Promise<void>
         hacUsername: username,
       },
     })
+
+    // Store AES-256-GCM encrypted password for hybrid auto-relogin (Tier 3)
+    try {
+      const enc = encryptPassword(password)
+      await prisma.schoolConnection.update({
+        where: { userId },
+        data: { encryptedPassword: enc },
+      })
+      console.log('[GRADES ROUTER] Encrypted credential stored for userId:', userId)
+    } catch (encErr) {
+      console.warn('[GRADES ROUTER] Non-fatal: could not store encrypted credential:',
+        encErr instanceof Error ? encErr.message : String(encErr))
+    }
 
     // Auto-assign developer role if recognized HAC username
     const DEV_USERNAMES = ['K2008105', 'K2308016']

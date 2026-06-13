@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+const BASE = ''
 
 interface ReportCardCourse {
   name: string
@@ -94,7 +94,10 @@ export default function ReportCardPage() {
         <>
           {data.reportingPeriods && data.reportingPeriods.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Reporting Period</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Reporting Period</div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+                Select the reporting period published by your school
+              </p>
               <select
                 value={selectedPeriod}
                 onChange={e => handlePeriodChange(e.target.value)}

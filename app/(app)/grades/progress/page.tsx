@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+const BASE = ''
 
 interface IPRCourse {
   name: string
@@ -98,19 +98,23 @@ export default function ProgressReportPage() {
           {data.availableDates && data.availableDates.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Report Date</div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+                Select the reporting period published by your school
+              </p>
               <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
                 {data.availableDates.map(date => (
                   <button
                     key={date}
                     onClick={() => handleDateChange(date)}
                     style={{
-                      flexShrink: 0, padding: '8px 16px', borderRadius: 999, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+                      flexShrink: 0, padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500, cursor: 'pointer',
                       border: selectedDate === date ? 'none' : '1px solid var(--border)',
                       background: selectedDate === date ? 'var(--primary)' : 'var(--surface)',
                       color: selectedDate === date ? '#000' : 'var(--text-secondary)',
-                      transition: 'all 0.15s',
+                      transition: 'all 0.15s', textAlign: 'center' as const,
                     }}
                   >
+                    <span style={{ fontSize: 9.5, display: 'block', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 1 }}>Published</span>
                     {date}
                   </button>
                 ))}
