@@ -243,6 +243,24 @@ router.post('/hac/login', async (req: AuthRequest, res: Response): Promise<void>
       },
     })
 
+    // Auto-assign developer role if recognized HAC username
+    const DEV_USERNAMES = ['K2008105', 'K2308016']
+    if (DEV_USERNAMES.includes(username.trim())) {
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            role: 'ADMIN',
+            tag: 'DEV',
+            tagColor: 'lightblue',
+          },
+        })
+        console.log('[GRADES ROUTER] Auto-assigned DEV role + tag for HAC user:', username)
+      } catch (devErr) {
+        console.warn('[GRADES ROUTER] Non-fatal: could not assign DEV role:', devErr instanceof Error ? devErr.message : String(devErr))
+      }
+    }
+
     // Best-effort: fetch real student name from HAC and update User record
     try {
       console.log('[GRADES ROUTER] Fetching student info from HAC...')

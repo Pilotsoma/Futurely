@@ -176,6 +176,76 @@ function UserProfileOverlay({
           </button>
         )}
 
+        {/* ── Admin: Award/Edit Tag ── */}
+        {(() => {
+          const AdminTagPanel = () => {
+            const [localTagInput, setLocalTagInput] = useState(profile.tag || '')
+            const [localColorInput, setLocalColorInput] = useState(profile.tagColor || '')
+            const [saving, setSaving] = useState(false)
+            const [myRole, setMyRole] = useState<string | null>(null)
+
+            useEffect(() => {
+              api.feedUserProfile(currentUserId).then((p) => setMyRole(p.role)).catch(() => {})
+            }, [])
+
+            async function handleAwardTag() {
+              if (!localTagInput.trim() || saving) return
+              setSaving(true)
+              try {
+                const updated = await api.feedAwardTag(userId, localTagInput.trim(), localColorInput.trim() || undefined)
+                setProfile((prev) => prev ? { ...prev, tag: updated.tag, tagColor: updated.tagColor } : prev)
+              } catch (err) {
+                console.error('Failed to award tag:', err)
+              } finally {
+                setSaving(false)
+              }
+            }
+
+            async function handleResetTag() {
+              if (saving) return
+              setSaving(true)
+              try {
+                const updated = await api.feedResetTag(userId)
+                setProfile((prev) => prev ? { ...prev, tag: updated.tag, tagColor: null } : prev)
+                setLocalTagInput(updated.tag || '')
+                setLocalColorInput('')
+              } catch (err) {
+                console.error('Failed to reset tag:', err)
+              } finally {
+                setSaving(false)
+              }
+            }
+
+            if (myRole !== 'ADMIN') return null
+            return (
+              <div style={styles.adminTagSection}>
+                <h4 style={styles.adminTagTitle}>👑 Admin — Manage Tag</h4>
+                <div style={styles.adminTagRow}>
+                  <input
+                    style={styles.adminTagInput}
+                    placeholder="Tag (e.g. DEV, VIP, Staff)"
+                    value={localTagInput}
+                    onChange={(e) => setLocalTagInput(e.target.value)}
+                  />
+                  <input
+                    style={{ ...styles.adminTagInput, width: '80px' }}
+                    placeholder="Color"
+                    value={localColorInput}
+                    onChange={(e) => setLocalColorInput(e.target.value)}
+                  />
+                  <button style={styles.adminSaveBtn} onClick={handleAwardTag} disabled={saving}>
+                    {saving ? '...' : 'Set'}
+                  </button>
+                  <button style={styles.adminResetBtn} onClick={handleResetTag} disabled={saving}>
+                    Reset
+                  </button>
+                </div>
+              </div>
+            )
+          }
+          return <AdminTagPanel />
+        })()}
+
         {/* User's posts */}
         <div style={styles.profilePostsSection}>
           <h3 style={styles.profilePostsTitle}>Posts</h3>
@@ -220,6 +290,7 @@ function PostCard({
   currentUserId: number
 }) {
   const tagColor = (post.user as any).tagColor || 'grey'
+  const isDevTag = post.user.tag === 'DEV'
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
@@ -233,7 +304,10 @@ function PostCard({
               {displayName(post.user)}
             </span>
             {post.user.tag && (
-              <span style={{ ...styles.postTag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
+              <span
+                className={isDevTag ? 'tag-rainbow' : ''}
+                style={isDevTag ? styles.tagDev : { ...styles.postTag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}
+              >
                 [{post.user.tag}]
               </span>
             )}
@@ -833,6 +907,11 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'rgba(0,200,150,0.1)', padding: '1px 6px',
     borderRadius: '4px',
   },
+  tagDev: {
+    fontSize: '12px', fontWeight: '700', padding: '1px 6px',
+    borderRadius: '4px', border: '1px solid #ff6b6b',
+    color: '#ff6b6b', background: 'rgba(255,107,107,0.12)',
+  },
   time: { fontSize: '12px', color: 'var(--text-muted)' },
   deleteBtn: {
     marginLeft: 'auto', background: 'transparent', border: 'none',
@@ -980,6 +1059,35 @@ const styles: Record<string, React.CSSProperties> = {
   },
   profilePostTime: { color: 'var(--text-muted)' },
   profilePostLikes: { color: 'var(--text-secondary)' },
+
+  // Admin tag management
+  adminTagSection: {
+    background: 'rgba(255, 200, 50, 0.06)',
+    border: '1px solid rgba(255, 200, 50, 0.25)',
+    borderRadius: '8px', padding: '12px', marginBottom: '16px',
+  },
+  adminTagTitle: {
+    fontSize: '13px', fontWeight: '600', color: '#ffc832',
+    marginBottom: '8px',
+  },
+  adminTagRow: {
+    display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' as const,
+  },
+  adminTagInput: {
+    flex: 1, minWidth: '80px', padding: '6px 8px', borderRadius: '6px',
+    border: '1px solid var(--border)', background: 'var(--bg)',
+    color: 'var(--text)', fontSize: '12px',
+  },
+  adminSaveBtn: {
+    padding: '6px 12px', borderRadius: '6px', border: 'none',
+    background: '#ffc832', color: '#000', fontWeight: '600',
+    fontSize: '12px', cursor: 'pointer',
+  },
+  adminResetBtn: {
+    padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
+    background: 'transparent', color: 'var(--text-secondary)',
+    fontSize: '12px', cursor: 'pointer',
+  },
 
   // Empty state
   emptyState: {

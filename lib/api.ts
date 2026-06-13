@@ -218,6 +218,21 @@ export const api = {
         body: JSON.stringify({ tag }),
       },
     ),
+
+  feedAwardTag: (targetUserId: number, tag: string, tagColor?: string) =>
+    request<{ id: number; name: string | null; email: string; tag: string | null; tagColor: string | null }>(
+      `/api/feed/users/${targetUserId}/tag`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ tag, ...(tagColor ? { tagColor } : {}) }),
+      },
+    ),
+
+  feedResetTag: (targetUserId: number) =>
+    request<{ id: number; name: string | null; email: string; tag: string | null }>(
+      `/api/feed/users/${targetUserId}/tag`,
+      { method: 'DELETE' },
+    ),
 }
 
 // ── Study Feed types ───────────────────────────────────────────────────────

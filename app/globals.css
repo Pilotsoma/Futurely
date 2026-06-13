@@ -25,3 +25,20 @@ body {
 a { color: var(--primary); text-decoration: none; }
 button { cursor: pointer; font-family: inherit; font-size: inherit; }
 input, textarea { font-family: inherit; font-size: inherit; }
+
+/* ── Rainbow animation for DEV tag ── */
+@keyframes rainbow {
+  0%   { color: #ff6b6b; border-color: #ff6b6b; background: rgba(255,107,107,0.12); }
+  14%  { color: #ffa94d; border-color: #ffa94d; background: rgba(255,169,77,0.12); }
+  28%  { color: #ffd43b; border-color: #ffd43b; background: rgba(255,212,59,0.12); }
+  42%  { color: #69db7c; border-color: #69db7c; background: rgba(105,219,124,0.12); }
+  57%  { color: #38d9a9; border-color: #38d9a9; background: rgba(56,217,169,0.12); }
+  71%  { color: #4dabf7; border-color: #4dabf7; background: rgba(77,171,247,0.12); }
+  85%  { color: #da77f2; border-color: #da77f2; background: rgba(218,119,242,0.12); }
+  100% { color: #ff6b6b; border-color: #ff6b6b; background: rgba(255,107,107,0.12); }
+}
+
+.tag-rainbow {
+  animation: rainbow 3s linear infinite;
+  font-weight: 700 !important;
+}
