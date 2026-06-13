@@ -219,6 +219,7 @@ function PostCard({
   onOpenProfile: (userId: number) => void
   currentUserId: number
 }) {
+  const tagColor = (post.user as any).tagColor || 'grey'
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
@@ -232,7 +233,9 @@ function PostCard({
               {displayName(post.user)}
             </span>
             {post.user.tag && (
-              <span style={styles.postTag}>[{post.user.tag}]</span>
+              <span style={{ ...styles.postTag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
+                [{post.user.tag}]
+              </span>
             )}
           </div>
           <div style={styles.time}>{timeAgo(post.createdAt)}</div>
@@ -624,38 +627,6 @@ export default function StudyFeedPage() {
 
       {tab === 'feed' ? (
         <>
-          {/* Tag management */}
-          <div style={styles.tagBar}>
-            {editingTag ? (
-              <div style={styles.tagEditRow}>
-                <input
-                  style={styles.tagInput}
-                  placeholder="Your tag (e.g. Senior)"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  maxLength={20}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveTag()}
-                />
-                <button style={styles.tagSaveBtn} onClick={handleSaveTag}>Save</button>
-                <button
-                  style={styles.tagCancelBtn}
-                  onClick={() => { setEditingTag(false); setTagInput(myTag || '') }}
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <div style={styles.tagDisplayRow}>
-                <span style={styles.tagLabel}>
-                  Your tag: {myTag ? <span style={styles.tagBadge}>[{myTag}]</span> : <span style={styles.tagNone}>None set</span>}
-                </span>
-                <button style={styles.tagEditBtn} onClick={() => setEditingTag(true)}>
-                  {myTag ? 'Edit' : 'Set Tag'}
-                </button>
-              </div>
-            )}
-          </div>
-
           {/* New Post */}
           <div style={styles.newPostCard}>
             <textarea

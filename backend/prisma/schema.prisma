@@ -12,7 +12,8 @@ model User {
   email        String   @unique
   passwordHash String
   name         String?
-  tag          String?
+  tag          String   @default("Student")
+  tagColor     String?  @default("grey")
   role         String   @default("STUDENT")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

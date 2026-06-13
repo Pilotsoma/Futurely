@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 
-const TTL_MS = 30 * 60 * 1000 // 30 minutes
+const TTL_MS = 24 * 60 * 60 * 1000 // 24 hours (was 30 min)
+const EXTEND_ON_ACCESS_MS = 6 * 60 * 60 * 1000 // extend by 6h on successful access
 
 export type SchoolSystemType = 'HAC' | 'PowerSchool'
 
@@ -15,13 +16,13 @@ export interface StoredSession {
 
 const store = new Map<string, StoredSession>()
 
-// Purge expired sessions every 5 minutes
+// Purge expired sessions every 15 minutes
 setInterval(() => {
   const now = Date.now()
   for (const [key, val] of store.entries()) {
     if (val.expiresAt < now) store.delete(key)
   }
-}, 5 * 60 * 1000).unref()
+}, 15 * 60 * 1000).unref()
 
 export function saveSession(
   userId: number,
@@ -66,6 +67,17 @@ export function getSessionByUserId(userId: number): { token: string; session: St
     }
   }
   return null
+}
+
+/**
+ * Extend the session expiry on successful access, so active users
+ * don't get kicked out as long as they're using the app.
+ */
+export function touchSession(userId: number): void {
+  const entry = getSessionByUserId(userId)
+  if (entry) {
+    entry.session.expiresAt = Date.now() + EXTEND_ON_ACCESS_MS
+  }
 }
 
 export function deleteSessionByUserId(userId: number): void {

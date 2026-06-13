@@ -197,7 +197,7 @@ export const api = {
     request<FeedUserProfile>(`/api/feed/users/${targetUserId}/profile`),
 
   feedSearchUsers: (q: string) =>
-    request<Array<{ id: number; name: string | null; email: string; tag: string | null }>>(
+    request<Array<{ id: number; name: string | null; email: string; tag: string | null; tagColor: string | null }>>(
       `/api/feed/users/search?q=${encodeURIComponent(q)}`,
     ),
 
@@ -227,6 +227,7 @@ export interface FeedUser {
   name: string | null
   email: string
   tag: string | null
+  tagColor: string | null
 }
 
 export interface FeedPost {
@@ -254,6 +255,8 @@ export interface FeedUserProfile {
   name: string | null
   email: string
   tag: string | null
+  tagColor: string | null
+  role: string
   isFollowing: boolean
   totalLikes: number
   _count: { followers: number; following: number; posts: number }

@@ -14,7 +14,7 @@ import {
   getTranscript as psTranscript,
 } from './powerSchoolClient'
 import { buildSessionWithCLCookie } from './classLinkHelper'
-import { getSessionByUserId, getSessionByToken, deleteSessionByUserId, restoreSessionFromCache, type SchoolSystemType } from './sessionStore'
+import { getSessionByUserId, getSessionByToken, deleteSessionByUserId, restoreSessionFromCache, touchSession, type SchoolSystemType } from './sessionStore'
 import { prisma } from '../../lib/prisma'
 import { normalizeHacGrades, normalizePsGrades } from './normalizeGrades'
 
@@ -372,6 +372,9 @@ router.get('/current', async (req: AuthRequest, res: Response): Promise<void> =>
   if (!entry) return
 
   try {
+    // Extend session on successful access
+    touchSession(userId)
+
     if (entry.session.systemType === 'HAC') {
       const rawHacGrades = await hacGrades(entry.token)
       const normalizedGrades = normalizeHacGrades(rawHacGrades)

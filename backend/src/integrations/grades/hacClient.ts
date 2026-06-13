@@ -697,8 +697,10 @@ function parseClassBlock(
   const periodText = $el.find('.sg-header-period, [id*="lblPeriod"]').text().replace(/Period/i, '').trim()
 
   // Average
-  const avgRaw = $el.find('.sg-header-average, [id*="lblAverage"]').text()
-    .replace(/Student\s*Avg[:.]\s*/i, '').trim()
+  const avgRaw = $el.find('.sg-header-average, [id*="lblAverage"], [id*="lblHdrAverage"]').text()
+    .replace(/Student\s*Avg[:.]\s*/i, '')
+    .replace(/Classwork\s*Average\s*/i, '')
+    .trim()
   const average = avgRaw && avgRaw !== '--' && avgRaw !== 'N/A' ? avgRaw : null
 
   // Teacher

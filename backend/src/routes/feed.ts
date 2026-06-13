@@ -19,7 +19,7 @@ router.post('/posts', async (req: any, res) => {
     const post = await prisma.post.create({
       data: { userId, body: body.trim() },
       include: {
-        user: { select: { id: true, name: true, email: true, tag: true } },
+        user: { select: { id: true, name: true, email: true, tag: true, tagColor: true } },
         _count: { select: { likes: true, comments: true } },
       },
     })
@@ -45,7 +45,7 @@ router.get('/posts', async (req: any, res) => {
         skip,
         take: limit,
         include: {
-          user: { select: { id: true, name: true, email: true, tag: true } },
+          user: { select: { id: true, name: true, email: true, tag: true, tagColor: true } },
           likes: { select: { userId: true } },
           _count: { select: { likes: true, comments: true } },
         },
@@ -53,11 +53,10 @@ router.get('/posts', async (req: any, res) => {
       prisma.post.count(),
     ])
 
-    // Mark which posts the current user has liked
     const postsWithLiked = posts.map((p) => ({
       ...p,
       likedByMe: p.likes.some((l) => l.userId === userId),
-      likes: undefined, // strip raw likes array
+      likes: undefined,
     }))
 
     res.json({
@@ -84,10 +83,10 @@ router.get('/posts/:postId', async (req: any, res) => {
     const post = await prisma.post.findUnique({
       where: { id: postId },
       include: {
-        user: { select: { id: true, name: true, email: true, tag: true } },
+        user: { select: { id: true, name: true, email: true, tag: true, tagColor: true } },
         comments: {
           orderBy: { createdAt: 'asc' },
-          include: { user: { select: { id: true, name: true, email: true, tag: true } } },
+          include: { user: { select: { id: true, name: true, email: true, tag: true, tagColor: true } } },
         },
         likes: { select: { userId: true } },
         _count: { select: { likes: true, comments: true } },
@@ -183,7 +182,7 @@ router.post('/posts/:postId/comments', async (req: any, res) => {
 
     const comment = await prisma.comment.create({
       data: { postId, userId, body: body.trim() },
-      include: { user: { select: { id: true, name: true, email: true, tag: true } } },
+      include: { user: { select: { id: true, name: true, email: true, tag: true, tagColor: true } } },
     })
 
     res.json({ data: comment })
@@ -211,7 +210,6 @@ router.post('/users/:targetUserId/follow', async (req: any, res) => {
     })
 
     if (existing) {
-      // Unfollow
       await prisma.follow.delete({ where: { id: existing.id } })
       res.json({ data: { following: false } })
     } else {
@@ -231,7 +229,7 @@ router.get('/users/:targetUserId/followers', async (req: any, res) => {
 
     const followers = await prisma.follow.findMany({
       where: { followingId: targetUserId },
-      include: { follower: { select: { id: true, name: true, email: true, tag: true } } },
+      include: { follower: { select: { id: true, name: true, email: true, tag: true, tagColor: true } } },
     })
 
     res.json({ data: followers.map((f) => f.follower) })
@@ -248,7 +246,7 @@ router.get('/users/:targetUserId/following', async (req: any, res) => {
 
     const following = await prisma.follow.findMany({
       where: { followerId: targetUserId },
-      include: { following: { select: { id: true, name: true, email: true, tag: true } } },
+      include: { following: { select: { id: true, name: true, email: true, tag: true, tagColor: true } } },
     })
 
     res.json({ data: following.map((f) => f.following) })
@@ -282,7 +280,7 @@ router.get('/users/search', async (req: any, res) => {
           },
         ],
       },
-      select: { id: true, name: true, email: true, tag: true },
+      select: { id: true, name: true, email: true, tag: true, tagColor: true },
       take: 20,
     })
 
@@ -306,6 +304,8 @@ router.get('/users/:targetUserId/profile', async (req: any, res) => {
         name: true,
         email: true,
         tag: true,
+        tagColor: true,
+        role: true,
         _count: { select: { followers: true, following: true, posts: true } },
       },
     })
@@ -319,7 +319,6 @@ router.get('/users/:targetUserId/profile', async (req: any, res) => {
       where: { followerId_followingId: { followerId: userId, followingId: targetUserId } },
     })
 
-    // Calculate total likes across all of this user's posts
     const likesAggregate = await prisma.like.aggregate({
       where: { post: { userId: targetUserId } },
       _count: true,
@@ -354,7 +353,7 @@ router.get('/users/:targetUserId/posts', async (req: any, res) => {
         skip,
         take: limit,
         include: {
-          user: { select: { id: true, name: true, email: true, tag: true } },
+          user: { select: { id: true, name: true, email: true, tag: true, tagColor: true } },
           likes: { select: { userId: true } },
           _count: { select: { likes: true, comments: true } },
         },
@@ -383,30 +382,69 @@ router.get('/users/:targetUserId/posts', async (req: any, res) => {
   }
 })
 
-/** Update current user's tag */
-router.put('/users/me/tag', async (req: any, res) => {
+// ── Admin Tag Management ─────────────────────────────────────────────────────
+
+/** Award a tag to a user (admin/developer only) */
+router.put('/users/:targetUserId/tag', async (req: any, res) => {
   try {
     const userId = req.userId as number
-    const { tag } = req.body as { tag?: string }
+    const targetUserId = parseInt(req.params.targetUserId)
+
+    // Check if the requesting user is an admin/developer
+    const adminUser = await prisma.user.findUnique({ where: { id: userId } })
+    if (!adminUser || adminUser.role !== 'ADMIN') {
+      res.status(403).json({ error: { message: 'Only admins can award tags' } })
+      return
+    }
+
+    const { tag, tagColor } = req.body as { tag?: string; tagColor?: string }
 
     if (!tag || !tag.trim()) {
       res.status(400).json({ error: { message: 'Tag is required' } })
       return
     }
 
-    // Sanitize tag: remove brackets if user included them, trim, max 20 chars
     const cleanTag = tag.replace(/[[\]]/g, '').trim().slice(0, 20)
+    const cleanColor = tagColor ? tagColor.replace(/[[\]]/g, '').trim().slice(0, 20) : undefined
 
     const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { tag: cleanTag },
-      select: { id: true, name: true, email: true, tag: true },
+      where: { id: targetUserId },
+      data: {
+        tag: cleanTag,
+        ...(cleanColor ? { tagColor: cleanColor } : {}),
+      },
+      select: { id: true, name: true, email: true, tag: true, tagColor: true },
     })
 
     res.json({ data: updated })
   } catch (err) {
-    console.error('[FEED] Update tag error:', err)
-    res.status(500).json({ error: { message: 'Failed to update tag' } })
+    console.error('[FEED] Award tag error:', err)
+    res.status(500).json({ error: { message: 'Failed to award tag' } })
+  }
+})
+
+/** Reset a user's tag back to default [Student] (admin/developer only) */
+router.delete('/users/:targetUserId/tag', async (req: any, res) => {
+  try {
+    const userId = req.userId as number
+    const targetUserId = parseInt(req.params.targetUserId)
+
+    const adminUser = await prisma.user.findUnique({ where: { id: userId } })
+    if (!adminUser || adminUser.role !== 'ADMIN') {
+      res.status(403).json({ error: { message: 'Only admins can reset tags' } })
+      return
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: targetUserId },
+      data: { tag: 'Student', tagColor: 'grey' },
+      select: { id: true, name: true, email: true, tag: true, tagColor: true },
+    })
+
+    res.json({ data: updated })
+  } catch (err) {
+    console.error('[FEED] Reset tag error:', err)
+    res.status(500).json({ error: { message: 'Failed to reset tag' } })
   }
 })
 

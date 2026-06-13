@@ -16,8 +16,8 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName]         = useState('')
 
-  // HAC school portal fields (optional)
-  const [showHac, setShowHac]         = useState(false)
+  // HAC school portal fields (mandatory)
+  const [showHac, setShowHac]         = useState(true)
   const [hacUrl, setHacUrl]           = useState('https://homeaccess.katyisd.org/')
   const [hacUsername, setHacUsername] = useState('')
   const [hacPassword, setHacPassword] = useState('')
@@ -59,8 +59,22 @@ export default function LoginPage() {
       localStorage.setItem('ns_token', result.token)
       localStorage.setItem('ns_user', JSON.stringify(result.user))
 
-      // Step 2: If HAC credentials were provided, connect the school portal
-      if (showHac && hacUsername.trim() && hacPassword.trim() && hacUrl.trim()) {
+      // Step 2: Connect the school portal (mandatory for new registration)
+      if (isRegister) {
+        if (!hacUsername.trim() || !hacPassword.trim() || !hacUrl.trim()) {
+          setError('School portal credentials are required to create an account')
+          setIsLoading(false)
+          return
+        }
+        setStep('connecting')
+        try {
+          await api.portalLoginHAC(hacUrl.trim(), hacUsername.trim(), hacPassword.trim())
+          localStorage.setItem('ns_hac_url', hacUrl.trim())
+        } catch (hacErr) {
+          setHacError(hacErr instanceof Error ? hacErr.message : 'School portal connection failed')
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+      } else if (showHac && hacUsername.trim() && hacPassword.trim() && hacUrl.trim()) {
         setStep('connecting')
         try {
           await api.portalLoginHAC(hacUrl.trim(), hacUsername.trim(), hacPassword.trim())
@@ -157,20 +171,30 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* ── Divider + toggle for school portal ── */}
-          <div style={styles.dividerRow}>
-            <div style={styles.dividerLine} />
-            <span style={styles.dividerText}>optional</span>
-            <div style={styles.dividerLine} />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowHac(v => !v)}
-            style={styles.toggleBtn}
-          >
-            {showHac ? '▲ Hide school portal' : '▼ Connect school portal (HAC)'}
-          </button>
+          {/* ── School portal ── */}
+          {!isRegister && (
+            <>
+              <div style={styles.dividerRow}>
+                <div style={styles.dividerLine} />
+                <span style={styles.dividerText}>optional</span>
+                <div style={styles.dividerLine} />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHac(v => !v)}
+                style={styles.toggleBtn}
+              >
+                {showHac ? '▲ Hide school portal' : '▼ Connect school portal (HAC)'}
+              </button>
+            </>
+          )}
+          {isRegister && (
+            <div style={styles.dividerRow}>
+              <div style={styles.dividerLine} />
+              <span style={styles.dividerText}>required</span>
+              <div style={styles.dividerLine} />
+            </div>
+          )}
 
           {showHac && (
             <div style={styles.hacSection}>
@@ -208,6 +232,7 @@ export default function LoginPage() {
               </div>
               <p style={styles.hint}>
                 Your school credentials are never stored — they are only used to fetch your grades.
+                {isRegister && ' Required to create an account.'}
               </p>
               {hacError && <p style={styles.hacError}>⚠ {hacError} — you can connect later in Settings.</p>}
             </div>
