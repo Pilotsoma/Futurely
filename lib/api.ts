@@ -165,10 +165,17 @@ export const api = {
   portalSchedule: () =>
     request<{ schedule: Record<string, string>[] }>('/api/integrations/grades/schedule'),
 
-  portalReportCard: () =>
+  portalClasswork: () =>
     request<{
-      courses: Array<{ name: string; period: string; grade: string; letterGrade: string; credits: string }>
-    }>('/api/integrations/grades/report-card'),
+      classes: Array<{ name: string; period: string; teacher: string; room: string; average: string | null; scores: Array<{ name: string; category: string; score: number | null; totalPoints: number | null; percentage: string; dateDue: string }> }>
+    }>('/api/integrations/grades/classwork'),
+
+  portalReportCard: (period?: string) =>
+    request<{
+      reportingPeriods: string[]
+      currentPeriod: string
+      courses: Array<{ name: string; period: string; numericGrade: string; letterGrade: string; credits: string; teacher: string }>
+    }>(`/api/integrations/grades/report-card${period ? `?period=${encodeURIComponent(period)}` : ''}`),
 
   portalGpa: () =>
     request<{
@@ -177,15 +184,26 @@ export const api = {
       systemType: string
     }>('/api/integrations/grades/gpa'),
 
-  portalProgressReport: () =>
+  portalProgressReport: (date?: string) =>
     request<{
+      availableDates: string[]
+      currentDate: string
       courses: Array<{ name: string; period: string; average: string; letterGrade: string; teacher: string }>
-    }>('/api/integrations/grades/progress-report'),
+    }>(`/api/integrations/grades/progress-report${date ? `?date=${encodeURIComponent(date)}` : ''}`),
 
   portalContactTeachers: () =>
     request<{
       teachers: Array<{ name: string; courseName: string; period: string; email: null; emailNote: string; emailHint: string }>
     }>('/api/integrations/grades/contact-teachers'),
+
+  portalAttendance: (monthOffset = 0) =>
+    request<{
+      month: string
+      year: number
+      monthIndex: number
+      days: Array<{ date: string; dayOfWeek: string; status: string; code: string; description: string }>
+      summary: { absences: number; tardies: number; excused: number }
+    }>(`/api/integrations/grades/attendance?monthOffset=${monthOffset}`),
 
   // ── Study Feed ──────────────────────────────────────────────────────────────
 

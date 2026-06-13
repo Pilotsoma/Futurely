@@ -4,18 +4,18 @@ import { useRouter } from 'next/navigation'
 
 const CARDS = [
   {
-    href: '/grades/report-card',
-    title: 'Report Card',
-    desc: 'Grades & letter grades',
-    icon: '📋',
-    iconBg: 'rgba(0,200,150,0.1)',
+    href: '/grades/classwork',
+    title: 'Grades',
+    desc: 'Assignments & current averages',
+    icon: '📊',
+    iconBg: 'rgba(16,185,129,0.1)',
   },
   {
-    href: '/grades/transcript',
-    title: 'Transcript',
-    desc: 'Credits & GPA history',
-    icon: '📄',
-    iconBg: 'rgba(75,110,255,0.12)',
+    href: '/grades/report-card',
+    title: 'Report Card',
+    desc: 'Official grades by reporting period',
+    icon: '📋',
+    iconBg: 'rgba(59,130,246,0.12)',
   },
   {
     href: '/grades/schedule',
@@ -27,7 +27,7 @@ const CARDS = [
   {
     href: '/grades/what-if',
     title: 'What-If Calculator',
-    desc: 'Simulate grade changes',
+    desc: 'Simulate GPA changes',
     icon: '🧮',
     iconBg: 'rgba(0,200,150,0.08)',
   },
@@ -36,14 +36,28 @@ const CARDS = [
     title: 'Contact Teachers',
     desc: 'Email your teachers',
     icon: '✉️',
-    iconBg: 'rgba(167,139,250,0.1)',
+    iconBg: 'rgba(249,115,22,0.1)',
   },
   {
     href: '/grades/progress',
     title: 'Progress Report',
-    desc: 'Interim grades',
-    icon: '📊',
-    iconBg: 'rgba(249,115,22,0.1)',
+    desc: 'Interim grades by date',
+    icon: '📈',
+    iconBg: 'rgba(167,139,250,0.1)',
+  },
+  {
+    href: '/grades/transcript',
+    title: 'Transcript',
+    desc: 'Credits & GPA history',
+    icon: '📄',
+    iconBg: 'rgba(99,102,241,0.1)',
+  },
+  {
+    href: '/grades/attendance',
+    title: 'Attendance',
+    desc: 'Absences & tardies calendar',
+    icon: '📅',
+    iconBg: 'rgba(239,68,68,0.1)',
   },
 ]
 

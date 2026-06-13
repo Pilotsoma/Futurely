@@ -10,6 +10,7 @@ import {
   getReportCard,
   getProgressReport,
   getContactTeachers,
+  getAttendance,
 } from './hacClient'
 import {
   loginPowerSchool,
@@ -705,6 +706,24 @@ router.get('/status', async (req: AuthRequest, res: Response): Promise<void> => 
   })
 })
 
+router.get('/classwork', async (req: AuthRequest, res: Response): Promise<void> => {
+  const entry = await resolveSession(req.userId!, res)
+  if (!entry) return
+
+  if (entry.session.systemType !== 'HAC') {
+    res.status(400).json({ data: null, error: { code: 'UNSUPPORTED', message: 'Classwork is only available for HAC districts' } })
+    return
+  }
+
+  try {
+    touchSession(req.userId!)
+    const classes = await hacGrades(entry.token)
+    res.json({ data: { classes } })
+  } catch (err: unknown) {
+    sendError(res, 'FETCH_CLASSWORK', err, 'FETCH_ERROR')
+  }
+})
+
 router.get('/report-card', async (req: AuthRequest, res: Response): Promise<void> => {
   const entry = await resolveSession(req.userId!, res)
   if (!entry) return
@@ -716,7 +735,8 @@ router.get('/report-card', async (req: AuthRequest, res: Response): Promise<void
 
   try {
     touchSession(req.userId!)
-    const data = await getReportCard(entry.token)
+    const period = req.query.period as string | undefined
+    const data = await getReportCard(entry.token, period)
     res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_REPORT_CARD', err, 'FETCH_ERROR')
@@ -734,10 +754,30 @@ router.get('/progress-report', async (req: AuthRequest, res: Response): Promise<
 
   try {
     touchSession(req.userId!)
-    const data = await getProgressReport(entry.token)
+    const date = req.query.date as string | undefined
+    const data = await getProgressReport(entry.token, date)
     res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_PROGRESS_REPORT', err, 'FETCH_ERROR')
+  }
+})
+
+router.get('/attendance', async (req: AuthRequest, res: Response): Promise<void> => {
+  const entry = await resolveSession(req.userId!, res)
+  if (!entry) return
+
+  if (entry.session.systemType !== 'HAC') {
+    res.status(400).json({ data: null, error: { code: 'UNSUPPORTED', message: 'Attendance is only available for HAC districts' } })
+    return
+  }
+
+  try {
+    touchSession(req.userId!)
+    const offset = parseInt(String(req.query.monthOffset ?? '0')) || 0
+    const data = await getAttendance(entry.token, offset)
+    res.json({ data })
+  } catch (err: unknown) {
+    sendError(res, 'FETCH_ATTENDANCE', err, 'FETCH_ERROR')
   }
 })
 

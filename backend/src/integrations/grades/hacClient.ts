@@ -549,7 +549,7 @@ export async function getGrades(sessionToken: string): Promise<HACClass[]> {
   const origin = stored.baseUrl // already cleaned to https://hostname/
 
   // The correct URL for grades and classwork in PowerSchool HAC
-  const classworkUrl = `${origin}HomeAccess/Content/Student/Assignments.aspx`
+  const classworkUrl = `${origin}HomeAccess/Classes/Classwork`
 
   console.log('[HAC CLIENT] Fetching classwork from:', classworkUrl)
 
@@ -774,7 +774,7 @@ export async function getTranscript(sessionToken: string): Promise<HACTranscript
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400) // 0.8–1.2s delay
-  const res = await http.get(`${origin}HomeAccess/Content/Student/Transcript.aspx`, {
+  const res = await http.get(`${origin}HomeAccess/Grades/Transcript`, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
   const transcriptHtml = res.data as string
@@ -954,7 +954,7 @@ export async function getSchedule(sessionToken: string): Promise<object[]> {
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400)
-  const res = await http.get(`${origin}HomeAccess/Content/Student/Classes.aspx`, {
+  const res = await http.get(`${origin}HomeAccess/Classes/Schedule`, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
 
@@ -1037,8 +1037,10 @@ export async function getSchedule(sessionToken: string): Promise<object[]> {
   return schedule
 }
 
-export async function getReportCard(sessionToken: string): Promise<{
-  courses: Array<{ name: string; period: string; grade: string; letterGrade: string; credits: string }>
+export async function getReportCard(sessionToken: string, period?: string): Promise<{
+  reportingPeriods: string[]
+  currentPeriod: string
+  courses: Array<{ name: string; period: string; numericGrade: string; letterGrade: string; credits: string; teacher: string }>
 }> {
   const stored = getSessionByToken(sessionToken)
   if (!stored) throw new Error('School session expired — please log in again')
@@ -1047,17 +1049,51 @@ export async function getReportCard(sessionToken: string): Promise<{
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400)
-  const res = await http.get(`${origin}HomeAccess/Content/Student/ReportCards.aspx`, {
+  const initialRes = await http.get(`${origin}HomeAccess/Grades/ReportCard`, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
 
-  const html = res.data as string
-  const $ = cheerio.load(html)
+  let html = initialRes.data as string
+  let $ = cheerio.load(html)
+
+  // Extract reporting period dropdown options (#plnMain_ddlRCRuns)
+  const reportingPeriods: string[] = []
+  let currentPeriod = ''
+  $('[id*="ddlRCRuns"] option, #plnMain_ddlRCRuns option').each((_i, opt) => {
+    const text = $(opt).text().trim()
+    if (text) {
+      reportingPeriods.push(text)
+      if ($(opt).attr('selected') || !currentPeriod) currentPeriod = text
+    }
+  })
+
+  // If a specific period is requested, POST back to HAC selecting it
+  if (period && period !== currentPeriod && reportingPeriods.includes(period)) {
+    let requestedValue = ''
+    $('[id*="ddlRCRuns"] option, #plnMain_ddlRCRuns option').each((_i, opt) => {
+      if ($(opt).text().trim() === period) { requestedValue = $(opt).attr('value') ?? ''; return false }
+    })
+    const dropdownName = $('[id*="ddlRCRuns"]').attr('name') ?? 'ctl00$plnMain$ddlRCRuns'
+    const formData = new URLSearchParams({
+      __EVENTTARGET: dropdownName,
+      __EVENTARGUMENT: '',
+      __VIEWSTATE: ($('[id="__VIEWSTATE"]').val() as string) ?? '',
+      __EVENTVALIDATION: ($('[id="__EVENTVALIDATION"]').val() as string) ?? '',
+      __VIEWSTATEGENERATOR: ($('[id="__VIEWSTATEGENERATOR"]').val() as string) ?? '',
+      [dropdownName]: requestedValue,
+    })
+    const postRes = await http.post(`${origin}HomeAccess/Grades/ReportCard`, formData.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: `${origin}HomeAccess/Grades/ReportCard` },
+    })
+    html = postRes.data as string
+    $ = cheerio.load(html)
+    currentPeriod = period
+  }
+
   dumpDebugHtml('reportcard', html)
 
-  const courses: Array<{ name: string; period: string; grade: string; letterGrade: string; credits: string }> = []
+  const courses: Array<{ name: string; period: string; numericGrade: string; letterGrade: string; credits: string; teacher: string }> = []
 
-  // Try selectors in priority order; stop at first one that yields rows
   const rowSelectors = [
     '.sg-asp-table-data-row',
     'table.sg-asp-table tr',
@@ -1077,20 +1113,23 @@ export async function getReportCard(sessionToken: string): Promise<{
       courses.push({
         name,
         period: cells.eq(1).text().trim(),
-        grade: cells.eq(2).text().trim(),
+        numericGrade: cells.eq(2).text().trim(),
         letterGrade: cells.eq(3).text().trim(),
         credits: cells.eq(4).text().trim() || '',
+        teacher: cells.eq(5).text().trim() || '',
       })
     })
     if (courses.length > 0) break
   }
 
-  console.log(`[REPORT CARD] Parsed ${courses.length} courses`)
+  console.log(`[REPORT CARD] Parsed ${courses.length} courses, ${reportingPeriods.length} periods`)
   if (courses.length === 0) console.warn('[REPORT CARD] No courses found — check debug_reportcard.html')
-  return { courses }
+  return { reportingPeriods, currentPeriod, courses }
 }
 
-export async function getProgressReport(sessionToken: string): Promise<{
+export async function getProgressReport(sessionToken: string, date?: string): Promise<{
+  availableDates: string[]
+  currentDate: string
   courses: Array<{ name: string; period: string; average: string; letterGrade: string; teacher: string }>
 }> {
   const stored = getSessionByToken(sessionToken)
@@ -1100,17 +1139,52 @@ export async function getProgressReport(sessionToken: string): Promise<{
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400)
-  const res = await http.get(`${origin}HomeAccess/Content/Student/InterimProgress.aspx`, {
+  const initialRes = await http.get(`${origin}HomeAccess/Grades/IPR`, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
 
-  const html = res.data as string
-  const $ = cheerio.load(html)
+  let html = initialRes.data as string
+  let $ = cheerio.load(html)
+
+  // Extract IPR date dropdown options (#plnMain_ddlIPRDates)
+  const availableDates: string[] = []
+  let currentDate = ''
+  $('[id*="ddlIPRDates"] option, #plnMain_ddlIPRDates option').each((_i, opt) => {
+    const text = $(opt).text().trim()
+    if (text) {
+      availableDates.push(text)
+      if ($(opt).attr('selected') || !currentDate) currentDate = text
+    }
+  })
+
+  // If a specific date is requested, POST back to HAC selecting it
+  if (date && date !== currentDate && availableDates.includes(date)) {
+    let requestedValue = ''
+    $('[id*="ddlIPRDates"] option, #plnMain_ddlIPRDates option').each((_i, opt) => {
+      if ($(opt).text().trim() === date) { requestedValue = $(opt).attr('value') ?? ''; return false }
+    })
+    const dropdownName = $('[id*="ddlIPRDates"]').attr('name') ?? 'ctl00$plnMain$ddlIPRDates'
+    const formData = new URLSearchParams({
+      __EVENTTARGET: dropdownName,
+      __EVENTARGUMENT: '',
+      __VIEWSTATE: ($('[id="__VIEWSTATE"]').val() as string) ?? '',
+      __EVENTVALIDATION: ($('[id="__EVENTVALIDATION"]').val() as string) ?? '',
+      __VIEWSTATEGENERATOR: ($('[id="__VIEWSTATEGENERATOR"]').val() as string) ?? '',
+      [dropdownName]: requestedValue,
+    })
+    const postRes = await http.post(`${origin}HomeAccess/Grades/IPR`, formData.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: `${origin}HomeAccess/Grades/IPR` },
+    })
+    html = postRes.data as string
+    $ = cheerio.load(html)
+    currentDate = date
+  }
+
   dumpDebugHtml('ipr', html)
 
   const courses: Array<{ name: string; period: string; average: string; letterGrade: string; teacher: string }> = []
 
-  // Strategy 0: gradexis — #plnMain_dgIPR rows (cols: 0=course, 1=desc, 2=period, 3=teacher, 4=room, 5=grade)
+  // Strategy 0: #plnMain_dgIPR rows (cols: 0=course, 1=desc, 2=period, 3=teacher, 4=room, 5=grade)
   const dgIPRRows = $('#plnMain_dgIPR .sg-asp-table-data-row, #plnMain_dgIPR tr.sg-asp-table-data-row')
   if (dgIPRRows.length > 0) {
     dgIPRRows.each((_i, row) => {
@@ -1118,66 +1192,44 @@ export async function getProgressReport(sessionToken: string): Promise<{
       if (cells.length < 3) return
       const name = cells.eq(0).text().trim()
       if (!name || /^(course|class)/i.test(name)) return
-      courses.push({
-        name,
-        period: cells.eq(2).text().trim(),
-        average: cells.eq(5).text().trim(),
-        letterGrade: cells.eq(5).text().trim(),
-        teacher: cells.eq(3).text().trim(),
-      })
+      courses.push({ name, period: cells.eq(2).text().trim(), average: cells.eq(5).text().trim(), letterGrade: cells.eq(5).text().trim(), teacher: cells.eq(3).text().trim() })
     })
   }
 
-  // Strategy 0b: any .sg-asp-table-data-row on the IPR page (same column order)
   if (courses.length === 0) {
     $('.sg-asp-table-data-row').each((_i, row) => {
       const cells = $(row).find('td')
       if (cells.length < 3) return
       const name = cells.eq(0).text().trim()
       if (!name || /^(course|class)/i.test(name)) return
-      courses.push({
-        name,
-        period: cells.eq(2).text().trim(),
-        average: cells.eq(5).text().trim(),
-        letterGrade: cells.eq(5).text().trim(),
-        teacher: cells.eq(3).text().trim(),
-      })
+      courses.push({ name, period: cells.eq(2).text().trim(), average: cells.eq(5).text().trim(), letterGrade: cells.eq(5).text().trim(), teacher: cells.eq(3).text().trim() })
     })
   }
 
-  // Strategy 1: AssignmentClass blocks (same framework as classwork page)
   if (courses.length === 0 && $('.AssignmentClass').length > 0) {
     $('.AssignmentClass').each((_i, el) => {
       const rawName = $(el).find('.sg-header-heading, [id*="lblCourseName"]').first().text().trim()
       const name = rawName.replace(/\s*[-–]\s*Period\s*\d+.*$/i, '').trim() || rawName
       const period = $(el).find('.sg-header-period, [id*="lblPeriod"]').text().replace(/Period/i, '').trim()
-      const average = $(el).find('.sg-header-average, [id*="lblAverage"]').text()
-        .replace(/Student\s*Avg[:.]\s*/i, '').trim()
+      const average = $(el).find('.sg-header-average, [id*="lblAverage"]').text().replace(/Student\s*Avg[:.]\s*/i, '').trim()
       const teacher = $(el).find('.sg-header-teacher, [id*="lblTeacher"]').text().trim()
       if (name) courses.push({ name, period, average, letterGrade: '', teacher })
     })
   }
 
-  // Strategy 2: generic table row scan
   if (courses.length === 0) {
     $('table tr').each((_i, row) => {
       const cells = $(row).find('td')
       if (cells.length < 2) return
       const name = cells.eq(0).text().trim()
       if (!name || /^(course|class|subject|teacher)/i.test(name)) return
-      courses.push({
-        name,
-        period: cells.eq(1).text().trim(),
-        average: cells.eq(2).text().trim(),
-        letterGrade: cells.eq(3).text().trim(),
-        teacher: cells.eq(4).text().trim() || '',
-      })
+      courses.push({ name, period: cells.eq(1).text().trim(), average: cells.eq(2).text().trim(), letterGrade: cells.eq(3).text().trim(), teacher: cells.eq(4).text().trim() || '' })
     })
   }
 
-  console.log(`[IPR] Parsed ${courses.length} courses`)
+  console.log(`[IPR] Parsed ${courses.length} courses, ${availableDates.length} dates available`)
   if (courses.length === 0) console.warn('[IPR] No courses found — check debug_ipr.html')
-  return { courses }
+  return { availableDates, currentDate, courses }
 }
 
 export async function getContactTeachers(sessionToken: string): Promise<{
@@ -1262,4 +1314,110 @@ export async function getStudentInfo(sessionToken: string): Promise<HACStudentIn
       '[id*="GraduationYear"]',
     ]),
   }
+}
+
+export async function getAttendance(sessionToken: string, monthOffset: number = 0): Promise<{
+  month: string
+  year: number
+  monthIndex: number
+  days: Array<{ date: string; dayOfWeek: string; status: string; code: string; description: string }>
+  summary: { absences: number; tardies: number; excused: number }
+}> {
+  const stored = getSessionByToken(sessionToken)
+  if (!stored) throw new Error('School session expired — please log in again')
+
+  const { http } = restoreSession(stored)
+  const origin = stored.baseUrl
+
+  await sleep(800 + Math.random() * 400)
+  const initialRes = await http.get(`${origin}HomeAccess/Attendance/MonthView`, {
+    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
+  })
+
+  let html = initialRes.data as string
+  dumpDebugHtml('attendance', html)
+
+  // Navigate months via ASP.NET postback if offset != 0
+  if (monthOffset !== 0) {
+    const steps = Math.abs(monthOffset)
+    for (let s = 0; s < steps; s++) {
+      const $nav = cheerio.load(html)
+      const prevId = $nav('[id*="lbPrev"]').attr('id') ?? 'ctl00$plnMain$lbPrev'
+      const nextId = $nav('[id*="lbNext"]').attr('id') ?? 'ctl00$plnMain$lbNext'
+      const target = (monthOffset < 0 ? prevId : nextId).replace(/#/g, '')
+      const formData = new URLSearchParams({
+        __EVENTTARGET: target,
+        __EVENTARGUMENT: '',
+        __VIEWSTATE: ($nav('[id="__VIEWSTATE"]').val() as string) ?? '',
+        __EVENTVALIDATION: ($nav('[id="__EVENTVALIDATION"]').val() as string) ?? '',
+        __VIEWSTATEGENERATOR: ($nav('[id="__VIEWSTATEGENERATOR"]').val() as string) ?? '',
+      })
+      const navRes = await http.post(`${origin}HomeAccess/Attendance/MonthView`, formData.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: `${origin}HomeAccess/Attendance/MonthView` },
+      })
+      html = navRes.data as string
+      await sleep(300)
+    }
+    dumpDebugHtml('attendance_nav', html)
+  }
+
+  const $ = cheerio.load(html)
+
+  // Extract month/year heading
+  const heading = $('[id*="lblMonthYear"], [id*="lbMonthYear"], caption, .sg-header-heading, h2').first().text().trim()
+  const monthYear = heading || new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+
+  const MONTH_NAMES_ATT = ['january','february','march','april','may','june','july','august','september','october','november','december']
+  const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+  let year = new Date().getFullYear()
+  let monthIndex = new Date().getMonth()
+  const mymatch = monthYear.match(/(\w+)\s+(\d{4})/)
+  if (mymatch) {
+    const mIdx = MONTH_NAMES_ATT.indexOf(mymatch[1].toLowerCase())
+    if (mIdx >= 0) monthIndex = mIdx
+    year = parseInt(mymatch[2])
+  }
+
+  const days: Array<{ date: string; dayOfWeek: string; status: string; code: string; description: string }> = []
+
+  $('table td').each((_i, cell) => {
+    const $cell = $(cell)
+    const cellClass = ($cell.attr('class') ?? '').toLowerCase()
+    const title = ($cell.attr('title') ?? '').toLowerCase()
+
+    // Get the first visible number from this cell — that's the day number
+    const dayText = $cell.find('[id*="lblDate"], .sg-cal-date, span').first().text().trim()
+      || $cell.children('span').first().text().trim()
+    const dayNum = parseInt(dayText)
+    if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) return
+
+    const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
+    const d = new Date(year, monthIndex, dayNum)
+    const dayOfWeek = DAY_NAMES[d.getDay()] ?? ''
+
+    // Determine attendance code from class names, title attribute, or child image IDs
+    let code = ''
+    let status = ''
+    const childClasses = $cell.find('*').map((_j, el) => ($(el).attr('class') ?? '').toLowerCase()).get().join(' ')
+    const allClasses = cellClass + ' ' + childClasses
+    const hasImg = (id: string) => $cell.find(`[id*="${id}"]`).length > 0
+
+    if (/absent/i.test(title) || /absent/.test(allClasses) || hasImg('imgAbsent') || hasImg('Absent')) { code = 'A'; status = 'Absent' }
+    else if (/tardy/i.test(title) || /tardy/.test(allClasses) || hasImg('imgTardy') || hasImg('Tardy')) { code = 'T'; status = 'Tardy' }
+    else if (/excused/i.test(title) || /excused/.test(allClasses) || hasImg('imgExcused') || hasImg('Excused')) { code = 'E'; status = 'Excused' }
+    else if (/present/i.test(title) || /present/.test(allClasses)) { code = 'P'; status = 'Present' }
+
+    days.push({ date: dateStr, dayOfWeek, status, code, description: ($cell.attr('title') ?? '') })
+  })
+
+  // De-duplicate by date (table can have multiple cells per day in some layouts)
+  const seen = new Set<string>()
+  const uniqueDays = days.filter(d => { if (seen.has(d.date)) return false; seen.add(d.date); return true })
+
+  const absences = uniqueDays.filter(d => d.code === 'A').length
+  const tardies  = uniqueDays.filter(d => d.code === 'T').length
+  const excused  = uniqueDays.filter(d => d.code === 'E').length
+
+  console.log(`[ATTENDANCE] ${monthYear}: ${uniqueDays.length} days parsed, A=${absences} T=${tardies} E=${excused}`)
+  return { month: monthYear, year, monthIndex, days: uniqueDays, summary: { absences, tardies, excused } }
 }
