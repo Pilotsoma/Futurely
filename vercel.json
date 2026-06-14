@@ -1,5 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/ws/(.*)", "destination": "/api/ws/$1" }
-  ]
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install"
 }
