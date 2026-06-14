@@ -1,513 +1,405 @@
 
+
 <!DOCTYPE html>
-
-<html lang="en">
-    <head>
-        <meta charset="utf-8" />
-
-        
+<html>
+<head><title>
+	HomeAccess
+</title>
     
-    
-
-
-        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-            <title>Month View</title>
-        
-
-        <!-- 3rd party CSS our globals override -->
-<link  href="/HomeAccess/Stylesheets/Themes/Base/css?v=ErOiUuOsVp6tquD2fInmzTQl3A3SlFxTXp8j5mZ8LI01" type="text/css" rel="stylesheet" />
-<link  href="/HomeAccess/Stylesheets/SunGard/sungard-font-awesome.css" type="text/css" rel="stylesheet" />
-
-        <link  href="/HomeAccess/Stylesheets/Trirand/ui.jqgrid.css" type="text/css" rel="stylesheet" />
+    <link href="/HomeAccess/Stylesheets/Themes/Base/css?v=ErOiUuOsVp6tquD2fInmzTQl3A3SlFxTXp8j5mZ8LI01" rel="Stylesheet" type="text/css" /> 
 
     
-        <!-- Our globals -->
-        <link  href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=CrossSite" type="text/css" rel="stylesheet" />
-
-        <link  href="/HomeAccess/Stylesheets/Site.css" type="text/css" rel="stylesheet" />
-
-        <link href="/HomeAccess/Media/Themes/Base/Common/favicon.ico" rel="shortcut icon" type="image/x-icon" />
-
-        <!-- Our shared -->
-        <link  href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=ComboBox" type="text/css" rel="stylesheet" />
-
-        <link  href="/HomeAccess/Stylesheets/Common/Navigation.css" type="text/css" rel="stylesheet" />
-
-        <link  href="/HomeAccess/Stylesheets/Common/font-awesome.css" type="text/css" rel="stylesheet" />
-
-    
-        <!-- JS -->
-        
-    <link  href="/HomeAccess/Stylesheets/Frame/Frame?v=yzZqewVSSkEGBkILgX7u5yHUgsp6zMBY6ZlU_7X3NQw1" type="text/css" rel="stylesheet" />
-
-<link href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=SessionTracking" rel="stylesheet" />
+    <link rel="Stylesheet" href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=CrossSite" />
+    <link rel="Stylesheet" href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=ComboBox" />
+    <link rel="Stylesheet" href="/HomeAccess/Stylesheets/Common/font-awesome.css" />
     
     
-
-
-
-        <script type="text/javascript" nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/Scripts/libs/modernizr-2.8.3.js"></script>
-
-        <script type="text/javascript" nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/Scripts/Common/BrowserTest.js"></script>
-
-        <script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" type="text/javascript">
-            if (!BrowserTest()) {
-                document.location = '/HomeAccess/' + 'BrowserReject'; // Done because browsers that vail won't support jQuery
-            }
-        </script>
-            
-        <script type="text/javascript" nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/Scripts/libs/jquery?v=qIcuP3UP_aRnf7YSojJ0X96urcPMuU40OLTAhIFZUhU1"></script>
-
-
-        <script type="text/javascript" nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/Scripts/Trirand/ui.multiselect.js"></script>
-
-        <script type="text/javascript" nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/Scripts/Trirand/i18n/grid.locale-en.js"></script>
-
-        <script type="text/javascript" nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/Scripts/Trirand/jquery.jqGrid.js"></script>
-
-
-
-        <script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=SungardCommon" type="text/javascript"></script>
-        <script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=Combobox" type="text/javascript"></script>
-
-        <script type="text/javascript" nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/Scripts/Common/HAC.js"></script>
-
-        <script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" type="text/javascript">
-            $(function () {
-                    parseForComboBoxes();
-
-                SunGard.Hac.Area('');
-                SunGard.Hac.Controller('Attendance');
-                SunGard.Hac.Action('MonthView');
-
-                SunGard.Common.Init('/HomeAccess/');
-                SunGard.Hac.Init('/HomeAccess/');
-            });
-        </script>
-   
-        <!-- Gainsights Logic -->
-            <!-- Gainsight PX Tag-->
-            <script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" type="text/javascript">
-                        (function (n, t, a, e, co) {
-                            var i = "aptrinsic"; n[i] = n[i] || function () {
-                                (n[i].q = n[i].q || []).push(arguments)
-                            }, n[i].p = e; n[i].c = co;
-                            var r = t.createElement("script"); r.async = !0, r.src = a + "?a=" + e;
-                            var c = t.getElementsByTagName("script")[0]; c.parentNode.insertBefore(r, c)
-                        })(window, document, "https://web-sdk-us2.aptrinsic.com/api/aptrinsic.js", "AP-YDUVDTYHCH0C-2" + '');
-            </script>
-            <!-- Gainsight PX Tag-->
-
-        <!-- This should be at the bottom of this section -->
-        
-    <script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=SungardCommon" type="text/javascript"></script>
-    <script type="text/javascript" nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/Scripts/Frame/Frame?v=1u9U5AXsn-Es4rBPNTMVm2UiMdW1xGOw3HiHDq7e3hk1"></script>
-
-    <script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=SessionTracking" type="text/javascript"></script>
-
-    <script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw">
-        $(function() {
-            var timeout = 600;
-            var expireAfter = 599.5564656;
-            var showBefore = 120;
-            var redirectUrl = "/HomeAccess/Account/TimedOut";
-            var settingsOverride = {
-                captionText: null,
-                renewText: null,
-                ignoreText: null
-            };
-
-            SunGard.Common.SessionTracking.Init(timeout, expireAfter, showBefore, redirectUrl, settingsOverride);
-        });
-    </script>
-
-    <style >
-        .sg-asp-table th,
+    <link rel="Stylesheet" href="/HomeAccess/Stylesheets/Site.css" />
+    <link rel="stylesheet" href="/HomeAccess/Stylesheets/Frame/Frame.css" /> 
+    <link rel="SHORTCUT ICON" href="/HomeAccess/Media/Themes/Base/Common/favicon.ico"/>
+    <style>
         .sg-asp-table-header-row,
-        .sg-banner-logo-color,
-        .sg-hac-submenu,
-        .ui-jqgrid-view .ui-jqgrid-hdiv,
-        .ui-jqgrid tr.ui-jqgrid-labels th  { /* asp datatables dont produce th elements, only td. Use this class to index the header rows */
-            background-color: #00427c;
-            color: #FFFFFF
-        }
-        .sg-asp-table-header-row a,
-        .sg-banner-text-color {
-            color: #FFFFFF
+        .ui-jqgrid-view .ui-jqgrid-hdiv, 
+        .ui-jqgrid tr.ui-jqgrid-labels th  {
+	        background-color: #00427c;
+            color: #FFFFFF;
         }
     </style>
 
-    <!-- This should be at the bottom of this section -->
-    
-    <script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw">
-        $(SunGard.Hac.Frame.Init);
-        $(function() {
-            var helpUrl = '/HomeAccess/HelpTAC/Default.htm';
-            SunGard.Hac.Frame.Banner.Init();
+    <script src="/HomeAccess/Scripts/libs/jquery?v=qIcuP3UP_aRnf7YSojJ0X96urcPMuU40OLTAhIFZUhU1" type="text/javascript"></script>   
+    <script src="/HomeAccess/Scripts/libs/modernizr-2.8.3.js" type="text/javascript"></script>   
+    <script src="/HomeAccess/Scripts/Trirand/ui.multiselect.js" type="text/javascript" ></script>
+    <script src="/HomeAccess/Scripts/Trirand/i18n/grid.locale-en.js" type="text/javascript"></script>
+    <script src="/HomeAccess/Scripts/Trirand/jquery.jqGrid.js" type="text/javascript"></script>
+    <script src="/HomeAccess/Scripts/libs/json2.js" type="text/javascript"></script>
+    <script src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=SungardCommon" type="text/javascript"></script>    
+    <script src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=Combobox" type="text/javascript"></script>
+    <script type="text/javascript">
+        $(function () {
+            parseForComboBoxes();
         });
+    </script>    
+    
+
+    <script type="text/javascript">
+        $(SunGard.Common.Init('/HomeAccess/'));
     </script>
-
-    <!-- This should be at the bottom of this section -->
     
-
-
-
-
-    </head>
-    <!-- add webkit-overflow to fix scrolling on IOS Devices-->
-    <body style="-webkit-overflow-scrolling: touch;">
-        <a href="#MainContent" class="sg-skip-link">Skip to main content</a>
-        <main role="main">
-            
-
-
-
-
-
-
-    <header class="sg-main-header" role="banner">
-        
-
-
-
-
-<div class="sg-banner sg-banner-logo-color" data-contact-id="3739215" data-student-id="K2308016">
-
-
-
-        <div class="sg-banner-left sg-banner-left-default-logo" tabindex="0" role="img" aria-label="Katy ISD">
-            <div class="sg-banner-info-container">
-                <span class="sg-banner-text sg-banner-text-color">Katy ISD</span>
-            </div>
-        </div>
-
-    <div class="sg-banner-right">
-        <div class="sg-banner-menu-container">
-            <div class="sg-banner-menu-left"></div>
-            <ul class="sg-banner-menu">
-                <li class="sg-banner-menu-element sg-menu-element-identity">
-                    <span tabindex="0" role="button" aria-haspopup="true" aria-expanded="false">Soma Srikara Sai Vattem</span>
-                    <ul class="sg-banner-submenu" role="menu">
-                            <li role="none"><a href="/HomeAccess/Account/Alerts" role="menuitem">My Alerts</a></li>
-                        <li role="none"><a href="/HomeAccess/Account/Details" role="menuitem">My Account</a></li>
-                    </ul>
-                </li>
-
-                <li class="sg-banner-menu-divider"></li>
-                <li class="sg-banner-menu-element sg-menu-element-logoff"><a href="/HomeAccess/Account/Logoff">Logout</a></li>
-            </ul>
-            <div class="sg-banner-menu-right"></div>
-        </div>
-            <div class="sg-banner-chooser">
-                <span class="sg-banner-learning-location"></span>
-            </div>
-    </div>
-</div>
-<script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" type="text/javascript">
-    $(function () {
-        SunGard.Common.AddResource('Cancel', 'Cancel');
-        SunGard.Common.AddResource('Submit', 'Submit');
-        SunGard.Common.AddResource('EnrollNewStudent', 'Enroll New Student');
-        SunGard.Common.AddResource('ChangeStudentTitle', 'Choose Your Student');
-
-        var $identity = $('.sg-menu-element-identity');
-        var $identityTrigger = $identity.children('span[tabindex]');
-        $identity.on('focusin', function () {
-            $(this).addClass('sg-submenu-open');
-            $identityTrigger.attr('aria-expanded', 'true');
-        }).on('focusout', function () {
-            var $el = $(this);
-            setTimeout(function () {
-                if (!$.contains($el[0], document.activeElement)) {
-                    $el.removeClass('sg-submenu-open');
-                    $identityTrigger.attr('aria-expanded', 'false');
-                }
-            }, 0);
-        });
-        $identityTrigger.on('keydown', function (e) {
-            if (e.keyCode === 13 || e.keyCode === 32) {
-                e.preventDefault();
-                var $parent = $(this).parent();
-                $parent.toggleClass('sg-submenu-open');
-                var isOpen = $parent.hasClass('sg-submenu-open');
-                $(this).attr('aria-expanded', isOpen ? 'true' : 'false');
-                if (isOpen) {
-                    $parent.find('.sg-banner-submenu a').first().focus();
-                }
-            }
-        });
-    })
-</script>
-        
-
-<script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw">
-    function navigateHacMenuItem(elementId, url) {
-        var $element = $('#' + elementId);
-        if ($element.attr('data-open-in-new-tab') === 'true') {
-            window.open($element.attr('data-url'), '_blank', 'noopener');
-            return;
+    
+    
+    
+    <style>        
+        .sg-asp-calendar { width: 100%; font-size: 2.5em; }
+        .sg-asp-calendar-header {
+            border: none;
+	        border-bottom: medium solid #006699;
+	        font-weight: 700;
+	        color: #006699;
         }
+        .sg-asp-calendar-today { border: 1px solid #006699; }
 
-        window.location = url;
+        .sg-legend { border: 1px solid #006699; }
+        .sg-legend td  { padding-left: 5px; padding-right: 5px; }
+        .sg-legend tr.TableHeader td { text-align: center; }
+
+        .sg-width-38em { width: 38em; }
+    </style>
+    <script type="text/javascript" src="MonthlyView.js"></script>
+    <script type="text/javascript" src="/HomeAccess/Content/Common/Validation.js"></script>
+
+</head>
+<body>
+    
+    <div id='MainContent' class='sg-main-content'>
+        <div class='sg-hac-content'>
+            <form method="post" action="./MonthlyView.aspx" id="fmMain">
+<div class="aspNetHidden">
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="mWwFBpiZBaZxoNz+1ZdH4/ag3sokOOw0s3u/Tc7OwgLzZYFTDEIHYAGMKZ7+s1KzRwofwsCrMT7B7OnwSlqr+9i/WG77GAnp7AdrZRnfQtA=" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['fmMain'];
+if (!theForm) {
+    theForm = document.fmMain;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
     }
-
-        $(function() {
-            $('#hac-Home').click(function() { window.location = '/HomeAccess/Home/Home'; });
-            $('#hac-Home').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/Home/Home'; } });
-        });
-            $(function () {
-                $('#hac-nav-submenu-Home-WeekView').click(function () { navigateHacMenuItem('hac-nav-submenu-Home-WeekView', '/HomeAccess/Home/WeekView'); });
-                $('#hac-nav-submenu-Home-WeekView').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Home-WeekView', '/HomeAccess/Home/WeekView'); } });
-            });
-            $(function () {
-                $('#hac-nav-submenu-Home-SchoolLinks').click(function () { navigateHacMenuItem('hac-nav-submenu-Home-SchoolLinks', '/HomeAccess/Home/SchoolLinks'); });
-                $('#hac-nav-submenu-Home-SchoolLinks').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Home-SchoolLinks', '/HomeAccess/Home/SchoolLinks'); } });
-            });
-        $(function() {
-            $('#hac-Attendance').click(function() { window.location = '/HomeAccess/Attendance'; });
-            $('#hac-Attendance').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/Attendance'; } });
-        });
-            $(function () {
-                $('#hac-nav-submenu-Attendance-MonthView').click(function () { navigateHacMenuItem('hac-nav-submenu-Attendance-MonthView', '/HomeAccess/Attendance/MonthView'); });
-                $('#hac-nav-submenu-Attendance-MonthView').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Attendance-MonthView', '/HomeAccess/Attendance/MonthView'); } });
-            });
-        $(function() {
-            $('#hac-Classes').click(function() { window.location = '/HomeAccess/Classes'; });
-            $('#hac-Classes').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/Classes'; } });
-        });
-            $(function () {
-                $('#hac-nav-submenu-Classes-Classwork').click(function () { navigateHacMenuItem('hac-nav-submenu-Classes-Classwork', '/HomeAccess/Classes/Classwork'); });
-                $('#hac-nav-submenu-Classes-Classwork').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Classes-Classwork', '/HomeAccess/Classes/Classwork'); } });
-            });
-            $(function () {
-                $('#hac-nav-submenu-Classes-Schedule').click(function () { navigateHacMenuItem('hac-nav-submenu-Classes-Schedule', '/HomeAccess/Classes/Schedule'); });
-                $('#hac-nav-submenu-Classes-Schedule').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Classes-Schedule', '/HomeAccess/Classes/Schedule'); } });
-            });
-        $(function() {
-            $('#hac-Grades').click(function() { window.location = '/HomeAccess/Grades'; });
-            $('#hac-Grades').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/Grades'; } });
-        });
-            $(function () {
-                $('#hac-nav-submenu-Grades-IPR').click(function () { navigateHacMenuItem('hac-nav-submenu-Grades-IPR', '/HomeAccess/Grades/IPR'); });
-                $('#hac-nav-submenu-Grades-IPR').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Grades-IPR', '/HomeAccess/Grades/IPR'); } });
-            });
-            $(function () {
-                $('#hac-nav-submenu-Grades-ReportCard').click(function () { navigateHacMenuItem('hac-nav-submenu-Grades-ReportCard', '/HomeAccess/Grades/ReportCard'); });
-                $('#hac-nav-submenu-Grades-ReportCard').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Grades-ReportCard', '/HomeAccess/Grades/ReportCard'); } });
-            });
-            $(function () {
-                $('#hac-nav-submenu-Grades-Transcript').click(function () { navigateHacMenuItem('hac-nav-submenu-Grades-Transcript', '/HomeAccess/Grades/Transcript'); });
-                $('#hac-nav-submenu-Grades-Transcript').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Grades-Transcript', '/HomeAccess/Grades/Transcript'); } });
-            });
-            $(function () {
-                $('#hac-nav-submenu-Grades-TestScores').click(function () { navigateHacMenuItem('hac-nav-submenu-Grades-TestScores', '/HomeAccess/Grades/TestScores'); });
-                $('#hac-nav-submenu-Grades-TestScores').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Grades-TestScores', '/HomeAccess/Grades/TestScores'); } });
-            });
-            $(function () {
-                $('#hac-nav-submenu-Grades-TXTestScores').click(function () { navigateHacMenuItem('hac-nav-submenu-Grades-TXTestScores', '/HomeAccess/Grades/TXTestScores'); });
-                $('#hac-nav-submenu-Grades-TXTestScores').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Grades-TXTestScores', '/HomeAccess/Grades/TXTestScores'); } });
-            });
-        $(function() {
-            $('#hac-StudentSupport').click(function() { window.location = '/HomeAccess/StudentSupport'; });
-            $('#hac-StudentSupport').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/StudentSupport'; } });
-        });
-            $(function () {
-                $('#hac-nav-submenu-StudentSupport-Discipline').click(function () { navigateHacMenuItem('hac-nav-submenu-StudentSupport-Discipline', '/HomeAccess/StudentSupport/Discipline'); });
-                $('#hac-nav-submenu-StudentSupport-Discipline').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-StudentSupport-Discipline', '/HomeAccess/StudentSupport/Discipline'); } });
-            });
-        $(function() {
-            $('#hac-Registration').click(function() { window.location = '/HomeAccess/Registration'; });
-            $('#hac-Registration').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/Registration'; } });
-        });
-            $(function () {
-                $('#hac-nav-submenu-Registration-Demographic').click(function () { navigateHacMenuItem('hac-nav-submenu-Registration-Demographic', '/HomeAccess/Registration/Demographic'); });
-                $('#hac-nav-submenu-Registration-Demographic').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Registration-Demographic', '/HomeAccess/Registration/Demographic'); } });
-            });
-    // Focus management: On page load, focus the currently selected submenu item for keyboard users
-    $(function() {
-        // Only set focus if user navigated via keyboard (check for hash or sessionStorage flag)
-        if (sessionStorage.getItem('hacMenuKeyboardNav') === 'true') {
-            var $selectedSubmenu = $('.sg-hac-submenu-option-selected');
-            if ($selectedSubmenu.length > 0) {
-                $selectedSubmenu.first().focus();
-            }
-            sessionStorage.removeItem('hacMenuKeyboardNav');
-        }
-        // After submenu keyboard navigation, focus main content area
-        if (sessionStorage.getItem('hacSubmenuKeyboardNav') === 'true') {
-            var mainContent = document.getElementById('MainContent');
-            if (mainContent) {
-                mainContent.focus();
-            }
-            sessionStorage.removeItem('hacSubmenuKeyboardNav');
-        }
-    });
+}
+//]]>
 </script>
 
-<nav id="hac-nav-menu" class="sg-hac-menu" role="navigation" aria-label="Main menu">
-    <div class="sg-hac-menu-options" role="menubar">
-            <div id="hac-Home" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Home"  subDiv="#hac-nav-submenu-Home-options">
-                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-Home.png" />
-                <span>Home</span> 
-            </div>
-            <div id="hac-Attendance" class="sg-hac-menu-option sg-hac-menu-option-selected" tabindex="0" role="menuitem" aria-label="Attendance" aria-current="page" subDiv="#hac-nav-submenu-Attendance-options">
-                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-Attendance.png" />
-                <span>Attendance</span> 
-            </div>
-            <div id="hac-Classes" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Classes"  subDiv="#hac-nav-submenu-Classes-options">
-                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-Classes.png" />
-                <span>Classes</span> 
-            </div>
-            <div id="hac-Grades" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Grades"  subDiv="#hac-nav-submenu-Grades-options">
-                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-Grades.png" />
-                <span>Grades</span> 
-            </div>
-            <div id="hac-StudentSupport" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Student Support"  subDiv="#hac-nav-submenu-StudentSupport-options">
-                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-StudentSupport.png" />
-                <span>Student Support</span> 
-            </div>
-            <div id="hac-Registration" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Registration"  subDiv="#hac-nav-submenu-Registration-options">
-                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-Registration.png" />
-                <span>Registration</span> 
-            </div>
-    </div>
-</nav>
-<div id="hac-nav-submenu" class="sg-hac-submenu" role="navigation" aria-label="Sub menu">
-    <div id="hac-nav-submenu-Home-options" class="sg-hac-submenu-options" role="tablist" aria-label="Home" style="display:none;">
-            <div id="hac-nav-submenu-Home-WeekView" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Week View" aria-selected="false">
-                <span>Week View</span>
-            </div>
-            <div id="hac-nav-submenu-Home-SchoolLinks" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="School Links" aria-selected="false">
-                <span>School Links</span>
-            </div>
-    </div>
-    <div id="hac-nav-submenu-Attendance-options" class="sg-hac-submenu-options" role="tablist" aria-label="Attendance" style="">
-            <div id="hac-nav-submenu-Attendance-MonthView" class="sg-hac-submenu-option sg-hac-submenu-option-selected" role="tab" tabindex="0" aria-label="Month View" aria-selected="true" aria-current="page">
-                <span>Month View</span>
-            </div>
-    </div>
-    <div id="hac-nav-submenu-Classes-options" class="sg-hac-submenu-options" role="tablist" aria-label="Classes" style="display:none;">
-            <div id="hac-nav-submenu-Classes-Classwork" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Classwork" aria-selected="false">
-                <span>Classwork</span>
-            </div>
-            <div id="hac-nav-submenu-Classes-Schedule" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Schedule" aria-selected="false">
-                <span>Schedule</span>
-            </div>
-    </div>
-    <div id="hac-nav-submenu-Grades-options" class="sg-hac-submenu-options" role="tablist" aria-label="Grades" style="display:none;">
-            <div id="hac-nav-submenu-Grades-IPR" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="IPR" aria-selected="false">
-                <span>IPR</span>
-            </div>
-            <div id="hac-nav-submenu-Grades-ReportCard" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Report Card" aria-selected="false">
-                <span>Report Card</span>
-            </div>
-            <div id="hac-nav-submenu-Grades-Transcript" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Transcript" aria-selected="false">
-                <span>Transcript</span>
-            </div>
-            <div id="hac-nav-submenu-Grades-TestScores" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Test Scores" aria-selected="false">
-                <span>Test Scores</span>
-            </div>
-            <div id="hac-nav-submenu-Grades-TXTestScores" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Texas Test Scores" aria-selected="false">
-                <span>Texas Test Scores</span>
-            </div>
-    </div>
-    <div id="hac-nav-submenu-StudentSupport-options" class="sg-hac-submenu-options" role="tablist" aria-label="Student Support" style="display:none;">
-            <div id="hac-nav-submenu-StudentSupport-Discipline" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Discipline" aria-selected="false">
-                <span>Discipline</span>
-            </div>
-    </div>
-    <div id="hac-nav-submenu-Registration-options" class="sg-hac-submenu-options" role="tablist" aria-label="Registration" style="display:none;">
-            <div id="hac-nav-submenu-Registration-Demographic" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Demographic" aria-selected="false">
-                <span>Demographic</span>
-            </div>
-    </div>
+
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="C0F72E2D" />
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="lPZkn4vx56hs8138zuTG4wU2WFOG/UOBcl+xAOHZDkdjWttRLQ+8lCr3gwlUTfCwoabo3awOx4/AlHFy36pTS3i/xPiqDgWs47AcLxRrydqurIrzPUcwmE+EbuBzReKfQwXKU63BP63Sl+ZARIPvejTdEp7zI8oUhhqbpsPQQH3I13gf+BCbxNgSZTqW1bvFKrqg7loc56yj6HGrseBqKZzE9T5jCZ3tdcG6VhTmJAyoy/CAk0rouEaJcPG5VNYUF1RDlMm6Opf5IkvgaMXwsxpvIiOH+WytinxKa0LE9Mcuqu+kjoV1jnnAMzgaNeL6JLZNigBPaZRCQQfDOzikursqY160aodZlRyOwZHeqQ5AEBDUB/XQu7wM2MBuYTs12Ir2hDO22hGmuTpVWwrQ5CvVG7hrxq5Y+wd68QHCbEL5emMH3krGXDEcliWJ5zWbDHAR8aeyX+F6LNZCguazKNBcTXEK2AxTDIOpkWpEPbk1xFlAELbozsqsTrJVNEN3vbqm40MZfof/Q10AEsYa/4k17792KIVd3nrym8yrYjzUt/RlTet/gSHVRpcmY9gS79IqbzSQSLoBZSnDNO4Yi61tAyCOKIK0VusIfRH5STSM+dEXKnEmxNk1PXgals3yCDAAGREmPicmXwc32XX5x2Xa9v2gJjSiVyH9DAhhbPCNcQmZKYImK2QHLhfk/2zPdWhRtPfVBNrjk1dFnXmKMye9ELC6idlrDHnhtj9TUqD/EN2mo+KHbfiM+VNooLxNkawcb4oyFg16sjH8W7JfPuZURYCshDqeM5fBXW5ZBUrpL81aTTBovPhOIHVcEeuu3BH1erPD/NJpcT7XhNe6sAbl3f2eLvwOhGo9mabHAfA4suEuSXaHOSGtHXyoQ3IMoFV/d3ln8WKZ/1x6R7C76k9b8ReAhzMc7ajWwOu1c9ClLpucpDfte+MtzyQ8FTOq4dNKRnHFEGZEY0E2mMCw5c2wLWX3K0ROe+Mo6z1dK/MXlVYQso9n3VgDCz1W0jQK5BZvjgiC5AuAwYpONsa6PhWGph5e/cZn40hMsFcp/gk3vyJoCnHG2w9ebN+dhQEUaI49HGnKgLbu9tSfAy7x7d+RIHRdv6VWKstdkdUUUpCwyGlYw5Nk/DFhxifR9DCdVtpYTOUFpEFBVGz6+bC5iemGbovisjtAK0ywnwP4qQkVTlkDn7pFQmWwou/Fj5ZSZ4v8/N8jWEnOQiEAsSXO1+WBElctwuuXB/UljgeAH2UeTA9jf1WmLIZU9jaDLxqO7mcX91kgK4xdNR//mE0z4TAiL3b7JuIVtLNVuJZ/gGncukdvEjlx/qjXj5Vu/5BZ" />
 </div>
-    </header>
-
+                
     
 
+	<div class="sg-header">
+       
+	</div>
+     
+    <div class="sg-content-grid">
 
-<div id="MainContent" class="sg-main-content" tabindex="0">
-    
-
-    <div style="display: none;" id="session-block" aria-hidden="true">
-    </div>
-    <div id="session-container" style="display: none;" class="sg-container" role="alertdialog" aria-modal="true" aria-labelledby="session-warning-heading" aria-describedby="session-warning-text">
-        <div class="sg-header">
-		    <img class="sg-header-image" src="/HomeAccess/Media/Themes/Base/Headers/header-session-expire.png" alt="" aria-hidden="true" />
-		    <span class="sg-header-heading" id="session-warning-heading">Session Warning</span>
-        </div>
-        <div class="sg-container-content" id="session-background">
-            <p id="session-warning-text">Your session is about to expire.  Unsaved changes will be lost.</p>
-            <div id="session-buttons" class="sg-container-button">
-                <button Name="session-renew" Value="" aria_label="Keep session open" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" id="session-renew"><span class="ui-button-text">Keep session open</span></button>
-                <button Name="session-ignore" Value="" aria_label="Ignore" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" id="session-ignore"><span class="ui-button-text">Ignore</span></button>
-            </div>
-        </div>
-    </div>
-
-    
-
-
-
-
-
-
-
-
-<iframe src="/HomeAccess/Content/Attendance/MonthlyView.aspx" id="sg-legacy-iframe" class="sg-legacy-iframe" title="Month View" allowtransparency=true frameborder=0 scrolling="auto" seamless="seamless"></iframe>
-<div id="saveNotification" role="alert" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
-<script type="text/javascript" nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw" src="/HomeAccess/Scripts/Legacy/Index.js"></script>
-
-
-
-
-
-<input name="__RequestVerificationToken" type="hidden" value="VkgoDB5VujZPu1jeKPV09JbIwt2ShY-GmiSX5kyydeUHmvpV4RvYy183DsDuYEIYf4AM_WNfS1I4BcOuekV26lypB0oHNzJf4VtEo9sJFjk1" />
-</div>
-
-
-    <footer class="sg-main-footer" role="contentinfo">
-        <span class="sg-hac-footer-logo" aria-hidden="true"></span>
-<span class="sg-hac-copyright">&copy; 2003 - 2026 PowerSchool.  All Rights Reserved.</span>
-<nav class="sg-hac-footer-links" aria-label="Footer links">
-        <a href="/HomeAccess/Frame/PrivacyPolicy" onclick="SunGard.Hac.Frame.Footer.DisplayFooterPopup('/HomeAccess/Frame/PrivacyPolicy', 'Privacy Policy'); return false;" role="button">
-            Privacy Policy
-        </a>
-
-        <a href="/HomeAccess/Frame/TermsOfUse" onclick="SunGard.Hac.Frame.Footer.DisplayFooterPopup('/HomeAccess/Frame/TermsOfUse', 'Terms of Use'); return false;" role="button">
-            Terms of Use
-        </a>
-</nav>
-
-    </footer>
-
-    
-
-
-
-        </main>
         
-        <script nonce="AHrT4Mjc+p4O1ZudnRpy1/Dw">
-            $(function() {
-                // Build the jQuery UI buttons
-                $('.sg-buttonset').controlgroup();
-                $('.sg-button').button();
 
-                // Move focus to main content when skip link is activated
-                $('.sg-skip-link').on('click', function (e) {
-                    var target = document.getElementById('MainContent');
-                    if (target) {
-                        e.preventDefault();
-                        target.focus();
-                    }
-                });
-            })
-        </script>
-    </body>
-    
-    
-    
+        <div class="sg-content-alert-container sg-container-content">
+            
+        </div>
+        
+        <table id="plnMain_cldAttendance" class="sg-asp-calendar" cellspacing="0" cellpadding="2" title="Calendar" style="border-width:1px;border-style:None;border-collapse:collapse;">
+	<tr><td colspan="7" style="background-color:White;border-color:White;"><table class="sg-asp-calendar-header" cellspacing="0" style="width:100%;border-collapse:collapse;">
+		<tr><td valign="bottom" style="font-weight:bold;width:15%;"><a href="javascript:__doPostBack('ctl00$plnMain$cldAttendance','V9617')" style="color:Black" title="Go to the previous month"><span title='' aria-label='' role='button'>&lt;&lt;</span></a></td><td align="center" style="width:70%;">June 2026</td><td align="right" valign="bottom" style="font-weight:bold;width:15%;"><a href="javascript:__doPostBack('ctl00$plnMain$cldAttendance','V9678')" style="color:Black" title="Go to the next month"><span title='' aria-label='' role='button'>&gt;&gt;</span></a></td></tr>
+	</table></td></tr><tr><th align="center" abbr="Sunday" scope="col" style="font-weight:bold;">Sun</th><th align="center" abbr="Monday" scope="col" style="font-weight:bold;">Mon</th><th align="center" abbr="Tuesday" scope="col" style="font-weight:bold;">Tue</th><th align="center" abbr="Wednesday" scope="col" style="font-weight:bold;">Wed</th><th align="center" abbr="Thursday" scope="col" style="font-weight:bold;">Thu</th><th align="center" abbr="Friday" scope="col" style="font-weight:bold;">Fri</th><th align="center" abbr="Saturday" scope="col" style="font-weight:bold;">Sat</th></tr><tr><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="width:14%;">1</td><td align="center" style="width:14%;">2</td><td align="center" style="width:14%;">3</td><td align="center" style="width:14%;">4</td><td align="center" style="width:14%;">5</td><td align="center" style="width:14%;">6</td></tr><tr><td align="center" style="width:14%;">7</td><td align="center" style="width:14%;">8</td><td align="center" style="width:14%;">9</td><td align="center" style="width:14%;">10</td><td align="center" style="width:14%;">11</td><td align="center" style="width:14%;">12</td><td class="sg-asp-calendar-today" align="center" style="width:14%;">13</td></tr><tr><td align="center" style="width:14%;">14</td><td align="center" style="width:14%;">15</td><td align="center" style="width:14%;">16</td><td align="center" style="width:14%;">17</td><td align="center" style="width:14%;">18</td><td align="center" style="width:14%;">19</td><td align="center" style="width:14%;">20</td></tr><tr><td align="center" style="width:14%;">21</td><td align="center" style="width:14%;">22</td><td align="center" style="width:14%;">23</td><td align="center" style="width:14%;">24</td><td align="center" style="width:14%;">25</td><td align="center" style="width:14%;">26</td><td align="center" style="width:14%;">27</td></tr><tr><td align="center" style="width:14%;">28</td><td align="center" style="width:14%;">29</td><td align="center" style="width:14%;">30</td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td></tr><tr><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td></tr>
+</table>
+        
+        <div class="sg-asp-calendar-header">
+            <label id="lblColorLegend">Color Legend</label>
+        </div>
+        <div class="sg-clearfix" role="list" aria-label="Color Legend">
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #000000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>In-School Suspension</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #000000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Remote Attendance Engaged</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #000000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Remote Attendance Unengaged</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #0000cc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Doctor Note</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #006600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>College Visit/Military Visit</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>College Visit/Military Visit</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Court Appearance</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Doctor Note</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Dr. Note due to excessive abs.</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Ex Absence due to healthcare</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Ex Late arrival after ADA time</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Excused - Nurse</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Excused Absence w/note</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Homebound Instruction/CEHI</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Human Services activities</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>KISD Approved Absence</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>McKinney-Vento</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Medicaid Eligible</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Mentorship Absence</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Personal Illness w/note</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Religious Holy Day</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Religious Holy Day and other</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cccc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Excused Late/Early Dismissal</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00ffff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>District Outage / Individual Outage / Technology Issue (Internet Outage) / Power Outage</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00ffff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Excused Late/Early Dismissal</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00ffff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Late arrival before ADA time</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #660000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Absent - Unexcused</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #660000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Informed Concern 16DEP</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #6600cc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Ex Absence due to healthcare</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #666600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>CV Related</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #666666;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Out of School Suspension</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #6666ff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Dr. Note due to excessive abs.</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #996600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>School Activities non-UIL</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #996600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>School Sponsored non UIL</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #996600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>UIL Activities</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cc00cc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Personal Illness w/note</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cc66ff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>No show</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cc66ff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Remote Conferencing</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cccccc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Present</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cccccc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Present b/not in class</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cccccc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Remote Present Asynchronous</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cccccc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Remote Present Synchronous</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #ff0000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Absent - Unexcused</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #ff0000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Truancy</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #ff6600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>SYA Unexcused Absence</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #ffff00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Unex Late Arrival/Early Depart</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #FFCC99;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Multiple Attendance Codes</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #CCCCCC;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>School Closed</span>
+            </div>
+            
+        </div>
+    </div>
 
+    <input name="ctl00$plnMain$hdnValidMHACLicense" type="hidden" id="plnMain_hdnValidMHACLicense" />
+    <input name="ctl00$plnMain$hdnPeriod" type="hidden" id="plnMain_hdnPeriod" />
+    <input name="ctl00$plnMain$hdnAttendance" type="hidden" id="plnMain_hdnAttendance" />
+    <input name="ctl00$plnMain$hdnDismissTime" type="hidden" id="plnMain_hdnDismissTime" />
+    <input name="ctl00$plnMain$hdnArriveTime" type="hidden" id="plnMain_hdnArriveTime" />
+    <input name="ctl00$plnMain$hdnColorLegend" type="hidden" id="plnMain_hdnColorLegend" />
+    <input name="ctl00$plnMain$hdnCalTooltip" type="hidden" id="plnMain_hdnCalTooltip" />
+    <input name="ctl00$plnMain$hdnCalPrvMthToolTip" type="hidden" id="plnMain_hdnCalPrvMthToolTip" />
+    <input name="ctl00$plnMain$hdnCalNxtMthToolTip" type="hidden" id="plnMain_hdnCalNxtMthToolTip" />
+    <input name="ctl00$plnMain$hdnMultipleAttendenceCodes" type="hidden" id="plnMain_hdnMultipleAttendenceCodes" value="Multiple Attendance Codes" />
+    <input name="ctl00$plnMain$hdnSchoolClosed" type="hidden" id="plnMain_hdnSchoolClosed" value="School Closed" />
+    <input name="ctl00$plnMain$hdnLegendNoCodes" type="hidden" id="plnMain_hdnLegendNoCodes" value="Attendance Codes could not be found." />
+    <input name="ctl00$plnMain$hdnHyperlinkText_exist" type="hidden" id="plnMain_hdnHyperlinkText_exist" value="(Alerts Are Limited. Click to View List of Selected Choices.)" /> 
+    <input name="ctl00$plnMain$hdnHyperlinkText_Noexist" type="hidden" id="plnMain_hdnHyperlinkText_Noexist" value="(Limit Alerts to Specific Types of Attendance)" /> 
 
+            </form>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            // Build the jQuery UI buttons
+            $('.sg-buttonset').controlgroup();
+            $('.sg-button').button();
+            window.parent.$('.sg-legacy-iframe').height($('.sg-main-content').height()); // set the init size
+            // Increase length of smaller content windows to reduce cutoffs in dropdowns. 
+            var iframeHeight = window.parent.$('.sg-legacy-iframe').height(); 
+            if (iframeHeight < 450)
+            { window.parent.$('.sg-legacy-iframe').height($('.sg-main-content').height() + 200); }
+           
+        })
+    </script>
+</body>
 </html>

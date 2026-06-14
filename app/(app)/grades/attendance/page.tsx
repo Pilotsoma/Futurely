@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+const BASE = ''
 
 interface AttendanceDay {
   date: string

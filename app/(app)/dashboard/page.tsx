@@ -64,7 +64,7 @@ export default function DashboardPage() {
       {portalGpa !== null && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
           <div className="ns-card" style={{ padding: 18, background: 'rgba(0,200,150,0.06)', borderColor: 'rgba(0,200,150,0.25)' }}>
-            <p style={S.cardLabel}>Cumulative GPA</p>
+            <p style={S.cardLabel}>Current GPA</p>
             <p style={{ fontSize: 32, fontWeight: 800, color: 'var(--primary)', marginTop: 8, marginBottom: 4, lineHeight: 1 }}>
               {portalGpa.toFixed(2)}
             </p>
