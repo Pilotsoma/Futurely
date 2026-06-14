@@ -1,4 +1,4 @@
-import { Router, Response } from 'express'
+import { Router, Response, NextFunction, Request } from 'express'
 import { z } from 'zod'
 import { AuthRequest } from '../../middleware/auth'
 import {
@@ -20,6 +20,7 @@ import {
 import { buildSessionWithCLCookie } from './classLinkHelper'
 import { getSessionByUserId, getSessionByToken, deleteSessionByUserId, restoreSessionFromCache, touchSession, type SchoolSystemType } from './sessionStore'
 import { prisma } from '../../lib/prisma'
+import { APIError, AuthenticationError } from './errors'
 import { normalizeHacGrades, normalizePsGrades } from './normalizeGrades'
 import { encryptPassword, decryptPassword } from './credentialCrypto'
 
@@ -148,7 +149,8 @@ function statusFromError(message: string, status?: number): number {
 
 function sendError(res: Response, label: string, err: unknown, fallbackCode: string): void {
   const details = getErrorDetails(err)
-  const status = statusFromError(details.message, details.status)
+  // Typed errors carry their own status — use it directly
+  const status = err instanceof APIError ? err.status : statusFromError(details.message, details.status)
 
   console.error(`[${label}] FAILED`, {
     message: details.message,
@@ -161,7 +163,7 @@ function sendError(res: Response, label: string, err: unknown, fallbackCode: str
   res.status(status).json({
     data: null,
     error: {
-      code: fallbackCode,
+      code: err instanceof AuthenticationError ? 'AUTH_ERROR' : fallbackCode,
       message: details.message,
       details: {
         code: details.code,
@@ -170,6 +172,27 @@ function sendError(res: Response, label: string, err: unknown, fallbackCode: str
       },
     },
   })
+}
+
+// asyncHandler: ensures uncaught async errors always produce JSON + correct CORS headers.
+// Login/session pattern adapted from gradexis-api (Apache-2.0): github.com/ruskcoder/gradexis-api
+function asyncHandler(
+  fn: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>
+) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req as AuthRequest, res, next)).catch(err => {
+      if (!res.headersSent) {
+        const status = err instanceof APIError ? err.status : 500
+        res.status(status).json({
+          data: null,
+          error: {
+            code: err instanceof AuthenticationError ? 'AUTH_ERROR' : 'INTERNAL_ERROR',
+            message: err instanceof Error ? err.message : 'Internal server error',
+          },
+        })
+      }
+    })
+  }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

@@ -5,14 +5,37 @@
 
 import fs from 'fs'
 import path from 'path'
-import axios from 'axios'
+import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { wrapper } from 'axios-cookiejar-support'
 import { CookieJar } from 'tough-cookie'
 import * as cheerio from 'cheerio'
 import type { AnyNode } from 'domhandler'
 import { saveSession, getSessionByToken, StoredSession } from './sessionStore'
+import { AuthenticationError, ScrapeError } from './errors'
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+// Login/session pattern adapted from gradexis-api (Apache-2.0): github.com/ruskcoder/gradexis-api
+const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Cache-Control': 'max-age=0',
+  'Connection': 'keep-alive',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'same-origin',
+  'Sec-Fetch-User': '?1',
+  'sec-ch-ua': '"Chromium";v="128", "Not;A=Brand";v="24", "Microsoft Edge";v="128"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+} as const
+
+function isLoginPage(html: string): boolean {
+  return html.includes('LogOnDetails.UserName') ||
+    (html.includes('LogOn') && html.includes('__RequestVerificationToken'))
+}
 
 function dumpDebugHtml(filename: string, html: string): void {
   try {
@@ -113,24 +136,24 @@ function throwDetailedAxiosError(label: string, err: unknown): never {
   })
 
   if (details.code === 'ENOTFOUND') {
-    throw new Error(`Cannot reach HAC URL. DNS lookup failed for ${details.url ?? 'unknown URL'}`)
+    throw new ScrapeError(`Cannot reach HAC URL. DNS lookup failed for ${details.url ?? 'unknown URL'}`)
   }
 
   if (details.code === 'ECONNREFUSED') {
-    throw new Error(`Connection refused by HAC at ${details.url ?? 'unknown URL'}`)
+    throw new ScrapeError(`Connection refused by HAC at ${details.url ?? 'unknown URL'}`)
   }
 
   if (details.code === 'ETIMEDOUT' || details.code === 'ECONNABORTED') {
-    throw new Error(`Connection timed out while contacting HAC at ${details.url ?? 'unknown URL'}`)
+    throw new ScrapeError(`Connection timed out while contacting HAC at ${details.url ?? 'unknown URL'}`)
   }
 
   if (details.status) {
-    throw new Error(
+    throw new ScrapeError(
       `HAC request failed with HTTP ${details.status} at ${details.url ?? 'unknown URL'}`,
     )
   }
 
-  throw new Error(
+  throw new ScrapeError(
     `HAC request failed: ${details.message}${details.code ? ` (${details.code})` : ''}`,
   )
 }
@@ -146,12 +169,7 @@ function makeAxiosSession() {
     timeout: 45_000,
     maxRedirects: 10,
     validateStatus: status => status >= 200 && status < 500,
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
+    headers: { ...BROWSER_HEADERS },
   })
 
   return {
@@ -177,12 +195,7 @@ function restoreSession(stored: StoredSession) {
     timeout: 45_000,
     maxRedirects: 10,
     validateStatus: status => status >= 200 && status < 500,
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
+    headers: { ...BROWSER_HEADERS },
   })
 
   return {
@@ -305,7 +318,7 @@ export async function loginHAC(
 
     console.error('[HAC CLIENT] Page HTML (first 3000 chars):', loginPageHtml.slice(0, 3000))
 
-    throw new Error(
+    throw new ScrapeError(
       `Could not find login form on HAC page. Page title: ${title || 'unknown'}. The district may use SSO/ClassLink or a different login URL.`,
     )
   }
@@ -315,22 +328,30 @@ export async function loginHAC(
   $('form input').each((_i, input) => {
     const name = $(input).attr('name')
     const value = $(input).attr('value') ?? ''
+    if (name) formData.set(name, value)
+  })
 
-    if (name) {
-      formData.set(name, value)
-    }
+  // Collect default values from <select> elements (not captured by input scan)
+  $('form select').each((_i, sel) => {
+    const name = $(sel).attr('name')
+    if (!name) return
+    const selected = $(sel).find('option[selected]').first()
+    const defaultOpt = selected.length ? selected : $(sel).find('option').first()
+    formData.set(name, defaultOpt.attr('value') ?? defaultOpt.text().trim())
   })
 
   formData.set('__RequestVerificationToken', verificationToken)
   formData.set('VerificationOption', 'UsernamePassword')
-  // Set both dot-notation (ASP.NET MVC model binding) and underscore-notation (HTML ID form)
   formData.set('LogOnDetails.UserName', username)
   formData.set('LogOnDetails.Password', password)
   formData.set('LogOnDetails_UserName', username)
   formData.set('LogOnDetails_Password', password)
-  // Some HAC implementations use tempUN/tempPW as intermediate fields
   if (formData.has('tempUN')) formData.set('tempUN', username)
   if (formData.has('tempPW')) formData.set('tempPW', password)
+
+  // SCKTY fields required by some eSchoolPlus/HAC districts
+  if (!formData.has('SCKTY00328510CustomEnabled')) formData.set('SCKTY00328510CustomEnabled', 'true')
+  if (!formData.has('SCKTY00436568CustomEnabled')) formData.set('SCKTY00436568CustomEnabled', 'true')
 
   if (!formData.has('Database')) {
     formData.set('Database', '10')
@@ -372,7 +393,7 @@ export async function loginHAC(
     })
 
     if (postRes.status >= 500) {
-      throw new Error(`HAC login POST returned HTTP ${postRes.status}. Title: ${postTitle || 'unknown'}.`)
+      throw new ScrapeError(`HAC login POST returned HTTP ${postRes.status}. Title: ${postTitle || 'unknown'}.`)
     }
 
     // Explicit credential rejection messages
@@ -382,7 +403,12 @@ export async function loginHAC(
       postHtml.includes('The user name or password is incorrect') ||
       postHtml.includes('Login was unsuccessful')
     ) {
-      throw new Error('Invalid credentials — HAC rejected the username or password')
+      throw new AuthenticationError('Invalid credentials — HAC rejected the username or password')
+    }
+
+    // Fast login-page detection: if POST response body still looks like the login page, fail early
+    if (isLoginPage(postHtml) && !postFinalUrl.includes('/Error')) {
+      throw new AuthenticationError('Invalid credentials — HAC returned login page after POST')
     }
 
     const isStillOnLoginPage =
@@ -419,7 +445,7 @@ export async function loginHAC(
       homeFinalUrl.includes('Account/LogOn') || homeFinalUrl.includes('Account/Login')
 
     if (homeRedirectedToLogin) {
-      throw new Error('Invalid credentials — HAC rejected the username or password')
+      throw new AuthenticationError('Invalid credentials — HAC rejected the username or password')
     }
 
     // A redirect to an error page is NOT proof of bad credentials (e.g. a
@@ -440,7 +466,7 @@ export async function loginHAC(
       ).length > 0
 
       if (hasLoginInput) {
-        throw new Error('Invalid credentials — login form still present after authentication attempt')
+        throw new AuthenticationError('Invalid credentials — login form still present after authentication attempt')
       }
     }
 
@@ -475,7 +501,7 @@ export async function loginHAC(
   )
 
   if (!hasAspxAuth && !hasSessionCookie) {
-    throw new Error('Invalid credentials — HAC did not set an authentication cookie')
+    throw new AuthenticationError('Invalid credentials — HAC did not set an authentication cookie')
   }
   if (!hasAspxAuth && hasSessionCookie) {
     console.warn('[HAC CLIENT] No .ASPXAUTH but session cookie found — proceeding')
@@ -567,6 +593,22 @@ function extractAverage($el: cheerio.Cheerio<AnyNode>, $: cheerio.CheerioAPI): s
   return null
 }
 
+// ── Session-validity guard ─────────────────────────────────────────────────────
+// Login/session pattern adapted from gradexis-api (Apache-2.0): github.com/ruskcoder/gradexis-api
+// Wraps http.get() and throws immediately if the response is a login page,
+// giving a clear error instead of silently returning unparseable HTML.
+async function getChecked(
+  http: AxiosInstance,
+  url: string,
+  opts?: AxiosRequestConfig
+) {
+  const res = await http.get(url, opts)
+  if (typeof res.data === 'string' && isLoginPage(res.data)) {
+    throw new AuthenticationError('School session expired — please log in again')
+  }
+  return res
+}
+
 // ── Data fetchers ──────────────────────────────────────────────────────────────
 
 export interface HACGradesResult {
@@ -577,7 +619,7 @@ export interface HACGradesResult {
 
 export async function getGrades(sessionToken: string, period?: string): Promise<HACGradesResult> {
   const stored = getSessionByToken(sessionToken)
-  if (!stored) throw new Error('School session expired — please log in again')
+  if (!stored) throw new AuthenticationError('School session expired — please log in again')
 
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl // already cleaned to https://hostname/
@@ -588,7 +630,7 @@ export async function getGrades(sessionToken: string, period?: string): Promise<
   console.log('[HAC CLIENT] Fetching classwork from:', classworkUrl)
 
   await sleep(800 + Math.random() * 400) // 0.8–1.2s delay
-  const res = await http.get(classworkUrl, {
+  const res = await getChecked(http, classworkUrl, {
     headers: {
       Referer: `${origin}HomeAccess/Home.aspx`,
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -604,7 +646,7 @@ export async function getGrades(sessionToken: string, period?: string): Promise<
 
   // If redirected to login, session expired
   if (finalUrl.includes('Account/LogOn') || finalUrl.includes('Account/Login')) {
-    throw new Error('School session expired — please log in again')
+    throw new AuthenticationError('School session expired — please log in again')
   }
 
   const outerHtml = res.data as string
@@ -913,14 +955,14 @@ function parseClassBlock(
 
 export async function getTranscript(sessionToken: string): Promise<HACTranscript> {
   const stored = getSessionByToken(sessionToken)
-  if (!stored) throw new Error('School session expired or not found — please log in again')
+  if (!stored) throw new AuthenticationError('School session expired or not found — please log in again')
 
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400) // 0.8–1.2s delay
   const transcriptUrl = `${origin}HomeAccess/Grades/Transcript`
-  const res = await http.get(transcriptUrl, {
+  const res = await getChecked(http, transcriptUrl, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
   const outerTransHtml = res.data as string
@@ -1258,14 +1300,14 @@ export async function getTranscript(sessionToken: string): Promise<HACTranscript
 
 export async function getSchedule(sessionToken: string): Promise<object[]> {
   const stored = getSessionByToken(sessionToken)
-  if (!stored) throw new Error('School session expired or not found — please log in again')
+  if (!stored) throw new AuthenticationError('School session expired or not found — please log in again')
 
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400)
   const scheduleUrl = `${origin}HomeAccess/Classes/Schedule`
-  const res = await http.get(scheduleUrl, {
+  const res = await getChecked(http, scheduleUrl, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
 
@@ -1381,14 +1423,14 @@ export async function getReportCard(sessionToken: string, period?: string): Prom
   }
 }> {
   const stored = getSessionByToken(sessionToken)
-  if (!stored) throw new Error('School session expired — please log in again')
+  if (!stored) throw new AuthenticationError('School session expired — please log in again')
 
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400)
   const reportCardUrl = `${origin}HomeAccess/Grades/ReportCard`
-  const initialRes = await http.get(reportCardUrl, {
+  const initialRes = await getChecked(http, reportCardUrl, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
 
@@ -1504,14 +1546,14 @@ export async function getProgressReport(sessionToken: string, date?: string): Pr
   courses: Array<{ name: string; period: string; average: string; letterGrade: string; teacher: string }>
 }> {
   const stored = getSessionByToken(sessionToken)
-  if (!stored) throw new Error('School session expired — please log in again')
+  if (!stored) throw new AuthenticationError('School session expired — please log in again')
 
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400)
   const iprUrl = `${origin}HomeAccess/Grades/IPR`
-  const initialRes = await http.get(iprUrl, {
+  const initialRes = await getChecked(http, iprUrl, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
 
@@ -1647,7 +1689,7 @@ export async function getContactTeachers(sessionToken: string): Promise<{
 
 export async function getStudentInfo(sessionToken: string): Promise<HACStudentInfo> {
   const stored = getSessionByToken(sessionToken)
-  if (!stored) throw new Error('School session expired or not found — please log in again')
+  if (!stored) throw new AuthenticationError('School session expired or not found — please log in again')
 
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
@@ -1656,7 +1698,7 @@ export async function getStudentInfo(sessionToken: string): Promise<HACStudentIn
   const demoUrl = `${origin}HomeAccess/Registration/Demographic`
   console.log('[HAC CLIENT] Fetching student info from:', demoUrl)
 
-  const res = await http.get(demoUrl, {
+  const res = await getChecked(http, demoUrl, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
 
@@ -1671,7 +1713,7 @@ export async function getStudentInfo(sessionToken: string): Promise<HACStudentIn
 
   // Check if redirected to login (session expired)
   if (finalUrl.includes('Account/LogOn') || finalUrl.includes('Account/Login')) {
-    throw new Error('School session expired — please log in again')
+    throw new AuthenticationError('School session expired — please log in again')
   }
 
   // The actual student data is inside an iframe — resolve and fetch it
@@ -1830,13 +1872,13 @@ export async function getAttendance(sessionToken: string, monthOffset: number = 
   summary: { absences: number; tardies: number; excused: number }
 }> {
   const stored = getSessionByToken(sessionToken)
-  if (!stored) throw new Error('School session expired — please log in again')
+  if (!stored) throw new AuthenticationError('School session expired — please log in again')
 
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400)
-  const initialRes = await http.get(`${origin}HomeAccess/Attendance/MonthView`, {
+  const initialRes = await getChecked(http, `${origin}HomeAccess/Attendance/MonthView`, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
 
