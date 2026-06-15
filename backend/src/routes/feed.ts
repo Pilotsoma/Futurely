@@ -17,7 +17,7 @@ const USER_SELECT = {
   tag: true, tagColor: true,
   nameColor: true, pfpEffect: true,
   chatBanned: true, chatMutedUntil: true,
-  deletedAt: true,
+  deletedAt: true, role: true, allTags: true,
 } as const;
 
 type RawUser = {
@@ -25,13 +25,15 @@ type RawUser = {
   tag: string | null; tagColor: string | null;
   nameColor: string | null; pfpEffect: string | null;
   chatBanned: boolean; chatMutedUntil: Date | null;
-  deletedAt: Date | null;
+  deletedAt: Date | null; role: string; allTags: string | null;
 };
 
 function toFeedUser(u: RawUser) {
   if (u.deletedAt) return { id: u.id, name: u.name, email: u.email, tag: 'DELETED', tagColor: '#6B7280', nameColor: null as string | null, pfpEffect: null as string | null };
   if (u.chatBanned) return { id: u.id, name: u.name, email: u.email, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null };
   if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, email: u.email, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null };
+  // DEV/ADMIN role always shows as DEV regardless of display tag
+  if (u.role === 'ADMIN') return { id: u.id, name: u.name, email: u.email, tag: 'DEV', tagColor: 'lightblue', nameColor: u.nameColor, pfpEffect: u.pfpEffect };
   return { id: u.id, name: u.name, email: u.email, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect };
 }
 
@@ -100,6 +102,7 @@ router.get('/posts', async (req: Request, res: Response) => {
             id: true, name: true, email: true,
             tag: true, tagColor: true, nameColor: true, pfpEffect: true,
             chatBanned: true, chatMutedUntil: true, deletedAt: true,
+            role: true, allTags: true,
             _count: { select: { followers: true } },
           },
         },
@@ -592,7 +595,7 @@ router.get('/search', async (req: Request, res: Response) => {
     const users = await prisma.user.findMany({
       where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q } }, { email: { contains: q } }, { tag: { contains: q } }] }] },
       take: 20,
-      select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true },
+      select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -643,7 +646,7 @@ router.get('/users/search', async (req: Request, res: Response) => {
     const users = await prisma.user.findMany({
       where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q } }, { email: { contains: q } }, { tag: { contains: q } }] }] },
       take: 20,
-      select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true },
+      select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -677,6 +680,7 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
     if (profile.deletedAt) { effectiveTag = 'DELETED'; effectiveTagColor = '#6B7280'; }
     else if (profile.chatBanned) { effectiveTag = 'BANNED'; effectiveTagColor = '#EF4444'; }
     else if (profile.chatMutedUntil && profile.chatMutedUntil > new Date()) { effectiveTag = 'MUTED'; effectiveTagColor = '#f97316'; }
+    else if (profile.role === 'ADMIN') { effectiveTag = 'DEV'; effectiveTagColor = 'lightblue'; }
 
     const { passwordHash, allTags: rawAllTags, ...rest } = profile as typeof profile & { passwordHash: string; allTags: string };
     res.json({
