@@ -39,8 +39,8 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
     drops: [
       { rarity: 'Common',    pct: '60%',   items: ['Grinder', 'Focused', 'Scholar'] },
       { rarity: 'Uncommon',  pct: '25%',   items: ['Honors Student', 'AP Student'] },
-      { rarity: 'Rare',      pct: '9.5%',  items: ["Dean's List", 'Top Performer'] },
-      { rarity: 'Epic',      pct: '4%',    items: ['Ace', 'Prodigy'] },
+      { rarity: 'Rare',      pct: '10%',   items: ["Dean's List", 'Top Performer'] },
+      { rarity: 'Epic',      pct: '3.5%',  items: ['Ace', 'Prodigy'] },
       { rarity: 'Legendary', pct: '1%',    items: ['Mastermind', 'Genius'] },
       { rarity: 'Mythic',    pct: '0.5%',  items: ['GOAT'] },
     ],
