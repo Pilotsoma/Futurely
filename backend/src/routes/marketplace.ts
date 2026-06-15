@@ -675,7 +675,7 @@ router.get('/users/:userId/inventory', requireAuth, async (req: AuthRequest, res
   try {
     const user = await prisma.user.findUnique({
       where: { id: targetId },
-      select: { id: true, name: true, tag: true, tagColor: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true },
+      select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
@@ -687,7 +687,7 @@ router.get('/users/:userId/inventory', requireAuth, async (req: AuthRequest, res
 
     res.json({
       data: {
-        user: { id: user.id, name: user.name, tag: user.tag, tagColor: user.tagColor },
+        user: { id: user.id, name: user.name, tag: user.tag, tagColor: user.tagColor, nameColor: user.nameColor },
         tags,
         nameColors: parseJsonArr(user.ownedNameColors),
         pfpEffects: parseJsonArr(user.ownedPfpEffects),

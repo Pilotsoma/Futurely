@@ -693,7 +693,7 @@ export interface TradeOffer {
 }
 
 export interface UserPublicInventory {
-  user: { id: number; name: string | null; tag: string | null; tagColor: string | null }
+  user: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }
   tags: TagInventoryItem[]
   nameColors: MarketplaceItem[]
   pfpEffects: MarketplaceItem[]
