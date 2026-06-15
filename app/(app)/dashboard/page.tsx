@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [courseCount, setCourseCount] = useState<number | null>(null)
   const [semesterLabel, setSemesterLabel] = useState<string>('')
   const [dayStreak, setDayStreak] = useState(0)
+  const [coins, setCoins] = useState<number | null>(null)
   const [newlyAwardedTags, setNewlyAwardedTags] = useState<Array<{ tag: string; tagColor: string }>>([])
   const [showStreakPopup, setShowStreakPopup] = useState(false)
   const [showResyncPopup, setShowResyncPopup] = useState(false)
@@ -84,12 +85,15 @@ export default function DashboardPage() {
     }
     localStorage.setItem('ns_lastVisit', today)
 
-    // Award any streak milestone tags the user has earned
+    // Claim daily coins + award any streak milestone tags
     if (currentStreak > 0) {
       api.streakReward(currentStreak)
         .then(r => { if (r.newTags?.length) setNewlyAwardedTags(r.newTags) })
         .catch(() => {})
     }
+    api.marketplaceDailyClaim()
+      .then(r => setCoins(r.coins))
+      .catch(() => {})
     api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed'))
     api.portalGpa()
       .then(g => { setPortalUGpa(g.unweightedGpa); setPortalWGpa(g.weightedGpa) })
@@ -170,7 +174,14 @@ export default function DashboardPage() {
           <p style={S.greeting}>Good {getTimeOfDay()},</p>
           <h1 style={S.name}>{firstName}</h1>
         </div>
-        <span style={S.dateChip}>{formatDate()}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <span style={S.dateChip}>{formatDate()}</span>
+          {coins !== null && (
+            <span style={{ fontSize: 12, color: '#EAB308', background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 20, padding: '4px 10px', fontWeight: 700 }}>
+              🪙 {coins.toLocaleString()} coins
+            </span>
+          )}
+        </div>
       </div>
 
       {/* GPA + Due Today */}

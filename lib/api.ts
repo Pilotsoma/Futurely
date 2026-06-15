@@ -461,6 +461,29 @@ export const api = {
   markAllNotificationsRead: () =>
     request<{ ok: boolean }>('/api/notifications/read-all', { method: 'POST' }),
 
+  // ── Marketplace ───────────────────────────────────────────────────────────────
+
+  marketplaceDailyClaim: () =>
+    request<{ coins: number; claimed: boolean; alreadyClaimed: boolean }>('/api/marketplace/daily-coins', { method: 'POST' }),
+
+  marketplaceInventory: () =>
+    request<InventoryData>('/api/marketplace/inventory'),
+
+  marketplaceOpenBox: (boxType: 'tag' | 'name-color' | 'pfp') =>
+    request<BoxResult>('/api/marketplace/open-box', { method: 'POST', body: JSON.stringify({ boxType }) }),
+
+  marketplaceEquip: (type: 'name-color' | 'pfp', itemId: string | null) =>
+    request<{ nameColor?: string | null; pfpEffect?: string | null }>('/api/marketplace/equip', {
+      method: 'PUT',
+      body: JSON.stringify({ type, itemId }),
+    }),
+
+  marketplaceAdminGrant: (payload: { type: 'coins'; amount: number } | { type: 'name-color' | 'pfp'; itemId: string }) =>
+    request<{ coins?: number; granted?: MarketplaceItem }>('/api/marketplace/admin/grant', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   // ── Parent API ────────────────────────────────────────────────────────────────
 
   parentLinkStudent: (credentials: { districtUrl: string; username: string; password: string }) =>
@@ -506,6 +529,8 @@ export interface FeedUser {
   email: string
   tag: string | null
   tagColor: string | null
+  nameColor: string | null
+  pfpEffect: string | null
 }
 
 export interface FeedPost {
@@ -544,6 +569,8 @@ export interface FeedUserProfile {
   email: string
   tag: string | null
   tagColor: string | null
+  nameColor: string | null
+  pfpEffect: string | null
   role: string
   isFollowing: boolean
   totalLikes: number
@@ -551,6 +578,29 @@ export interface FeedUserProfile {
   chatMutedUntil: string | null
   allTags: Array<{ tag: string; tagColor: string }>
   _count: { followers: number; following: number; posts: number }
+}
+
+export interface MarketplaceItem {
+  id: string
+  name: string
+  value: string
+  rarity: string
+  weight: number
+}
+
+export interface InventoryData {
+  coins: number
+  canClaimToday: boolean
+  nameColor: string | null
+  pfpEffect: string | null
+  ownedNameColors: MarketplaceItem[]
+  ownedPfpEffects: MarketplaceItem[]
+}
+
+export interface BoxResult {
+  coins: number
+  won: { id: string; name?: string; tag?: string; tagColor?: string; value?: string; rarity: string; type: string }
+  alreadyHad: boolean
 }
 
 // ── Parent API ─────────────────────────────────────────────────────────────────

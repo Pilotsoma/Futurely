@@ -15,6 +15,7 @@ async function hasDevPowers(userId: number): Promise<boolean> {
 const USER_SELECT = {
   id: true, name: true, email: true,
   tag: true, tagColor: true,
+  nameColor: true, pfpEffect: true,
   chatBanned: true, chatMutedUntil: true,
   deletedAt: true,
 } as const;
@@ -22,15 +23,16 @@ const USER_SELECT = {
 type RawUser = {
   id: number; name: string | null; email: string;
   tag: string | null; tagColor: string | null;
+  nameColor: string | null; pfpEffect: string | null;
   chatBanned: boolean; chatMutedUntil: Date | null;
   deletedAt: Date | null;
 };
 
 function toFeedUser(u: RawUser) {
-  if (u.deletedAt) return { id: u.id, name: u.name, email: u.email, tag: 'DELETED', tagColor: '#6B7280' };
-  if (u.chatBanned) return { id: u.id, name: u.name, email: u.email, tag: 'BANNED', tagColor: '#EF4444' };
-  if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, email: u.email, tag: 'MUTED', tagColor: '#f97316' };
-  return { id: u.id, name: u.name, email: u.email, tag: u.tag, tagColor: u.tagColor };
+  if (u.deletedAt) return { id: u.id, name: u.name, email: u.email, tag: 'DELETED', tagColor: '#6B7280', nameColor: null as string | null, pfpEffect: null as string | null };
+  if (u.chatBanned) return { id: u.id, name: u.name, email: u.email, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null };
+  if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, email: u.email, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null };
+  return { id: u.id, name: u.name, email: u.email, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect };
 }
 
 function parseAllTags(raw: unknown): Array<{ tag: string; tagColor: string }> {
@@ -96,7 +98,7 @@ router.get('/posts', async (req: Request, res: Response) => {
         user: {
           select: {
             id: true, name: true, email: true,
-            tag: true, tagColor: true,
+            tag: true, tagColor: true, nameColor: true, pfpEffect: true,
             chatBanned: true, chatMutedUntil: true, deletedAt: true,
             _count: { select: { followers: true } },
           },
@@ -590,7 +592,7 @@ router.get('/search', async (req: Request, res: Response) => {
     const users = await prisma.user.findMany({
       where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q } }, { email: { contains: q } }, { tag: { contains: q } }] }] },
       take: 20,
-      select: { id: true, name: true, email: true, tag: true, tagColor: true, chatBanned: true, chatMutedUntil: true, deletedAt: true },
+      select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -641,7 +643,7 @@ router.get('/users/search', async (req: Request, res: Response) => {
     const users = await prisma.user.findMany({
       where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q } }, { email: { contains: q } }, { tag: { contains: q } }] }] },
       take: 20,
-      select: { id: true, name: true, email: true, tag: true, tagColor: true, chatBanned: true, chatMutedUntil: true, deletedAt: true },
+      select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {

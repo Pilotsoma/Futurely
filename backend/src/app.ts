@@ -13,6 +13,7 @@ import feedRouter from './routes/feed'
 import parentRouter from './routes/parent'
 import notificationsRouter from './routes/notifications'
 import collegesRouter from './routes/colleges'
+import marketplaceRouter from './routes/marketplace'
 import { requireAuth } from './middleware/auth'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 
@@ -129,6 +130,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/notifications', devBypass, notificationsRouter)
   app.use('/integrations/grades', devBypass, gradesIntegrationRouter)
   app.use('/colleges', devBypass, collegesRouter)
+  app.use('/marketplace', devBypass, marketplaceRouter)
 } else {
   app.use('/assignments', assignmentsRouter)
   app.use('/students', studentsRouter)
@@ -138,6 +140,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/notifications', requireAuth, notificationsRouter)
   app.use('/integrations/grades', requireAuth, gradesIntegrationRouter)
   app.use('/colleges', requireAuth, collegesRouter)
+  app.use('/marketplace', requireAuth, marketplaceRouter)
 }
 
 app.use('/parent', parentRouter)

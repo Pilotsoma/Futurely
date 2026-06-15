@@ -17,6 +17,12 @@ model User {
   tag                      String                   @default("Student")
   tagColor                 String?                  @default("grey")
   allTags                  Json                     @default("[]")
+  coins                    Int                      @default(0)
+  lastCoinClaim            DateTime?
+  nameColor                String?
+  pfpEffect                String?
+  ownedNameColors          Json                     @default("[]")
+  ownedPfpEffects          Json                     @default("[]")
   role                     String                   @default("STUDENT")
   chatBanned               Boolean                  @default(false)
   chatMutedUntil           DateTime?
