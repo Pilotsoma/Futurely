@@ -619,7 +619,7 @@ router.get('/search', async (req: Request, res: Response) => {
     if (!q) return res.json({ data: [] });
     const isDev = await hasDevPowers(userId);
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q } }, { email: { contains: q } }, { tag: { contains: q } }] }] },
+      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { email: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
       select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
     });
@@ -670,7 +670,7 @@ router.get('/users/search', async (req: Request, res: Response) => {
     if (!q) return res.json({ data: [] });
     const isDev = await hasDevPowers(userId);
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q } }, { email: { contains: q } }, { tag: { contains: q } }] }] },
+      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { email: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
       select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
     });
