@@ -603,11 +603,13 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
   const canDelete = post.userId === currentUserId || isDevUser
   const isPinned = !!post.pinnedUntil && new Date(post.pinnedUntil) > new Date()
   const isGiveaway = post.type === 'giveaway'
+  const isCoinGiveaway = isGiveaway && !!post.giveawayCoinAmount
   const giveawayEnded = !!post.giveawayEndsAt && new Date(post.giveawayEndsAt) <= new Date()
   const giveawayTagColor = post.giveawayTagColor || 'gold'
+  const giveawayAccent = isCoinGiveaway ? '#EAB308' : giveawayTagColor
 
   return (
-    <div className="ns-card" style={{ padding: 16, marginBottom: 12, ...(isGiveaway ? { border: `1px solid ${giveawayTagColor}55`, background: `${giveawayTagColor}08` } : {}), ...(isPinned && !isGiveaway ? { border: '1px solid rgba(75,110,255,0.3)' } : {}) }}>
+    <div className="ns-card" style={{ padding: 16, marginBottom: 12, ...(isGiveaway ? { border: `1px solid ${giveawayAccent}55`, background: `${giveawayAccent}08` } : {}), ...(isPinned && !isGiveaway ? { border: '1px solid rgba(75,110,255,0.3)' } : {}) }}>
       {/* Pinned banner */}
       {isPinned && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
@@ -648,13 +650,22 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
       {/* Giveaway section */}
       {isGiveaway && (
-        <div style={{ border: `1px solid ${giveawayTagColor}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${giveawayTagColor}0d` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <div style={{ border: `1px solid ${giveawayAccent}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${giveawayAccent}0d` }}>
+          {/* Header: icon + label + prize bubble inline */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const }}>
             <span style={{ fontSize: 16 }}>🎁</span>
-            <span style={{ fontSize: 12, fontWeight: 800, color: giveawayTagColor, letterSpacing: '0.5px' }}>TAG GIVEAWAY</span>
-            <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: `${giveawayTagColor}22`, color: giveawayTagColor, border: `1px solid ${giveawayTagColor}66` }}>
-              {post.giveawayTag}
+            <span style={{ fontSize: 12, fontWeight: 800, color: giveawayAccent, letterSpacing: '0.5px' }}>
+              {isCoinGiveaway ? 'COIN GIVEAWAY' : 'TAG GIVEAWAY'}
             </span>
+            {isCoinGiveaway ? (
+              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(234,179,8,0.15)', color: '#EAB308', border: '1px solid rgba(234,179,8,0.5)' }}>
+                🪙 {post.giveawayCoinAmount?.toLocaleString()} coins
+              </span>
+            ) : post.giveawayTag && (
+              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: `${giveawayTagColor}22`, color: giveawayTagColor, border: `1px solid ${giveawayTagColor}` }}>
+                {post.giveawayTag}
+              </span>
+            )}
           </div>
 
           {post.giveawayWinnerId ? (
@@ -664,7 +675,11 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#22C55E' }}>Winner!</div>
                 <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                  {post.giveawayWinner ? displayName(post.giveawayWinner) : 'Someone'} won the <strong style={{ color: giveawayTagColor }}>{post.giveawayTag}</strong> tag!
+                  {post.giveawayWinner ? displayName(post.giveawayWinner) : 'Someone'} won{' '}
+                  {isCoinGiveaway
+                    ? <strong style={{ color: '#EAB308' }}>🪙 {post.giveawayCoinAmount?.toLocaleString()} coins</strong>
+                    : <>the <strong style={{ color: giveawayTagColor }}>{post.giveawayTag}</strong> tag</>
+                  }!
                 </div>
               </div>
             </div>
@@ -674,7 +689,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
               Giveaway ended · {post._count.giveawayEntries} {post._count.giveawayEntries === 1 ? 'entry' : 'entries'}
               {isDevUser && post._count.giveawayEntries > 0 && (
                 <button
-                  style={{ marginLeft: 10, background: giveawayTagColor, color: '#000', border: 'none', borderRadius: 5, padding: '3px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
+                  style={{ marginLeft: 10, background: giveawayAccent, color: '#000', border: 'none', borderRadius: 5, padding: '3px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
                   onClick={() => onDrawGiveaway(post.id)}
                 >
                   Draw Winner
@@ -693,7 +708,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                   <span style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', padding: '6px 14px', border: '1px solid #22C55E', borderRadius: 6, display: 'inline-block' }}>✓ Entered</span>
                 ) : (
                   <button
-                    style={{ background: giveawayTagColor, color: '#000', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
+                    style={{ background: giveawayAccent, color: '#000', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
                     onClick={() => onEnterGiveaway(post.id)}
                   >
                     Enter Giveaway
@@ -953,8 +968,10 @@ export default function StudyFeedPage() {
   const [mutedUntil, setMutedUntil] = useState<string | null>(null)
   const [statusLoaded, setStatusLoaded] = useState(false)
   const [showGiveawayForm, setShowGiveawayForm] = useState(false)
+  const [gwType, setGwType] = useState<'tag' | 'coin'>('tag')
   const [gwTag, setGwTag] = useState('')
   const [gwColor, setGwColor] = useState('gold')
+  const [gwCoins, setGwCoins] = useState('')
   const [gwDuration, setGwDuration] = useState('60')
   const [gwBody, setGwBody] = useState('')
   const [creatingGw, setCreatingGw] = useState(false)
@@ -1154,17 +1171,21 @@ export default function StudyFeedPage() {
   }
 
   async function handleCreateGiveaway() {
-    if (!gwTag.trim() || !gwBody.trim() || creatingGw) return
+    const coinAmt = parseInt(gwCoins)
+    if (!gwBody.trim() || creatingGw) return
+    if (gwType === 'tag' && !gwTag.trim()) return
+    if (gwType === 'coin' && (!coinAmt || coinAmt < 1)) return
     setCreatingGw(true)
     try {
       const post = await api.feedCreateGiveaway({
         body: gwBody.trim(),
-        giveawayTag: gwTag.trim(),
-        giveawayTagColor: gwColor.trim() || 'gold',
         durationMinutes: parseInt(gwDuration) || 60,
+        ...(gwType === 'coin'
+          ? { giveawayCoinAmount: coinAmt }
+          : { giveawayTag: gwTag.trim(), giveawayTagColor: gwColor.trim() || 'gold' }),
       })
       setPosts(prev => [post, ...prev])
-      setGwTag(''); setGwColor('gold'); setGwBody(''); setGwDuration('60')
+      setGwTag(''); setGwColor('gold'); setGwCoins(''); setGwBody(''); setGwDuration('60'); setGwType('tag')
       setShowGiveawayForm(false)
     } catch { /* ignore */ }
     finally { setCreatingGw(false) }
@@ -1319,26 +1340,46 @@ export default function StudyFeedPage() {
                 /* Giveaway creator */
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'gold' }}>🎁 Create Tag Giveaway</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'gold' }}>🎁 Create Giveaway</span>
                     <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1 }} onClick={() => setShowGiveawayForm(false)}>×</button>
                   </div>
+                  {/* Type toggle */}
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                    {(['tag', 'coin'] as const).map(t => (
+                      <button key={t} onClick={() => setGwType(t)} style={{ flex: 1, height: 34, borderRadius: 8, border: `1px solid ${gwType === t ? 'gold' : 'var(--border)'}`, background: gwType === t ? 'rgba(255,215,0,0.12)' : 'transparent', color: gwType === t ? 'gold' : 'var(--text-secondary)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                        {t === 'tag' ? '🏷️ Tag' : '🪙 Coins'}
+                      </button>
+                    ))}
+                  </div>
                   <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, minHeight: 60, fontSize: 14, lineHeight: 1.6, padding: 12, marginBottom: 10 }}
-                    placeholder="Announce the giveaway… (e.g. 'Enter to win a limited VIP tag!')"
+                    placeholder={gwType === 'coin' ? "Announce the giveaway… (e.g. 'Enter to win 500 coins!')" : "Announce the giveaway… (e.g. 'Enter to win a limited VIP tag!')"}
                     value={gwBody}
                     onChange={e => setGwBody(e.target.value)}
                     rows={2}
                   />
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 10 }}>
-                    <input className="ns-input" style={{ flex: 1, minWidth: 100, height: 36, fontSize: 13 }}
-                      placeholder="Tag name (e.g. VIP)"
-                      value={gwTag}
-                      onChange={e => setGwTag(e.target.value)}
-                    />
-                    <input className="ns-input" style={{ width: 90, height: 36, fontSize: 13 }}
-                      placeholder="Color"
-                      value={gwColor}
-                      onChange={e => setGwColor(e.target.value)}
-                    />
+                    {gwType === 'tag' ? (
+                      <>
+                        <input className="ns-input" style={{ flex: 1, minWidth: 100, height: 36, fontSize: 13 }}
+                          placeholder="Tag name (e.g. VIP)"
+                          value={gwTag}
+                          onChange={e => setGwTag(e.target.value)}
+                        />
+                        <input className="ns-input" style={{ width: 90, height: 36, fontSize: 13 }}
+                          placeholder="Color"
+                          value={gwColor}
+                          onChange={e => setGwColor(e.target.value)}
+                        />
+                      </>
+                    ) : (
+                      <input className="ns-input" style={{ flex: 1, height: 36, fontSize: 13 }}
+                        placeholder="Coin amount (e.g. 500)"
+                        type="number"
+                        min="1"
+                        value={gwCoins}
+                        onChange={e => setGwCoins(e.target.value)}
+                      />
+                    )}
                     <select className="ns-input" style={{ height: 36, fontSize: 13 }} value={gwDuration} onChange={e => setGwDuration(e.target.value)}>
                       <option value="30">30 min</option>
                       <option value="60">1 hour</option>
@@ -1352,9 +1393,9 @@ export default function StudyFeedPage() {
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <button className="ns-btn-ghost" style={{ height: 36, padding: '0 14px', fontSize: 13 }} onClick={() => setShowGiveawayForm(false)}>Cancel</button>
                     <button
-                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, background: 'gold', color: '#000', border: 'none', borderRadius: 8, cursor: 'pointer', opacity: gwTag.trim() && gwBody.trim() && !creatingGw ? 1 : 0.5 }}
+                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, background: 'gold', color: '#000', border: 'none', borderRadius: 8, cursor: 'pointer', opacity: gwBody.trim() && (gwType === 'coin' ? parseInt(gwCoins) > 0 : gwTag.trim()) && !creatingGw ? 1 : 0.5 }}
                       onClick={handleCreateGiveaway}
-                      disabled={!gwTag.trim() || !gwBody.trim() || creatingGw}
+                      disabled={!gwBody.trim() || (gwType === 'coin' ? !parseInt(gwCoins) : !gwTag.trim()) || creatingGw}
                     >
                       {creatingGw ? 'Creating…' : 'Launch Giveaway'}
                     </button>

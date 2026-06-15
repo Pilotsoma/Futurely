@@ -389,7 +389,7 @@ export const api = {
       body: JSON.stringify({ role }),
     }),
 
-  feedCreateGiveaway: (data: { body: string; giveawayTag: string; giveawayTagColor: string; durationMinutes: number }) =>
+  feedCreateGiveaway: (data: { body: string; durationMinutes: number; giveawayTag?: string; giveawayTagColor?: string; giveawayCoinAmount?: number }) =>
     request<FeedPost>('/api/feed/posts/giveaway', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -549,6 +549,7 @@ export interface FeedPost {
   pinnedUntil: string | null
   giveawayTag: string | null
   giveawayTagColor: string | null
+  giveawayCoinAmount: number | null
   giveawayEndsAt: string | null
   giveawayWinnerId: number | null
   giveawayWinner: { id: number; name: string | null; email: string } | null

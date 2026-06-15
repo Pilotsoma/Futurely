@@ -53,7 +53,12 @@ async function autoDrawExpiredGiveaways() {
     if (ga.giveawayEntries.length === 0) continue;
     const winner = ga.giveawayEntries[Math.floor(Math.random() * ga.giveawayEntries.length)];
     await prisma.post.update({ where: { id: ga.id }, data: { giveawayWinnerId: winner.userId } });
-    if (ga.giveawayTag) {
+    if (ga.giveawayCoinAmount) {
+      await prisma.user.update({
+        where: { id: winner.userId },
+        data: { coins: { increment: ga.giveawayCoinAmount } },
+      });
+    } else if (ga.giveawayTag) {
       const winnerUser = await prisma.user.findUnique({ where: { id: winner.userId } });
       if (winnerUser) {
         const existing = parseAllTags(winnerUser.allTags || '[]');
@@ -186,12 +191,13 @@ router.post('/posts', async (req: Request, res: Response) => {
 router.post('/posts/giveaway', async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as number;
-    const { body, giveawayTag, giveawayTagColor, durationMinutes } = req.body as {
-      body?: string; giveawayTag?: string; giveawayTagColor?: string; durationMinutes?: number;
+    const { body, giveawayTag, giveawayTagColor, giveawayCoinAmount, durationMinutes } = req.body as {
+      body?: string; giveawayTag?: string; giveawayTagColor?: string; giveawayCoinAmount?: number; durationMinutes?: number;
     };
     if (!body?.trim()) return res.status(400).json({ error: 'Body is required' });
-    if (!giveawayTag?.trim()) return res.status(400).json({ error: 'Tag name is required' });
     if (!durationMinutes || durationMinutes < 1) return res.status(400).json({ error: 'Duration must be at least 1 minute' });
+    const isCoinGiveaway = typeof giveawayCoinAmount === 'number' && giveawayCoinAmount > 0;
+    if (!isCoinGiveaway && !giveawayTag?.trim()) return res.status(400).json({ error: 'Tag name or coin amount is required' });
 
     const isDev = await hasDevPowers(userId);
     if (!isDev) return res.status(403).json({ error: 'Only DEV/admin can create giveaways' });
@@ -202,8 +208,9 @@ router.post('/posts/giveaway', async (req: Request, res: Response) => {
         body: body.trim(),
         userId,
         type: 'giveaway',
-        giveawayTag: giveawayTag.trim(),
-        giveawayTagColor: (giveawayTagColor || 'gold').trim(),
+        ...(isCoinGiveaway
+          ? { giveawayCoinAmount }
+          : { giveawayTag: giveawayTag!.trim(), giveawayTagColor: (giveawayTagColor || 'gold').trim() }),
         giveawayEndsAt,
       },
       include: {
@@ -462,7 +469,12 @@ router.post('/posts/:id/giveaway/draw', async (req: Request, res: Response) => {
     const winnerEntry = post.giveawayEntries[Math.floor(Math.random() * post.giveawayEntries.length)];
     await prisma.post.update({ where: { id: postId }, data: { giveawayWinnerId: winnerEntry.userId } });
 
-    if (post.giveawayTag) {
+    if (post.giveawayCoinAmount) {
+      await prisma.user.update({
+        where: { id: winnerEntry.userId },
+        data: { coins: { increment: post.giveawayCoinAmount } },
+      });
+    } else if (post.giveawayTag) {
       const winnerUser = await prisma.user.findUnique({ where: { id: winnerEntry.userId } });
       if (winnerUser) {
         const existing = parseAllTags(winnerUser.allTags || '[]');
