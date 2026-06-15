@@ -9,10 +9,5 @@
       "routePrefix": "/api",
       "entrypoint": "api/index.ts"
     }
-  },
-  "functions": {
-    "backend/api/index.ts": {
-      "maxDuration": 30
-    }
   }
 }
