@@ -826,8 +826,16 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
             return (
               <div key={c.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <div
+                    className={pfpClass(c.user.pfpEffect)}
+                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect) }}
+                    onClick={() => { onClose(); onOpenProfile(c.user.id) }}
+                  >
+                    {initials(c.user)}
+                  </div>
                   <button
-                    style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, color: 'var(--text)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                    className={nameColorClass(c.user.nameColor)}
+                    style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...nameColorStyle(c.user.nameColor) }}
                     onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                   >
                     {displayName(c.user)}
