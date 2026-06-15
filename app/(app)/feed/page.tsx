@@ -150,36 +150,17 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
               <div className={pfpClass(profile.pfpEffect)} style={{ ...O.avatar, ...pfpStyle(profile.pfpEffect) }}>{initials(profile)}</div>
               <div style={{ flex: 1 }}>
                 <div className={nameColorClass(profile.nameColor)} style={{ ...O.name, ...nameColorStyle(profile.nameColor) }}>{displayName(profile)}</div>
-                {/* Show ALL awarded tags in profile view */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 3 }}>
-                  {/* Priority override badge */}
                   {(profile.chatBanned || (profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())) && (
                     <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, display: 'inline-block', ...(profile.chatBanned ? { color: '#EF4444', background: '#EF444422', border: '1px solid #EF4444' } : { color: '#f97316', background: '#f9731622', border: '1px solid #f97316' }) }}>
                       {profile.chatBanned ? 'BANNED' : 'MUTED'}
                     </span>
                   )}
-                  {/* All awarded tags */}
-                  {(profile.allTags ?? []).length > 0
-                    ? (profile.allTags ?? []).map(t => {
-                        const active = profile.tag === t.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())
-                        const isDev = t.tag === 'DEV'
-                        return (
-                          <span key={t.tag}
-                            className={isDev ? 'tag-rainbow' : ''}
-                            style={isDev
-                              ? { ...O.tagDev, opacity: active ? 1 : 0.45 }
-                              : { ...O.tag, color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor, background: t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`, border: `1px solid ${t.tagColor === 'grey' ? 'rgba(128,128,128,0.4)' : t.tagColor}`, opacity: active ? 1 : 0.45 }}
-                          >
-                            {t.tag}{active && ' ✓'}
-                          </span>
-                        )
-                      })
-                    : profile.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
-                        <span className={isDevTag ? 'tag-rainbow' : ''} style={isDevTag ? O.tagDev : { ...O.tag, color: profile.tagColor || 'var(--primary)', background: profile.tagColor ? `${profile.tagColor}22` : 'rgba(0,200,150,0.1)' }}>
-                          {profile.tag}
-                        </span>
-                      )
-                  }
+                  {profile.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
+                    <span className={isDevTag ? 'tag-rainbow' : ''} style={isDevTag ? O.tagDev : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
+                      {profile.tag}
+                    </span>
+                  )}
                 </div>
                 <div style={O.email}>{profile.email}</div>
               </div>
