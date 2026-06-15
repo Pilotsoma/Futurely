@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction, Request } from 'express'
+import { ASSIGNMENT_SOURCE } from '../../constants/assignmentSource'
 import { z } from 'zod'
 import { AuthRequest } from '../../middleware/auth'
 import {
@@ -106,7 +107,7 @@ function computeGPA(grades: Array<{ average: string | null; grade?: string | nul
 
   if (!points.length) return null
 
-  return Math.round((points.reduce((a, b) => a + b, 0) / points.length) * 100) / 100
+  return Math.round((points.reduce((a, b) => a + b, 0) / points.length) * 1000) / 1000
 }
 
 // ── Error helpers ──────────────────────────────────────────────────────────────
@@ -391,6 +392,7 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
           userId,
           title: a.name,
           subject: course.name,
+          source: ASSIGNMENT_SOURCE.HAC,
           dueDate: a.dateDue
             ? (() => { const p = new Date(a.dateDue); return isNaN(p.getTime()) ? new Date(Date.now() + 7 * 86400000) : p })()
             : new Date(Date.now() + 7 * 86400000),
@@ -803,8 +805,8 @@ router.get('/gpa', async (req: AuthRequest, res: Response): Promise<void> => {
 
       const w = parseFloat(t.weightedGPA ?? '')
       const u = parseFloat(t.unweightedGPA ?? '')
-      if (!isNaN(w)) weightedGpa   = Math.round(w * 100) / 100
-      if (!isNaN(u)) unweightedGpa = Math.round(u * 100) / 100
+      if (!isNaN(w)) weightedGpa   = Math.round(w * 1000) / 1000
+      if (!isNaN(u)) unweightedGpa = Math.round(u * 1000) / 1000
 
       courseCount = (t.semesters ?? []).reduce((acc, s) => acc + (s.courses?.length ?? 0), 0)
     } else {
@@ -1044,16 +1046,29 @@ router.get('/contact-teachers', async (req: AuthRequest, res: Response): Promise
 // ── Re-sync student profile from HAC (counselor, graduation year, name) ────
 router.post('/sync-profile', async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId!
-  const entry = await resolveSession(userId, res)
-  if (!entry) return
 
-  if (entry.session.systemType !== 'HAC') {
-    res.status(400).json({
-      data: null,
-      error: { code: 'UNSUPPORTED', message: 'Profile sync is only available for HAC districts' },
-    })
+  // Force a fresh login rather than relying on a potentially-stale cached cookie.
+  // autoRelogin uses stored encrypted credentials to get a brand-new HAC session.
+  const connection = await prisma.schoolConnection.findUnique({ where: { userId } })
+  if (!connection) {
+    res.status(401).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No school portal connected. Go to Settings to connect your HAC account.' } })
     return
   }
+  if (connection.systemType !== 'HAC') {
+    res.status(400).json({ data: null, error: { code: 'UNSUPPORTED', message: 'Profile sync is only available for HAC districts' } })
+    return
+  }
+  if (!connection.encryptedPassword) {
+    res.status(401).json({ data: null, error: { code: 'NO_CREDENTIALS', message: 'No saved credentials. Go to Settings and sign in to your HAC account again to enable automatic re-sync.' } })
+    return
+  }
+
+  const reloginResult = await autoRelogin(userId)
+  if (!reloginResult?.session) {
+    res.status(401).json({ data: null, error: { code: 'RELOGIN_FAILED', message: 'Could not sign in to HAC with your saved credentials. Your password may have changed — go to Settings to reconnect.' } })
+    return
+  }
+  const entry = reloginResult.session
 
   try {
     touchSession(userId)

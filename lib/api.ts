@@ -1,4 +1,4 @@
-const BASE = ''
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 class ApiError extends Error {
   code?: string

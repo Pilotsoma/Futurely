@@ -1,0 +1,405 @@
+
+
+<!DOCTYPE html>
+<html>
+<head><title>
+	HomeAccess
+</title>
+    
+    <link href="/HomeAccess/Stylesheets/Themes/Base/css?v=ErOiUuOsVp6tquD2fInmzTQl3A3SlFxTXp8j5mZ8LI01" rel="Stylesheet" type="text/css" /> 
+
+    
+    <link rel="Stylesheet" href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=CrossSite" />
+    <link rel="Stylesheet" href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=ComboBox" />
+    <link rel="Stylesheet" href="/HomeAccess/Stylesheets/Common/font-awesome.css" />
+    
+    
+    <link rel="Stylesheet" href="/HomeAccess/Stylesheets/Site.css" />
+    <link rel="stylesheet" href="/HomeAccess/Stylesheets/Frame/Frame.css" /> 
+    <link rel="SHORTCUT ICON" href="/HomeAccess/Media/Themes/Base/Common/favicon.ico"/>
+    <style>
+        .sg-asp-table-header-row,
+        .ui-jqgrid-view .ui-jqgrid-hdiv, 
+        .ui-jqgrid tr.ui-jqgrid-labels th  {
+	        background-color: #00427c;
+            color: #FFFFFF;
+        }
+    </style>
+
+    <script src="/HomeAccess/Scripts/libs/jquery?v=qIcuP3UP_aRnf7YSojJ0X96urcPMuU40OLTAhIFZUhU1" type="text/javascript"></script>   
+    <script src="/HomeAccess/Scripts/libs/modernizr-2.8.3.js" type="text/javascript"></script>   
+    <script src="/HomeAccess/Scripts/Trirand/ui.multiselect.js" type="text/javascript" ></script>
+    <script src="/HomeAccess/Scripts/Trirand/i18n/grid.locale-en.js" type="text/javascript"></script>
+    <script src="/HomeAccess/Scripts/Trirand/jquery.jqGrid.js" type="text/javascript"></script>
+    <script src="/HomeAccess/Scripts/libs/json2.js" type="text/javascript"></script>
+    <script src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=SungardCommon" type="text/javascript"></script>    
+    <script src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=Combobox" type="text/javascript"></script>
+    <script type="text/javascript">
+        $(function () {
+            parseForComboBoxes();
+        });
+    </script>    
+    
+
+    <script type="text/javascript">
+        $(SunGard.Common.Init('/HomeAccess/'));
+    </script>
+    
+    
+    
+    
+    <style>        
+        .sg-asp-calendar { width: 100%; font-size: 2.5em; }
+        .sg-asp-calendar-header {
+            border: none;
+	        border-bottom: medium solid #006699;
+	        font-weight: 700;
+	        color: #006699;
+        }
+        .sg-asp-calendar-today { border: 1px solid #006699; }
+
+        .sg-legend { border: 1px solid #006699; }
+        .sg-legend td  { padding-left: 5px; padding-right: 5px; }
+        .sg-legend tr.TableHeader td { text-align: center; }
+
+        .sg-width-38em { width: 38em; }
+    </style>
+    <script type="text/javascript" src="MonthlyView.js"></script>
+    <script type="text/javascript" src="/HomeAccess/Content/Common/Validation.js"></script>
+
+</head>
+<body>
+    
+    <div id='MainContent' class='sg-main-content'>
+        <div class='sg-hac-content'>
+            <form method="post" action="./MonthlyView.aspx" id="fmMain">
+<div class="aspNetHidden">
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="gd2WDqUcEEc+TqRgzNUh+R7BHaQYQo3QaasCPn/323G5Yew6F2t5poMjs7p75Ut1pXx2zCdFuy/+Pur3/9Cbr/7u+W2s44nqBx2WWLC8L60=" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['fmMain'];
+if (!theForm) {
+    theForm = document.fmMain;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="C0F72E2D" />
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="8rzubMmRfFfBcNqAO3YNnF0cT5ryVVGu4Fvj8HpNi0M3UDJ5+7YLXmhOgjxxICMiyQPx7hxTjKl2jvWmqIoVu2EyKpEqs7Tslr2Rht7pOOKD1QGPWXKFgfjsQlmfSjzhICmGR8+kAoS3DrJIbjZk7UzYKnH+raI2DgmGYySciV2xAjqgyQ70zEB4Os4+ZAYBLU3hNtfc4yUEhDWXpki50W6WA3rmnrNiNiQu30a4cwib2zAwYHW7mzQnD1JH8PG2Pp9Aet8p7IHfd5ZMuZUxEFNVbxkg3338x8l2tLGNUgL7cl6nTm2rMf/loo3TEMui4PvVXN76vLxgPjxx959sy+0EY0k3FrIiLboJgVwkKNFMMPd+wZarICzfvTQzRFn3eGGnmIPNTGQFgSO83TVnSLzlpkxuorUuwHI+CBHCrtmYeSaIA97sxsh0XoZy8vCDJrCpkss/zf5wDRbkRQw3mTlwSF3BJTtUvpKeYn5eiX/RlbkMJ34aZgohmiw5KM6q7qier+bdKwVzjuVUwSdzML4chRd9tXEP9VRep6gAlXIPKHSzFo5wsfLsDTggsUbFL6Tu58AtUqbML7g2oqtTPYkamjPLC4GlDf+hZ3FW44SNpRN+2YayC39S26L8jaEDm2RTHtV81p29ekxQ4GnquO031BA5/JLaz19chMrONCeKnlJQarX2pJ0iaUhzUE7DeBwHf0nW2hj0pdAeNt/MdeI9E9fcilNiNeCBPSfreisUtLsDHYEOdv4+68z+DngZ89axYM4NbiQDKo/2fHttk9YzwpF9qN2jnoOcVyV+3PsyqS9kpSUIhnJagwiqVPATdvdsdZqIVhlvlV7S2mBN8pS412kV3FyFS5NtgKUN7sHZzcr2Ovkp0R15axhbAubGRt4DV2C9gOp4yMox8bP3BOTs0wL8Pq1ZgrDk1fMIvkJ2Siwl7g7uARsrTJY2LMA/y8A3bQ9VyOm9FH/EBxDScEL9/EW0jZNjZPPZlCaQaXrtGWQqeVE2mLZL2eOhhPOdmxjipetNowCVSOsrkZCFVMm9MONWWh7lEdbys862KGE1CuB7RhHDN3mrTNBQoazRS9Bq3vrnqYPpBR7RTYneJBgqF3y2cYQKSSQ4+x5s8oOPayKkrG1vum4kIh67bGVyo1j8qEU7CyvNjQSINz1McCIaDT/iW0Klqx1WzLs3tiyw4ECZLJoY0AhH5hfJSJm/lGqOeVUVGb+zF0cJJslYuggNrkNjcivLSqxFrkm9dzklQ6Qmng8+oGDkqIGgmDtoB/exSrnb6VsZRuTaFzxG05eNXrFQXQ8FqyfNIEJ3XM3k37gbCKNyrbPzbr6+MjU/" />
+</div>
+                
+    
+
+	<div class="sg-header">
+       
+	</div>
+     
+    <div class="sg-content-grid">
+
+        
+
+        <div class="sg-content-alert-container sg-container-content">
+            
+        </div>
+        
+        <table id="plnMain_cldAttendance" class="sg-asp-calendar" cellspacing="0" cellpadding="2" title="Calendar" style="border-width:1px;border-style:None;border-collapse:collapse;">
+	<tr><td colspan="7" style="background-color:White;border-color:White;"><table class="sg-asp-calendar-header" cellspacing="0" style="width:100%;border-collapse:collapse;">
+		<tr><td valign="bottom" style="font-weight:bold;width:15%;"><a href="javascript:__doPostBack('ctl00$plnMain$cldAttendance','V9556')" style="color:Black" title="Go to the previous month"><span title='' aria-label='' role='button'>&lt;&lt;</span></a></td><td align="center" style="width:70%;">April 2026</td><td align="right" valign="bottom" style="font-weight:bold;width:15%;"><a href="javascript:__doPostBack('ctl00$plnMain$cldAttendance','V9617')" style="color:Black" title="Go to the next month"><span title='' aria-label='' role='button'>&gt;&gt;</span></a></td></tr>
+	</table></td></tr><tr><th align="center" abbr="Sunday" scope="col" style="font-weight:bold;">Sun</th><th align="center" abbr="Monday" scope="col" style="font-weight:bold;">Mon</th><th align="center" abbr="Tuesday" scope="col" style="font-weight:bold;">Tue</th><th align="center" abbr="Wednesday" scope="col" style="font-weight:bold;">Wed</th><th align="center" abbr="Thursday" scope="col" style="font-weight:bold;">Thu</th><th align="center" abbr="Friday" scope="col" style="font-weight:bold;">Fri</th><th align="center" abbr="Saturday" scope="col" style="font-weight:bold;">Sat</th></tr><tr><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="width:14%;">1</td><td align="center" style="width:14%;">2</td><td align="center" style="width:14%;background-color:#CCCCCC;"><span role='img' aria-label='3, School Closed'>3</span></td><td align="center" style="width:14%;background-color:#CCCCCC;"><span role='img' aria-label='4, School Closed'>4</span></td></tr><tr><td align="center" style="width:14%;background-color:#CCCCCC;"><span role='img' aria-label='5, School Closed'>5</span></td><td align="center" style="width:14%;background-color:#CCCCCC;"><span role='img' aria-label='6, School Closed'>6</span></td><td title="1Unex Late Arrival/Early Depart" align="center" style="background-color:#FFFF00;width:14%;cursor:help;"><span role='img' aria-label='7, 1, Unex Late Arrival/Early Depart'>7</span></td><td title="1School Sponsored non UIL2School Sponsored non UIL3School Sponsored non UIL4aSchool Sponsored non UIL5bSchool Sponsored non UIL6bSchool Sponsored non UIL7School Sponsored non UIL" align="center" style="background-color:#996600;width:14%;cursor:help;"><span role='img' aria-label='8, 1, School Sponsored non UIL, 2, School Sponsored non UIL, 3, School Sponsored non UIL, 4a, School Sponsored non UIL, 5b, School Sponsored non UIL, 6b, School Sponsored non UIL, 7, School Sponsored non UIL'>8</span></td><td title="1School Sponsored non UIL2School Sponsored non UIL3School Sponsored non UIL4aSchool Sponsored non UIL5bSchool Sponsored non UIL6bSchool Sponsored non UIL7School Sponsored non UIL" align="center" style="background-color:#996600;width:14%;cursor:help;"><span role='img' aria-label='9, 1, School Sponsored non UIL, 2, School Sponsored non UIL, 3, School Sponsored non UIL, 4a, School Sponsored non UIL, 5b, School Sponsored non UIL, 6b, School Sponsored non UIL, 7, School Sponsored non UIL'>9</span></td><td title="1School Sponsored non UIL2School Sponsored non UIL3School Sponsored non UIL4aSchool Sponsored non UIL5bSchool Sponsored non UIL6bSchool Sponsored non UIL7School Sponsored non UIL" align="center" style="background-color:#996600;width:14%;cursor:help;"><span role='img' aria-label='10, 1, School Sponsored non UIL, 2, School Sponsored non UIL, 3, School Sponsored non UIL, 4a, School Sponsored non UIL, 5b, School Sponsored non UIL, 6b, School Sponsored non UIL, 7, School Sponsored non UIL'>10</span></td><td align="center" style="width:14%;background-color:#CCCCCC;"><span role='img' aria-label='11, School Closed'>11</span></td></tr><tr><td align="center" style="width:14%;background-color:#CCCCCC;"><span role='img' aria-label='12, School Closed'>12</span></td><td title="4aPresent" align="center" style="background-color:#CCCCCC;width:14%;cursor:help;"><span role='img' aria-label='13, 4a, Present'>13</span></td><td align="center" style="width:14%;">14</td><td title="1Present b/not in class2Present b/not in class3Present b/not in class4aPresent b/not in class5bPresent b/not in class6bPresent b/not in class7Present b/not in class" align="center" style="background-color:#CCCCCC;width:14%;cursor:help;"><span role='img' aria-label='15, 1, Present b/not in class, 2, Present b/not in class, 3, Present b/not in class, 4a, Present b/not in class, 5b, Present b/not in class, 6b, Present b/not in class, 7, Present b/not in class'>15</span></td><td align="center" style="width:14%;">16</td><td title="1Unex Late Arrival/Early Depart" align="center" style="background-color:#FFFF00;width:14%;cursor:help;"><span role='img' aria-label='17, 1, Unex Late Arrival/Early Depart'>17</span></td><td align="center" style="width:14%;background-color:#CCCCCC;"><span role='img' aria-label='18, School Closed'>18</span></td></tr><tr><td align="center" style="width:14%;background-color:#CCCCCC;"><span role='img' aria-label='19, School Closed'>19</span></td><td title="1Personal Illness w/note2Personal Illness w/note3Personal Illness w/note4aPersonal Illness w/note5bPersonal Illness w/note6bPersonal Illness w/note7Personal Illness w/note" align="center" style="background-color:#CC00CC;width:14%;cursor:help;"><span role='img' aria-label='20, 1, Personal Illness w/note, 2, Personal Illness w/note, 3, Personal Illness w/note, 4a, Personal Illness w/note, 5b, Personal Illness w/note, 6b, Personal Illness w/note, 7, Personal Illness w/note'>20</span></td><td title="1Unex Late Arrival/Early Depart7:19:00 AM3Present b/not in class" align="center" style="width:14%;background-color:#FFCC99;cursor:help;"><span role='img' aria-label='21, 1, Unex Late Arrival/Early Depart, 7:19:00 AM, 3, Present b/not in class'>21</span></td><td title="3Personal Illness w/note4aPersonal Illness w/note5bPersonal Illness w/note6bPersonal Illness w/note7Personal Illness w/note" align="center" style="background-color:#CC00CC;width:14%;cursor:help;"><span role='img' aria-label='22, 3, Personal Illness w/note, 4a, Personal Illness w/note, 5b, Personal Illness w/note, 6b, Personal Illness w/note, 7, Personal Illness w/note'>22</span></td><td align="center" style="width:14%;">23</td><td align="center" style="width:14%;">24</td><td align="center" style="width:14%;background-color:#CCCCCC;"><span role='img' aria-label='25, School Closed'>25</span></td></tr><tr><td align="center" style="width:14%;background-color:#CCCCCC;"><span role='img' aria-label='26, School Closed'>26</span></td><td align="center" style="width:14%;">27</td><td align="center" style="width:14%;">28</td><td align="center" style="width:14%;">29</td><td title="1Absent - Unexcused" align="center" style="background-color:#660000;width:14%;cursor:help;"><span role='img' aria-label='30, 1, Absent - Unexcused'>30</span></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td></tr><tr><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td><td align="center" style="color:#999999;background-color:White;width:14%;"></td></tr>
+</table>
+        
+        <div class="sg-asp-calendar-header">
+            <label id="lblColorLegend">Color Legend</label>
+        </div>
+        <div class="sg-clearfix" role="list" aria-label="Color Legend">
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #000000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>In-School Suspension</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #000000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Remote Attendance Engaged</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #000000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Remote Attendance Unengaged</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #0000cc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Doctor Note</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #006600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>College Visit/Military Visit</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>College Visit/Military Visit</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Court Appearance</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Doctor Note</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Dr. Note due to excessive abs.</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Ex Absence due to healthcare</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Ex Late arrival after ADA time</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Excused - Nurse</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Excused Absence w/note</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Homebound Instruction/CEHI</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Human Services activities</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>KISD Approved Absence</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>McKinney-Vento</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Medicaid Eligible</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Mentorship Absence</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Personal Illness w/note</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Religious Holy Day</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cc00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Religious Holy Day and other</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00cccc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Excused Late/Early Dismissal</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00ffff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>District Outage / Individual Outage / Technology Issue (Internet Outage) / Power Outage</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00ffff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Excused Late/Early Dismissal</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #00ffff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Late arrival before ADA time</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #660000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Absent - Unexcused</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #660000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Informed Concern 16DEP</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #6600cc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Ex Absence due to healthcare</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #666600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>CV Related</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #666666;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Out of School Suspension</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #6666ff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Dr. Note due to excessive abs.</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #996600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>School Activities non-UIL</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #996600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>School Sponsored non UIL</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #996600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>UIL Activities</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cc00cc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Personal Illness w/note</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cc66ff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>No show</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cc66ff;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Remote Conferencing</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cccccc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Present</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cccccc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Present b/not in class</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cccccc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Remote Present Asynchronous</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #cccccc;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Remote Present Synchronous</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #ff0000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Absent - Unexcused</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #ff0000;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Truancy</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #ff6600;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>SYA Unexcused Absence</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #ffff00;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Unex Late Arrival/Early Depart</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #FFCC99;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>Multiple Attendance Codes</span>
+            </div>
+            
+            <div class="sg-left sg-width-38em" role="listitem">
+                <span style="background-color: #CCCCCC;" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span>
+                <span>School Closed</span>
+            </div>
+            
+        </div>
+    </div>
+
+    <input name="ctl00$plnMain$hdnValidMHACLicense" type="hidden" id="plnMain_hdnValidMHACLicense" />
+    <input name="ctl00$plnMain$hdnPeriod" type="hidden" id="plnMain_hdnPeriod" />
+    <input name="ctl00$plnMain$hdnAttendance" type="hidden" id="plnMain_hdnAttendance" />
+    <input name="ctl00$plnMain$hdnDismissTime" type="hidden" id="plnMain_hdnDismissTime" />
+    <input name="ctl00$plnMain$hdnArriveTime" type="hidden" id="plnMain_hdnArriveTime" />
+    <input name="ctl00$plnMain$hdnColorLegend" type="hidden" id="plnMain_hdnColorLegend" />
+    <input name="ctl00$plnMain$hdnCalTooltip" type="hidden" id="plnMain_hdnCalTooltip" />
+    <input name="ctl00$plnMain$hdnCalPrvMthToolTip" type="hidden" id="plnMain_hdnCalPrvMthToolTip" />
+    <input name="ctl00$plnMain$hdnCalNxtMthToolTip" type="hidden" id="plnMain_hdnCalNxtMthToolTip" />
+    <input name="ctl00$plnMain$hdnMultipleAttendenceCodes" type="hidden" id="plnMain_hdnMultipleAttendenceCodes" value="Multiple Attendance Codes" />
+    <input name="ctl00$plnMain$hdnSchoolClosed" type="hidden" id="plnMain_hdnSchoolClosed" value="School Closed" />
+    <input name="ctl00$plnMain$hdnLegendNoCodes" type="hidden" id="plnMain_hdnLegendNoCodes" value="Attendance Codes could not be found." />
+    <input name="ctl00$plnMain$hdnHyperlinkText_exist" type="hidden" id="plnMain_hdnHyperlinkText_exist" value="(Alerts Are Limited. Click to View List of Selected Choices.)" /> 
+    <input name="ctl00$plnMain$hdnHyperlinkText_Noexist" type="hidden" id="plnMain_hdnHyperlinkText_Noexist" value="(Limit Alerts to Specific Types of Attendance)" /> 
+
+            </form>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            // Build the jQuery UI buttons
+            $('.sg-buttonset').controlgroup();
+            $('.sg-button').button();
+            window.parent.$('.sg-legacy-iframe').height($('.sg-main-content').height()); // set the init size
+            // Increase length of smaller content windows to reduce cutoffs in dropdowns. 
+            var iframeHeight = window.parent.$('.sg-legacy-iframe').height(); 
+            if (iframeHeight < 450)
+            { window.parent.$('.sg-legacy-iframe').height($('.sg-main-content').height() + 200); }
+           
+        })
+    </script>
+</body>
+</html>

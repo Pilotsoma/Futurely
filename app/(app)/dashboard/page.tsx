@@ -22,6 +22,7 @@ const QUICK_LINKS = [
   { href: '/ai',      label: 'AI Chat',         sub: 'College guidance',     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00C896" strokeWidth="2" strokeLinecap="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>, iconBg: 'rgba(0,200,150,0.1)' },
   { href: '/planner', label: 'Planner',         sub: 'Assignments & tasks',  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, iconBg: 'rgba(245,158,11,0.1)' },
   { href: '/feed',    label: 'Study Feed',      sub: 'Connect with peers',   icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>, iconBg: 'rgba(167,139,250,0.1)' },
+  { href: '/colleges',label: 'Colleges',        sub: 'Track your college list', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EC4899" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, iconBg: 'rgba(236,72,153,0.1)' },
 ]
 
 export default function DashboardPage() {
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const [showResyncPopup, setShowResyncPopup] = useState(false)
   const [resyncing, setResyncing] = useState(false)
   const [resyncError, setResyncError] = useState<string | null>(null)
+  const [needsReconnect, setNeedsReconnect] = useState(false)
   const gpaNeedsResync = useRef(false)
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export default function DashboardPage() {
 
     const resyncTimer = setTimeout(() => {
       if (gpaNeedsResync.current) setShowResyncPopup(true)
-    }, 10000)
+    }, 6000)
 
     return () => clearTimeout(resyncTimer)
   }, [])
@@ -93,6 +95,7 @@ export default function DashboardPage() {
   async function handleResync() {
     setResyncing(true)
     setResyncError(null)
+    setNeedsReconnect(false)
     try {
       await api.portalSyncProfile()
       const [g, grades, freshData] = await Promise.all([api.portalGpa(), api.portalGrades(), api.me()])
@@ -102,7 +105,12 @@ export default function DashboardPage() {
       setData(freshData)
       setShowResyncPopup(false)
     } catch (err) {
-      setResyncError(err instanceof Error ? err.message : 'Re-sync failed')
+      const code = (err as { code?: string }).code
+      if (code === 'NOT_CONNECTED' || code === 'NO_CREDENTIALS' || code === 'RELOGIN_FAILED') {
+        setNeedsReconnect(true)
+      } else {
+        setResyncError(err instanceof Error ? err.message : 'Re-sync failed')
+      }
     } finally {
       setResyncing(false)
     }
@@ -284,30 +292,36 @@ export default function DashboardPage() {
         <div style={S.popupOverlay} onClick={() => setShowResyncPopup(false)}>
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowResyncPopup(false)} style={S.popupClose}>×</button>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>🔄</div>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>{needsReconnect ? '🔗' : '🔄'}</div>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
-              Couldn't load your school data
+              {needsReconnect ? 'Reconnect your school account' : 'Couldn\'t load your school data'}
             </h3>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
-              Your HAC session may have expired since you last logged in. This can happen automatically after a period of inactivity. Tap "Re-sync" below to reconnect and pull your latest grades, GPA, and courses back into the app.
+              {needsReconnect
+                ? 'Your saved HAC credentials couldn\'t be used to sign in — your password may have changed, or credentials weren\'t saved. Go to Settings to sign in again and everything will sync automatically.'
+                : 'Your HAC session may have expired. Tap "Re-sync" below to reconnect and pull your latest grades, GPA, and courses back into the app.'}
             </p>
             {resyncError && (
               <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--error)' }}>
                 {resyncError}
-                <div style={{ marginTop: 6 }}>
-                  <button onClick={() => { setShowResyncPopup(false); router.push('/settings') }} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                    Go to Settings to reconnect →
-                  </button>
-                </div>
               </div>
             )}
-            <button
-              onClick={handleResync}
-              disabled={resyncing}
-              style={{ ...S.popupButton, opacity: resyncing ? 0.7 : 1, cursor: resyncing ? 'not-allowed' : 'pointer' }}
-            >
-              {resyncing ? 'Syncing…' : 'Re-sync with HAC'}
-            </button>
+            {needsReconnect ? (
+              <button
+                onClick={() => { setShowResyncPopup(false); router.push('/settings') }}
+                style={S.popupButton}
+              >
+                Go to Settings to reconnect
+              </button>
+            ) : (
+              <button
+                onClick={handleResync}
+                disabled={resyncing}
+                style={{ ...S.popupButton, opacity: resyncing ? 0.7 : 1, cursor: resyncing ? 'not-allowed' : 'pointer' }}
+              >
+                {resyncing ? 'Syncing…' : 'Re-sync with HAC'}
+              </button>
+            )}
             <button onClick={() => setShowResyncPopup(false)} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginTop: 8 }}>
               Dismiss
             </button>
@@ -335,7 +349,7 @@ const S: Record<string, React.CSSProperties> = {
   pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 },
   greeting:   { fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 },
   name:       { fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' },
-  dateChip:   { fontSize: 12, color: 'var(--text-muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 20, padding: '5px 12px', marginTop: 4 },
+  dateChip:   { fontSize: 12, color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 20, padding: '5px 12px', marginTop: 4 },
   topRow:     { display: 'flex', gap: 16, marginBottom: 16 },
   card:       { padding: 20, marginBottom: 16 },
   cardLabel:  { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)' },

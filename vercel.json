@@ -1,25 +1,12 @@
 {
-  "version": 2,
-  "buildCommand": "npx prisma generate --schema=backend/prisma/schema.prisma && next build",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
+  "experimentalServices": {
+    "frontend": {
+      "routePrefix": "/",
+      "framework": "nextjs"
     },
-    {
-      "src": "backend/api/index.ts",
-      "use": "@vercel/node"
+    "backend": {
+      "root": "backend",
+      "routePrefix": "/api"
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/backend/api/index.ts"
-    },
-    {
-      "src": "/ws/(.*)",
-      "dest": "/backend/api/index.ts"
-    },
-    { "handle": "filesystem" }
-  ]
+  }
 }

@@ -1662,27 +1662,84 @@ export async function getProgressReport(sessionToken: string, date?: string): Pr
 }
 
 export async function getContactTeachers(sessionToken: string): Promise<{
-  teachers: Array<{ name: string; courseName: string; period: string; email: null; emailNote: string; emailHint: string }>
+  teachers: Array<{
+    name: string
+    email: string
+    room: string
+    building: string
+    courses: Array<{ courseName: string; period: string }>
+  }>
 }> {
-  const { classes } = await getGrades(sessionToken)
+  const stored = getSessionByToken(sessionToken)
+  if (!stored) throw new AuthenticationError('School session expired or not found — please log in again')
 
-  const teachers = classes
-    .filter(c => c.teacher && c.teacher.trim() !== '')
-    .map(c => {
-      const parts = c.teacher.trim().split(/\s+/)
-      const emailHint = parts.length >= 2
-        ? `${parts[0].toLowerCase()}.${parts[parts.length - 1].toLowerCase()}@katyisd.org`
-        : `${c.teacher.toLowerCase().replace(/\s+/g, '.')}@katyisd.org`
-      return {
-        name: c.teacher,
-        courseName: c.name,
-        period: c.period,
-        email: null as null,
-        emailNote: 'Contact via school directory or Katy ISD staff search',
-        emailHint,
-      }
-    })
-    .filter((t, i, arr) => arr.findIndex(x => x.name === t.name) === i)
+  const { http } = restoreSession(stored)
+  const origin = stored.baseUrl
+
+  await sleep(800 + Math.random() * 400)
+  const scheduleUrl = `${origin}HomeAccess/Classes/Schedule`
+  const res = await getChecked(http, scheduleUrl, {
+    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
+  })
+
+  let html = res.data as string
+  const $outer = cheerio.load(html)
+
+  // Schedule page may be a shell wrapping an iframe
+  const iframeSrc = $outer('iframe.sg-legacy-iframe, iframe[id*="legacy"], iframe[src*="Schedule"]').attr('src')
+  if (iframeSrc && $outer('table').length === 0) {
+    const iframeUrl = iframeSrc.startsWith('http') ? iframeSrc : new URL(iframeSrc, scheduleUrl).toString()
+    try {
+      await sleep(400 + Math.random() * 300)
+      const iframeRes = await http.get(iframeUrl, { headers: { Referer: scheduleUrl } })
+      if (typeof iframeRes.data === 'string' && iframeRes.data.length > 500) html = iframeRes.data
+    } catch (e) { console.warn('[CONTACT] Schedule iframe fetch failed:', e instanceof Error ? e.message : String(e)) }
+  }
+
+  const $ = cheerio.load(html)
+
+  // Map: teacher name → teacher entry
+  const teacherMap = new Map<string, {
+    name: string; email: string; room: string; building: string
+    courses: Array<{ courseName: string; period: string }>
+    courseKeys: Set<string>
+  }>()
+
+  $('tr.sg-asp-table-data-row').each((_i, row) => {
+    const $row = $(row)
+    const tds = $row.children('td')
+
+    const courseName = tds.eq(1).find('a').text().trim() || tds.eq(1).text().trim()
+    const period     = tds.eq(2).text().trim()
+    const $teacherTd = tds.eq(3)
+    const $teacherA  = $teacherTd.find('a[href^="mailto:"]')
+    const room       = tds.eq(4).text().trim()
+    const building   = tds.eq(7).text().trim()
+
+    if (!$teacherA.length) return // skip "Staff" rows (Lunch, etc.)
+
+    const name  = $teacherA.text().trim()
+    const email = ($teacherA.attr('href') ?? '').replace(/^mailto:/i, '').trim()
+
+    if (!name || !email) return
+
+    const periodShort = period.substring(0, period.indexOf(',') > -1 ? period.indexOf(',') : period.length).trim()
+
+    let entry = teacherMap.get(name)
+    if (!entry) {
+      entry = { name, email: email.toLowerCase(), room, building, courses: [], courseKeys: new Set() }
+      teacherMap.set(name, entry)
+    }
+
+    // Deduplicate courses: same courseName+period combo may appear for A and B semesters
+    const courseKey = `${courseName}|${periodShort}`
+    if (courseName && !entry.courseKeys.has(courseKey)) {
+      entry.courseKeys.add(courseKey)
+      entry.courses.push({ courseName, period: periodShort })
+    }
+  })
+
+  const teachers = Array.from(teacherMap.values()).map(({ courseKeys: _k, ...t }) => t)
 
   return { teachers }
 }
@@ -1868,8 +1925,16 @@ export async function getAttendance(sessionToken: string, monthOffset: number = 
   month: string
   year: number
   monthIndex: number
-  days: Array<{ date: string; dayOfWeek: string; status: string; code: string; description: string }>
-  summary: { absences: number; tardies: number; excused: number }
+  days: Array<{
+    date: string
+    dayOfWeek: string
+    dayNum: number
+    bgColor: string
+    description: string
+    isSchoolClosed: boolean
+    periods: Array<{ period: string; status: string }>
+  }>
+  summary: { absences: number; excused: number; tardies: number; multiple: number }
 }> {
   const stored = getSessionByToken(sessionToken)
   if (!stored) throw new AuthenticationError('School session expired — please log in again')
@@ -1877,95 +1942,173 @@ export async function getAttendance(sessionToken: string, monthOffset: number = 
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
 
+  // The attendance page wraps an iframe — fetch the iframe directly
+  const iframeUrl = `${origin}HomeAccess/Content/Attendance/MonthlyView.aspx`
+  const outerUrl  = `${origin}HomeAccess/Attendance/MonthView`
+
   await sleep(800 + Math.random() * 400)
-  const initialRes = await getChecked(http, `${origin}HomeAccess/Attendance/MonthView`, {
-    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
+  const initialRes = await getChecked(http, iframeUrl, {
+    headers: { Referer: outerUrl },
   })
 
   let html = initialRes.data as string
-  dumpDebugHtml('attendance', html)
+  dumpDebugHtml('attendance_iframe', html)
 
-  // Navigate months via ASP.NET postback if offset != 0
+  // Navigate months — the calendar uses __doPostBack with V-values, NOT lbPrev/lbNext buttons.
+  // Extract the doPostBack target/argument from the prev/next anchor title attributes.
   if (monthOffset !== 0) {
     const steps = Math.abs(monthOffset)
+    const dir = monthOffset < 0 ? 'previous' : 'next'
+
     for (let s = 0; s < steps; s++) {
       const $nav = cheerio.load(html)
-      const prevId = $nav('[id*="lbPrev"]').attr('id') ?? 'ctl00$plnMain$lbPrev'
-      const nextId = $nav('[id*="lbNext"]').attr('id') ?? 'ctl00$plnMain$lbNext'
-      const target = (monthOffset < 0 ? prevId : nextId).replace(/#/g, '')
+
+      const viewState = ($nav('[id="__VIEWSTATE"]').val() as string) ?? ''
+      const eventValidation = ($nav('[id="__EVENTVALIDATION"]').val() as string) ?? ''
+      const viewStateGenerator = ($nav('[id="__VIEWSTATEGENERATOR"]').val() as string) ?? ''
+
+      // Find prev/next link by title attribute
+      const navLink = $nav('a').filter((_i, el) => {
+        const t = ($nav(el).attr('title') ?? '').toLowerCase()
+        return t.includes(`${dir} month`)
+      }).first()
+
+      const href = navLink.attr('href') ?? ''
+      const match = href.match(/__doPostBack\('([^']+)','([^']+)'\)/)
+      if (!match) {
+        console.warn(`[ATTENDANCE] nav step ${s + 1}: no ${dir} month link found, href="${href}"`)
+        break
+      }
+
+      const eventTarget = match[1]   // e.g. 'ctl00$plnMain$cldAttendance'
+      const eventArgument = match[2] // e.g. 'V9587'
+      console.log(`[ATTENDANCE] nav ${s + 1}/${steps} dir=${dir} target=${eventTarget} arg=${eventArgument}`)
+
       const formData = new URLSearchParams({
-        __EVENTTARGET: target,
-        __EVENTARGUMENT: '',
-        __VIEWSTATE: ($nav('[id="__VIEWSTATE"]').val() as string) ?? '',
-        __EVENTVALIDATION: ($nav('[id="__EVENTVALIDATION"]').val() as string) ?? '',
-        __VIEWSTATEGENERATOR: ($nav('[id="__VIEWSTATEGENERATOR"]').val() as string) ?? '',
+        __EVENTTARGET: eventTarget,
+        __EVENTARGUMENT: eventArgument,
+        __VIEWSTATE: viewState,
+        __EVENTVALIDATION: eventValidation,
+        __VIEWSTATEGENERATOR: viewStateGenerator,
       })
-      const navRes = await http.post(`${origin}HomeAccess/Attendance/MonthView`, formData.toString(), {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: `${origin}HomeAccess/Attendance/MonthView` },
+
+      const navRes = await http.post(iframeUrl, formData.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: iframeUrl },
       })
       html = navRes.data as string
-      await sleep(300)
+      await sleep(400)
     }
     dumpDebugHtml('attendance_nav', html)
   }
 
   const $ = cheerio.load(html)
 
-  // Extract month/year heading
-  const heading = $('[id*="lblMonthYear"], [id*="lbMonthYear"], caption, .sg-header-heading, h2').first().text().trim()
-  const monthYear = heading || new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  // Month/year is in the calendar header's center cell: <td align="center" style="width:70%;">May 2026</td>
+  const monthYear = $('.sg-asp-calendar-header td[align="center"]').first().text().trim()
+    || new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   const MONTH_NAMES_ATT = ['january','february','march','april','may','june','july','august','september','october','november','december']
   const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
   let year = new Date().getFullYear()
   let monthIndex = new Date().getMonth()
+
   const mymatch = monthYear.match(/(\w+)\s+(\d{4})/)
   if (mymatch) {
     const mIdx = MONTH_NAMES_ATT.indexOf(mymatch[1].toLowerCase())
     if (mIdx >= 0) monthIndex = mIdx
     year = parseInt(mymatch[2])
+  } else if (monthOffset !== 0) {
+    const now = new Date()
+    const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
+    year = target.getFullYear()
+    monthIndex = target.getMonth()
   }
 
-  const days: Array<{ date: string; dayOfWeek: string; status: string; code: string; description: string }> = []
+  console.log(`[ATTENDANCE] Parsed header: "${monthYear}" → year=${year} monthIndex=${monthIndex}`)
 
-  $('table td').each((_i, cell) => {
+  // Day cell parsing.
+  // Cells with attendance info have: <span role='img' aria-label='dayNum, period, desc, ...'> inside a <td>
+  // The aria-label format is: "dayNum, period1, desc1, period2, desc2, ..."
+  // OR for whole-school events: "dayNum, School Closed"
+  // The td's background-color tells us the severity (e.g. #660000 = unexcused, #FFCC99 = multiple)
+  const PERIOD_PATTERN = /^\d+[a-z]*$/i
+
+  type ParsedDay = {
+    date: string
+    dayOfWeek: string
+    dayNum: number
+    bgColor: string
+    description: string
+    isSchoolClosed: boolean
+    periods: Array<{ period: string; status: string }>
+  }
+
+  const days: ParsedDay[] = []
+
+  $('table#plnMain_cldAttendance td, table.sg-asp-calendar td').each((_i, cell) => {
     const $cell = $(cell)
-    const cellClass = ($cell.attr('class') ?? '').toLowerCase()
-    const title = ($cell.attr('title') ?? '').toLowerCase()
 
-    // Get the first visible number from this cell — that's the day number
-    const dayText = $cell.find('[id*="lblDate"], .sg-cal-date, span').first().text().trim()
-      || $cell.children('span').first().text().trim()
-    const dayNum = parseInt(dayText)
+    // Skip prev/next-month placeholder cells (grey text, no real data)
+    const styleAttr = $cell.attr('style') ?? ''
+    if (/color:\s*#999999/i.test(styleAttr)) return
+
+    // Only process cells that have a span[role="img"] (indicates notable attendance)
+    // Plain present days just have a bare number with no span
+    const span = $cell.find('span[role="img"][aria-label]').first()
+    if (!span.length) {
+      // Plain number cell — include as a normal school day so the grid renders correctly
+      const text = $cell.text().trim().replace(/&nbsp;/g, '')
+      const n = parseInt(text)
+      if (isNaN(n) || n < 1 || n > 31) return
+      const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(n).padStart(2, '0')}`
+      const d = new Date(year, monthIndex, n)
+      days.push({ date: dateStr, dayOfWeek: DAY_NAMES[d.getDay()] ?? '', dayNum: n, bgColor: '', description: '', isSchoolClosed: false, periods: [] })
+      return
+    }
+
+    const ariaLabel = span.attr('aria-label') ?? ''
+    const parts = ariaLabel.split(', ')
+    const dayNum = parseInt(parts[0])
     if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) return
+
+    const bgColorMatch = styleAttr.match(/background-color:\s*([#\w]+)/i)
+    const bgColor = bgColorMatch ? bgColorMatch[1].toLowerCase() : ''
+
+    let description = ''
+    let isSchoolClosed = false
+    const periods: Array<{ period: string; status: string }> = []
+
+    if (parts.length === 2) {
+      // Whole-school event: "dayNum, School Closed"
+      description = parts[1]
+      isSchoolClosed = /school.?closed/i.test(parts[1])
+      periods.push({ period: 'all', status: parts[1] })
+    } else {
+      // Period-specific: "dayNum, period1, desc1, period2, desc2, ..."
+      for (let i = 1; i < parts.length - 1; i++) {
+        if (PERIOD_PATTERN.test(parts[i].trim()) && parts[i + 1]) {
+          periods.push({ period: parts[i].trim(), status: parts[i + 1].trim() })
+          i++
+        }
+      }
+      const uniqueStatuses = [...new Set(periods.map(p => p.status))]
+      description = uniqueStatuses.length === 1 ? uniqueStatuses[0] : 'Multiple Attendance Codes'
+    }
 
     const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
     const d = new Date(year, monthIndex, dayNum)
-    const dayOfWeek = DAY_NAMES[d.getDay()] ?? ''
-
-    // Determine attendance code from class names, title attribute, or child image IDs
-    let code = ''
-    let status = ''
-    const childClasses = $cell.find('*').map((_j, el) => ($(el).attr('class') ?? '').toLowerCase()).get().join(' ')
-    const allClasses = cellClass + ' ' + childClasses
-    const hasImg = (id: string) => $cell.find(`[id*="${id}"]`).length > 0
-
-    if (/absent/i.test(title) || /absent/.test(allClasses) || hasImg('imgAbsent') || hasImg('Absent')) { code = 'A'; status = 'Absent' }
-    else if (/tardy/i.test(title) || /tardy/.test(allClasses) || hasImg('imgTardy') || hasImg('Tardy')) { code = 'T'; status = 'Tardy' }
-    else if (/excused/i.test(title) || /excused/.test(allClasses) || hasImg('imgExcused') || hasImg('Excused')) { code = 'E'; status = 'Excused' }
-    else if (/present/i.test(title) || /present/.test(allClasses)) { code = 'P'; status = 'Present' }
-
-    days.push({ date: dateStr, dayOfWeek, status, code, description: ($cell.attr('title') ?? '') })
+    days.push({ date: dateStr, dayOfWeek: DAY_NAMES[d.getDay()] ?? '', dayNum, bgColor, description, isSchoolClosed, periods })
   })
 
-  // De-duplicate by date (table can have multiple cells per day in some layouts)
+  // De-duplicate by date
   const seen = new Set<string>()
   const uniqueDays = days.filter(d => { if (seen.has(d.date)) return false; seen.add(d.date); return true })
 
-  const absences = uniqueDays.filter(d => d.code === 'A').length
-  const tardies  = uniqueDays.filter(d => d.code === 'T').length
-  const excused  = uniqueDays.filter(d => d.code === 'E').length
+  const absences = uniqueDays.filter(d => /absent.*unexcused|unexcused.*absent/i.test(d.description)).length
+  const excused  = uniqueDays.filter(d => /excused|approved.?absence|doctor.*note|kisd/i.test(d.description) && !/unexcused/i.test(d.description)).length
+  const tardies  = uniqueDays.filter(d => /tardy|late.?arrival/i.test(d.description)).length
+  const multiple = uniqueDays.filter(d => d.description === 'Multiple Attendance Codes').length
 
-  console.log(`[ATTENDANCE] ${monthYear}: ${uniqueDays.length} days parsed, A=${absences} T=${tardies} E=${excused}`)
-  return { month: monthYear, year, monthIndex, days: uniqueDays, summary: { absences, tardies, excused } }
+  console.log(`[ATTENDANCE] ${monthYear}: ${uniqueDays.length} days, absences=${absences} excused=${excused} tardies=${tardies} multiple=${multiple}`)
+  return { month: monthYear, year, monthIndex, days: uniqueDays, summary: { absences, excused, tardies, multiple } }
 }

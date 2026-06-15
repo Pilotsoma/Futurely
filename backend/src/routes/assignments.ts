@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { logger } from '../common/logger'
+import { ASSIGNMENT_SOURCE } from '../constants/assignmentSource'
 
 const router = Router()
 
@@ -47,6 +48,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<vo
   try {
     const where = {
       userId: req.userId,
+      source: ASSIGNMENT_SOURCE.MANUAL,
       ...(status === 'incomplete' && { completed: false }),
       ...(status === 'complete' && { completed: true }),
     }
@@ -95,7 +97,11 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
 
   const { title, subject, dueDate, dueTime } = parsed.data
 
-  const parsedDate = new Date(dueDate)
+  // Parse date as local time by splitting components — new Date("YYYY-MM-DD") is UTC midnight
+  // which shifts the day back by one in US timezones. Using Date(y, m, d, h, min) is always local.
+  const [year, month, day] = dueDate.split('-').map(Number)
+  const [hours, minutes] = (dueTime?.trim() || '23:59').split(':').map(Number)
+  const parsedDate = new Date(year, month - 1, day, hours, minutes, 0)
   if (isNaN(parsedDate.getTime())) {
     res.status(422).json({
       data: null,
@@ -112,6 +118,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
         dueDate: parsedDate,
         dueTime: dueTime?.trim() || null,
         userId: req.userId,
+        source: ASSIGNMENT_SOURCE.MANUAL,
       },
     })
 

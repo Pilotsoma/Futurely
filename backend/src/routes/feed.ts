@@ -848,7 +848,7 @@ router.put('/users/me/display-tag', async (req: Request, res: Response) => {
 
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { tag: tag ?? null, tagColor: tagColor ?? null },
+      data: { tag: tag ?? undefined, tagColor: tagColor ?? null },
     });
     res.json({ data: { tag: updated.tag, tagColor: updated.tagColor } });
   } catch (err) {

@@ -1,6 +1,7 @@
 import { Router, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
+import { ASSIGNMENT_SOURCE } from '../constants/assignmentSource'
 
 const router = Router()
 
@@ -55,6 +56,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
           orderBy: { period: 'asc' },
         },
         assignments: {
+          where: { source: ASSIGNMENT_SOURCE.MANUAL },
           orderBy: { dueDate: 'asc' },
         },
       },

@@ -30,7 +30,10 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section style={styles.hero}>
-        <div style={styles.heroBadge}>MVP Build · 2026</div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
+          <div style={styles.heroBadge}>MVP Build · 2026</div>
+          <div style={{ ...styles.heroBadge, background: 'rgba(99,102,241,0.15)', borderColor: 'rgba(99,102,241,0.4)', color: 'var(--primary)', fontWeight: 700 }}>v1.0.1</div>
+        </div>
         <h1 style={styles.heroHeading}>Your AI-Powered<br />Academic Companion</h1>
         <p style={styles.heroSub}>
           NextStep helps high school students track grades, plan assignments,
@@ -95,7 +98,7 @@ const styles: Record<string, React.CSSProperties> = {
   navInner:       { maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   navBtn:         { background: 'var(--primary)', color: '#060D10', borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: 14, textDecoration: 'none' },
   hero:           { textAlign: 'center', padding: '80px 24px 60px', maxWidth: 1100, margin: '0 auto' },
-  heroBadge:      { display: 'inline-block', background: 'rgba(0,200,150,0.15)', color: 'var(--primary)', border: '1px solid rgba(0,200,150,0.3)', borderRadius: 100, padding: '4px 14px', fontSize: 12, fontWeight: 600, marginBottom: 20 },
+  heroBadge:      { display: 'inline-block', background: 'rgba(0,200,150,0.15)', color: 'var(--primary)', border: '1px solid rgba(0,200,150,0.3)', borderRadius: 100, padding: '4px 14px', fontSize: 12, fontWeight: 600 },
   heroHeading:    { fontSize: 56, fontWeight: 800, lineHeight: 1.12, marginBottom: 20, letterSpacing: '-1.5px', color: 'var(--text)' },
   heroSub:        { fontSize: 18, color: 'var(--text-secondary)', maxWidth: 560, margin: '0 auto 32px', lineHeight: 1.7 },
   ctaBtn:         { display: 'inline-block', background: 'var(--primary)', color: '#060D10', borderRadius: 10, padding: '14px 32px', fontWeight: 700, fontSize: 16, textDecoration: 'none' },

@@ -6,12 +6,19 @@ import PageLoader from '../../../../components/ui/PageLoader'
 
 const BASE = ''
 
+interface AttendancePeriod {
+  period: string
+  status: string
+}
+
 interface AttendanceDay {
   date: string
   dayOfWeek: string
-  status: string
-  code: string
+  dayNum: number
+  bgColor: string
   description: string
+  isSchoolClosed: boolean
+  periods: AttendancePeriod[]
 }
 
 interface AttendanceData {
@@ -19,7 +26,7 @@ interface AttendanceData {
   year: number
   monthIndex: number
   days: AttendanceDay[]
-  summary: { absences: number; tardies: number; excused: number }
+  summary: { absences: number; excused: number; tardies: number; multiple: number }
 }
 
 function apiFetch<T>(path: string): Promise<T> {
@@ -29,24 +36,37 @@ function apiFetch<T>(path: string): Promise<T> {
   }).then(r => r.json())
 }
 
-// ── Code definitions ──────────────────────────────────────────────────────────
-// A = Absent (Unexcused)  T = Tardy / Late (Unexcused)
-// X = Excused Absence     S = School Activity / UIL
-// U = Suspension          P = Present   C = School Closed
-
-const CODE_META: Record<string, { label: string; bg: string; color: string; border: string }> = {
-  A: { label: 'Absent - Unexcused', bg: 'rgba(239,68,68,0.18)',   color: '#F87171', border: 'rgba(239,68,68,0.35)' },
-  T: { label: 'Tardy / Late',       bg: 'rgba(245,158,11,0.18)',  color: '#FBBF24', border: 'rgba(245,158,11,0.35)' },
-  X: { label: 'Excused Absence',    bg: 'rgba(34,197,94,0.18)',   color: '#4ADE80', border: 'rgba(34,197,94,0.35)' },
-  S: { label: 'School Activity/UIL',bg: 'rgba(217,119,6,0.18)',   color: '#F59E0B', border: 'rgba(217,119,6,0.35)' },
-  U: { label: 'Suspension',         bg: 'rgba(107,114,128,0.25)', color: '#9CA3AF', border: 'rgba(107,114,128,0.4)' },
-  P: { label: 'Present',            bg: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', border: 'var(--border)' },
+function getDayStyle(description: string): { bg: string; color: string; border: string } | null {
+  if (!description) return null
+  const desc = description.toLowerCase()
+  if (desc === 'multiple attendance codes') {
+    return { bg: 'rgba(251,146,60,0.18)', color: '#FB923C', border: 'rgba(251,146,60,0.35)' }
+  }
+  if (/absent.*unexcused|unexcused.*absent/i.test(desc)) {
+    return { bg: 'rgba(239,68,68,0.18)', color: '#F87171', border: 'rgba(239,68,68,0.35)' }
+  }
+  if (/tardy|late.?arrival|early.?depart/i.test(desc)) {
+    return { bg: 'rgba(245,158,11,0.18)', color: '#FBBF24', border: 'rgba(245,158,11,0.35)' }
+  }
+  if (/excused|approved.?absence|doctor|note|kisd|religious|illness|healthcare|homebound|court|college.?visit|military/i.test(desc)) {
+    return { bg: 'rgba(34,197,94,0.18)', color: '#4ADE80', border: 'rgba(34,197,94,0.35)' }
+  }
+  if (/uil|school.?act|field.?trip|sponsored|mentorship/i.test(desc)) {
+    return { bg: 'rgba(217,119,6,0.18)', color: '#F59E0B', border: 'rgba(217,119,6,0.35)' }
+  }
+  if (/suspend|truancy|no.?show/i.test(desc)) {
+    return { bg: 'rgba(107,114,128,0.25)', color: '#9CA3AF', border: 'rgba(107,114,128,0.4)' }
+  }
+  if (/present/i.test(desc)) return null
+  return { bg: 'rgba(99,102,241,0.15)', color: '#A78BFA', border: 'rgba(99,102,241,0.3)' }
 }
 
-function cellStyle(code: string): React.CSSProperties | undefined {
-  const m = CODE_META[code]
-  if (!m || code === 'P' || code === 'C' || !code) return undefined
-  return { background: m.bg, color: m.color, border: `1px solid ${m.border}` }
+function shortLabel(description: string): string {
+  if (!description) return ''
+  if (description === 'Multiple Attendance Codes') return 'Multi'
+  if (description === 'School Closed') return 'Closed'
+  const words = description.split(' ')
+  return words.slice(0, 2).join(' ')
 }
 
 export default function AttendancePage() {
@@ -79,10 +99,8 @@ export default function AttendancePage() {
     if (!data) return []
     const { year, monthIndex, days } = data
     const dayMap = new Map<number, AttendanceDay>()
-    for (const d of days) {
-      const num = parseInt(d.date.split('-')[2], 10)
-      if (!isNaN(num)) dayMap.set(num, d)
-    }
+    for (const d of days) dayMap.set(d.dayNum, d)
+
     const firstDow    = new Date(year, monthIndex, 1).getDay()
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
     const grid: ({ dayNum: number; day: AttendanceDay | null } | null)[][] = []
@@ -106,14 +124,12 @@ export default function AttendancePage() {
     fetchAttendance(next)
   }
 
-  // All notable events (exclude plain present days and school-closed days)
-  const events = data?.days.filter(d => d.code && d.code !== 'P' && d.code !== 'C' && d.code !== '') ?? []
-
-  // Summary counts
-  const totalAbsent  = data?.days.filter(d => d.code === 'A').length ?? 0
-  const totalTardy   = data?.days.filter(d => d.code === 'T').length ?? 0
-  const totalExcused = data?.days.filter(d => d.code === 'X').length ?? 0
-  const totalUIL     = data?.days.filter(d => d.code === 'S').length ?? 0
+  const events = data?.days.filter(d =>
+    d.description &&
+    d.description !== '' &&
+    !d.isSchoolClosed &&
+    !/^present/i.test(d.description)
+  ) ?? []
 
   if (loading && !data) return <PageLoader message="Opening attendance…" />
 
@@ -135,19 +151,16 @@ export default function AttendancePage() {
       {data && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
           {[
-            { count: totalAbsent,  label: 'Unexcused',  code: 'A' },
-            { count: totalTardy,   label: 'Tardy/Late',  code: 'T' },
-            { count: totalExcused, label: 'Excused',     code: 'X' },
-            { count: totalUIL,     label: 'School Act.', code: 'S' },
-          ].map(({ count, label, code }) => {
-            const m = CODE_META[code]
-            return (
-              <div key={code} className="ns-card" style={{ padding: '12px 8px', textAlign: 'center', border: `1px solid ${m.border}` }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: m.color }}>{count}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
-              </div>
-            )
-          })}
+            { count: data.summary.absences, label: 'Unexcused',  color: '#F87171', border: 'rgba(239,68,68,0.35)' },
+            { count: data.summary.tardies,  label: 'Tardy/Late',  color: '#FBBF24', border: 'rgba(245,158,11,0.35)' },
+            { count: data.summary.excused,  label: 'Excused',     color: '#4ADE80', border: 'rgba(34,197,94,0.35)' },
+            { count: data.summary.multiple, label: 'Multiple',    color: '#FB923C', border: 'rgba(251,146,60,0.35)' },
+          ].map(({ count, label, color, border }) => (
+            <div key={label} className="ns-card" style={{ padding: '12px 8px', textAlign: 'center', border: `1px solid ${border}` }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color }}>{count}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -155,20 +168,26 @@ export default function AttendancePage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <button onClick={() => navigate(-1)} style={S.navBtn}>← Prev</button>
         <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{data?.month ?? '—'}</span>
-        <button onClick={() => navigate(1)} disabled={monthOffset >= 0} style={{ ...S.navBtn, opacity: monthOffset >= 0 ? 0.3 : 1, cursor: monthOffset >= 0 ? 'default' : 'pointer' }}>Next →</button>
+        <button
+          onClick={() => navigate(1)}
+          disabled={monthOffset >= 0}
+          style={{ ...S.navBtn, opacity: monthOffset >= 0 ? 0.3 : 1, cursor: monthOffset >= 0 ? 'default' : 'pointer' }}
+        >
+          Next →
+        </button>
       </div>
 
       {loading && <div style={{ height: 240, background: 'rgba(255,255,255,0.04)', borderRadius: 12 }} />}
 
       {!loading && !data && !error && (
         <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8 }}>
-          No attendance data available. Connect your school portal in Settings.
+          No attendance data. Connect your school portal in Settings.
         </p>
       )}
 
       {!loading && data && (
         <>
-          {/* Calendar */}
+          {/* Calendar grid */}
           <div className="ns-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border)' }}>
               {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
@@ -178,12 +197,15 @@ export default function AttendancePage() {
             {grid.map((week, wi) => (
               <div key={wi} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 {week.map((cell, di) => {
-                  const cs = cellStyle(cell?.day?.code ?? '')
-                  const titleTip = cell?.day?.description || cell?.day?.status || undefined
+                  const day = cell?.day ?? null
+                  const style = day ? getDayStyle(day.description) : null
+                  const label = day ? shortLabel(day.description) : ''
+                  const closed = day?.isSchoolClosed ?? false
+
                   return (
                     <div
                       key={di}
-                      title={titleTip}
+                      title={day?.description || undefined}
                       style={{
                         aspectRatio: '1',
                         display: 'flex',
@@ -192,19 +214,22 @@ export default function AttendancePage() {
                         justifyContent: 'center',
                         fontSize: 12,
                         borderRight: di < 6 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                        cursor: titleTip ? 'help' : 'default',
-                        ...(cs ?? {}),
+                        cursor: (style || closed) ? 'help' : 'default',
+                        background: closed ? 'rgba(156,163,175,0.07)' : (style?.bg ?? 'transparent'),
+                        color: style?.color ?? (closed ? 'rgba(156,163,175,0.5)' : 'var(--text-secondary)'),
+                        border: style ? `1px solid ${style.border}` : 'none',
                       }}
                     >
                       {cell && (
                         <>
-                          <span style={{ fontWeight: 500, color: cs ? 'inherit' : 'var(--text-secondary)' }}>
-                            {cell.dayNum}
-                          </span>
-                          {cell.day?.code && cell.day.code !== 'P' && cell.day.code !== 'C' && cell.day.code !== '' && (
-                            <span style={{ fontSize: 9, fontWeight: 700, marginTop: 1, letterSpacing: '0.3px' }}>
-                              {cell.day.code}
+                          <span style={{ fontWeight: 500 }}>{cell.dayNum}</span>
+                          {label && !closed && (
+                            <span style={{ fontSize: 7, fontWeight: 700, marginTop: 1, letterSpacing: '0.2px', textAlign: 'center', lineHeight: 1.1 }}>
+                              {label}
                             </span>
+                          )}
+                          {closed && (
+                            <span style={{ fontSize: 7, opacity: 0.4, marginTop: 1 }}>—</span>
                           )}
                         </>
                       )}
@@ -215,50 +240,56 @@ export default function AttendancePage() {
             ))}
           </div>
 
-          {/* Legend */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
-            {Object.entries(CODE_META).map(([code, meta]) => (
-              <div key={code} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, fontSize: 11.5, background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}>
-                <span style={{ fontWeight: 700 }}>{code}</span>
-                <span>{meta.label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Attendance events list */}
+          {/* Events list */}
           <div style={{ marginBottom: 4 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-              Events This Month
+              Notable Events This Month
             </div>
             {events.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No events recorded this month.</p>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No notable attendance events this month.</p>
             ) : (
               <div className="ns-card" style={{ padding: 0, overflow: 'hidden' }}>
                 {events.map((ev, i) => {
-                  const m = CODE_META[ev.code]
+                  const style = getDayStyle(ev.description)
                   return (
                     <div
                       key={ev.date}
                       style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 14px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}
                     >
                       <div style={{
-                        background: m?.bg, color: m?.color, border: `1px solid ${m?.border}`,
-                        width: 30, height: 30, borderRadius: 7,
+                        background: style?.bg ?? 'rgba(255,255,255,0.06)',
+                        color: style?.color ?? 'var(--text-muted)',
+                        border: `1px solid ${style?.border ?? 'var(--border)'}`,
+                        width: 34, height: 34, borderRadius: 8,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1,
+                        fontSize: 13, fontWeight: 800, flexShrink: 0, marginTop: 1,
                       }}>
-                        {ev.code}
+                        {ev.dayNum}
                       </div>
+
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text)' }}>
                           {new Date(ev.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                         </div>
-                        <div style={{ fontSize: 11.5, fontWeight: 600, color: m?.color, marginTop: 1 }}>
-                          {m?.label ?? ev.status}
+                        <div style={{ fontSize: 12, fontWeight: 600, color: style?.color ?? 'var(--text-secondary)', marginTop: 2 }}>
+                          {ev.description}
                         </div>
-                        {ev.description && (
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.5 }}>
-                            {ev.description}
+                        {ev.periods.length > 0 && ev.periods[0].period !== 'all' && (
+                          <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {ev.periods.map((p, pi) => {
+                              const ps = getDayStyle(p.status)
+                              return (
+                                <span key={pi} style={{
+                                  fontSize: 10, fontWeight: 600,
+                                  padding: '2px 7px', borderRadius: 999,
+                                  background: ps?.bg ?? 'rgba(255,255,255,0.06)',
+                                  color: ps?.color ?? 'var(--text-muted)',
+                                  border: `1px solid ${ps?.border ?? 'var(--border)'}`,
+                                }}>
+                                  Pd {p.period}: {p.status}
+                                </span>
+                              )
+                            })}
                           </div>
                         )}
                       </div>

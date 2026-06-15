@@ -58,6 +58,7 @@ async function main(): Promise<void> {
     await prisma.grade.create({
       data: {
         courseId: course.id,
+        userId: user.id,
         letterGrade: def.letterGrade,
         percentage: def.percentage,
         gradingPeriod: 'CURRENT',
