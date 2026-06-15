@@ -45,7 +45,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
 
-app.get('/api/health/connectivity', async (_req, res) => {
+app.get('/health/connectivity', async (_req, res) => {
   const testUrl = 'https://homeaccess.katyisd.org/HomeAccess/Account/LogOn'
 
   try {
@@ -74,8 +74,8 @@ app.get('/api/health/connectivity', async (_req, res) => {
   }
 })
 
-app.use('/api/auth', authRoutes)
-app.use('/api/grades', gradesRoutes)
+app.use('/auth', authRoutes)
+app.use('/grades', gradesRoutes)
 
 /**
  * TEMPORARY LOCAL DEV ONLY:
@@ -121,25 +121,25 @@ function devBypass(req: any, _res: any, next: any): void {
 if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   console.warn('⚠️  [DEV] Auth bypass active — requests will use real JWT userId or fall back to userId=1')
   console.warn('⚠️  [DEV] Set ENABLE_DEV_INTEGRATION_AUTH_BYPASS=false before any real testing')
-  app.use('/api/assignments', devBypass, assignmentsRouter)
-  app.use('/api/students', devBypass, studentsRouter)
-  app.use('/api/roadmap', devBypass, roadmapRouter)
-  app.use('/api/ai', devBypass, aiRouter)
-  app.use('/api/feed', devBypass, feedRouter)
-  app.use('/api/notifications', devBypass, notificationsRouter)
-  app.use('/api/integrations/grades', devBypass, gradesIntegrationRouter)
-  app.use('/api/colleges', devBypass, collegesRouter)
+  app.use('/assignments', devBypass, assignmentsRouter)
+  app.use('/students', devBypass, studentsRouter)
+  app.use('/roadmap', devBypass, roadmapRouter)
+  app.use('/ai', devBypass, aiRouter)
+  app.use('/feed', devBypass, feedRouter)
+  app.use('/notifications', devBypass, notificationsRouter)
+  app.use('/integrations/grades', devBypass, gradesIntegrationRouter)
+  app.use('/colleges', devBypass, collegesRouter)
 } else {
-  app.use('/api/assignments', assignmentsRouter)
-  app.use('/api/students', studentsRouter)
-  app.use('/api/roadmap', roadmapRouter)
-  app.use('/api/ai', aiRouter)
-  app.use('/api/feed', requireAuth, feedRouter)
-  app.use('/api/notifications', requireAuth, notificationsRouter)
-  app.use('/api/integrations/grades', requireAuth, gradesIntegrationRouter)
-  app.use('/api/colleges', requireAuth, collegesRouter)
+  app.use('/assignments', assignmentsRouter)
+  app.use('/students', studentsRouter)
+  app.use('/roadmap', roadmapRouter)
+  app.use('/ai', aiRouter)
+  app.use('/feed', requireAuth, feedRouter)
+  app.use('/notifications', requireAuth, notificationsRouter)
+  app.use('/integrations/grades', requireAuth, gradesIntegrationRouter)
+  app.use('/colleges', requireAuth, collegesRouter)
 }
 
-app.use('/api/parent', parentRouter)
+app.use('/parent', parentRouter)
 
 export default app
