@@ -202,6 +202,7 @@ model SchoolConnection {
   hacUsername       String?
   encryptedPassword String?
   cachedSession     String?
+  hacDataCache      Json?
   lastSynced        DateTime?
   syncStatus        String?
   syncError         String?

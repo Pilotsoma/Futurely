@@ -327,6 +327,44 @@ function isCacheStale(lastSynced: Date | null): boolean {
   return Date.now() - lastSynced.getTime() > SYNC_STALE_MS
 }
 
+// ── Per-endpoint HAC response cache ───────────────────────────────────────────
+// Stored as JSON in SchoolConnection.hacDataCache keyed by endpoint name.
+// Cache misses fall through to live HAC scraping — identical to pre-cache behavior.
+const HAC_CACHE_TTL_MS: Record<string, number> = {
+  transcript:     24 * 60 * 60 * 1000,  // 24h  — rarely changes
+  schedule:        7 * 24 * 60 * 60 * 1000,  // 7d   — changes once per semester
+  gpa:             4 * 60 * 60 * 1000,  // 4h
+  contactTeachers: 24 * 60 * 60 * 1000, // 24h
+}
+const CLASSWORK_TTL_MS   = 2 * 60 * 60 * 1000  // 2h  — grades update throughout the day
+const REPORT_CARD_TTL_MS = 6 * 60 * 60 * 1000  // 6h
+const ATTENDANCE_TTL_MS  = 4 * 60 * 60 * 1000  // 4h
+const PROGRESS_TTL_MS    = 4 * 60 * 60 * 1000  // 4h
+
+async function readHacCache(userId: number, key: string, ttlMs: number): Promise<unknown | null> {
+  try {
+    const conn = await prisma.schoolConnection.findUnique({ where: { userId }, select: { hacDataCache: true } })
+    if (!conn?.hacDataCache) return null
+    const cache = conn.hacDataCache as Record<string, { data: unknown; cachedAt: number }>
+    const entry = cache[key]
+    if (!entry || Date.now() - entry.cachedAt > ttlMs) return null
+    return entry.data
+  } catch { return null }
+}
+
+async function writeHacCache(userId: number, key: string, data: unknown): Promise<void> {
+  try {
+    const conn = await prisma.schoolConnection.findUnique({ where: { userId }, select: { hacDataCache: true } })
+    const existing: any = conn?.hacDataCache ?? {}
+    await prisma.schoolConnection.update({
+      where: { userId },
+      data: { hacDataCache: { ...existing, [key]: { data, cachedAt: Date.now() } } as any },
+    })
+  } catch (e) {
+    console.warn('[HAC CACHE] Non-fatal write failure:', e instanceof Error ? e.message : String(e))
+  }
+}
+
 // ── Background grade sync ──────────────────────────────────────────────────────
 // Fired without await after /hac/login responds. Updates syncStatus on
 // SchoolConnection so the client can poll GET /sync-status.
@@ -741,20 +779,21 @@ router.get('/transcript', async (req: AuthRequest, res: Response): Promise<void>
   if (!entry) return
 
   try {
-    let transcript: object
+    const cached = await readHacCache(req.userId!, 'transcript', HAC_CACHE_TTL_MS.transcript)
+    if (cached) {
+      res.json({ data: { systemType: entry.session.systemType, transcript: cached } })
+      return
+    }
 
+    let transcript: object
     if (entry.session.systemType === 'HAC') {
       transcript = await hacTranscript(entry.token)
     } else {
       transcript = await psTranscript(entry.token)
     }
 
-    res.json({
-      data: {
-        systemType: entry.session.systemType,
-        transcript,
-      },
-    })
+    void writeHacCache(req.userId!, 'transcript', transcript)
+    res.json({ data: { systemType: entry.session.systemType, transcript } })
   } catch (err: unknown) {
     sendError(res, 'FETCH_TRANSCRIPT', err, 'FETCH_ERROR')
   }
@@ -777,13 +816,15 @@ router.get('/schedule', async (req: AuthRequest, res: Response): Promise<void> =
   }
 
   try {
-    const schedule = await getSchedule(entry.token)
+    const cached = await readHacCache(req.userId!, 'schedule', HAC_CACHE_TTL_MS.schedule)
+    if (cached) {
+      res.json({ data: { schedule: cached } })
+      return
+    }
 
-    res.json({
-      data: {
-        schedule,
-      },
-    })
+    const schedule = await getSchedule(entry.token)
+    void writeHacCache(req.userId!, 'schedule', schedule)
+    res.json({ data: { schedule } })
   } catch (err: unknown) {
     sendError(res, 'FETCH_SCHEDULE', err, 'FETCH_ERROR')
   }
@@ -799,9 +840,14 @@ router.get('/gpa', async (req: AuthRequest, res: Response): Promise<void> => {
     let courseCount = 0
 
     if (entry.session.systemType === 'HAC') {
-      // Pull the real cumulative GPAs that HAC calculates and displays on the transcript page
-      const transcript = await hacTranscript(entry.token)
-      const t = transcript as { weightedGPA?: string | null; unweightedGPA?: string | null; semesters?: Array<{ courses: unknown[] }> }
+      // Reuse transcript cache — GPA data lives on the same page
+      const cachedTranscript = await readHacCache(req.userId!, 'transcript', HAC_CACHE_TTL_MS.transcript)
+      const rawTranscript = cachedTranscript ?? await (async () => {
+        const t = await hacTranscript(entry.token)
+        void writeHacCache(req.userId!, 'transcript', t)
+        return t
+      })()
+      const t = rawTranscript as { weightedGPA?: string | null; unweightedGPA?: string | null; semesters?: Array<{ courses: unknown[] }> }
 
       const w = parseFloat(t.weightedGPA ?? '')
       const u = parseFloat(t.unweightedGPA ?? '')
@@ -961,7 +1007,16 @@ router.get('/classwork', async (req: AuthRequest, res: Response): Promise<void> 
   try {
     touchSession(req.userId!)
     const period = req.query.period as string | undefined
+    const cacheKey = `classwork:${period ?? '__default__'}`
+
+    const cached = await readHacCache(req.userId!, cacheKey, CLASSWORK_TTL_MS)
+    if (cached) {
+      res.json({ data: cached })
+      return
+    }
+
     const { classes, availablePeriods, currentPeriod } = await hacGrades(entry.token, period)
+    void writeHacCache(req.userId!, cacheKey, { classes, availablePeriods, currentPeriod })
     res.json({ data: { classes, availablePeriods, currentPeriod } })
   } catch (err: unknown) {
     sendError(res, 'FETCH_CLASSWORK', err, 'FETCH_ERROR')
@@ -980,7 +1035,16 @@ router.get('/report-card', async (req: AuthRequest, res: Response): Promise<void
   try {
     touchSession(req.userId!)
     const period = req.query.period as string | undefined
+    const cacheKey = `reportCard:${period ?? '__default__'}`
+
+    const cached = await readHacCache(req.userId!, cacheKey, REPORT_CARD_TTL_MS)
+    if (cached) {
+      res.json({ data: cached })
+      return
+    }
+
     const { reportingPeriods, currentPeriod, semesters } = await getReportCard(entry.token, period)
+    void writeHacCache(req.userId!, cacheKey, { reportingPeriods, currentPeriod, semesters })
     res.json({ data: { reportingPeriods, currentPeriod, semesters } })
   } catch (err: unknown) {
     sendError(res, 'FETCH_REPORT_CARD', err, 'FETCH_ERROR')
@@ -999,7 +1063,16 @@ router.get('/progress-report', async (req: AuthRequest, res: Response): Promise<
   try {
     touchSession(req.userId!)
     const date = req.query.date as string | undefined
+    const cacheKey = `progressReport:${date ?? '__default__'}`
+
+    const cached = await readHacCache(req.userId!, cacheKey, PROGRESS_TTL_MS)
+    if (cached) {
+      res.json({ data: cached })
+      return
+    }
+
     const data = await getProgressReport(entry.token, date)
+    void writeHacCache(req.userId!, cacheKey, data)
     res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_PROGRESS_REPORT', err, 'FETCH_ERROR')
@@ -1018,7 +1091,16 @@ router.get('/attendance', async (req: AuthRequest, res: Response): Promise<void>
   try {
     touchSession(req.userId!)
     const offset = parseInt(String(req.query.monthOffset ?? '0')) || 0
+    const cacheKey = `attendance:${offset}`
+
+    const cached = await readHacCache(req.userId!, cacheKey, ATTENDANCE_TTL_MS)
+    if (cached) {
+      res.json({ data: cached })
+      return
+    }
+
     const data = await getAttendance(entry.token, offset)
+    void writeHacCache(req.userId!, cacheKey, data)
     res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_ATTENDANCE', err, 'FETCH_ERROR')
@@ -1036,7 +1118,14 @@ router.get('/contact-teachers', async (req: AuthRequest, res: Response): Promise
 
   try {
     touchSession(req.userId!)
+    const cached = await readHacCache(req.userId!, 'contactTeachers', HAC_CACHE_TTL_MS.contactTeachers)
+    if (cached) {
+      res.json({ data: cached })
+      return
+    }
+
     const data = await getContactTeachers(entry.token)
+    void writeHacCache(req.userId!, 'contactTeachers', data)
     res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_CONTACT_TEACHERS', err, 'FETCH_ERROR')
