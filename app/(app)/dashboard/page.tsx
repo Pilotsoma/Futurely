@@ -6,6 +6,19 @@ import { api, type StudentData } from '../../../lib/api'
 import AiBar from '../../../components/ui/AiBar'
 import PageLoader from '../../../components/ui/PageLoader'
 
+const STREAK_MILESTONES = [
+  { days: 3,   tag: 'Consistent', tagColor: '#22C55E', emoji: '✅' },
+  { days: 7,   tag: 'Pro',        tagColor: '#3B82F6', emoji: '⚡' },
+  { days: 14,  tag: 'Dedicated',  tagColor: '#8B5CF6', emoji: '🎯' },
+  { days: 30,  tag: 'Veteran',    tagColor: '#F97316', emoji: '🏅' },
+  { days: 50,  tag: 'Legend',     tagColor: '#EC4899', emoji: '💎' },
+  { days: 100, tag: 'GOD',        tagColor: '#EAB308', emoji: '👑' },
+]
+
+function getNextMilestone(streak: number) {
+  return STREAK_MILESTONES.find(m => m.days > streak) ?? null
+}
+
 const GRADE_COLOR: Record<string, string> = { A: '#22C55E', B: '#10B981', C: '#F59E0B', D: '#F97316', F: '#EF4444' }
 const gradeColor = (g: string) => GRADE_COLOR[g?.charAt(0).toUpperCase()] ?? 'var(--text-muted)'
 
@@ -34,6 +47,7 @@ export default function DashboardPage() {
   const [courseCount, setCourseCount] = useState<number | null>(null)
   const [semesterLabel, setSemesterLabel] = useState<string>('')
   const [dayStreak, setDayStreak] = useState(0)
+  const [newlyAwardedTags, setNewlyAwardedTags] = useState<Array<{ tag: string; tagColor: string }>>([])
   const [showStreakPopup, setShowStreakPopup] = useState(false)
   const [showResyncPopup, setShowResyncPopup] = useState(false)
   const [resyncing, setResyncing] = useState(false)
@@ -47,29 +61,35 @@ export default function DashboardPage() {
     const lastVisit = localStorage.getItem('ns_lastVisit')
     const streak = parseInt(localStorage.getItem('ns_streak') ?? '0', 10)
 
+    let currentStreak = streak
     if (lastVisit === today) {
-      // Already visited today, keep current streak
       setDayStreak(streak)
     } else if (lastVisit) {
       const lastDate = new Date(lastVisit)
       const todayDate = new Date(today)
       const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / 86400000)
       if (diffDays === 1) {
-        // Consecutive day, increment streak
-        const newStreak = streak + 1
-        localStorage.setItem('ns_streak', String(newStreak))
-        setDayStreak(newStreak)
+        currentStreak = streak + 1
+        localStorage.setItem('ns_streak', String(currentStreak))
+        setDayStreak(currentStreak)
       } else {
-        // Streak broken, reset to 1
+        currentStreak = 1
         localStorage.setItem('ns_streak', '1')
         setDayStreak(1)
       }
     } else {
-      // First visit ever
+      currentStreak = 1
       localStorage.setItem('ns_streak', '1')
       setDayStreak(1)
     }
     localStorage.setItem('ns_lastVisit', today)
+
+    // Award any streak milestone tags the user has earned
+    if (currentStreak > 0) {
+      api.streakReward(currentStreak)
+        .then(r => { if (r.newTags?.length) setNewlyAwardedTags(r.newTags) })
+        .catch(() => {})
+    }
     api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed'))
     api.portalGpa()
       .then(g => { setPortalUGpa(g.unweightedGpa); setPortalWGpa(g.weightedGpa) })
@@ -218,6 +238,11 @@ export default function DashboardPage() {
         <div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)}>
           <div style={S.statNum}>{dayStreak}</div>
           <div style={S.statLabel}>Day Streak 🔥</div>
+          {(() => {
+            const next = getNextMilestone(dayStreak)
+            if (!next) return <div style={S.statSub} title="All streak rewards earned">👑 GOD</div>
+            return <div style={S.statSub}>Next: {next.days}d → {next.tag}</div>
+          })()}
         </div>
       </div>
 
@@ -244,42 +269,46 @@ export default function DashboardPage() {
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowStreakPopup(false)} style={S.popupClose}>×</button>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🔥</div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>
               {dayStreak} Day Streak!
             </h3>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              You've opened the app <strong>{dayStreak} day{dayStreak !== 1 ? 's' : ''}</strong> in a row! Keep it up to unlock rewards and stay on top of your learning.
+              Log in every day to earn exclusive tags. Keep your streak alive to climb the ladder!
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={S.popupBenefit}>
-                <span style={{ fontSize: 16 }}>📚</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Stay on Track</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Daily check-ins help you manage assignments and never miss a deadline.</div>
-                </div>
+
+            {newlyAwardedTags.length > 0 && (
+              <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#22C55E', fontWeight: 600 }}>
+                🎉 You just earned: {newlyAwardedTags.map(t => t.tag).join(', ')}!
               </div>
-              <div style={S.popupBenefit}>
-                <span style={{ fontSize: 16 }}>🎯</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Build Habits</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Consistent study habits lead to better grades and less stress.</div>
-                </div>
-              </div>
-              <div style={S.popupBenefit}>
-                <span style={{ fontSize: 16 }}>🏆</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Unlock Rewards</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Reach milestones like 7, 14, and 30-day streaks to earn special badges.</div>
-                </div>
-              </div>
-              <div style={S.popupBenefit}>
-                <span style={{ fontSize: 16 }}>🧠</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>AI-Powered Insights</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>The more you use the app, the smarter your AI study recommendations become.</div>
-                </div>
-              </div>
+            )}
+
+            <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 10 }}>Streak Rewards</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              {STREAK_MILESTONES.map(m => {
+                const earned = dayStreak >= m.days
+                return (
+                  <div key={m.days} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '9px 12px', borderRadius: 10,
+                    background: earned ? 'var(--surface-2)' : 'transparent',
+                    border: `1px solid ${earned ? m.tagColor + '44' : 'var(--border)'}`,
+                    opacity: earned ? 1 : 0.5,
+                  }}>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>{earned ? m.emoji : '🔒'}</span>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: earned ? m.tagColor : 'var(--text-secondary)' }}>
+                        {m.tag}
+                      </span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>{m.days} day streak</span>
+                    </div>
+                    {earned && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: m.tagColor, background: m.tagColor + '22', borderRadius: 6, padding: '2px 7px' }}>Earned</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
+
             <button onClick={() => setShowStreakPopup(false)} style={S.popupButton}>
               Got it!
             </button>
@@ -369,6 +398,7 @@ const S: Record<string, React.CSSProperties> = {
   statCard:   { padding: '16px', textAlign: 'center' as const },
   statNum:    { fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 4 },
   statLabel:  { fontSize: 11.5, color: 'var(--text-secondary)' },
+  statSub:    { fontSize: 10, color: 'var(--text-muted)', marginTop: 4, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
   tilesGrid:  { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 },
   tile:       { display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'border-color 0.15s' },
   tileIcon:   { width: 42, height: 42, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },

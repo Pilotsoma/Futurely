@@ -93,6 +93,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(fields),
     }),
+  streakReward: (streak: number) =>
+    request<{ newTags: Array<{ days: number; tag: string; tagColor: string }> }>(
+      '/api/students/me/streak-reward',
+      { method: 'POST', body: JSON.stringify({ streak }) }
+    ),
   roadmap: () => request<{
     gradeLevel: number
     creditsCompleted: number

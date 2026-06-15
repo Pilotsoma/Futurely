@@ -5,6 +5,21 @@ import { ASSIGNMENT_SOURCE } from '../constants/assignmentSource'
 
 const router = Router()
 
+const STREAK_MILESTONES: Array<{ days: number; tag: string; tagColor: string }> = [
+  { days: 3,   tag: 'Consistent', tagColor: '#22C55E' },
+  { days: 7,   tag: 'Pro',        tagColor: '#3B82F6' },
+  { days: 14,  tag: 'Dedicated',  tagColor: '#8B5CF6' },
+  { days: 30,  tag: 'Veteran',    tagColor: '#F97316' },
+  { days: 50,  tag: 'Legend',     tagColor: '#EC4899' },
+  { days: 100, tag: 'GOD',        tagColor: '#EAB308' },
+]
+
+function parseAllTags(raw: unknown): Array<{ tag: string; tagColor: string }> {
+  if (Array.isArray(raw)) return (raw as Array<{ tag?: unknown; tagColor?: unknown }>)
+    .filter(t => t?.tag).map(t => ({ tag: String(t.tag), tagColor: String(t.tagColor ?? 'grey') }))
+  try { return JSON.parse(String(raw ?? '[]')) as Array<{ tag: string; tagColor: string }> } catch { return [] }
+}
+
 function letterToPoints(letter: string): number {
   const map: Record<string, number> = {
     'A+': 4.0, 'A': 4.0, 'A-': 3.7,
@@ -144,6 +159,36 @@ router.patch('/me/profile', requireAuth, async (req: AuthRequest, res: Response)
     res.json({ data: profile })
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to update profile' } })
+  }
+})
+
+router.post('/me/streak-reward', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }); return }
+  const { streak } = req.body as { streak?: number }
+  if (typeof streak !== 'number' || streak < 1) {
+    res.status(400).json({ data: null, error: { code: 'BAD_REQUEST', message: 'streak must be a positive number' } })
+    return
+  }
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { allTags: true } })
+    const existing = parseAllTags(user?.allTags)
+    const existingNames = new Set(existing.map(t => t.tag))
+
+    const newlyEarned = STREAK_MILESTONES.filter(m => streak >= m.days && !existingNames.has(m.tag))
+    if (newlyEarned.length === 0) {
+      res.json({ data: { newTags: [] } })
+      return
+    }
+
+    const updated = [...existing, ...newlyEarned.map(m => ({ tag: m.tag, tagColor: m.tagColor }))]
+    await prisma.user.update({
+      where: { id: req.userId },
+      data: { allTags: JSON.stringify(updated) },
+    })
+
+    res.json({ data: { newTags: newlyEarned } })
+  } catch {
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to award streak tag' } })
   }
 })
 
