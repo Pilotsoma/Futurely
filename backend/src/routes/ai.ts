@@ -1,11 +1,16 @@
 import { Router, Response } from 'express'
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
+import OpenAI from 'openai'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
-const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
+const FREE_MODEL = 'google/gemini-2.0-flash-exp:free'
+
+const openrouter = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY ?? '',
+  baseURL: 'https://openrouter.ai/api/v1',
+})
 
 router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.userId === undefined) {
@@ -55,14 +60,16 @@ College goal: ${profile?.futureDecision ?? 'not specified'}
 
 Be encouraging, concise, and specific. Only reference the student data above — never invent numbers or facts. Keep responses under 3 sentences.`
 
-    const model = genai.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: systemPrompt,
+    const response = await openrouter.chat.completions.create({
+      model: FREE_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      max_tokens: 512,
     })
 
-    const result = await model.generateContent(userMessage)
-    const reply = result.response.text()
-
+    const reply = response.choices[0]?.message?.content ?? 'Sorry, I could not generate a response right now.'
     res.json({ data: { reply } })
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
@@ -98,48 +105,42 @@ router.get('/study-plan', requireAuth, async (req: AuthRequest, res: Response): 
       dueDate: new Date(a.dueDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
     }))
 
-    const model = genai.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            overview: { type: SchemaType.STRING },
-            days: {
-              type: SchemaType.ARRAY,
-              items: {
-                type: SchemaType.OBJECT,
-                properties: {
-                  label: { type: SchemaType.STRING },
-                  date:  { type: SchemaType.STRING },
-                  sessions: {
-                    type: SchemaType.ARRAY,
-                    items: {
-                      type: SchemaType.OBJECT,
-                      properties: {
-                        assignmentId:   { type: SchemaType.NUMBER },
-                        title:          { type: SchemaType.STRING },
-                        subject:        { type: SchemaType.STRING },
-                        dueDate:        { type: SchemaType.STRING },
-                        minutesToSpend: { type: SchemaType.NUMBER },
-                        notes:          { type: SchemaType.STRING },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+    const prompt = `Today is ${todayStr}. Create a realistic study plan for these assignments:
+
+${JSON.stringify(assignmentList, null, 2)}
+
+Rules: max 120 min/day, prioritize soonest due dates, split large tasks across days, only include days with work.
+
+Respond with ONLY a JSON object in exactly this shape (no markdown, no extra text):
+{
+  "overview": "1-2 sentence motivational summary",
+  "days": [
+    {
+      "label": "Today" | "Tomorrow" | "Weekday, Mon DD",
+      "date": "YYYY-MM-DD",
+      "sessions": [
+        {
+          "assignmentId": <number>,
+          "title": "<string>",
+          "subject": "<string>",
+          "dueDate": "<string>",
+          "minutesToSpend": <number>,
+          "notes": "<string>"
+        }
+      ]
+    }
+  ]
+}`
+
+    const response = await openrouter.chat.completions.create({
+      model: FREE_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 2048,
+      response_format: { type: 'json_object' },
     })
 
-    const prompt = `Today is ${todayStr}. Create a realistic study plan for these assignments:\n\n${JSON.stringify(assignmentList, null, 2)}\n\nRules: max 120 min/day, prioritize soonest due dates, split large tasks across days, only include days with work. Use "Today", "Tomorrow", or the weekday name for the label field. Use ISO date (YYYY-MM-DD) for the date field.`
-
-    const result = await model.generateContent(prompt)
-    const data = JSON.parse(result.response.text())
-
+    const raw = response.choices[0]?.message?.content ?? '{}'
+    const data = JSON.parse(raw)
     res.json({ data })
   } catch (err) {
     console.error('[AI STUDY PLAN]', err)

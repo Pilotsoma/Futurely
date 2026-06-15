@@ -374,8 +374,11 @@ router.post('/students/:studentId/chat', async (req: AuthRequest, res: Response)
       .join(', ')
     const pendingCount = courses.reduce((sum, c) => sum + (c.upcomingAssignments?.length ?? 0), 0)
 
-    const { GoogleGenerativeAI } = await import('@google/generative-ai')
-    const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
+    const OpenAI = (await import('openai')).default
+    const openrouter = new OpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY ?? '',
+      baseURL: 'https://openrouter.ai/api/v1',
+    })
 
     const systemPrompt = `You are NextStep AI, an academic advisor assistant for parents.
 You are helping a parent review their student's academic performance.
@@ -387,9 +390,15 @@ Current courses: ${coursesSummary || 'none on file'}
 Pending assignments: ${pendingCount}
 Answer the parent's question clearly and helpfully. Be concise.`
 
-    const model = genai.getGenerativeModel({ model: 'gemini-2.0-flash', systemInstruction: systemPrompt })
-    const result = await model.generateContent(message.trim())
-    const reply = result.response.text()
+    const response = await openrouter.chat.completions.create({
+      model: 'google/gemini-2.0-flash-exp:free',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message.trim() },
+      ],
+      max_tokens: 512,
+    })
+    const reply = response.choices[0]?.message?.content ?? 'No response.'
     res.json({ data: { reply } })
   } catch (e) {
     console.error('[PARENT] chat error:', e)
