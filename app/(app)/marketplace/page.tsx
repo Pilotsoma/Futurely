@@ -712,7 +712,8 @@ export default function MarketplacePage() {
                         by{' '}
                         <button
                           onClick={() => void openProfile(listing.seller.id)}
-                          style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 600, color: 'var(--text)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                          className={listing.seller.nameColor === 'rainbow' ? 'name-rainbow' : ''}
+                          style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...(listing.seller.nameColor && listing.seller.nameColor !== 'rainbow' ? { color: listing.seller.nameColor } : { color: 'var(--text)' }) }}
                         >
                           {listing.seller.name ?? 'Unknown'}
                         </button>
