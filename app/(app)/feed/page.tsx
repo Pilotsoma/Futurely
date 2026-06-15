@@ -89,6 +89,8 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
     : n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED' ? '🔄'
     : '💬'
 
+  if (!content) return null
+
   return (
     <div style={{ ...N.item, background: n.read ? 'transparent' : 'rgba(75,110,255,0.07)' }}>
       <span style={{ fontSize: 15, flexShrink: 0 }}>
