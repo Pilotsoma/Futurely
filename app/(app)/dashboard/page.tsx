@@ -15,7 +15,7 @@ const STREAK_MILESTONES = [
 ]
 
 function streakCoinBonus(streak: number) {
-  return 30 + Math.max(0, streak - 1) * 5
+  return Math.min(250, 30 + Math.max(0, streak - 1) * 5)
 }
 
 function getNextMilestone(streak: number) {
