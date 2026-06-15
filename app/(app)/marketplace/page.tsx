@@ -698,7 +698,7 @@ export default function MarketplacePage() {
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                         by {listing.seller.name ?? 'Unknown'}
                         {listing.seller.tag && (
-                          <span style={{ marginLeft: 6, fontWeight: 700, color: listing.seller.tagColor ?? '#6B7280' }}>[{listing.seller.tag}]</span>
+                          <span className={listing.seller.tag === 'DEV' ? 'tag-rainbow' : ''} style={{ marginLeft: 6, fontWeight: 700, color: listing.seller.tag === 'DEV' ? undefined : listing.seller.tagColor ?? '#6B7280' }}>[{listing.seller.tag}]</span>
                         )}
                       </div>
                     </div>
