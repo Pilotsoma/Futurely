@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification, InventoryData, BoxResult, MarketplaceItem } from '@/lib/api'
+import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification } from '@/lib/api'
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -45,11 +45,6 @@ function nameColorStyle(color: string | null | undefined): React.CSSProperties {
 }
 function nameColorClass(color: string | null | undefined): string {
   return color === 'rainbow' ? 'name-rainbow' : ''
-}
-
-const RARITY_COLOR: Record<string, string> = {
-  Common: '#6B7280', Uncommon: '#3B82F6', Rare: '#8B5CF6',
-  Epic: '#F97316', Legendary: '#EAB308', Mythic: '#EC4899',
 }
 
 // ── Notification row with clickable sender name ───────────────────────────────
@@ -948,7 +943,7 @@ export default function StudyFeedPage() {
   const [followingLoaded, setFollowingLoaded] = useState(false)
   const [commentPostId, setCommentPostId] = useState<number | null>(null)
   const [currentUserId, setCurrentUserId] = useState<number>(0)
-  const [tab, setTab] = useState<'social' | 'following' | 'search' | 'marketplace'>('social')
+  const [tab, setTab] = useState<'social' | 'following' | 'search'>('social')
   const [profileUserId, setProfileUserId] = useState<number | null>(null)
   const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set())
   const [isDevUser, setIsDevUser] = useState(false)
@@ -1200,7 +1195,7 @@ export default function StudyFeedPage() {
     <div className="fade-up" style={{ padding: '0 var(--page-px) 32px' }}>
       {/* Tab bar */}
       <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', marginBottom: 16, position: 'relative' }}>
-        {([['social', 'Social'], ['following', 'Following'], ['search', 'Find People'], ['marketplace', '🛒 Shop']] as const).map(([key, label]) => (
+        {([['social', 'Social'], ['following', 'Following'], ['search', 'Find People']] as const).map(([key, label]) => (
           <button key={key} onClick={() => {
             setTab(key)
             if (key === 'following' && !followingLoaded) loadFollowingPosts(1)
@@ -1425,8 +1420,6 @@ export default function StudyFeedPage() {
             </>
           )}
         </>
-      ) : tab === 'marketplace' ? (
-        <MarketplaceTab isDevUser={isDevUser} currentUserId={currentUserId} />
       ) : (
         <UserSearch currentUserId={currentUserId} onOpenProfile={id => setProfileUserId(id)}
           followedUsers={followedUsers} onFollow={handleFollow} />
@@ -1470,251 +1463,6 @@ export default function StudyFeedPage() {
   )
 }
 
-// ── Marketplace Tab ───────────────────────────────────────────────────────────
-
-function MarketplaceTab({ isDevUser, currentUserId }: { isDevUser: boolean; currentUserId: number }) {
-  const [inv, setInv] = useState<InventoryData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [opening, setOpening] = useState<'tag' | 'name-color' | 'pfp' | null>(null)
-  const [result, setResult] = useState<(BoxResult & { dismissed?: boolean }) | null>(null)
-  const [equipping, setEquipping] = useState<string | null>(null)
-  const [devCoins, setDevCoins] = useState('500')
-  const [devType, setDevType] = useState<'name-color' | 'pfp'>('name-color')
-  const [devItemId, setDevItemId] = useState('')
-  const [devGranting, setDevGranting] = useState(false)
-  const [devMsg, setDevMsg] = useState('')
-
-  useEffect(() => {
-    api.marketplaceInventory()
-      .then(d => { setInv(d); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
-
-  async function handleDailyClaim() {
-    try {
-      const r = await api.marketplaceDailyClaim()
-      setInv(prev => prev ? { ...prev, coins: r.coins, canClaimToday: false } : prev)
-    } catch { /* ignore */ }
-  }
-
-  async function handleOpenBox(boxType: 'tag' | 'name-color' | 'pfp') {
-    if (opening || !inv || inv.coins < 10) return
-    setOpening(boxType); setResult(null)
-    try {
-      const r = await api.marketplaceOpenBox(boxType)
-      setInv(prev => {
-        if (!prev) return prev
-        const next = { ...prev, coins: r.coins }
-        if (boxType === 'name-color' && r.won.value) {
-          const item: MarketplaceItem = { id: r.won.id, name: r.won.name ?? r.won.id, value: r.won.value, rarity: r.won.rarity, weight: 0 }
-          next.ownedNameColors = prev.ownedNameColors.some(i => i.id === r.won.id) ? prev.ownedNameColors : [...prev.ownedNameColors, item]
-        }
-        if (boxType === 'pfp' && r.won.value) {
-          const item: MarketplaceItem = { id: r.won.id, name: r.won.name ?? r.won.id, value: r.won.value, rarity: r.won.rarity, weight: 0 }
-          next.ownedPfpEffects = prev.ownedPfpEffects.some(i => i.id === r.won.id) ? prev.ownedPfpEffects : [...prev.ownedPfpEffects, item]
-        }
-        return next
-      })
-      setResult(r)
-    } catch { /* ignore */ }
-    finally { setOpening(null) }
-  }
-
-  async function handleEquip(type: 'name-color' | 'pfp', itemId: string | null) {
-    if (equipping || !inv) return
-    const key = type + (itemId ?? 'null')
-    setEquipping(key)
-    try {
-      await api.marketplaceEquip(type, itemId)
-      setInv(prev => {
-        if (!prev) return prev
-        if (type === 'name-color') {
-          const val = itemId ? prev.ownedNameColors.find(i => i.id === itemId)?.value ?? null : null
-          return { ...prev, nameColor: val }
-        } else {
-          const val = itemId ? prev.ownedPfpEffects.find(i => i.id === itemId)?.value ?? null : null
-          return { ...prev, pfpEffect: val }
-        }
-      })
-    } catch { /* ignore */ }
-    finally { setEquipping(null) }
-  }
-
-  async function handleDevGrant(grantType: 'coins' | 'name-color' | 'pfp') {
-    if (devGranting) return
-    setDevGranting(true); setDevMsg('')
-    try {
-      if (grantType === 'coins') {
-        const amount = parseInt(devCoins)
-        if (isNaN(amount) || amount <= 0) { setDevMsg('Enter a valid coin amount'); return }
-        const r = await api.marketplaceAdminGrant({ type: 'coins', amount })
-        setInv(prev => prev ? { ...prev, coins: r.coins ?? prev.coins } : prev)
-        setDevMsg(`✓ Granted ${amount} coins`)
-      } else {
-        if (!devItemId.trim()) { setDevMsg('Enter an item ID'); return }
-        const r = await api.marketplaceAdminGrant({ type: grantType === 'name-color' ? 'name-color' : 'pfp', itemId: devItemId.trim() })
-        setDevMsg(`✓ Granted: ${r.granted?.name}`)
-        // refresh inventory
-        const fresh = await api.marketplaceInventory()
-        setInv(fresh)
-      }
-    } catch { setDevMsg('Grant failed') }
-    finally { setDevGranting(false) }
-  }
-
-  const BOX_DEFS = [
-    { type: 'tag' as const,         icon: '📦', label: 'Tag Box',          desc: 'Win exclusive profile tags',       rarities: '0.5% Mythic · 0.5% Legendary' },
-    { type: 'name-color' as const,  icon: '🎨', label: 'Name Color Box',   desc: 'Colorize your display name',       rarities: '0.01% Rainbow RGB · 1% Black' },
-    { type: 'pfp' as const,         icon: '🖼️', label: 'Profile Picture Box', desc: 'Apply effects to your avatar',  rarities: '0.01% Rainbow Animated · 1% Black Frame' },
-  ]
-
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Loading marketplace…</div>
-
-  return (
-    <div style={{ maxWidth: 600, margin: '0 auto', paddingBottom: 32 }}>
-      {/* Coin balance */}
-      <div className="ns-card" style={{ padding: 18, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 4 }}>Your Coins</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#EAB308' }}>🪙 {inv?.coins?.toLocaleString() ?? 0}</div>
-        </div>
-        {inv?.canClaimToday ? (
-          <button onClick={handleDailyClaim} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#EAB308', color: '#000', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-            Claim 50 🪙 Today
-          </button>
-        ) : (
-          <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>✓ Claimed today</span>
-        )}
-      </div>
-
-      {/* Box result */}
-      {result && !result.dismissed && (
-        <div className="ns-card box-pop" style={{ padding: 20, marginBottom: 16, textAlign: 'center', border: `1px solid ${RARITY_COLOR[result.won.rarity] ?? 'var(--border)'}55` }}>
-          <div style={{ fontSize: 36, marginBottom: 8 }}>🎉</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>You won!</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: RARITY_COLOR[result.won.rarity] ?? 'var(--text)', marginBottom: 4 }}>
-            {result.won.name ?? result.won.tag}
-          </div>
-          <div style={{ fontSize: 12, color: RARITY_COLOR[result.won.rarity] ?? 'var(--text-muted)', fontWeight: 700, marginBottom: 12 }}>
-            {result.won.rarity} {result.alreadyHad ? '(duplicate)' : ''}
-          </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-            {result.won.type !== 'tag' && (
-              <button
-                onClick={() => {
-                  const type = result.won.type === 'name-color' ? 'name-color' : 'pfp'
-                  void handleEquip(type, result.won.id)
-                }}
-                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#060D10', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
-              >Equip Now</button>
-            )}
-            <button onClick={() => setResult(r => r ? { ...r, dismissed: true } : r)}
-              style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-              Nice!
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Boxes */}
-      <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 10 }}>Open a Box — 10 🪙 each</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
-        {BOX_DEFS.map(box => (
-          <div key={box.type} className="ns-card" style={{ padding: 16, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ fontSize: 32 }}>{box.icon}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{box.label}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{box.desc}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.4 }}>{box.rarities}</div>
-            <button
-              onClick={() => void handleOpenBox(box.type)}
-              disabled={!inv || inv.coins < 10 || !!opening}
-              style={{ padding: '9px 0', borderRadius: 8, border: 'none', background: opening === box.type ? 'var(--surface-2)' : 'var(--primary)', color: opening === box.type ? 'var(--text-muted)' : '#060D10', fontWeight: 700, fontSize: 12, cursor: inv && inv.coins >= 10 && !opening ? 'pointer' : 'not-allowed', opacity: !inv || inv.coins < 10 ? 0.5 : 1, marginTop: 'auto' }}
-            >
-              {opening === box.type ? 'Opening…' : '🎁 Open'}
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Inventory */}
-      {((inv?.ownedNameColors ?? []).length > 0 || (inv?.ownedPfpEffects ?? []).length > 0) && (
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 10 }}>Your Inventory</p>
-
-          {(inv?.ownedNameColors ?? []).length > 0 && (
-            <div className="ns-card" style={{ padding: 16, marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>🎨 Name Colors</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {inv!.ownedNameColors.map(item => {
-                  const isEquipped = inv!.nameColor === item.value
-                  return (
-                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ width: 16, height: 16, borderRadius: '50%', background: item.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : item.value, flexShrink: 0, border: '1px solid var(--border)' }} />
-                      <span className={item.value === 'rainbow' ? 'name-rainbow' : ''} style={{ flex: 1, fontSize: 13, fontWeight: 600, ...(item.value !== 'rainbow' ? { color: item.value } : {}) }}>{item.name}</span>
-                      <span style={{ fontSize: 11, color: RARITY_COLOR[item.rarity], fontWeight: 700 }}>{item.rarity}</span>
-                      <button
-                        onClick={() => void handleEquip('name-color', isEquipped ? null : item.id)}
-                        disabled={!!equipping}
-                        style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${isEquipped ? 'var(--border)' : 'var(--primary)'}`, background: isEquipped ? 'var(--surface-2)' : 'transparent', color: isEquipped ? 'var(--text-muted)' : 'var(--primary)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-                      >{isEquipped ? 'Unequip' : 'Equip'}</button>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {(inv?.ownedPfpEffects ?? []).length > 0 && (
-            <div className="ns-card" style={{ padding: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>🖼️ PFP Effects</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {inv!.ownedPfpEffects.map(item => {
-                  const isEquipped = inv!.pfpEffect === item.value
-                  const previewStyle = pfpStyle(item.value)
-                  const previewClass = pfpClass(item.value)
-                  return (
-                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div className={previewClass} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', flexShrink: 0, ...previewStyle }} />
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{item.name}</span>
-                      <span style={{ fontSize: 11, color: RARITY_COLOR[item.rarity], fontWeight: 700 }}>{item.rarity}</span>
-                      <button
-                        onClick={() => void handleEquip('pfp', isEquipped ? null : item.id)}
-                        disabled={!!equipping}
-                        style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${isEquipped ? 'var(--border)' : 'var(--primary)'}`, background: isEquipped ? 'var(--surface-2)' : 'transparent', color: isEquipped ? 'var(--text-muted)' : 'var(--primary)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-                      >{isEquipped ? 'Unequip' : 'Equip'}</button>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* DEV Panel */}
-      {isDevUser && (
-        <div className="ns-card" style={{ padding: 18, border: '1px solid rgba(255,107,107,0.4)', background: 'rgba(255,107,107,0.05)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 14 }}>🔧 DEV Panel — Grant to Self</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input value={devCoins} onChange={e => setDevCoins(e.target.value)} style={{ width: 90, padding: '7px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }} placeholder="500" />
-              <button onClick={() => void handleDevGrant('coins')} disabled={devGranting} style={{ padding: '7px 14px', borderRadius: 7, border: 'none', background: '#EAB308', color: '#000', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Grant Coins</button>
-            </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
-              <select value={devType} onChange={e => setDevType(e.target.value as 'name-color' | 'pfp')} style={{ padding: '7px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
-                <option value="name-color">Name Color</option>
-                <option value="pfp">PFP Effect</option>
-              </select>
-              <input value={devItemId} onChange={e => setDevItemId(e.target.value)} placeholder="item-id (e.g. rainbow)" style={{ flex: 1, minWidth: 120, padding: '7px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }} />
-              <button onClick={() => void handleDevGrant(devType)} disabled={devGranting} style={{ padding: '7px 14px', borderRadius: 7, border: 'none', background: '#ff6b6b', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Grant Item</button>
-            </div>
-            {devMsg && <div style={{ fontSize: 12, color: devMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600 }}>{devMsg}</div>}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ── Style objects ──────────────────────────────────────────────────────────────
 

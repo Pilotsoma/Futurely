@@ -334,12 +334,12 @@ export default function DashboardPage() {
             <button onClick={() => setShowResyncPopup(false)} style={S.popupClose}>×</button>
             <div style={{ fontSize: 36, marginBottom: 12 }}>{needsReconnect ? '🔗' : '🔄'}</div>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
-              {needsReconnect ? 'Reconnect your school account' : 'Couldn\'t load your school data'}
+              {needsReconnect ? 'Reconnect your school account' : 'Some school data didn\'t load'}
             </h3>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
               {needsReconnect
                 ? 'Your saved HAC credentials couldn\'t be used to sign in — your password may have changed, or credentials weren\'t saved. Go to Settings to sign in again and everything will sync automatically.'
-                : 'Your HAC session may have expired. Tap "Re-sync" below to reconnect and pull your latest grades, GPA, and courses back into the app.'}
+                : 'Your GPA loaded fine, but your course list couldn\'t be fetched — your HAC session may have expired mid-load. Hit "Re-sync" to reconnect and pull everything in together.'}
             </p>
             {resyncError && (
               <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--error)' }}>
