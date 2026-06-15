@@ -32,7 +32,8 @@ const PFP_GLOW_MAP: Record<string, [string, string]> = {
   'glow-gold':   ['#D97706', '#D9770655'],
 }
 function pfpStyle(effect: string | null | undefined): React.CSSProperties {
-  if (!effect || effect === 'rainbow') return {}
+  if (!effect) return {}
+  if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
   return {}

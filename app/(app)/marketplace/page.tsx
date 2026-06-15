@@ -20,7 +20,8 @@ const PFP_GLOW_MAP: Record<string, [string, string]> = {
   'glow-gold':   ['#D97706', '#D9770655'],
 }
 function pfpStyle(effect: string | null | undefined): React.CSSProperties {
-  if (!effect || effect === 'rainbow') return {}
+  if (!effect) return {}
+  if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
   return {}
@@ -29,16 +30,49 @@ function pfpClass(effect: string | null | undefined): string {
   return effect === 'rainbow' ? 'pfp-rainbow' : ''
 }
 
-const BOX_DEFS = [
-  { type: 'tag' as const,        icon: '📦', label: 'Tag Box',             desc: 'Win exclusive profile tags',      rarities: '0.5% Mythic · 0.5% Legendary · 5% Rare' },
-  { type: 'name-color' as const, icon: '🎨', label: 'Name Color Box',      desc: 'Colorize your display name',      rarities: '0.01% Rainbow RGB · 1% Black · 1.99% Pure White' },
-  { type: 'pfp' as const,        icon: '🖼️', label: 'Profile Picture Box', desc: 'Apply effects to your avatar',    rarities: '0.01% Rainbow Animated · 1% Black Frame · 1.99% Gold Glow' },
+type DropGroup = { rarity: string; pct: string; items: string[] }
+
+const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: string; desc: string; drops: DropGroup[] }[] = [
+  {
+    type: 'tag', icon: '📦', label: 'Tag Box', desc: 'Win exclusive profile tags',
+    drops: [
+      { rarity: 'Common',    pct: '60%',   items: ['Grinder', 'Focused', 'Scholar'] },
+      { rarity: 'Uncommon',  pct: '25%',   items: ['Honors Student', 'AP Student'] },
+      { rarity: 'Rare',      pct: '10%',   items: ["Dean's List", 'Top Performer'] },
+      { rarity: 'Epic',      pct: '4%',    items: ['Ace', 'Prodigy'] },
+      { rarity: 'Legendary', pct: '0.5%',  items: ['Mastermind', 'GOAT'] },
+      { rarity: 'Mythic',    pct: '0.5%',  items: ['Genius'] },
+    ],
+  },
+  {
+    type: 'name-color', icon: '🎨', label: 'Name Color Box', desc: 'Colorize your display name',
+    drops: [
+      { rarity: 'Common',    pct: '50%',    items: ['Forest Green', 'Navy Blue', 'Dark Red', 'Slate Blue', 'Teal'] },
+      { rarity: 'Uncommon',  pct: '23%',    items: ['Bright Orange', 'Violet', 'Cyan'] },
+      { rarity: 'Rare',      pct: '17%',    items: ['Hot Pink', 'Gold', 'Lime Green'] },
+      { rarity: 'Epic',      pct: '7%',     items: ['Electric Blue', 'Magenta'] },
+      { rarity: 'Legendary', pct: '2.99%',  items: ['Pure White', 'Black'] },
+      { rarity: 'Mythic',    pct: '0.01%',  items: ['Rainbow RGB ✨'] },
+    ],
+  },
+  {
+    type: 'pfp', icon: '🖼️', label: 'Profile Picture Box', desc: 'Apply effects to your avatar',
+    drops: [
+      { rarity: 'Common',    pct: '50%',    items: ['Green Border', 'Blue Border', 'Red Border', 'Navy Border', 'Teal Border'] },
+      { rarity: 'Uncommon',  pct: '23%',    items: ['Orange Border', 'Violet Border', 'Cyan Border'] },
+      { rarity: 'Rare',      pct: '17%',    items: ['Hot Pink Border', 'Gold Border', 'Lime Border'] },
+      { rarity: 'Epic',      pct: '7%',     items: ['Pink Glow', 'Purple Glow'] },
+      { rarity: 'Legendary', pct: '2.99%',  items: ['Gold Glow', 'Black Frame'] },
+      { rarity: 'Mythic',    pct: '0.01%',  items: ['Rainbow Animated ✨'] },
+    ],
+  },
 ]
 
 export default function MarketplacePage() {
   const [inv, setInv] = useState<InventoryData | null>(null)
   const [loading, setLoading] = useState(true)
   const [opening, setOpening] = useState<'tag' | 'name-color' | 'pfp' | null>(null)
+  const [hoveredBox, setHoveredBox] = useState<'tag' | 'name-color' | 'pfp' | null>(null)
   const [result, setResult] = useState<(BoxResult & { dismissed?: boolean }) | null>(null)
   const [equipping, setEquipping] = useState<string | null>(null)
   const [isDevUser, setIsDevUser] = useState(false)
@@ -202,28 +236,52 @@ export default function MarketplacePage() {
       {/* Boxes */}
       <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 12 }}>Open a Box — 10 🪙 each</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 28 }}>
-        {BOX_DEFS.map(box => (
-          <div key={box.type} className="ns-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10 }}>
-            <div style={{ fontSize: 38 }}>{box.icon}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{box.label}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{box.desc}</div>
-            <div style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.5 }}>{box.rarities}</div>
-            <button
-              onClick={() => void handleOpenBox(box.type)}
-              disabled={!inv || inv.coins < 10 || !!opening}
-              style={{
-                width: '100%', padding: '10px 0', borderRadius: 9, border: 'none',
-                background: opening === box.type ? 'var(--surface-2)' : 'var(--primary)',
-                color: opening === box.type ? 'var(--text-muted)' : '#060D10',
-                fontWeight: 700, fontSize: 13, marginTop: 4,
-                cursor: inv && inv.coins >= 10 && !opening ? 'pointer' : 'not-allowed',
-                opacity: !inv || inv.coins < 10 ? 0.45 : 1,
-              }}
+        {BOX_DEFS.map(box => {
+          const isHovered = hoveredBox === box.type
+          return (
+            <div
+              key={box.type}
+              className="ns-card"
+              onMouseEnter={() => setHoveredBox(box.type)}
+              onMouseLeave={() => setHoveredBox(null)}
+              style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10, transition: 'border-color 0.15s' }}
             >
-              {opening === box.type ? 'Opening…' : '🎁 Open Box'}
-            </button>
-          </div>
-        ))}
+              <div style={{ fontSize: 38 }}>{box.icon}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{box.label}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{box.desc}</div>
+              <button
+                onClick={() => void handleOpenBox(box.type)}
+                disabled={!inv || inv.coins < 10 || !!opening}
+                style={{
+                  width: '100%', padding: '10px 0', borderRadius: 9, border: 'none',
+                  background: opening === box.type ? 'var(--surface-2)' : 'var(--primary)',
+                  color: opening === box.type ? 'var(--text-muted)' : '#060D10',
+                  fontWeight: 700, fontSize: 13, marginTop: 4,
+                  cursor: inv && inv.coins >= 10 && !opening ? 'pointer' : 'not-allowed',
+                  opacity: !inv || inv.coins < 10 ? 0.45 : 1,
+                }}
+              >
+                {opening === box.type ? 'Opening…' : '🎁 Open Box'}
+              </button>
+
+              {/* Drop table — shown on hover */}
+              {isHovered && (
+                <div style={{ width: '100%', borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 2, display: 'flex', flexDirection: 'column', gap: 5, textAlign: 'left' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 2 }}>Drop Rates</div>
+                  {box.drops.map(group => (
+                    <div key={group.rarity} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: RARITY_COLOR[group.rarity], minWidth: 36, paddingTop: 1 }}>{group.pct}</span>
+                      <div>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: RARITY_COLOR[group.rarity] }}>{group.rarity} </span>
+                        <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{group.items.join(' · ')}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* Inventory */}

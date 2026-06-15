@@ -216,15 +216,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .name-rainbow { animation: nameRainbow 3s linear infinite; }
 
 @keyframes pfpRainbow {
-  0%   { border-color: #ff6b6b; box-shadow: 0 0 8px #ff6b6b99; }
-  16%  { border-color: #ffa94d; box-shadow: 0 0 8px #ffa94d99; }
-  32%  { border-color: #ffd43b; box-shadow: 0 0 8px #ffd43b99; }
-  48%  { border-color: #69db7c; box-shadow: 0 0 8px #69db7c99; }
-  64%  { border-color: #38d9a9; box-shadow: 0 0 8px #38d9a999; }
-  80%  { border-color: #4dabf7; box-shadow: 0 0 8px #4dabf799; }
-  100% { border-color: #ff6b6b; box-shadow: 0 0 8px #ff6b6b99; }
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
 }
-.pfp-rainbow { animation: pfpRainbow 3s linear infinite; border-width: 3px !important; border-style: solid !important; }
+.pfp-rainbow { animation: pfpRainbow 3s linear infinite; }
 
 @keyframes boxPop {
   0%   { transform: scale(0.7); opacity: 0; }
