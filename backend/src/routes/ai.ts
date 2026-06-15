@@ -5,7 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
-const FREE_MODEL = 'google/gemini-2.0-flash-exp:free'
+const FREE_MODEL = 'meta-llama/llama-3.3-70b-instruct:free'
 
 const openrouter = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY ?? '',
@@ -71,7 +71,8 @@ Be encouraging, concise, and specific. Only reference the student data above —
 
     const reply = response.choices[0]?.message?.content ?? 'Sorry, I could not generate a response right now.'
     res.json({ data: { reply } })
-  } catch {
+  } catch (err) {
+    console.error('[AI CHAT]', err)
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
   }
 })
