@@ -374,8 +374,8 @@ router.post('/students/:studentId/chat', async (req: AuthRequest, res: Response)
       .join(', ')
     const pendingCount = courses.reduce((sum, c) => sum + (c.upcomingAssignments?.length ?? 0), 0)
 
-    const Anthropic = (await import('@anthropic-ai/sdk')).default
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const { GoogleGenerativeAI } = await import('@google/generative-ai')
+    const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
 
     const systemPrompt = `You are NextStep AI, an academic advisor assistant for parents.
 You are helping a parent review their student's academic performance.
@@ -387,14 +387,9 @@ Current courses: ${coursesSummary || 'none on file'}
 Pending assignments: ${pendingCount}
 Answer the parent's question clearly and helpfully. Be concise.`
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: message.trim() }],
-    })
-
-    const reply = response.content[0]?.type === 'text' ? response.content[0].text : 'No response.'
+    const model = genai.getGenerativeModel({ model: 'gemini-2.0-flash', systemInstruction: systemPrompt })
+    const result = await model.generateContent(message.trim())
+    const reply = result.response.text()
     res.json({ data: { reply } })
   } catch (e) {
     console.error('[PARENT] chat error:', e)

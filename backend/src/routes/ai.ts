@@ -1,13 +1,11 @@
 import { Router, Response } from 'express'
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
 
 router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.userId === undefined) {
@@ -57,17 +55,13 @@ College goal: ${profile?.futureDecision ?? 'not specified'}
 
 Be encouraging, concise, and specific. Only reference the student data above — never invent numbers or facts. Keep responses under 3 sentences.`
 
-    const aiResponse = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
+    const model = genai.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: systemPrompt,
     })
 
-    const reply =
-      aiResponse.content[0]?.type === 'text'
-        ? aiResponse.content[0].text
-        : 'Sorry, I could not generate a response right now.'
+    const result = await model.generateContent(userMessage)
+    const reply = result.response.text()
 
     res.json({ data: { reply } })
   } catch {
@@ -104,68 +98,49 @@ router.get('/study-plan', requireAuth, async (req: AuthRequest, res: Response): 
       dueDate: new Date(a.dueDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
     }))
 
-    const aiResponse = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      tools: [
-        {
-          name: 'create_study_plan',
-          description: 'Create a structured daily study plan for the student',
-          input_schema: {
-            type: 'object' as const,
-            properties: {
-              overview: {
-                type: 'string',
-                description: 'A brief motivational overview of the study plan (1-2 sentences)',
-              },
-              days: {
-                type: 'array',
-                description: 'Daily study sessions — only include days that have work',
-                items: {
-                  type: 'object',
-                  properties: {
-                    label: { type: 'string', description: '"Today", "Tomorrow", or e.g. "Wednesday, Jun 11"' },
-                    date: { type: 'string', description: 'ISO date YYYY-MM-DD' },
-                    sessions: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          assignmentId: { type: 'number' },
-                          title: { type: 'string' },
-                          subject: { type: 'string' },
-                          dueDate: { type: 'string' },
-                          minutesToSpend: { type: 'number', description: 'Minutes to work on this today (may be partial)' },
-                          notes: { type: 'string', description: 'What to focus on, or why this is scheduled today' },
-                        },
-                        required: ['assignmentId', 'title', 'subject', 'dueDate', 'minutesToSpend', 'notes'],
+    const model = genai.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            overview: { type: SchemaType.STRING },
+            days: {
+              type: SchemaType.ARRAY,
+              items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  label: { type: SchemaType.STRING },
+                  date:  { type: SchemaType.STRING },
+                  sessions: {
+                    type: SchemaType.ARRAY,
+                    items: {
+                      type: SchemaType.OBJECT,
+                      properties: {
+                        assignmentId:   { type: SchemaType.NUMBER },
+                        title:          { type: SchemaType.STRING },
+                        subject:        { type: SchemaType.STRING },
+                        dueDate:        { type: SchemaType.STRING },
+                        minutesToSpend: { type: SchemaType.NUMBER },
+                        notes:          { type: SchemaType.STRING },
                       },
                     },
                   },
-                  required: ['label', 'date', 'sessions'],
                 },
               },
             },
-            required: ['overview', 'days'],
           },
         },
-      ],
-      tool_choice: { type: 'tool', name: 'create_study_plan' },
-      messages: [
-        {
-          role: 'user',
-          content: `Today is ${todayStr}. Create a realistic study plan for these assignments:\n\n${JSON.stringify(assignmentList, null, 2)}\n\nRules: max 120 min/day, prioritize soonest due dates, split large tasks across days, only include days with work.`,
-        },
-      ],
+      },
     })
 
-    const toolUse = aiResponse.content.find(c => c.type === 'tool_use')
-    if (!toolUse || toolUse.type !== 'tool_use') {
-      res.status(500).json({ data: null, error: { code: 'AI_ERROR', message: 'Failed to generate plan' } })
-      return
-    }
+    const prompt = `Today is ${todayStr}. Create a realistic study plan for these assignments:\n\n${JSON.stringify(assignmentList, null, 2)}\n\nRules: max 120 min/day, prioritize soonest due dates, split large tasks across days, only include days with work. Use "Today", "Tomorrow", or the weekday name for the label field. Use ISO date (YYYY-MM-DD) for the date field.`
 
-    res.json({ data: toolUse.input })
+    const result = await model.generateContent(prompt)
+    const data = JSON.parse(result.response.text())
+
+    res.json({ data })
   } catch (err) {
     console.error('[AI STUDY PLAN]', err)
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
