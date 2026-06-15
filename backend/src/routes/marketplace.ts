@@ -1,6 +1,7 @@
 import { Router, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
+import { sendToUser } from '../lib/websocket'
 
 const router = Router()
 
@@ -650,15 +651,25 @@ router.post('/listings/:id/buy', requireAuth, async (req: AuthRequest, res: Resp
       prisma.user.update({ where: { id: req.userId }, data: { coins: { decrement: listing.price }, ...addUpdates } }),
       prisma.user.update({ where: { id: listing.sellerId }, data: { coins: { increment: listing.price } } }),
       prisma.marketplaceListing.update({ where: { id: listingId }, data: { status: 'SOLD', buyerId: req.userId } }),
-      prisma.notification.create({
-        data: {
-          userId: listing.sellerId,
-          fromUserId: req.userId,
-          type: 'LISTING_SOLD',
-          preview: `Your ${listing.itemName} sold for 🪙 ${listing.price}`,
-        },
-      }),
     ])
+
+    // Create notification outside transaction so we can include sender relation and push via WebSocket
+    const notif = await prisma.notification.create({
+      data: {
+        userId: listing.sellerId,
+        fromUserId: req.userId,
+        type: 'LISTING_SOLD',
+        preview: `${listing.itemName} for 🪙 ${listing.price}`,
+      },
+      include: {
+        sender: { select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true } },
+      },
+    })
+    const sender = notif.sender
+    const senderOut = sender.role === 'ADMIN'
+      ? { id: sender.id, name: sender.name, email: sender.email, tag: 'DEV', tagColor: 'lightblue', nameColor: sender.nameColor, pfpEffect: sender.pfpEffect }
+      : { id: sender.id, name: sender.name, email: sender.email, tag: sender.tag, tagColor: sender.tagColor, nameColor: sender.nameColor, pfpEffect: sender.pfpEffect }
+    sendToUser(listing.sellerId, 'NOTIFICATION', { ...notif, sender: senderOut })
 
     res.json({ data: { ok: true, coins: updatedBuyer.coins } })
   } catch {

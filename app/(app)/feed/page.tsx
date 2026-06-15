@@ -53,6 +53,7 @@ function nameColorClass(color: string | null | undefined): string {
 
 function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenProfile: (id: number) => void; onClose: () => void }) {
   const name = n.sender.name ?? n.sender.email.split('@')[0]
+  const isRainbowName = n.sender.nameColor === 'rainbow'
 
   function handleNameClick(e: React.MouseEvent) {
     e.stopPropagation()
@@ -62,7 +63,8 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
 
   const nameEl = (
     <button
-      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
+      className={isRainbowName ? 'name-rainbow' : ''}
+      style={{ background: 'none', border: 'none', padding: 0, color: isRainbowName ? undefined : (n.sender.nameColor ?? 'var(--primary)'), fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
       onClick={handleNameClick}
     >
       {name}
@@ -74,12 +76,23 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
   else if (n.type === 'LIKE') content = <>{nameEl} liked your post</>
   else if (n.type === 'COMMENT') content = n.preview ? <>{nameEl}: &quot;{n.preview}&quot;</> : <>{nameEl} commented on your post</>
   else if (n.type === 'GIVEAWAY_WIN') content = n.preview ? <>{n.preview}</> : <>You won a giveaway!</>
+  else if (n.type === 'LISTING_SOLD') content = n.preview ? <>{nameEl} bought your {n.preview}</> : <>{nameEl} bought your listing</>
+  else if (n.type === 'TRADE_OFFER') content = <>{nameEl} sent you a trade offer</>
+  else if (n.type === 'TRADE_ACCEPTED') content = <>{nameEl} accepted your trade</>
+  else if (n.type === 'TRADE_DECLINED') content = <>{nameEl} declined your trade</>
   else content = null
+
+  const icon = n.type === 'FOLLOW' ? '👤'
+    : n.type === 'LIKE' ? '❤️'
+    : n.type === 'GIVEAWAY_WIN' ? '🎉'
+    : n.type === 'LISTING_SOLD' ? '🏷️'
+    : n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED' ? '🔄'
+    : '💬'
 
   return (
     <div style={{ ...N.item, background: n.read ? 'transparent' : 'rgba(75,110,255,0.07)' }}>
       <span style={{ fontSize: 15, flexShrink: 0 }}>
-        {n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : '💬'}
+        {icon}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={N.text}>{content}</div>
