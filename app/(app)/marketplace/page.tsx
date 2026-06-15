@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   api, InventoryData, BoxResult, MarketplaceItem, TagInventoryItem,
-  MarketplaceListing, TradeOffer, TradeItem, UserPublicInventory,
+  MarketplaceListing, TradeOffer, TradeItem, UserPublicInventory, FeedUserProfile,
 } from '../../../lib/api'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -150,6 +150,10 @@ export default function MarketplacePage() {
   const [sendingTrade, setSendingTrade] = useState(false)
   const [tradeMsg, setTradeMsg] = useState('')
 
+  // Profile panel
+  const [profilePanel, setProfilePanel] = useState<FeedUserProfile | null>(null)
+  const [profilePanelLoading, setProfilePanelLoading] = useState(false)
+
   // Trade — lists
   const [incomingTrades, setIncomingTrades] = useState<TradeOffer[]>([])
   const [sentTrades, setSentTrades] = useState<TradeOffer[]>([])
@@ -224,6 +228,15 @@ export default function MarketplacePage() {
   }, [tab, fetchListings, fetchMyActiveListings, fetchTrades])
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+
+  async function openProfile(userId: number) {
+    setProfilePanelLoading(true); setProfilePanel(null)
+    try {
+      const p = await api.feedUserProfile(userId)
+      setProfilePanel(p)
+    } catch { /* ignore */ }
+    finally { setProfilePanelLoading(false) }
+  }
 
   async function handleDailyClaim() {
     try {
@@ -696,7 +709,13 @@ export default function MarketplacePage() {
                         <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'capitalize' as const }}>{listing.itemType.replace('-', ' ')}</span>
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                        by {listing.seller.name ?? 'Unknown'}
+                        by{' '}
+                        <button
+                          onClick={() => void openProfile(listing.seller.id)}
+                          style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 600, color: 'var(--text)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                        >
+                          {listing.seller.name ?? 'Unknown'}
+                        </button>
                         {listing.seller.tag && (
                           <span className={listing.seller.tag === 'DEV' ? 'tag-rainbow' : ''} style={{ marginLeft: 6, fontWeight: 700, color: listing.seller.tag === 'DEV' ? undefined : listing.seller.tagColor ?? '#6B7280' }}>[{listing.seller.tag}]</span>
                         )}
@@ -1070,6 +1089,67 @@ export default function MarketplacePage() {
             </>
           )}
         </>
+      )}
+
+      {/* ── Profile Panel ── */}
+      {(profilePanel || profilePanelLoading) && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setProfilePanel(null)}
+        >
+          <div
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, width: '90%', maxWidth: 420, padding: 24, position: 'relative' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setProfilePanel(null)}
+              style={{ position: 'absolute', top: 16, right: 16, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+
+            {profilePanelLoading && !profilePanel ? (
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)', fontSize: 13 }}>Loading profile…</div>
+            ) : profilePanel && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                  <div
+                    className={pfpClass(profilePanel.pfpEffect)}
+                    style={{ width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0, ...pfpStyle(profilePanel.pfpEffect) }}
+                  >
+                    {(profilePanel.name ?? profilePanel.email).slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className={profilePanel.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 19, fontWeight: 800, marginBottom: 3, ...(profilePanel.nameColor && profilePanel.nameColor !== 'rainbow' ? { color: profilePanel.nameColor } : { color: 'var(--text)' }) }}>
+                      {profilePanel.name ?? profilePanel.email}
+                    </div>
+                    {profilePanel.tag && (
+                      <span
+                        className={profilePanel.tag === 'DEV' ? 'tag-rainbow' : ''}
+                        style={profilePanel.tag === 'DEV' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'rgba(0,200,150,0.1)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
+                      >
+                        {profilePanel.tag}
+                      </span>
+                    )}
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{profilePanel.email}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 20, padding: '14px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 0 }}>
+                  {[
+                    { label: 'Followers', value: profilePanel._count.followers },
+                    { label: 'Following', value: profilePanel._count.following },
+                    { label: 'Posts', value: profilePanel._count.posts },
+                  ].map(s => (
+                    <div key={s.label} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{s.value}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── DEV Panel ── */}
