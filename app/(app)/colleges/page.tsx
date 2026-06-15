@@ -137,6 +137,8 @@ export default function CollegesPage() {
   const [list, setList]           = useState<CollegeListItem[]>([])
   const [profile, setProfile]     = useState<StudentData['profile'] | null>(null)
   const [portalGpa, setPortalGpa] = useState<{ unweightedGpa: number | null; weightedGpa: number | null } | null>(null)
+  const [profileLoaded, setProfileLoaded]   = useState(false)
+  const [portalGpaLoaded, setPortalGpaLoaded] = useState(false)
   const [query, setQuery]         = useState('')
   const [adding, setAdding]       = useState<string | null>(null)
   const [removing, setRemoving]   = useState<number | null>(null)
@@ -145,9 +147,11 @@ export default function CollegesPage() {
 
   useEffect(() => {
     api.collegeList().then(setList).catch(() => {})
-    api.me().then(d => setProfile(d.profile)).catch(() => {})
-    api.portalGpa().then(d => setPortalGpa({ unweightedGpa: d.unweightedGpa, weightedGpa: d.weightedGpa })).catch(() => {})
+    api.me().then(d => { setProfile(d.profile); setProfileLoaded(true) }).catch(() => { setProfileLoaded(true) })
+    api.portalGpa().then(d => { setPortalGpa({ unweightedGpa: d.unweightedGpa, weightedGpa: d.weightedGpa }); setPortalGpaLoaded(true) }).catch(() => { setPortalGpaLoaded(true) })
   }, [])
+
+  const statsReady = profileLoaded && portalGpaLoaded
 
   const suggestions = query.trim().length > 0
     ? COLLEGES.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
@@ -176,12 +180,13 @@ export default function CollegesPage() {
     finally { setRemoving(false as unknown as null) }
   }
 
-  // Prefer live portal GPA over stored profile GPA
-  const unweightedGpa = (portalGpa?.unweightedGpa ?? 0) > 0 ? portalGpa!.unweightedGpa : (profile?.unweightedGpa ?? null)
-  const weightedGpa   = (portalGpa?.weightedGpa ?? 0) > 0   ? portalGpa!.weightedGpa   : (profile?.weightedGpa   ?? null)
+  // Wait for both APIs to settle before computing stats — prevents a flash
+  // where the stored profile GPA (higher) shows briefly before the live portal GPA loads
+  const unweightedGpa = statsReady ? ((portalGpa?.unweightedGpa ?? 0) > 0 ? portalGpa!.unweightedGpa : (profile?.unweightedGpa ?? null)) : null
+  const weightedGpa   = statsReady ? ((portalGpa?.weightedGpa ?? 0) > 0   ? portalGpa!.weightedGpa   : (profile?.weightedGpa   ?? null)) : null
   const studentGPA    = unweightedGpa
-  const studentSAT    = profile?.satScore ?? null
-  const hasStats      = (studentGPA && studentGPA > 0) || (studentSAT && studentSAT > 0)
+  const studentSAT    = statsReady ? (profile?.satScore ?? null) : null
+  const hasStats      = statsReady && ((studentGPA && studentGPA > 0) || (studentSAT && studentSAT > 0))
 
   return (
     <div className="fade-up" style={{ maxWidth: 680, margin: '0 auto' }}>
