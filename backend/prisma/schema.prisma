@@ -9,31 +9,39 @@ generator client {
 }
 
 model User {
-  id                    Int                 @id @default(autoincrement())
-  email                 String              @unique
-  passwordHash          String
-  name                  String?
-  tag                   String              @default("Student")
-  tagColor              String?             @default("grey")
-  role                  String              @default("STUDENT")
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  assignments           Assignment[]
-  comments              Comment[]
-  courses               Course[]
-  following             Follow[]            @relation("Follower")
-  followers             Follow[]            @relation("Following")
-  Grade                 Grade[]
-  likes                 Like[]
-  parentLinks           ParentStudentLink[] @relation("ParentLinks")
-  studentLinks          ParentStudentLink[] @relation("StudentLinks")
-  posts                 Post[]
-  schoolConnection      SchoolConnection?
-  StudentProfile        StudentProfile?
-  profile               Profile?
-  notificationsReceived Notification[]      @relation("NotifRecipient")
-  notificationsSent     Notification[]      @relation("NotifSender")
-  collegeList           CollegeListItem[]
+  id                       Int                      @id @default(autoincrement())
+  email                    String                   @unique
+  passwordHash             String
+  name                     String?
+  tag                      String                   @default("Student")
+  tagColor                 String?                  @default("grey")
+  allTags                  Json                     @default("[]")
+  role                     String                   @default("STUDENT")
+  chatBanned               Boolean                  @default(false)
+  chatMutedUntil           DateTime?
+  deletedAt                DateTime?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  assignments              Assignment[]
+  comments                 Comment[]
+  courses                  Course[]
+  following                Follow[]                 @relation("Follower")
+  followers                Follow[]                 @relation("Following")
+  Grade                    Grade[]
+  likes                    Like[]
+  commentLikes             CommentLike[]
+  giveawayEntries          GiveawayEntry[]
+  parentLinks              ParentStudentLink[]      @relation("ParentLinks")
+  studentLinks             ParentStudentLink[]      @relation("StudentLinks")
+  posts                    Post[]
+  giveawayWins             Post[]                   @relation("GiveawayWinner")
+  schoolConnection         SchoolConnection?
+  StudentProfile           StudentProfile?
+  profile                  Profile?
+  notificationsReceived    Notification[]           @relation("NotifRecipient")
+  notificationsSent        Notification[]           @relation("NotifSender")
+  collegeList              CollegeListItem[]
+  parentPortalConnections  ParentPortalConnection[]
 }
 
 model Profile {
@@ -97,10 +105,12 @@ model Assignment {
   title            String
   subject          String
   dueDate          DateTime
-  estimatedMinutes Int
+  dueTime          String?
+  estimatedMinutes Int?      @default(0)
   completed        Boolean   @default(false)
   completedAt      DateTime?
   source           String    @default("SEED")
+  priority         String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -111,24 +121,33 @@ model Assignment {
 }
 
 model Post {
-  id        Int       @id @default(autoincrement())
-  userId    Int
-  body      String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  comments  Comment[]
-  likes     Like[]
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               Int             @id @default(autoincrement())
+  userId           Int
+  body             String
+  type             String          @default("NORMAL")
+  giveawayTag      String?
+  giveawayTagColor String?
+  giveawayEndsAt   DateTime?
+  giveawayWinnerId Int?
+  pinnedUntil      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  comments         Comment[]
+  likes            Like[]
+  giveawayEntries  GiveawayEntry[]
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  giveawayWinner   User?           @relation("GiveawayWinner", fields: [giveawayWinnerId], references: [id])
 }
 
 model Comment {
-  id        Int      @id @default(autoincrement())
-  postId    Int
-  userId    Int
-  body      String
-  createdAt DateTime @default(now())
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           Int           @id @default(autoincrement())
+  postId       Int
+  userId       Int
+  body         String
+  createdAt    DateTime      @default(now())
+  commentLikes CommentLike[]
+  post         Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Like {
@@ -137,6 +156,28 @@ model Like {
   userId Int
   post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model CommentLike {
+  id        Int      @id @default(autoincrement())
+  commentId Int
+  userId    Int
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+}
+
+model GiveawayEntry {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
 }
@@ -179,6 +220,25 @@ model ParentStudentLink {
   student   User     @relation("StudentLinks", fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([parentId, studentId])
+}
+
+model ParentPortalConnection {
+  id                   Int       @id @default(autoincrement())
+  parentId             Int
+  systemType           String
+  districtUrl          String
+  hacUsername          String
+  hacPasswordEncrypted String?
+  studentName          String?
+  gradeLevel           Int?
+  graduationYear       Int?
+  cachedData           String?
+  lastSynced           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  parent               User      @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, hacUsername, districtUrl], name: "parentId_hacUsername_districtUrl")
 }
 
 model ComplianceAuditLog {
