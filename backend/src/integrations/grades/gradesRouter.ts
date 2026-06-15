@@ -422,8 +422,8 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
           infoErr instanceof Error ? infoErr.message : String(infoErr))
       }
 
-      // Sync upcoming assignments from HAC grades
-      const { classes: rawHacGrades } = await hacGrades(entry.token)
+      // Sync upcoming assignments from HAC grades (capture all fields to also seed classwork cache)
+      const { classes: rawHacGrades, availablePeriods: hacAvailablePeriods, currentPeriod: hacCurrentPeriod } = await hacGrades(entry.token)
       const normalizedGrades = normalizeHacGrades(rawHacGrades)
       const upcomingToSync = normalizedGrades.flatMap(course =>
         (course.upcomingAssignments ?? []).map(a => ({
@@ -449,6 +449,21 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
         })
       }
       console.log(`[GRADES ROUTER] Background sync: synced ${upcomingToSync.length} assignments for userId:`, userId)
+
+      // Seed classwork cache with the grades data already fetched above (free — no extra HAC request)
+      void writeHacCache(userId, 'classwork:__default__', { classes: rawHacGrades, availablePeriods: hacAvailablePeriods, currentPeriod: hacCurrentPeriod })
+
+      // Pre-warm the remaining slow endpoints in parallel — fire and forget, non-fatal
+      // By the time the user navigates to these pages the cache will already be populated
+      void Promise.allSettled([
+        hacTranscript(entry.token).then(t => writeHacCache(userId, 'transcript', t)),
+        getSchedule(entry.token).then(s => writeHacCache(userId, 'schedule', s)),
+        getAttendance(entry.token, 0).then(a => writeHacCache(userId, 'attendance:0', a)),
+        getContactTeachers(entry.token).then(c => writeHacCache(userId, 'contactTeachers', c)),
+      ]).then(results => {
+        const ok = results.filter(r => r.status === 'fulfilled').length
+        console.log(`[GRADES ROUTER] Cache pre-warm: ${ok}/${results.length} endpoints cached for userId:`, userId)
+      })
     }
 
     await prisma.schoolConnection.update({
