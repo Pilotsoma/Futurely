@@ -73,12 +73,13 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
   if (n.type === 'FOLLOW') content = <>{nameEl} started following you</>
   else if (n.type === 'LIKE') content = <>{nameEl} liked your post</>
   else if (n.type === 'COMMENT') content = n.preview ? <>{nameEl}: &quot;{n.preview}&quot;</> : <>{nameEl} commented on your post</>
+  else if (n.type === 'GIVEAWAY_WIN') content = n.preview ? <>{n.preview}</> : <>You won a giveaway!</>
   else content = null
 
   return (
     <div style={{ ...N.item, background: n.read ? 'transparent' : 'rgba(75,110,255,0.07)' }}>
       <span style={{ fontSize: 15, flexShrink: 0 }}>
-        {n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : '💬'}
+        {n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : '💬'}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={N.text}>{content}</div>
@@ -1475,11 +1476,16 @@ export default function StudyFeedPage() {
       {toasts.map(t => (
         <div key={t.id} style={N.toast}>
           <span style={{ fontSize: 18, flexShrink: 0 }}>
-            {t.notif.type === 'FOLLOW' ? '👤' : t.notif.type === 'LIKE' ? '❤️' : '💬'}
+            {t.notif.type === 'FOLLOW' ? '👤' : t.notif.type === 'LIKE' ? '❤️' : t.notif.type === 'GIVEAWAY_WIN' ? '🎉' : '💬'}
           </span>
           <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--text)', lineHeight: 1.35, fontWeight: 500 }}>
-            {t.notif.sender.name ?? t.notif.sender.email.split('@')[0]}
-            {t.notif.type === 'FOLLOW' ? ' started following you' : t.notif.type === 'LIKE' ? ' liked your post' : ' commented on your post'}
+            {t.notif.type === 'GIVEAWAY_WIN'
+              ? (t.notif.preview ?? 'You won a giveaway!')
+              : <>
+                  {t.notif.sender.name ?? t.notif.sender.email.split('@')[0]}
+                  {t.notif.type === 'FOLLOW' ? ' started following you' : t.notif.type === 'LIKE' ? ' liked your post' : ' commented on your post'}
+                </>
+            }
           </div>
           <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1, flexShrink: 0, padding: 0, pointerEvents: 'auto' }}
             onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}>×</button>

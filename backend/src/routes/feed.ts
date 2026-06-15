@@ -75,6 +75,12 @@ async function autoDrawExpiredGiveaways() {
         });
       }
     }
+    const prize = ga.giveawayCoinAmount ? `🪙 ${ga.giveawayCoinAmount} coins` : `the "${ga.giveawayTag}" tag`;
+    const notif = await prisma.notification.create({
+      data: { userId: winner.userId, fromUserId: ga.userId, type: 'GIVEAWAY_WIN', postId: ga.id, preview: `You won a giveaway and received ${prize}!` },
+      include: { sender: { select: USER_SELECT } },
+    });
+    sendToUser(winner.userId, 'NOTIFICATION', { ...notif, sender: toFeedUser(notif.sender) });
   }
 }
 
@@ -494,6 +500,14 @@ router.post('/posts/:id/giveaway/draw', async (req: Request, res: Response) => {
 
     const winner = await prisma.user.findUnique({ where: { id: winnerEntry.userId }, select: { id: true, name: true, email: true } });
     broadcast('GIVEAWAY_WINNER', { postId, winner });
+
+    const prize = post.giveawayCoinAmount ? `🪙 ${post.giveawayCoinAmount} coins` : `the "${post.giveawayTag}" tag`;
+    const notif = await prisma.notification.create({
+      data: { userId: winnerEntry.userId, fromUserId: post.userId, type: 'GIVEAWAY_WIN', postId, preview: `You won a giveaway and received ${prize}!` },
+      include: { sender: { select: USER_SELECT } },
+    });
+    sendToUser(winnerEntry.userId, 'NOTIFICATION', { ...notif, sender: toFeedUser(notif.sender) });
+
     res.json({ data: { winnerId: winner?.id, winnerName: winner?.name ?? winner?.email } });
   } catch (err) {
     res.status(500).json({ error: 'Failed to draw winner' });
