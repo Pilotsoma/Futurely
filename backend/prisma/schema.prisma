@@ -17,19 +17,27 @@ model User {
   tagColor          String?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
+  deletedAt         DateTime?
   courses           Course[]
   assignments       Assignment[]
   profile           Profile?
   posts             Post[]
   likes             Like[]
   comments          Comment[]
+  commentLikes      CommentLike[]
   followers         Follow[]             @relation("Following")
   following         Follow[]             @relation("Follower")
   schoolConnection          SchoolConnection?
-  parentLinks               ParentStudentLink[]  @relation("ParentLinks")
-  studentLinks              ParentStudentLink[]  @relation("StudentLinks")
+  parentLinks               ParentStudentLink[]       @relation("ParentLinks")
+  studentLinks              ParentStudentLink[]       @relation("StudentLinks")
+  portalConnections         ParentPortalConnection[]  @relation("ParentPortalConnections")
   notificationsReceived     Notification[]       @relation("NotifRecipient")
   notificationsSent         Notification[]       @relation("NotifSender")
+  chatBanned                Boolean              @default(false)
+  chatMutedUntil            DateTime?
+  allTags                   String               @default("[]")
+  giveawayEntries           GiveawayEntry[]
+  giveawayWins              Post[]               @relation("GiveawayWinner")
 }
 
 model Profile {
@@ -71,30 +79,46 @@ model Grade {
 model Assignment {
   id               Int       @id @default(autoincrement())
   title            String
-  description      String?
   subject          String?
-  estimatedMinutes Int?
-  priority         String?
   dueDate          DateTime
+  dueTime          String?
   completed        Boolean   @default(false)
   completedAt      DateTime?
   userId           Int
   user             User      @relation(fields: [userId], references: [id])
 
-  @@unique([userId, title, subject], name: "userId_title_subject")
   @@index([userId, completed])
   @@index([userId, dueDate])
 }
 
 model Post {
-  id        Int       @id @default(autoincrement())
-  body      String
+  id               Int              @id @default(autoincrement())
+  body             String
+  userId           Int
+  user             User             @relation(fields: [userId], references: [id])
+  likes            Like[]
+  comments         Comment[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  type             String           @default("post")
+  pinnedUntil      DateTime?
+  giveawayTag      String?
+  giveawayTagColor String?
+  giveawayEndsAt   DateTime?
+  giveawayWinnerId Int?
+  giveawayWinner   User?            @relation("GiveawayWinner", fields: [giveawayWinnerId], references: [id])
+  giveawayEntries  GiveawayEntry[]
+}
+
+model GiveawayEntry {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    Int
-  user      User      @relation(fields: [userId], references: [id])
-  likes     Like[]
-  comments  Comment[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
 }
 
 model Comment {
@@ -105,6 +129,7 @@ model Comment {
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+  commentLikes CommentLike[] @relation("CommentLikes")
 }
 
 model Like {
@@ -115,6 +140,16 @@ model Like {
   post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
+}
+
+model CommentLike {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  commentId Int
+  user      User     @relation(fields: [userId], references: [id])
+  comment   Comment  @relation("CommentLikes", fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
 }
 
 model Follow {
@@ -162,4 +197,22 @@ model ParentStudentLink {
   student   User     @relation("StudentLinks", fields: [studentId], references: [id])
 
   @@unique([parentId, studentId])
+}
+
+model ParentPortalConnection {
+  id                   Int       @id @default(autoincrement())
+  parentId             Int
+  parent               User      @relation("ParentPortalConnections", fields: [parentId], references: [id])
+  studentName          String?
+  gradeLevel           Int?
+  graduationYear       Int?
+  systemType           String    @default("HAC")
+  districtUrl          String
+  hacUsername          String
+  hacPasswordEncrypted String?
+  cachedData           String?
+  lastSynced           DateTime?
+  createdAt            DateTime  @default(now())
+
+  @@unique([parentId, hacUsername, districtUrl])
 }

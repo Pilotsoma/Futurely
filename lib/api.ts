@@ -11,8 +11,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     },
   })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({})) as { error?: { message?: string } }
-    throw new Error(body?.error?.message ?? `HTTP ${res.status}`)
+    const body = await res.json().catch(() => ({})) as { error?: string | { message?: string } }
+    const msg = typeof body?.error === 'string' ? body.error : body?.error?.message
+    throw new Error(msg ?? `HTTP ${res.status}`)
   }
   const { data } = await res.json() as { data: T }
   return data
@@ -259,6 +260,15 @@ export const api = {
       hasMore: boolean
     }>(`/api/feed/posts?page=${page}&limit=${limit}`),
 
+  feedFollowingPosts: (page = 1, limit = 20) =>
+    request<{
+      posts: FeedPost[]
+      total: number
+      page: number
+      pageSize: number
+      hasMore: boolean
+    }>(`/api/feed/posts/following?page=${page}&limit=${limit}`),
+
   feedCreatePost: (body: string) =>
     request<FeedPost>('/api/feed/posts', {
       method: 'POST',
@@ -279,6 +289,11 @@ export const api = {
     request<FeedComment>(`/api/feed/posts/${postId}/comments`, {
       method: 'POST',
       body: JSON.stringify({ body }),
+    }),
+
+  feedToggleCommentLike: (postId: number, commentId: number) =>
+    request<{ liked: boolean; count: number }>(`/api/feed/posts/${postId}/comments/${commentId}/like`, {
+      method: 'POST',
     }),
 
   feedPostDetail: (postId: number) =>
@@ -316,7 +331,7 @@ export const api = {
     ),
 
   feedAwardTag: (targetUserId: number, tag: string, tagColor?: string) =>
-    request<{ id: number; name: string | null; email: string; tag: string | null; tagColor: string | null }>(
+    request<{ tag: string | null; tagColor: string | null; allTags: Array<{ tag: string; tagColor: string }> }>(
       `/api/feed/users/${targetUserId}/tag`,
       {
         method: 'PUT',
@@ -325,10 +340,90 @@ export const api = {
     ),
 
   feedResetTag: (targetUserId: number) =>
-    request<{ id: number; name: string | null; email: string; tag: string | null; tagColor: string | null }>(
+    request<{ tag: string | null; tagColor: string | null; allTags: Array<{ tag: string; tagColor: string }> }>(
       `/api/feed/users/${targetUserId}/tag`,
       { method: 'DELETE' },
     ),
+
+  feedRemoveTagFromUser: (targetUserId: number, tagName: string) =>
+    request<{ tag: string | null; tagColor: string | null; allTags: Array<{ tag: string; tagColor: string }> }>(
+      `/api/feed/users/${targetUserId}/tags/${encodeURIComponent(tagName)}`,
+      { method: 'DELETE' },
+    ),
+
+  feedSetDisplayTag: (tag: string, tagColor: string) =>
+    request<{ tag: string | null; tagColor: string | null }>(
+      '/api/feed/users/me/display-tag',
+      { method: 'PUT', body: JSON.stringify({ tag, tagColor }) },
+    ),
+
+  feedBanUser: (targetUserId: number, banned: boolean) =>
+    request<{ banned: boolean }>(`/api/feed/users/${targetUserId}/ban`, {
+      method: 'PUT',
+      body: JSON.stringify({ banned }),
+    }),
+
+  feedMuteUser: (targetUserId: number, minutes: number | null) =>
+    request<{ mutedUntil: string | null }>(`/api/feed/users/${targetUserId}/mute`, {
+      method: 'PUT',
+      body: JSON.stringify({ minutes }),
+    }),
+
+  feedSetUserRole: (targetUserId: number, role: string) =>
+    request<{ role: string }>(`/api/feed/users/${targetUserId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }),
+
+  feedCreateGiveaway: (data: { body: string; giveawayTag: string; giveawayTagColor: string; durationMinutes: number }) =>
+    request<FeedPost>('/api/feed/posts/giveaway', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  feedEnterGiveaway: (postId: number) =>
+    request<{ entered: boolean; count: number }>(`/api/feed/posts/${postId}/giveaway/enter`, {
+      method: 'POST',
+    }),
+
+  feedDrawGiveaway: (postId: number) =>
+    request<{ winnerId: number; winnerName: string }>(`/api/feed/posts/${postId}/giveaway/draw`, {
+      method: 'POST',
+    }),
+
+  feedPinPost: (postId: number) =>
+    request<{ pinnedUntil: string | null }>(`/api/feed/posts/${postId}/pin`, { method: 'PUT' }),
+
+  feedUnpinPost: (postId: number) =>
+    request<{ ok: boolean }>(`/api/feed/posts/${postId}/unpin`, { method: 'PUT' }),
+
+  // ── Planner ───────────────────────────────────────────────────────────────────
+
+  plannerList: () =>
+    request<PlannerItem[]>('/api/assignments?limit=100'),
+
+  plannerCreate: (item: { title: string; subject?: string; dueDate: string; dueTime?: string }) =>
+    request<PlannerItem>('/api/assignments', {
+      method: 'POST',
+      body: JSON.stringify(item),
+    }),
+
+  plannerToggle: (id: number, completed: boolean) =>
+    request<PlannerItem>(`/api/assignments/${id}/complete`, {
+      method: 'PATCH',
+      body: JSON.stringify({ completed }),
+    }),
+
+  plannerDelete: (id: number) =>
+    request<{ deleted: boolean }>(`/api/assignments/${id}`, {
+      method: 'DELETE',
+    }),
+
+  deleteAccount: (password: string) =>
+    request<{ deleted: boolean }>('/api/auth/account', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    }),
 
   // ── Notifications ─────────────────────────────────────────────────────────────
 
@@ -340,10 +435,10 @@ export const api = {
 
   // ── Parent API ────────────────────────────────────────────────────────────────
 
-  parentLinkStudent: (studentEmail: string) =>
+  parentLinkStudent: (credentials: { districtUrl: string; username: string; password: string }) =>
     request<{ linked: boolean; student: { id: number; name: string | null; email: string } }>(
       '/api/parent/link-student',
-      { method: 'POST', body: JSON.stringify({ studentEmail }) },
+      { method: 'POST', body: JSON.stringify(credentials) },
     ),
 
   parentStudents: () =>
@@ -360,6 +455,19 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ message }),
     }),
+}
+
+// ── Planner types ─────────────────────────────────────────────────────────
+
+export interface PlannerItem {
+  id: number
+  title: string
+  subject: string | null
+  dueDate: string
+  dueTime: string | null
+  completed: boolean
+  completedAt: string | null
+  userId: number
 }
 
 // ── Study Feed types ───────────────────────────────────────────────────────
@@ -380,7 +488,15 @@ export interface FeedPost {
   updatedAt: string
   user: FeedUser
   likedByMe: boolean
-  _count: { likes: number; comments: number }
+  enteredByMe: boolean
+  type: string
+  pinnedUntil: string | null
+  giveawayTag: string | null
+  giveawayTagColor: string | null
+  giveawayEndsAt: string | null
+  giveawayWinnerId: number | null
+  giveawayWinner: { id: number; name: string | null; email: string } | null
+  _count: { likes: number; comments: number; giveawayEntries: number }
 }
 
 export interface FeedComment {
@@ -390,6 +506,8 @@ export interface FeedComment {
   body: string
   createdAt: string
   user: FeedUser
+  likedByMe: boolean
+  _count: { likes: number }
 }
 
 export interface FeedUserProfile {
@@ -401,6 +519,9 @@ export interface FeedUserProfile {
   role: string
   isFollowing: boolean
   totalLikes: number
+  chatBanned: boolean
+  chatMutedUntil: string | null
+  allTags: Array<{ tag: string; tagColor: string }>
   _count: { followers: number; following: number; posts: number }
 }
 

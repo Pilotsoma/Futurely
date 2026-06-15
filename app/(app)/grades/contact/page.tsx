@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import PageLoader from '../../../../components/ui/PageLoader'
 
 const BASE = ''
 
@@ -66,7 +67,7 @@ export default function ContactTeachersPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading teachers…</div>
+  if (loading) return <PageLoader message="Opening teacher contacts…" />
 
   return (
     <div className="fade-up">

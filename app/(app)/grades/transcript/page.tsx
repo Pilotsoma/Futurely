@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '../../../../lib/api'
+import PageLoader from '../../../../components/ui/PageLoader'
 
 type TranscriptCourse = { name: string; grade: string; credits: string }
 type Semester = { year: string; semester: string; courses: TranscriptCourse[] }
@@ -13,6 +14,12 @@ interface TranscriptData {
   unweightedGPA: string | null
   classRank: string | null
   quartile: string | null
+}
+
+function formatGpa(value: string | null | undefined): string {
+  if (!value) return '—'
+  const parsed = parseFloat(value)
+  return Number.isFinite(parsed) ? parsed.toFixed(3) : value
 }
 
 export default function TranscriptPage() {
@@ -28,7 +35,7 @@ export default function TranscriptPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading transcript…</div>
+  if (loading) return <PageLoader message="Opening transcript…" />
 
   return (
     <div className="fade-up">
@@ -48,11 +55,11 @@ export default function TranscriptPage() {
       <div style={S.gpaGrid}>
         <div className="ns-card" style={{ ...S.gpaHero, border: '1px solid rgba(75,110,255,0.25)', background: 'rgba(75,110,255,0.05)' }}>
           <p style={S.gpaLabel}>Weighted GPA</p>
-          <p style={{ ...S.gpaValue, color: '#4B6EFF' }}>{data?.weightedGPA ?? '—'}</p>
+          <p style={{ ...S.gpaValue, color: '#4B6EFF' }}>{formatGpa(data?.weightedGPA)}</p>
         </div>
         <div className="ns-card" style={{ ...S.gpaHero, border: '1px solid rgba(0,200,150,0.25)', background: 'rgba(0,200,150,0.05)' }}>
           <p style={S.gpaLabel}>Unweighted GPA</p>
-          <p style={{ ...S.gpaValue, color: '#00C896' }}>{data?.unweightedGPA ?? '—'}</p>
+          <p style={{ ...S.gpaValue, color: '#00C896' }}>{formatGpa(data?.unweightedGPA)}</p>
         </div>
         <div className="ns-card" style={{ ...S.gpaHero, border: '1px solid rgba(255,170,50,0.25)', background: 'rgba(255,170,50,0.05)' }}>
           <p style={S.gpaLabel}>Class Rank</p>

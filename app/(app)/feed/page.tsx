@@ -20,12 +20,44 @@ function initials(user: { name: string | null; email: string }): string {
   return n.slice(0, 2).toUpperCase()
 }
 
-function notifLabel(n: AppNotification): string {
+// ── Notification row with clickable sender name ───────────────────────────────
+
+function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenProfile: (id: number) => void; onClose: () => void }) {
   const name = n.sender.name ?? n.sender.email.split('@')[0]
-  if (n.type === 'FOLLOW')  return `${name} started following you`
-  if (n.type === 'LIKE')    return `${name} liked your post`
-  if (n.type === 'COMMENT') return n.preview ? `${name}: "${n.preview}"` : `${name} commented on your post`
-  return ''
+
+  function handleNameClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    onClose()
+    onOpenProfile(n.fromUserId)
+  }
+
+  const nameEl = (
+    <button
+      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
+      onClick={handleNameClick}
+    >
+      {name}
+    </button>
+  )
+
+  let content: React.ReactNode
+  if (n.type === 'FOLLOW') content = <>{nameEl} started following you</>
+  else if (n.type === 'LIKE') content = <>{nameEl} liked your post</>
+  else if (n.type === 'COMMENT') content = n.preview ? <>{nameEl}: &quot;{n.preview}&quot;</> : <>{nameEl} commented on your post</>
+  else content = null
+
+  return (
+    <div style={{ ...N.item, background: n.read ? 'transparent' : 'rgba(75,110,255,0.07)' }}>
+      <span style={{ fontSize: 15, flexShrink: 0 }}>
+        {n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : '💬'}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={N.text}>{content}</div>
+        <div style={N.time}>{notifTimeAgo(n.createdAt)}</div>
+      </div>
+      {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, alignSelf: 'center' as const }} />}
+    </div>
+  )
 }
 
 function notifTimeAgo(iso: string): string {
@@ -73,6 +105,8 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
     } catch { /* ignore */ }
   }
 
+  const isDevTag = profile?.tag === 'DEV'
+
   return (
     <div style={O.overlay} onClick={onClose}>
       <div style={O.panel} onClick={e => e.stopPropagation()}>
@@ -86,11 +120,37 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
               <div style={O.avatar}>{initials(profile)}</div>
               <div style={{ flex: 1 }}>
                 <div style={O.name}>{displayName(profile)}</div>
-                {profile.tag && (
-                  <span className={profile.tag === 'DEV' ? 'tag-rainbow' : ''} style={profile.tag === 'DEV' ? O.tagDev : { ...O.tag, color: profile.tagColor || 'var(--primary)', background: profile.tagColor ? `${profile.tagColor}22` : 'rgba(0,200,150,0.1)' }}>
-                    [{profile.tag}]
-                  </span>
-                )}
+                {/* Show ALL awarded tags in profile view */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 3 }}>
+                  {/* Priority override badge */}
+                  {(profile.chatBanned || (profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())) && (
+                    <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, display: 'inline-block', ...(profile.chatBanned ? { color: '#EF4444', background: '#EF444422', border: '1px solid #EF4444' } : { color: '#f97316', background: '#f9731622', border: '1px solid #f97316' }) }}>
+                      {profile.chatBanned ? 'BANNED' : 'MUTED'}
+                    </span>
+                  )}
+                  {/* All awarded tags */}
+                  {(profile.allTags ?? []).length > 0
+                    ? (profile.allTags ?? []).map(t => {
+                        const active = profile.tag === t.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())
+                        const isDev = t.tag === 'DEV'
+                        return (
+                          <span key={t.tag}
+                            className={isDev ? 'tag-rainbow' : ''}
+                            style={isDev
+                              ? { ...O.tagDev, opacity: active ? 1 : 0.45 }
+                              : { ...O.tag, color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor, background: t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`, border: `1px solid ${t.tagColor === 'grey' ? 'rgba(128,128,128,0.4)' : t.tagColor}`, opacity: active ? 1 : 0.45 }}
+                          >
+                            {t.tag}{active && ' ✓'}
+                          </span>
+                        )
+                      })
+                    : profile.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
+                        <span className={isDevTag ? 'tag-rainbow' : ''} style={isDevTag ? O.tagDev : { ...O.tag, color: profile.tagColor || 'var(--primary)', background: profile.tagColor ? `${profile.tagColor}22` : 'rgba(0,200,150,0.1)' }}>
+                          {profile.tag}
+                        </span>
+                      )
+                  }
+                </div>
                 <div style={O.email}>{profile.email}</div>
               </div>
               <button style={O.closeBtn} onClick={onClose}>
@@ -113,8 +173,24 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
               </button>
             )}
 
-            {/* Admin tag panel */}
-            <AdminTagPanel profile={profile} userId={userId} currentUserId={currentUserId} onUpdate={updated => setProfile(prev => prev ? { ...prev, tag: updated.tag, tagColor: updated.tagColor } : prev)} />
+            {/* DEV/Admin panel */}
+            <DevAdminPanel
+              profile={profile}
+              userId={userId}
+              currentUserId={currentUserId}
+              onUpdateTag={updated => setProfile(prev => prev ? { ...prev, tag: updated.tag, tagColor: updated.tagColor, allTags: updated.allTags ?? prev.allTags } : prev)}
+              onUpdateBan={banned => setProfile(prev => prev ? { ...prev, chatBanned: banned } : prev)}
+              onUpdateMute={mu => setProfile(prev => prev ? { ...prev, chatMutedUntil: mu } : prev)}
+              onUpdateRole={role => setProfile(prev => prev ? { ...prev, role } : prev)}
+            />
+
+            {/* Tag picker — only shown on own profile */}
+            {userId === currentUserId && (profile.allTags ?? []).length > 0 && (
+              <OwnTagPicker
+                profile={profile}
+                onUpdateTag={updated => setProfile(prev => prev ? { ...prev, tag: updated.tag, tagColor: updated.tagColor } : prev)}
+              />
+            )}
 
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
               <p style={O.postsTitle}>Posts</p>
@@ -141,61 +217,377 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
   )
 }
 
-function AdminTagPanel({ profile, userId, currentUserId, onUpdate }: { profile: FeedUserProfile; userId: number; currentUserId: number; onUpdate: (u: { tag: string | null; tagColor: string | null }) => void }) {
-  const [localTag, setLocalTag] = useState(profile.tag || '')
-  const [localColor, setLocalColor] = useState(profile.tagColor || '')
+// ── DEV / Admin control panel ─────────────────────────────────────────────────
+
+function DevAdminPanel({
+  profile, userId, currentUserId, onUpdateTag, onUpdateBan, onUpdateMute, onUpdateRole,
+}: {
+  profile: FeedUserProfile
+  userId: number
+  currentUserId: number
+  onUpdateTag: (u: { tag: string | null; tagColor: string | null; allTags?: Array<{ tag: string; tagColor: string }> }) => void
+  onUpdateBan: (banned: boolean) => void
+  onUpdateMute: (mutedUntil: string | null) => void
+  onUpdateRole: (role: string) => void
+}) {
+  const [localTag, setLocalTag] = useState('')
+  const [localColor, setLocalColor] = useState('')
   const [saving, setSaving] = useState(false)
+  const [removingTag, setRemovingTag] = useState<string | null>(null)
+  const [muteMinutes, setMuteMinutes] = useState('60')
+  const [muteSaving, setMuteSaving] = useState(false)
+  const [roleSaving, setRoleSaving] = useState(false)
+  const [myTag, setMyTag] = useState<string | null>(null)
   const [myRole, setMyRole] = useState<string | null>(null)
 
   useEffect(() => {
-    api.feedUserProfile(currentUserId).then((p) => setMyRole(p.role)).catch(() => {})
+    api.feedUserProfile(currentUserId).then((p) => { setMyRole(p.role); setMyTag(p.tag) }).catch(() => {})
   }, [currentUserId])
 
-  if (myRole !== 'ADMIN') return null
+  const canManage = myRole === 'ADMIN' || myTag === 'DEV'
+  if (!canManage || userId === currentUserId) return null
 
-  async function handleSet() {
+  async function handleSetTag() {
     if (!localTag.trim() || saving) return
     setSaving(true)
     try {
       const updated = await api.feedAwardTag(userId, localTag.trim(), localColor.trim() || undefined)
-      onUpdate(updated)
-    } catch { /* ignore */ }
-    finally { setSaving(false) }
-  }
-
-  async function handleReset() {
-    if (saving) return
-    setSaving(true)
-    try {
-      const updated = await api.feedResetTag(userId)
-      onUpdate(updated)
-      setLocalTag(updated.tag || '')
+      onUpdateTag(updated)
+      setLocalTag('')
       setLocalColor('')
     } catch { /* ignore */ }
     finally { setSaving(false) }
   }
 
+  async function handleRemoveTag(tagName: string) {
+    if (removingTag) return
+    setRemovingTag(tagName)
+    try {
+      const updated = await api.feedRemoveTagFromUser(userId, tagName)
+      onUpdateTag(updated)
+    } catch { /* ignore */ }
+    finally { setRemovingTag(null) }
+  }
+
+  async function handleResetTag() {
+    if (saving) return
+    setSaving(true)
+    try {
+      const updated = await api.feedResetTag(userId)
+      onUpdateTag(updated)
+    } catch { /* ignore */ }
+    finally { setSaving(false) }
+  }
+
+  async function handleToggleBan() {
+    setSaving(true)
+    try {
+      const result = await api.feedBanUser(userId, !profile.chatBanned)
+      onUpdateBan(result.banned)
+    } catch { /* ignore */ }
+    finally { setSaving(false) }
+  }
+
+  async function handleMute() {
+    const mins = parseInt(muteMinutes)
+    if (isNaN(mins) || muteSaving) return
+    setMuteSaving(true)
+    try {
+      const result = await api.feedMuteUser(userId, mins > 0 ? mins : null)
+      onUpdateMute(result.mutedUntil)
+    } catch { /* ignore */ }
+    finally { setMuteSaving(false) }
+  }
+
+  async function handleUnmute() {
+    if (muteSaving) return
+    setMuteSaving(true)
+    try {
+      const result = await api.feedMuteUser(userId, null)
+      onUpdateMute(result.mutedUntil)
+    } catch { /* ignore */ }
+    finally { setMuteSaving(false) }
+  }
+
+  async function handleSetRole(role: string) {
+    if (roleSaving) return
+    setRoleSaving(true)
+    try {
+      const result = await api.feedSetUserRole(userId, role)
+      onUpdateRole(result.role)
+    } catch { /* ignore */ }
+    finally { setRoleSaving(false) }
+  }
+
+  async function handleQuickGrantTag(tag: string, color: string) {
+    if (saving) return
+    setSaving(true)
+    try {
+      const updated = await api.feedAwardTag(userId, tag, color)
+      onUpdateTag(updated)
+    } catch { /* ignore */ }
+    finally { setSaving(false) }
+  }
+
+  const isMutedTarget = profile.chatMutedUntil != null && new Date(profile.chatMutedUntil) > new Date()
+  const allTags = profile.allTags ?? []
+  const hasDevTag = allTags.some(t => t.tag === 'DEV')
+  const hasModTag = allTags.some(t => t.tag === 'MOD')
+  const isAdmin = profile.role === 'ADMIN'
+
   return (
     <div style={{ background: 'rgba(255,200,50,0.06)', border: '1px solid rgba(255,200,50,0.2)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-      <p style={{ fontSize: 12, fontWeight: 700, color: '#ffc832', marginBottom: 8 }}>Admin — Manage Tag</p>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const }}>
-        <input className="ns-input" style={{ flex: 1, minWidth: 80, height: 34, fontSize: 12 }} placeholder="Tag (DEV, VIP…)" value={localTag} onChange={e => setLocalTag(e.target.value)} />
-        <input className="ns-input" style={{ width: 80, height: 34, fontSize: 12 }} placeholder="Color" value={localColor} onChange={e => setLocalColor(e.target.value)} />
-        <button style={{ background: '#ffc832', color: '#000', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={handleSet} disabled={saving}>{saving ? '…' : 'Set'}</button>
-        <button className="ns-btn-ghost" style={{ height: 34, padding: '0 10px', fontSize: 12 }} onClick={handleReset} disabled={saving}>Reset</button>
+      <p style={{ fontSize: 12, fontWeight: 700, color: '#ffc832', marginBottom: 10 }}>DEV — Manage User</p>
+
+      {/* Privileges: role + quick grant/revoke */}
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>PRIVILEGES</p>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, alignItems: 'center', marginBottom: 10 }}>
+        <span style={{
+          fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+          background: isAdmin ? 'rgba(239,68,68,0.15)' : 'rgba(128,128,128,0.12)',
+          color: isAdmin ? '#EF4444' : 'var(--text-secondary)',
+          border: `1px solid ${isAdmin ? '#EF4444' : 'rgba(128,128,128,0.4)'}`,
+        }}>
+          {isAdmin ? 'ADMIN' : 'STUDENT'}
+        </span>
+        {!isAdmin ? (
+          <button
+            style={{ background: '#EF4444', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
+            onClick={() => void handleSetRole('ADMIN')}
+            disabled={roleSaving}
+          >
+            {roleSaving ? '…' : 'Grant Admin'}
+          </button>
+        ) : (
+          <button
+            style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid #EF4444', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
+            onClick={() => void handleSetRole('STUDENT')}
+            disabled={roleSaving}
+          >
+            {roleSaving ? '…' : 'Revoke Admin'}
+          </button>
+        )}
+        {!hasDevTag ? (
+          <button
+            style={{ background: 'rgba(173,216,230,0.15)', color: 'lightblue', border: '1px solid lightblue', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
+            onClick={() => void handleQuickGrantTag('DEV', 'lightblue')}
+            disabled={saving}
+          >
+            + DEV
+          </button>
+        ) : (
+          <button
+            style={{ background: 'rgba(173,216,230,0.15)', color: 'lightblue', border: '1px solid lightblue', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
+            onClick={() => void handleRemoveTag('DEV')}
+            disabled={!!removingTag}
+          >
+            − DEV
+          </button>
+        )}
+        {!hasModTag ? (
+          <button
+            style={{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid #a78bfa', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
+            onClick={() => void handleQuickGrantTag('MOD', '#a78bfa')}
+            disabled={saving}
+          >
+            + MOD
+          </button>
+        ) : (
+          <button
+            style={{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid #a78bfa', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
+            onClick={() => void handleRemoveTag('MOD')}
+            disabled={!!removingTag}
+          >
+            − MOD
+          </button>
+        )}
       </div>
+
+      {/* Existing tags */}
+      {allTags.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>AWARDED TAGS</p>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+            {allTags.map(t => (
+              <div key={t.tag} style={{ display: 'flex', alignItems: 'center', gap: 4, background: t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`, border: `1px solid ${t.tagColor === 'grey' ? 'rgba(128,128,128,0.4)' : t.tagColor}`, borderRadius: 4, padding: '2px 6px 2px 8px' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor }}>{t.tag}</span>
+                <button
+                  style={{ background: 'none', border: 'none', padding: '0 0 0 2px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center' }}
+                  onClick={() => void handleRemoveTag(t.tag)}
+                  disabled={!!removingTag}
+                  title={`Remove ${t.tag} tag`}
+                >×</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Award new tag */}
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>AWARD TAG</p>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const, marginBottom: 10 }}>
+        <input className="ns-input" style={{ flex: 1, minWidth: 80, height: 34, fontSize: 12 }} placeholder="Tag (VIP, MOD…)" value={localTag} onChange={e => setLocalTag(e.target.value)} />
+        <input className="ns-input" style={{ width: 80, height: 34, fontSize: 12 }} placeholder="Color" value={localColor} onChange={e => setLocalColor(e.target.value)} />
+        <button style={{ background: '#ffc832', color: '#000', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={handleSetTag} disabled={saving}>{saving ? '…' : 'Award'}</button>
+        <button className="ns-btn-ghost" style={{ height: 34, padding: '0 10px', fontSize: 12 }} onClick={handleResetTag} disabled={saving}>Reset All</button>
+      </div>
+
+      {/* Mute */}
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>MUTE</p>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const, marginBottom: 10 }}>
+        <select
+          className="ns-input"
+          style={{ flex: 1, height: 34, fontSize: 12 }}
+          value={muteMinutes}
+          onChange={e => setMuteMinutes(e.target.value)}
+        >
+          <option value="5">5 minutes</option>
+          <option value="60">1 hour</option>
+          <option value="1440">1 day</option>
+          <option value="10080">1 week</option>
+          <option value="525600">1 year (perm)</option>
+        </select>
+        <button style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={handleMute} disabled={muteSaving}>{muteSaving ? '…' : 'Mute'}</button>
+        {isMutedTarget && (
+          <button className="ns-btn-ghost" style={{ height: 34, padding: '0 10px', fontSize: 12 }} onClick={handleUnmute} disabled={muteSaving}>Unmute</button>
+        )}
+      </div>
+      {isMutedTarget && (
+        <p style={{ fontSize: 11, color: '#f97316', marginBottom: 8 }}>
+          Muted until {new Date(profile.chatMutedUntil!).toLocaleString()}
+        </p>
+      )}
+
+      {/* Ban */}
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>CHAT BAN</p>
+      <button
+        style={{ width: '100%', border: 'none', borderRadius: 6, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: 'pointer', background: profile.chatBanned ? '#22C55E' : '#EF4444', color: '#fff' }}
+        onClick={handleToggleBan}
+        disabled={saving}
+      >
+        {profile.chatBanned ? 'Unban from Chat' : 'Ban from Chat'}
+      </button>
+      {profile.chatBanned && (
+        <p style={{ fontSize: 11, color: '#EF4444', marginTop: 6 }}>This user is banned from posting.</p>
+      )}
+    </div>
+  )
+}
+
+// ── Own Tag Picker ────────────────────────────────────────────────────────────
+
+function OwnTagPicker({ profile, onUpdateTag }: {
+  profile: FeedUserProfile
+  onUpdateTag: (u: { tag: string | null; tagColor: string | null }) => void
+}) {
+  const [saving, setSaving] = useState<string | null>(null)
+  const isBannedOrMuted = profile.chatBanned || (!!profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())
+  const allTags = profile.allTags ?? []
+
+  async function handleSelect(tag: string, tagColor: string) {
+    if (saving || isBannedOrMuted) return
+    setSaving(tag)
+    try {
+      const updated = await api.feedSetDisplayTag(tag, tagColor)
+      onUpdateTag(updated)
+    } catch { /* ignore */ }
+    finally { setSaving(null) }
+  }
+
+  return (
+    <div style={{ background: 'rgba(0,200,150,0.05)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>YOUR DISPLAY TAG</p>
+      {isBannedOrMuted ? (
+        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Tag selection is disabled while banned or muted.</p>
+      ) : (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+          {allTags.map(t => {
+            const isActive = profile.tag === t.tag
+            const isDev = t.tag === 'DEV'
+            return (
+              <button
+                key={t.tag}
+                disabled={!!saving}
+                onClick={() => void handleSelect(t.tag, t.tagColor)}
+                className={isDev && isActive ? 'tag-rainbow' : ''}
+                style={{
+                  border: `2px solid ${isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.6)' : t.tagColor) : 'transparent'}`,
+                  background: isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`) : 'var(--surface-2)',
+                  borderRadius: 6, padding: '4px 10px',
+                  fontSize: 12, fontWeight: 700,
+                  color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor,
+                  cursor: saving ? 'default' : 'pointer',
+                  opacity: saving === t.tag ? 0.5 : 1,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {saving === t.tag ? '…' : t.tag}
+                {isActive && <span style={{ marginLeft: 4, fontSize: 10 }}>✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
 
 // ── Post Card ────────────────────────────────────────────────────────────────
 
-function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFollow, currentUserId, followedUsers }: { post: FeedPost; onLike: (id: number) => void; onDelete: (id: number) => void; onOpenComments: (id: number) => void; onOpenProfile: (userId: number) => void; onFollow: (userId: number) => void; currentUserId: number; followedUsers: Set<number> }) {
+function GiveawayCountdown({ endsAt }: { endsAt: string }) {
+  const [label, setLabel] = useState('')
+  useEffect(() => {
+    function update() {
+      const diff = Math.max(0, new Date(endsAt).getTime() - Date.now())
+      if (diff === 0) { setLabel('Ended'); return }
+      const s = Math.floor(diff / 1000)
+      if (s < 60) { setLabel(`${s}s left`); return }
+      const m = Math.floor(s / 60)
+      if (m < 60) { setLabel(`${m}m left`); return }
+      const h = Math.floor(m / 60)
+      if (h < 24) { setLabel(`${h}h ${m % 60}m left`); return }
+      setLabel(`${Math.floor(h / 24)}d left`)
+    }
+    update()
+    const t = setInterval(update, 5000)
+    return () => clearInterval(t)
+  }, [endsAt])
+  return <span>{label}</span>
+}
+
+function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFollow, onEnterGiveaway, onDrawGiveaway, onPin, currentUserId, followedUsers, isDevUser }: {
+  post: FeedPost
+  onLike: (id: number) => void
+  onDelete: (id: number) => void
+  onOpenComments: (id: number) => void
+  onOpenProfile: (userId: number) => void
+  onFollow: (userId: number) => void
+  onEnterGiveaway: (id: number) => void
+  onDrawGiveaway: (id: number) => void
+  onPin: (id: number, currentlyPinned: boolean) => void
+  currentUserId: number
+  followedUsers: Set<number>
+  isDevUser: boolean
+}) {
   const tagColor = (post.user as { tagColor?: string }).tagColor || 'grey'
   const isDevTag = post.user.tag === 'DEV'
   const isFollowing = followedUsers.has(post.userId)
+  const canDelete = post.userId === currentUserId || isDevUser
+  const isPinned = !!post.pinnedUntil && new Date(post.pinnedUntil) > new Date()
+  const isGiveaway = post.type === 'giveaway'
+  const giveawayEnded = !!post.giveawayEndsAt && new Date(post.giveawayEndsAt) <= new Date()
+  const giveawayTagColor = post.giveawayTagColor || 'gold'
+
   return (
-    <div className="ns-card" style={{ padding: 16, marginBottom: 12 }}>
+    <div className="ns-card" style={{ padding: 16, marginBottom: 12, ...(isGiveaway ? { border: `1px solid ${giveawayTagColor}55`, background: `${giveawayTagColor}08` } : {}), ...(isPinned && !isGiveaway ? { border: '1px solid rgba(75,110,255,0.3)' } : {}) }}>
+      {/* Pinned banner */}
+      {isPinned && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          PINNED
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <div style={P.avatar}>{initials(post.user)}</div>
@@ -210,13 +602,13 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             )}
             {post.user.tag && (
               <span className={isDevTag ? 'tag-rainbow' : ''} style={isDevTag ? P.tagDev : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
-                [{post.user.tag}]
+                {post.user.tag}
               </span>
             )}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{timeAgo(post.createdAt)}</div>
         </div>
-        {post.userId === currentUserId && (
+        {canDelete && (
           <button style={P.deleteBtn} onClick={() => onDelete(post.id)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -225,6 +617,65 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
       {/* Body */}
       <div style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--text)', marginBottom: 14, whiteSpace: 'pre-wrap' as const }}>{post.body}</div>
+
+      {/* Giveaway section */}
+      {isGiveaway && (
+        <div style={{ border: `1px solid ${giveawayTagColor}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${giveawayTagColor}0d` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 16 }}>🎁</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: giveawayTagColor, letterSpacing: '0.5px' }}>TAG GIVEAWAY</span>
+            <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: `${giveawayTagColor}22`, color: giveawayTagColor, border: `1px solid ${giveawayTagColor}66` }}>
+              {post.giveawayTag}
+            </span>
+          </div>
+
+          {post.giveawayWinnerId ? (
+            /* Winner announced */
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 6 }}>
+              <span style={{ fontSize: 18 }}>🏆</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#22C55E' }}>Winner!</div>
+                <div style={{ fontSize: 13, color: 'var(--text)' }}>
+                  {post.giveawayWinner ? displayName(post.giveawayWinner) : 'Someone'} won the <strong style={{ color: giveawayTagColor }}>{post.giveawayTag}</strong> tag!
+                </div>
+              </div>
+            </div>
+          ) : giveawayEnded ? (
+            /* Ended, no winner drawn yet */
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+              Giveaway ended · {post._count.giveawayEntries} {post._count.giveawayEntries === 1 ? 'entry' : 'entries'}
+              {isDevUser && post._count.giveawayEntries > 0 && (
+                <button
+                  style={{ marginLeft: 10, background: giveawayTagColor, color: '#000', border: 'none', borderRadius: 5, padding: '3px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
+                  onClick={() => onDrawGiveaway(post.id)}
+                >
+                  Draw Winner
+                </button>
+              )}
+            </div>
+          ) : (
+            /* Active giveaway */
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {post._count.giveawayEntries} {post._count.giveawayEntries === 1 ? 'entry' : 'entries'} ·{' '}
+                {post.giveawayEndsAt && <GiveawayCountdown endsAt={post.giveawayEndsAt} />}
+              </span>
+              <div style={{ marginLeft: 'auto' }}>
+                {post.enteredByMe ? (
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', padding: '6px 14px', border: '1px solid #22C55E', borderRadius: 6, display: 'inline-block' }}>✓ Entered</span>
+                ) : (
+                  <button
+                    style={{ background: giveawayTagColor, color: '#000', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
+                    onClick={() => onEnterGiveaway(post.id)}
+                  >
+                    Enter Giveaway
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 4, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
@@ -236,6 +687,16 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           {post._count.comments}
         </button>
+        {isDevUser && (
+          <button
+            style={{ ...P.actionBtn, marginLeft: 'auto', color: isPinned ? 'var(--primary)' : 'var(--text-secondary)' }}
+            onClick={() => onPin(post.id, isPinned)}
+            title={isPinned ? 'Unpin post' : 'Pin for 24h'}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill={isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+            {isPinned ? 'Unpin' : 'Pin'}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -243,28 +704,64 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
 // ── Comment Section ───────────────────────────────────────────────────────────
 
-function CommentSection({ postId, onClose, onCommentAdded }: { postId: number; onClose: () => void; onCommentAdded: () => void }) {
+function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpenProfile, isMuted, mutedUntil }: {
+  postId: number
+  onClose: () => void
+  onCommentAdded: () => void
+  currentUserId: number
+  onOpenProfile: (userId: number) => void
+  isMuted?: boolean
+  mutedUntil?: string | null
+}) {
   const [comments, setComments] = useState<FeedComment[]>([])
   const [newComment, setNewComment] = useState('')
   const [loading, setLoading] = useState(true)
+  const [likingId, setLikingId] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
     api.feedPostDetail(postId).then(data => {
-      if (!cancelled) { setComments((data as FeedPost & { comments: FeedComment[] }).comments || []); setLoading(false) }
+      if (!cancelled) {
+        const raw = (data as FeedPost & { comments: FeedComment[] }).comments || []
+        setComments(raw)
+        setLoading(false)
+      }
     }).catch(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [postId])
 
+  const [commentError, setCommentError] = useState<string | null>(null)
+
   async function handleAdd() {
     if (!newComment.trim()) return
+    setCommentError(null)
     try {
       const comment = await api.feedAddComment(postId, newComment.trim())
       setComments(prev => [...prev, comment])
       setNewComment('')
       onCommentAdded()
-    } catch { /* ignore */ }
+    } catch (err) {
+      setCommentError(err instanceof Error ? err.message : 'Failed to post comment')
+    }
   }
+
+  async function handleCommentLike(commentId: number) {
+    if (likingId !== null) return
+    setLikingId(commentId)
+    try {
+      const result = await api.feedToggleCommentLike(postId, commentId)
+      setComments(prev => prev.map(c => c.id === commentId
+        ? { ...c, likedByMe: result.liked, _count: { likes: result.count } }
+        : c
+      ))
+    } catch (err) {
+      console.error('[comment like]', err)
+    } finally {
+      setLikingId(null)
+    }
+  }
+
+  const sorted = [...comments].sort((a, b) => (b._count?.likes ?? 0) - (a._count?.likes ?? 0))
 
   return (
     <div style={O.overlay} onClick={onClose}>
@@ -276,25 +773,75 @@ function CommentSection({ postId, onClose, onCommentAdded }: { postId: number; o
         <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16 }}>
           {loading ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
-          ) : comments.length === 0 ? (
+          ) : sorted.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No comments yet. Be the first!</div>
-          ) : comments.map(c => (
-            <div key={c.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{displayName(c.user)}</span>
-                {c.user.tag && <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>[{c.user.tag}]</span>}
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{timeAgo(c.createdAt)}</span>
+          ) : sorted.map(c => {
+            const isDevTag = c.user.tag === 'DEV'
+            const tagColor = c.user.tagColor || 'grey'
+            return (
+              <div key={c.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <button
+                    style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, color: 'var(--text)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                    onClick={() => { onClose(); onOpenProfile(c.user.id) }}
+                  >
+                    {displayName(c.user)}
+                  </button>
+                  {c.user.tag && (
+                    <span
+                      className={isDevTag ? 'tag-rainbow' : ''}
+                      style={isDevTag
+                        ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' }
+                        : { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }
+                      }
+                    >
+                      {c.user.tag}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{timeAgo(c.createdAt)}</span>
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text)', marginBottom: 6 }}>{c.body}</div>
+                <button
+                  disabled={likingId !== null}
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: likingId !== null ? 'default' : 'pointer', fontSize: 12, color: c.likedByMe ? '#EF4444' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, opacity: likingId === c.id ? 0.5 : 1 }}
+                  onClick={() => void handleCommentLike(c.id)}
+                >
+                  {c.likedByMe ? '♥' : '♡'} {c._count?.likes ?? 0}
+                </button>
               </div>
-              <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text)' }}>{c.body}</div>
+            )
+          })}
+        </div>
+        {isMuted ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8 }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>🔇</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#f97316' }}>You are muted</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                {mutedUntil ? `Until ${new Date(mutedUntil).toLocaleString()}` : 'Cannot comment while muted'}
+              </div>
             </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <input className="ns-input" style={{ flex: 1, height: 42 }} placeholder="Write a comment…" value={newComment}
-            onChange={e => setNewComment(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && void handleAdd()} />
-          <button className="ns-btn-primary" style={{ height: 42, padding: '0 18px' }} onClick={handleAdd}>Send</button>
-        </div>
+          </div>
+        ) : (
+          <>
+            {commentError && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', marginBottom: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8 }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>🚫</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#EF4444', marginBottom: 1 }}>Comment blocked</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{commentError}</div>
+                </div>
+                <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0, flexShrink: 0 }} onClick={() => setCommentError(null)}>×</button>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input className="ns-input" style={{ flex: 1, height: 42 }} placeholder="Write a comment…" value={newComment}
+                onChange={e => { setNewComment(e.target.value); if (commentError) setCommentError(null) }}
+                onKeyDown={e => e.key === 'Enter' && void handleAdd()} />
+              <button className="ns-btn-primary" style={{ height: 42, padding: '0 18px' }} onClick={handleAdd}>Send</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -337,7 +884,7 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
                 <span
                   className={u.tag === 'DEV' ? 'tag-rainbow' : ''}
                   style={u.tag === 'DEV' ? P.tagDev : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
-                >[{u.tag}]</span>
+                >{u.tag}</span>
               )}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{u.email}</div>
@@ -362,11 +909,28 @@ export default function StudyFeedPage() {
   const [posting, setPosting] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
+  const [followingPosts, setFollowingPosts] = useState<FeedPost[]>([])
+  const [followingPage, setFollowingPage] = useState(1)
+  const [followingHasMore, setFollowingHasMore] = useState(false)
+  const [followingLoading, setFollowingLoading] = useState(false)
+  const [followingLoaded, setFollowingLoaded] = useState(false)
   const [commentPostId, setCommentPostId] = useState<number | null>(null)
   const [currentUserId, setCurrentUserId] = useState<number>(0)
-  const [tab, setTab] = useState<'feed' | 'search'>('feed')
+  const [tab, setTab] = useState<'social' | 'following' | 'search'>('social')
   const [profileUserId, setProfileUserId] = useState<number | null>(null)
   const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set())
+  const [isDevUser, setIsDevUser] = useState(false)
+  const [isBanned, setIsBanned] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const [mutedUntil, setMutedUntil] = useState<string | null>(null)
+  const [statusLoaded, setStatusLoaded] = useState(false)
+  const [showGiveawayForm, setShowGiveawayForm] = useState(false)
+  const [gwTag, setGwTag] = useState('')
+  const [gwColor, setGwColor] = useState('gold')
+  const [gwDuration, setGwDuration] = useState('60')
+  const [gwBody, setGwBody] = useState('')
+  const [creatingGw, setCreatingGw] = useState(false)
+  const [postError, setPostError] = useState<string | null>(null)
 
   // Notifications
   const [notifs, setNotifs]       = useState<AppNotification[]>([])
@@ -386,14 +950,41 @@ export default function StudyFeedPage() {
     finally { setLoading(false) }
   }, [])
 
+  const loadFollowingPosts = useCallback(async (p: number) => {
+    setFollowingLoading(true)
+    try {
+      const data = await api.feedFollowingPosts(p, 20)
+      if (p === 1) setFollowingPosts(data.posts)
+      else setFollowingPosts((prev) => [...prev, ...data.posts])
+      setFollowingHasMore(data.hasMore)
+      setFollowingLoaded(true)
+    } catch { /* ignore */ }
+    finally { setFollowingLoading(false) }
+  }, [])
+
   useEffect(() => {
     try {
       const token = localStorage.getItem('ns_token')
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1]))
-        setCurrentUserId(payload.sub || 0)
+        const uid = payload.sub || 0
+        setCurrentUserId(uid)
+        if (uid) {
+          api.feedUserProfile(uid).then(p => {
+            setIsDevUser(p.role === 'ADMIN' || p.tag === 'DEV')
+            setIsBanned(p.chatBanned)
+            const activeMute = !!p.chatMutedUntil && new Date(p.chatMutedUntil) > new Date()
+            setIsMuted(activeMute)
+            setMutedUntil(p.chatMutedUntil)
+            setStatusLoaded(true)
+          }).catch(() => { setStatusLoaded(true) })
+        } else {
+          setStatusLoaded(true)
+        }
+      } else {
+        setStatusLoaded(true)
       }
-    } catch { /* ignore */ }
+    } catch { setStatusLoaded(true) }
     loadPosts(1)
   }, [loadPosts])
 
@@ -461,19 +1052,23 @@ export default function StudyFeedPage() {
 
   async function handleCreatePost() {
     if (!newPostBody.trim() || posting) return
+    setPostError(null)
     setPosting(true)
     try {
       const post = await api.feedCreatePost(newPostBody.trim())
       setPosts(prev => [{ ...post, likedByMe: false }, ...prev])
       setNewPostBody('')
-    } catch { /* ignore */ }
-    finally { setPosting(false) }
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : 'Failed to create post')
+    } finally { setPosting(false) }
   }
 
   async function handleLike(postId: number) {
     try {
       const result = await api.feedToggleLike(postId)
-      setPosts(prev => prev.map(p => p.id === postId ? { ...p, likedByMe: result.liked, _count: { ...p._count, likes: result.liked ? p._count.likes + 1 : p._count.likes - 1 } } : p))
+      const update = (p: FeedPost) => p.id === postId ? { ...p, likedByMe: result.liked, _count: { ...p._count, likes: result.liked ? p._count.likes + 1 : p._count.likes - 1 } } : p
+      setPosts(prev => prev.map(update))
+      setFollowingPosts(prev => prev.map(update))
     } catch { /* ignore */ }
   }
 
@@ -481,6 +1076,7 @@ export default function StudyFeedPage() {
     try {
       await api.feedDeletePost(postId)
       setPosts(prev => prev.filter(p => p.id !== postId))
+      setFollowingPosts(prev => prev.filter(p => p.id !== postId))
     } catch { /* ignore */ }
   }
 
@@ -491,12 +1087,92 @@ export default function StudyFeedPage() {
     } catch { /* ignore */ }
   }
 
+  async function handleEnterGiveaway(postId: number) {
+    try {
+      const result = await api.feedEnterGiveaway(postId)
+      const update = (p: FeedPost) => p.id === postId
+        ? { ...p, enteredByMe: result.entered, _count: { ...p._count, giveawayEntries: result.count } }
+        : p
+      setPosts(prev => prev.map(update))
+      setFollowingPosts(prev => prev.map(update))
+    } catch { /* ignore */ }
+  }
+
+  async function handleDrawGiveaway(postId: number) {
+    try {
+      const result = await api.feedDrawGiveaway(postId)
+      const update = (p: FeedPost) => p.id === postId
+        ? { ...p, giveawayWinnerId: result.winnerId, giveawayWinner: { id: result.winnerId, name: result.winnerName, email: '' } }
+        : p
+      setPosts(prev => prev.map(update))
+      setFollowingPosts(prev => prev.map(update))
+    } catch { /* ignore */ }
+  }
+
+  async function handlePin(postId: number, currentlyPinned: boolean) {
+    try {
+      if (currentlyPinned) {
+        await api.feedUnpinPost(postId)
+        const update = (p: FeedPost) => p.id === postId ? { ...p, pinnedUntil: null } : p
+        setPosts(prev => prev.map(update))
+        setFollowingPosts(prev => prev.map(update))
+      } else {
+        const result = await api.feedPinPost(postId)
+        const update = (p: FeedPost) => p.id === postId ? { ...p, pinnedUntil: result.pinnedUntil } : p
+        setPosts(prev => prev.map(update))
+        setFollowingPosts(prev => prev.map(update))
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function handleCreateGiveaway() {
+    if (!gwTag.trim() || !gwBody.trim() || creatingGw) return
+    setCreatingGw(true)
+    try {
+      const post = await api.feedCreateGiveaway({
+        body: gwBody.trim(),
+        giveawayTag: gwTag.trim(),
+        giveawayTagColor: gwColor.trim() || 'gold',
+        durationMinutes: parseInt(gwDuration) || 60,
+      })
+      setPosts(prev => [post, ...prev])
+      setGwTag(''); setGwColor('gold'); setGwBody(''); setGwDuration('60')
+      setShowGiveawayForm(false)
+    } catch { /* ignore */ }
+    finally { setCreatingGw(false) }
+  }
+
+  function handleOpenProfile(uid: number) {
+    setProfileUserId(uid)
+    setShowPanel(false)
+  }
+
+  if (statusLoaded && isBanned) {
+    return (
+      <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: '0 var(--page-px)', textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EF444422', border: '1px solid #EF4444', borderRadius: 6, padding: '4px 10px', marginBottom: 20 }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#EF4444', letterSpacing: '0.5px' }}>BANNED</span>
+        </div>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>You&apos;re banned from the feed</h2>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 360, lineHeight: 1.6 }}>
+          A moderator has restricted your access to the social feed. You can no longer post, comment, or interact until the ban is lifted.
+        </p>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 16 }}>If you think this is a mistake, contact a DEV.</p>
+      </div>
+    )
+  }
+
   return (
+    <>
     <div className="fade-up" style={{ padding: '0 var(--page-px) 32px' }}>
       {/* Tab bar */}
       <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', marginBottom: 16, position: 'relative' }}>
-        {([['feed', 'Feed'], ['search', 'Find People']] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', padding: '14px 16px', fontSize: 14, fontWeight: tab === key ? 600 : 500, color: tab === key ? 'var(--primary)' : 'var(--text-secondary)', borderBottom: tab === key ? '2px solid var(--primary)' : '2px solid transparent', marginBottom: -1, cursor: 'pointer' }}>
+        {([['social', 'Social'], ['following', 'Following'], ['search', 'Find People']] as const).map(([key, label]) => (
+          <button key={key} onClick={() => {
+            setTab(key)
+            if (key === 'following' && !followingLoaded) loadFollowingPosts(1)
+          }} style={{ background: 'none', border: 'none', padding: '14px 16px', fontSize: 14, fontWeight: tab === key ? 600 : 500, color: tab === key ? 'var(--primary)' : 'var(--text-secondary)', borderBottom: tab === key ? '2px solid var(--primary)' : '2px solid transparent', marginBottom: -1, cursor: 'pointer' }}>
             {label}
           </button>
         ))}
@@ -538,16 +1214,12 @@ export default function StudyFeedPage() {
                 {notifs.length === 0 ? (
                   <div style={N.empty}>No notifications yet</div>
                 ) : notifs.map(n => (
-                  <div key={n.id} style={{ ...N.item, background: n.read ? 'transparent' : 'rgba(75,110,255,0.07)' }}>
-                    <span style={{ fontSize: 15, flexShrink: 0 }}>
-                      {n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : '💬'}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={N.text}>{notifLabel(n)}</div>
-                      <div style={N.time}>{notifTimeAgo(n.createdAt)}</div>
-                    </div>
-                    {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, alignSelf: 'center' as const }} />}
-                  </div>
+                  <NotifRow
+                    key={n.id}
+                    n={n}
+                    onOpenProfile={handleOpenProfile}
+                    onClose={() => setShowPanel(false)}
+                  />
                 ))}
               </div>
             </div>
@@ -563,62 +1235,158 @@ export default function StudyFeedPage() {
         </button>
       </div>
 
-      {/* Toast stack */}
-      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column-reverse', gap: 10, pointerEvents: 'none' }}>
-        {toasts.map(t => (
-          <div key={t.id} style={N.toast}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>
-              {t.notif.type === 'FOLLOW' ? '👤' : t.notif.type === 'LIKE' ? '❤️' : '💬'}
-            </span>
-            <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--text)', lineHeight: 1.35, fontWeight: 500 }}>
-              {notifLabel(t.notif)}
-            </div>
-            <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1, flexShrink: 0, padding: 0, pointerEvents: 'auto' }}
-              onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}>×</button>
-          </div>
-        ))}
-      </div>
-
-      {tab === 'feed' ? (
+      {tab === 'social' || tab === 'following' ? (
         <>
-          {/* New post composer */}
-          <div className="ns-card" style={{ padding: 16, marginBottom: 20 }}>
-            <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, height: 'auto', minHeight: 80, fontSize: 14, lineHeight: 1.6, padding: 14 }}
-              placeholder="What are you studying today?"
-              value={newPostBody}
-              onChange={e => setNewPostBody(e.target.value)}
-              rows={3}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{newPostBody.length}/500</span>
-              <button className="ns-btn-primary" style={{ height: 38, padding: '0 20px', opacity: newPostBody.trim() && !posting ? 1 : 0.5 }}
-                onClick={handleCreatePost} disabled={!newPostBody.trim() || posting}>
-                {posting ? 'Posting…' : 'Post'}
-              </button>
+          {/* New post composer / muted notice */}
+          {isMuted ? (
+            <div className="ns-card" style={{ padding: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>🔇</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#f97316', marginBottom: 2 }}>You are muted</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {mutedUntil ? `Until ${new Date(mutedUntil).toLocaleString()}` : 'You cannot post until your mute expires.'}
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="ns-card" style={{ padding: 16, marginBottom: 20 }}>
+              {!showGiveawayForm ? (
+                <>
+                  <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, height: 'auto', minHeight: 80, fontSize: 14, lineHeight: 1.6, padding: 14 }}
+                    placeholder="What are you studying today?"
+                    value={newPostBody}
+                    onChange={e => { setNewPostBody(e.target.value); if (postError) setPostError(null) }}
+                    rows={3}
+                  />
+                  {postError && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', marginTop: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8 }}>
+                      <span style={{ fontSize: 18, flexShrink: 0 }}>🚫</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#EF4444', marginBottom: 2 }}>Post blocked</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{postError}</div>
+                      </div>
+                      <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 0, flexShrink: 0 }} onClick={() => setPostError(null)}>×</button>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{newPostBody.length}/500</span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {isDevUser && (
+                        <button
+                          className="ns-btn-ghost"
+                          style={{ height: 38, padding: '0 14px', fontSize: 13 }}
+                          onClick={() => setShowGiveawayForm(true)}
+                        >
+                          🎁 Giveaway
+                        </button>
+                      )}
+                      <button className="ns-btn-primary" style={{ height: 38, padding: '0 20px', opacity: newPostBody.trim() && !posting ? 1 : 0.5 }}
+                        onClick={handleCreatePost} disabled={!newPostBody.trim() || posting}>
+                        {posting ? 'Posting…' : 'Post'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Giveaway creator */
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'gold' }}>🎁 Create Tag Giveaway</span>
+                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1 }} onClick={() => setShowGiveawayForm(false)}>×</button>
+                  </div>
+                  <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, minHeight: 60, fontSize: 14, lineHeight: 1.6, padding: 12, marginBottom: 10 }}
+                    placeholder="Announce the giveaway… (e.g. 'Enter to win a limited VIP tag!')"
+                    value={gwBody}
+                    onChange={e => setGwBody(e.target.value)}
+                    rows={2}
+                  />
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 10 }}>
+                    <input className="ns-input" style={{ flex: 1, minWidth: 100, height: 36, fontSize: 13 }}
+                      placeholder="Tag name (e.g. VIP)"
+                      value={gwTag}
+                      onChange={e => setGwTag(e.target.value)}
+                    />
+                    <input className="ns-input" style={{ width: 90, height: 36, fontSize: 13 }}
+                      placeholder="Color"
+                      value={gwColor}
+                      onChange={e => setGwColor(e.target.value)}
+                    />
+                    <select className="ns-input" style={{ height: 36, fontSize: 13 }} value={gwDuration} onChange={e => setGwDuration(e.target.value)}>
+                      <option value="30">30 min</option>
+                      <option value="60">1 hour</option>
+                      <option value="360">6 hours</option>
+                      <option value="720">12 hours</option>
+                      <option value="1440">24 hours</option>
+                      <option value="4320">3 days</option>
+                      <option value="10080">1 week</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button className="ns-btn-ghost" style={{ height: 36, padding: '0 14px', fontSize: 13 }} onClick={() => setShowGiveawayForm(false)}>Cancel</button>
+                    <button
+                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, background: 'gold', color: '#000', border: 'none', borderRadius: 8, cursor: 'pointer', opacity: gwTag.trim() && gwBody.trim() && !creatingGw ? 1 : 0.5 }}
+                      onClick={handleCreateGiveaway}
+                      disabled={!gwTag.trim() || !gwBody.trim() || creatingGw}
+                    >
+                      {creatingGw ? 'Creating…' : 'Launch Giveaway'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Posts */}
-          {loading ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading feed…</div>
-          ) : posts.length === 0 ? (
+          {tab === 'social' ? (
+            loading ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading feed…</div>
+            ) : posts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </div>
+                <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No posts yet</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Be the first to share what you&apos;re studying!</p>
+              </div>
+            ) : (
+              <>
+                {posts.map(post => (
+                  <PostCard key={post.id} post={post} onLike={handleLike} onDelete={handleDelete}
+                    onOpenComments={id => setCommentPostId(id)} onOpenProfile={id => setProfileUserId(id)}
+                    onFollow={handleFollow} onEnterGiveaway={handleEnterGiveaway}
+                    onDrawGiveaway={handleDrawGiveaway} onPin={handlePin}
+                    currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} />
+                ))}
+                {hasMore && (
+                  <button className="ns-btn-ghost" style={{ width: '100%', height: 42, marginTop: 8 }}
+                    onClick={() => { setPage(p => p + 1); void loadPosts(page + 1) }}>
+                    Load more
+                  </button>
+                )}
+              </>
+            )
+          ) : followingLoading && followingPosts.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading…</div>
+          ) : followingPosts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px' }}>
               <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
               </div>
-              <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No posts yet</p>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Be the first to share what you&apos;re studying!</p>
+              <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Nothing here yet</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Follow people in <strong>Find People</strong> to see their posts here.</p>
             </div>
           ) : (
             <>
-              {posts.map(post => (
+              {followingPosts.map(post => (
                 <PostCard key={post.id} post={post} onLike={handleLike} onDelete={handleDelete}
                   onOpenComments={id => setCommentPostId(id)} onOpenProfile={id => setProfileUserId(id)}
-                  onFollow={handleFollow} currentUserId={currentUserId} followedUsers={followedUsers} />
+                  onFollow={handleFollow} onEnterGiveaway={handleEnterGiveaway}
+                  onDrawGiveaway={handleDrawGiveaway} onPin={handlePin}
+                  currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} />
               ))}
-              {hasMore && (
+              {followingHasMore && (
                 <button className="ns-btn-ghost" style={{ width: '100%', height: 42, marginTop: 8 }}
-                  onClick={() => { setPage(p => p + 1); loadPosts(page + 1) }}>
+                  onClick={() => { setFollowingPage(p => p + 1); void loadFollowingPosts(followingPage + 1) }}>
                   Load more
                 </button>
               )}
@@ -630,15 +1398,41 @@ export default function StudyFeedPage() {
           followedUsers={followedUsers} onFollow={handleFollow} />
       )}
 
-      {commentPostId !== null && (
-        <CommentSection postId={commentPostId} onClose={() => setCommentPostId(null)}
-          onCommentAdded={() => setPosts(prev => prev.map(p => p.id === commentPostId ? { ...p, _count: { ...p._count, comments: p._count.comments + 1 } } : p))} />
-      )}
-
-      {profileUserId !== null && (
-        <UserProfileOverlay userId={profileUserId} onClose={() => setProfileUserId(null)} currentUserId={currentUserId} />
-      )}
     </div>
+
+    {/* Toast stack — outside fade-up so position:fixed works correctly */}
+    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column-reverse', gap: 10, pointerEvents: 'none' }}>
+      {toasts.map(t => (
+        <div key={t.id} style={N.toast}>
+          <span style={{ fontSize: 18, flexShrink: 0 }}>
+            {t.notif.type === 'FOLLOW' ? '👤' : t.notif.type === 'LIKE' ? '❤️' : '💬'}
+          </span>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--text)', lineHeight: 1.35, fontWeight: 500 }}>
+            {t.notif.sender.name ?? t.notif.sender.email.split('@')[0]}
+            {t.notif.type === 'FOLLOW' ? ' started following you' : t.notif.type === 'LIKE' ? ' liked your post' : ' commented on your post'}
+          </div>
+          <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1, flexShrink: 0, padding: 0, pointerEvents: 'auto' }}
+            onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}>×</button>
+        </div>
+      ))}
+    </div>
+
+    {commentPostId !== null && (
+      <CommentSection
+        postId={commentPostId}
+        onClose={() => setCommentPostId(null)}
+        onCommentAdded={() => setPosts(prev => prev.map(p => p.id === commentPostId ? { ...p, _count: { ...p._count, comments: p._count.comments + 1 } } : p))}
+        currentUserId={currentUserId}
+        onOpenProfile={id => { setCommentPostId(null); setProfileUserId(id) }}
+        isMuted={isMuted}
+        mutedUntil={mutedUntil}
+      />
+    )}
+
+    {profileUserId !== null && (
+      <UserProfileOverlay userId={profileUserId} onClose={() => setProfileUserId(null)} currentUserId={currentUserId} />
+    )}
+    </>
   )
 }
 

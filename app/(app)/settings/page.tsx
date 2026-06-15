@@ -4,6 +4,61 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, type StudentData } from '../../../lib/api'
 
+function DeleteAccountModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter()
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleDelete() {
+    if (confirm !== 'DELETE') { setError('Type DELETE to confirm'); return }
+    if (!password) { setError('Password required'); return }
+    setLoading(true); setError(null)
+    try {
+      await api.deleteAccount(password)
+      localStorage.removeItem('ns_token')
+      localStorage.removeItem('ns_user')
+      router.push('/login')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete account')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 400 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--error)', marginBottom: 8 }}>Delete Account</h2>
+        <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+          This permanently deletes your account, posts, grades, and all data. There is no undo — the only way to get access back is to create a new account.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Current Password</label>
+            <input type="password" className="ns-input" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Type <strong>DELETE</strong> to confirm</label>
+            <input type="text" className="ns-input" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="DELETE" />
+          </div>
+          {error && <p style={{ color: 'var(--error)', fontSize: 13 }}>{error}</p>}
+          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+            <button className="ns-btn-ghost" style={{ flex: 1, height: 44 }} onClick={onClose} disabled={loading}>Cancel</button>
+            <button
+              style={{ flex: 1, height: 44, background: '#EF4444', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}
+              onClick={handleDelete}
+              disabled={loading}
+            >
+              {loading ? 'Deleting…' : 'Delete Forever'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function initials(name: string | null) {
   if (!name) return 'S'
   return name.trim().split(' ').map(p => p.charAt(0)).join('').slice(0, 2).toUpperCase()
@@ -33,6 +88,7 @@ export default function SettingsPage() {
   const [saving, setSaving]             = useState(false)
   const [saveMsg, setSaveMsg]           = useState<string | null>(null)
   const [dirty, setDirty]               = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   useEffect(() => {
     api.me().then(d => {
@@ -84,7 +140,7 @@ export default function SettingsPage() {
   async function handleSyncProfile() {
     setSyncing(true); setSyncMsg(null)
     try {
-      const result = await api.portalSyncProfile()
+      await api.portalSyncProfile()
       setSyncMsg('Profile synced from HAC!')
       // Refresh the user data to reflect the updated profile
       const fresh = await api.me()
@@ -339,8 +395,24 @@ export default function SettingsPage() {
             </svg>
             Sign Out
           </button>
+
+          {/* Danger zone */}
+          <div className="ns-card" style={{ ...S.card, marginTop: 16, border: '1px solid rgba(239,68,68,0.25)' }}>
+            <p style={{ ...S.cardLabel, color: 'var(--error)' }}>Danger Zone</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 14 }}>
+              Permanently delete your account and all associated data. This cannot be undone.
+            </p>
+            <button
+              style={{ width: '100%', background: 'transparent', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, padding: '10px 0', color: 'var(--error)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              onClick={() => setShowDeleteModal(true)}
+            >
+              Delete Account
+            </button>
+          </div>
         </div>
       </div>
+
+      {showDeleteModal && <DeleteAccountModal onClose={() => setShowDeleteModal(false)} />}
     </div>
   )
 }

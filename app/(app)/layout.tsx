@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { api } from '../../lib/api'
 
 const NAV = [
   {
@@ -48,8 +49,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!token) {
       router.replace('/login')
     } else {
-      setChecked(true)
       if (user?.name) setUserName(user.name.split(' ')[0])
+      // Refresh HAC/PS session before showing content to avoid "session expired" errors
+      api.portalStatus()
+        .catch(() => {})
+        .finally(() => setChecked(true))
     }
   }, [router])
 
@@ -59,7 +63,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     router.push('/login')
   }
 
-  if (!checked) return null
+  if (!checked) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-muted)', fontSize: 13, flexDirection: 'column', gap: 8 }}>
+      <div style={{ width: 24, height: 24, border: '2.5px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <span>Refreshing session… This takes a few seconds.</span>
+    </div>
+  )
 
   const sideW = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
 

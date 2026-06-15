@@ -204,6 +204,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   font-weight: 700 !important;
 }
 
+/* ── Spinner ──────────────────────────────────────────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* ── Shimmer loading ─────────────────────────────────────────────────────── */
 @keyframes shimmer {
   from { background-position: -400px 0; }

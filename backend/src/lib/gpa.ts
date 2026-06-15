@@ -54,7 +54,7 @@ export function calculateGpa(inputs: GradeInput[]): GpaResult | null {
   if (creditSum === 0) return null
 
   return {
-    weighted: Math.round((weightedSum / creditSum) * 100) / 100,
-    unweighted: Math.round((unweightedSum / creditSum) * 100) / 100,
+    weighted: Math.round((weightedSum / creditSum) * 1000) / 1000,
+    unweighted: Math.round((unweightedSum / creditSum) * 1000) / 1000,
   }
 }

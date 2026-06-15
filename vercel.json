@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "buildCommand": "npx prisma generate --schema=backend/prisma/schema.prisma && next build",
   "builds": [
     {
       "src": "backend/api/index.ts",

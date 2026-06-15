@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '../../../../lib/api'
+import PageLoader from '../../../../components/ui/PageLoader'
 
 interface IPRCourse {
   name: string
@@ -58,7 +59,7 @@ export default function ProgressReportPage() {
       .finally(() => setDateLoading(false))
   }
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading progress report…</div>
+  if (loading) return <PageLoader message="Opening progress report…" />
 
   return (
     <div className="fade-up">

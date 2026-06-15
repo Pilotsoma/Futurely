@@ -33,8 +33,8 @@ function computeGpa(courses: Array<{ courseType: string; grades: Array<{ letterG
   }
   const n = graded.length
   return {
-    unweighted: Math.round((uSum / n) * 100) / 100,
-    weighted:   Math.round((wSum / n) * 100) / 100,
+    unweighted: Math.round((uSum / n) * 1000) / 1000,
+    weighted:   Math.round((wSum / n) * 1000) / 1000,
   }
 }
 

@@ -1,12 +1,103 @@
 import { Router, Response } from 'express'
+import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
+import { loginHAC, getGrades, getStudentInfo, getTranscript } from '../integrations/grades/hacClient'
+import { normalizeHacGrades } from '../integrations/grades/normalizeGrades'
+import { encryptPassword, decryptPassword } from '../integrations/grades/credentialCrypto'
+import { deleteSessionByUserId } from '../integrations/grades/sessionStore'
 
 const router = Router()
-
 router.use(requireAuth)
 
-// ── Link a student by email ────────────────────────────────────────────────────
+const connectSchema = z.object({
+  districtUrl: z.string().url('districtUrl must be a valid URL'),
+  username: z.string().min(1, 'username required'),
+  password: z.string().min(1, 'password required'),
+})
+
+// Offset parent IDs to avoid colliding with real user session IDs in the session store
+function tempSessionId(parentId: number): number {
+  return parentId + 1_000_000_000
+}
+
+type CachedStudentData = {
+  studentName: string | null
+  gradeLevel: number | null
+  graduationYear: number | null
+  weightedGpa: number | null
+  unweightedGpa: number | null
+  courses: Array<{
+    id: string
+    name: string
+    teacher: string
+    period: string
+    average: number | null
+    letterGrade: string | null
+    upcomingAssignments: Array<{
+      name: string
+      category: string
+      score: number | null
+      totalPoints: number | null
+      percentage: string
+      dateDue: string
+    }>
+  }>
+}
+
+async function scrapeStudentData(
+  districtUrl: string,
+  username: string,
+  password: string,
+  tempId: number,
+): Promise<{ sessionToken: string; data: CachedStudentData }> {
+  const sessionToken = await loginHAC(districtUrl, username, password, tempId)
+
+  let studentName: string | null = null
+  let gradeLevel: number | null = null
+  let graduationYear: number | null = null
+  let weightedGpa: number | null = null
+  let unweightedGpa: number | null = null
+  let courses: CachedStudentData['courses'] = []
+
+  try {
+    const info = await getStudentInfo(sessionToken)
+    studentName = info.name?.trim() || null
+    const gradeNum = parseInt(info.grade ?? '', 10)
+    if (!isNaN(gradeNum) && gradeNum >= 6 && gradeNum <= 12) gradeLevel = gradeNum
+    const cohort = parseInt((info.cohortYear ?? '').replace(/\D/g, ''), 10)
+    if (!isNaN(cohort) && cohort > 2020 && cohort < 2040) graduationYear = cohort
+  } catch { /* non-fatal */ }
+
+  try {
+    const transcript = await getTranscript(sessionToken)
+    const w = parseFloat(transcript.weightedGPA ?? '')
+    const uw = parseFloat(transcript.unweightedGPA ?? '')
+    if (!isNaN(w)) weightedGpa = Math.round(w * 1000) / 1000
+    if (!isNaN(uw)) unweightedGpa = Math.round(uw * 1000) / 1000
+  } catch { /* non-fatal */ }
+
+  try {
+    const rawGrades = await getGrades(sessionToken)
+    const normalized = normalizeHacGrades(rawGrades.classes ?? [])
+    courses = normalized.map(c => ({
+      id: c.id,
+      name: c.name,
+      teacher: c.teacher,
+      period: c.period,
+      average: c.average,
+      letterGrade: c.letterGrade,
+      upcomingAssignments: c.upcomingAssignments,
+    }))
+  } catch { /* non-fatal */ }
+
+  return {
+    sessionToken,
+    data: { studentName, gradeLevel, graduationYear, weightedGpa, unweightedGpa, courses },
+  }
+}
+
+// ── Connect child via HAC portal credentials ───────────────────────────────────
 
 router.post('/link-student', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -17,68 +108,101 @@ router.post('/link-student', async (req: AuthRequest, res: Response): Promise<vo
       return
     }
 
-    const { studentEmail } = req.body as { studentEmail?: string }
-    if (!studentEmail?.trim()) {
-      res.status(400).json({ error: { message: 'Student email is required' } })
+    const parse = connectSchema.safeParse(req.body)
+    if (!parse.success) {
+      res.status(400).json({ error: { message: parse.error.errors[0]?.message ?? 'Invalid request' } })
       return
     }
 
-    const student = await prisma.user.findUnique({ where: { email: studentEmail.trim().toLowerCase() } })
-    if (!student || student.role === 'PARENT') {
-      res.status(404).json({ error: { message: 'No student account found with that email' } })
-      return
-    }
+    const { districtUrl, username, password } = parse.data
 
-    const existing = await prisma.parentStudentLink.findUnique({
-      where: { parentId_studentId: { parentId, studentId: student.id } },
+    const existing = await prisma.parentPortalConnection.findUnique({
+      where: { parentId_hacUsername_districtUrl: { parentId, hacUsername: username, districtUrl } },
     })
     if (existing) {
-      res.status(409).json({ error: { message: 'This student is already linked to your account' } })
+      res.status(409).json({ error: { message: 'This student portal is already linked to your account' } })
       return
     }
 
-    await prisma.parentStudentLink.create({ data: { parentId, studentId: student.id } })
-    res.json({ data: { linked: true, student: { id: student.id, name: student.name, email: student.email } } })
+    const tempId = tempSessionId(parentId)
+    let scraped: CachedStudentData
+    try {
+      const result = await scrapeStudentData(districtUrl, username, password, tempId)
+      scraped = result.data
+    } catch {
+      deleteSessionByUserId(tempId)
+      res.status(401).json({ error: { message: 'Invalid portal credentials. Please check your district, username, and password.' } })
+      return
+    }
+    deleteSessionByUserId(tempId)
+
+    let encryptedPassword: string | null = null
+    try { encryptedPassword = encryptPassword(password) } catch { /* non-fatal */ }
+
+    const conn = await prisma.parentPortalConnection.create({
+      data: {
+        parentId,
+        systemType: 'HAC',
+        districtUrl,
+        hacUsername: username,
+        ...(encryptedPassword ? { hacPasswordEncrypted: encryptedPassword } : {}),
+        studentName: scraped.studentName,
+        gradeLevel: scraped.gradeLevel,
+        graduationYear: scraped.graduationYear,
+        cachedData: JSON.stringify(scraped),
+        lastSynced: new Date(),
+      },
+    })
+
+    res.json({
+      data: {
+        linked: true,
+        student: { id: conn.id, name: scraped.studentName, email: username },
+      },
+    })
   } catch (e) {
     console.error('[PARENT] link-student error:', e)
     res.status(500).json({ error: { message: 'Failed to link student' } })
   }
 })
 
-// ── List all linked students (summary cards) ───────────────────────────────────
+// ── List all portal-connected children (from cache) ────────────────────────────
 
 router.get('/students', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const parentId = req.userId!
-    const links = await prisma.parentStudentLink.findMany({
+    const connections = await prisma.parentPortalConnection.findMany({
       where: { parentId },
-      include: {
-        student: {
-          include: {
-            profile: true,
-            courses: { include: { grades: { where: { gradingPeriod: 'CURRENT' }, take: 1 } } },
-            assignments: { where: { completed: false } },
-          },
-        },
-      },
       orderBy: { createdAt: 'asc' },
     })
 
-    const students = links.map(({ student: s }) => ({
-      id: s.id,
-      name: s.name,
-      email: s.email,
-      gradeLevel: s.profile?.gradeLevel ?? null,
-      graduationYear: s.profile?.graduationYear ?? null,
-      weightedGpa: s.profile?.weightedGpa ?? 0,
-      unweightedGpa: s.profile?.unweightedGpa ?? 0,
-      pendingAssignments: s.assignments.length,
-      totalCourses: s.courses.length,
-      courses: s.courses.map(c => {
-        const g = c.grades[0] ?? null
-        return { name: c.name, letterGrade: g?.letterGrade ?? null, percentage: g?.percentage ?? null }
-      }),
-    }))
+    const students = connections.map(conn => {
+      let cached: CachedStudentData | null = null
+      try { if (conn.cachedData) cached = JSON.parse(conn.cachedData) } catch { /* skip */ }
+
+      const courses = (cached?.courses ?? []).map(c => ({
+        name: c.name,
+        letterGrade: c.letterGrade,
+        percentage: c.average,
+      }))
+
+      const pendingAssignments = (cached?.courses ?? []).reduce(
+        (sum, c) => sum + (c.upcomingAssignments?.length ?? 0), 0,
+      )
+
+      return {
+        id: conn.id,
+        name: conn.studentName,
+        email: conn.hacUsername,
+        gradeLevel: conn.gradeLevel,
+        graduationYear: conn.graduationYear,
+        weightedGpa: cached?.weightedGpa ?? cached?.unweightedGpa ?? 0,
+        unweightedGpa: cached?.unweightedGpa ?? 0,
+        pendingAssignments,
+        totalCourses: courses.length,
+        courses,
+      }
+    })
 
     res.json({ data: students })
   } catch (e) {
@@ -87,60 +211,116 @@ router.get('/students', async (req: AuthRequest, res: Response): Promise<void> =
   }
 })
 
-// ── Full data for one linked student ──────────────────────────────────────────
+// ── Full data for one linked child (live re-fetch from HAC) ───────────────────
 
 router.get('/students/:studentId', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const parentId = req.userId!
-    const studentId = parseInt(req.params.studentId)
+    const connId = parseInt(req.params.studentId)
 
-    const link = await prisma.parentStudentLink.findUnique({
-      where: { parentId_studentId: { parentId, studentId } },
+    const conn = await prisma.parentPortalConnection.findFirst({
+      where: { id: connId, parentId },
     })
-    if (!link) {
+    if (!conn) {
       res.status(403).json({ error: { message: 'Student not linked to your account' } })
       return
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: studentId },
-      include: {
-        profile: true,
-        courses: {
-          include: { grades: { where: { gradingPeriod: 'CURRENT' }, take: 1 } },
-          orderBy: { period: 'asc' },
-        },
-        assignments: { orderBy: { dueDate: 'asc' } },
-      },
-    })
-    if (!user) {
-      res.status(404).json({ error: { message: 'Student not found' } })
-      return
+    let cached: CachedStudentData | null = null
+    try { if (conn.cachedData) cached = JSON.parse(conn.cachedData) } catch { /* skip */ }
+
+    // Try to re-fetch live data if we have stored credentials
+    if (conn.hacPasswordEncrypted) {
+      const tempId = tempSessionId(parentId)
+      try {
+        const decrypted = decryptPassword(conn.hacPasswordEncrypted)
+        const result = await scrapeStudentData(conn.districtUrl, conn.hacUsername, decrypted, tempId)
+        cached = result.data
+        await prisma.parentPortalConnection.update({
+          where: { id: connId },
+          data: {
+            cachedData: JSON.stringify(cached),
+            studentName: cached.studentName ?? conn.studentName,
+            gradeLevel: cached.gradeLevel ?? conn.gradeLevel,
+            graduationYear: cached.graduationYear ?? conn.graduationYear,
+            lastSynced: new Date(),
+          },
+        })
+      } catch { /* fall through to cached */ }
+      deleteSessionByUserId(tempId)
     }
+
+    const courses = cached?.courses ?? []
+    const gpaW = cached?.weightedGpa ?? cached?.unweightedGpa ?? 0
+    const gpaUW = cached?.unweightedGpa ?? 0
+    const studentName = cached?.studentName ?? conn.studentName
 
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const todayEnd = new Date(todayStart.getTime() + 86400000)
-    const weekEnd = new Date(todayStart.getTime() + 7 * 86400000)
+    const todayEnd = new Date(todayStart.getTime() + 86_400_000)
+    const weekEnd = new Date(todayStart.getTime() + 7 * 86_400_000)
+
+    let assignmentId = 0
+    const assignments = courses.flatMap(c =>
+      (c.upcomingAssignments ?? []).map(a => {
+        const dueDate = a.dateDue ? new Date(a.dateDue) : null
+        return {
+          id: ++assignmentId,
+          title: a.name,
+          subject: c.name,
+          dueDate: (dueDate && !isNaN(dueDate.getTime()) ? dueDate : now).toISOString(),
+          estimatedMinutes: 0,
+          completed: false,
+          completedAt: null as string | null,
+          priority: null as string | null,
+        }
+      }),
+    )
+
+    const pendingAssignments = assignments.length
+    const assignmentsDueToday = assignments.filter(a => {
+      const d = new Date(a.dueDate)
+      return d >= todayStart && d < todayEnd
+    }).length
+    const assignmentsDueThisWeek = assignments.filter(a => {
+      const d = new Date(a.dueDate)
+      return d >= todayStart && d < weekEnd
+    }).length
+
+    const mappedCourses = courses.map((c, i) => ({
+      id: i + 1,
+      name: c.name,
+      teacher: c.teacher,
+      period: parseInt(c.period) || (i + 1),
+      courseType: 'REGULAR',
+      semester: 'FALL',
+      creditHours: 1,
+      grade: c.average !== null ? { letterGrade: c.letterGrade ?? '—', percentage: c.average } : null,
+    }))
 
     res.json({
       data: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        profile: user.profile,
-        courses: user.courses.map(c => {
-          const g = c.grades[0] ?? null
-          return { id: c.id, name: c.name, teacher: c.teacher, period: c.period, courseType: c.courseType, creditHours: c.creditHours, semester: c.semester, grade: g ? { letterGrade: g.letterGrade, percentage: g.percentage } : null }
-        }),
-        assignments: user.assignments,
+        id: conn.id,
+        name: studentName,
+        email: conn.hacUsername,
+        role: 'STUDENT',
+        profile: {
+          weightedGpa: gpaW,
+          unweightedGpa: gpaUW,
+          gradeLevel: cached?.gradeLevel ?? conn.gradeLevel ?? 0,
+          graduationYear: cached?.graduationYear ?? conn.graduationYear ?? 0,
+          futureDecision: null,
+          satScore: null,
+          actScore: null,
+          counselorName: null,
+        },
+        courses: mappedCourses,
+        assignments,
         stats: {
-          totalCourses: user.courses.length,
-          completedAssignments: user.assignments.filter(a => a.completed).length,
-          pendingAssignments: user.assignments.filter(a => !a.completed).length,
-          assignmentsDueToday: user.assignments.filter(a => !a.completed && a.dueDate >= todayStart && a.dueDate < todayEnd).length,
-          assignmentsDueThisWeek: user.assignments.filter(a => !a.completed && a.dueDate >= todayStart && a.dueDate < weekEnd).length,
+          totalCourses: courses.length,
+          pendingAssignments,
+          assignmentsDueToday,
+          assignmentsDueThisWeek,
         },
       },
     })
@@ -150,26 +330,26 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
   }
 })
 
-// ── Unlink a student ───────────────────────────────────────────────────────────
+// ── Disconnect child portal ────────────────────────────────────────────────────
 
 router.delete('/students/:studentId', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const parentId = req.userId!
-    const studentId = parseInt(req.params.studentId)
-    await prisma.parentStudentLink.deleteMany({ where: { parentId, studentId } })
+    const connId = parseInt(req.params.studentId)
+    await prisma.parentPortalConnection.deleteMany({ where: { id: connId, parentId } })
     res.json({ data: { unlinked: true } })
   } catch (e) {
     console.error('[PARENT] unlink student error:', e)
-    res.status(500).json({ error: { message: 'Failed to unlink student' } })
+    res.status(500).json({ error: { message: 'Failed to remove student' } })
   }
 })
 
-// ── AI chat in context of a linked student ─────────────────────────────────────
+// ── AI chat in context of a linked child ──────────────────────────────────────
 
 router.post('/students/:studentId/chat', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const parentId = req.userId!
-    const studentId = parseInt(req.params.studentId)
+    const connId = parseInt(req.params.studentId)
     const { message } = req.body as { message?: string }
 
     if (!message?.trim()) {
@@ -177,45 +357,34 @@ router.post('/students/:studentId/chat', async (req: AuthRequest, res: Response)
       return
     }
 
-    const link = await prisma.parentStudentLink.findUnique({
-      where: { parentId_studentId: { parentId, studentId } },
+    const conn = await prisma.parentPortalConnection.findFirst({
+      where: { id: connId, parentId },
     })
-    if (!link) {
+    if (!conn) {
       res.status(403).json({ error: { message: 'Student not linked to your account' } })
       return
     }
 
-    const student = await prisma.user.findUnique({
-      where: { id: studentId },
-      include: {
-        profile: true,
-        courses: { include: { grades: { where: { gradingPeriod: 'CURRENT' }, take: 1 } } },
-        assignments: { where: { completed: false }, orderBy: { dueDate: 'asc' }, take: 10 },
-      },
-    })
-    if (!student) {
-      res.status(404).json({ error: { message: 'Student not found' } })
-      return
-    }
+    let cached: CachedStudentData | null = null
+    try { if (conn.cachedData) cached = JSON.parse(conn.cachedData) } catch { /* ignore */ }
+
+    const courses = cached?.courses ?? []
+    const coursesSummary = courses
+      .map(c => `${c.name}: ${c.letterGrade ?? '?'} (${c.average?.toFixed(1) ?? 'N/A'}%)`)
+      .join(', ')
+    const pendingCount = courses.reduce((sum, c) => sum + (c.upcomingAssignments?.length ?? 0), 0)
 
     const Anthropic = (await import('@anthropic-ai/sdk')).default
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-    const coursesSummary = student.courses
-      .map(c => {
-        const g = c.grades[0]
-        return `${c.name}: ${g ? `${g.letterGrade} (${g.percentage.toFixed(1)}%)` : 'no grade'}`
-      })
-      .join(', ')
-
     const systemPrompt = `You are NextStep AI, an academic advisor assistant for parents.
 You are helping a parent review their student's academic performance.
-Student: ${student.name ?? 'Unknown'}
-Grade level: ${student.profile?.gradeLevel ?? 'unknown'}
-Weighted GPA: ${student.profile?.weightedGpa?.toFixed(2) ?? 'unknown'}
-Unweighted GPA: ${student.profile?.unweightedGpa?.toFixed(2) ?? 'unknown'}
+Student: ${conn.studentName ?? 'Unknown'}
+Grade level: ${conn.gradeLevel ?? 'unknown'}
+Weighted GPA: ${cached?.weightedGpa?.toFixed(3) ?? 'unknown'}
+Unweighted GPA: ${cached?.unweightedGpa?.toFixed(3) ?? 'unknown'}
 Current courses: ${coursesSummary || 'none on file'}
-Pending assignments: ${student.assignments.length}
+Pending assignments: ${pendingCount}
 Answer the parent's question clearly and helpfully. Be concise.`
 
     const response = await client.messages.create({

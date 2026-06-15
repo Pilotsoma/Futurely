@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api, type StudentData } from '../../../../lib/api'
+import PageLoader from '../../../../components/ui/PageLoader'
 
 type Tab = 'overview' | 'grades' | 'assignments' | 'chat'
 
@@ -55,12 +56,12 @@ export default function ParentStudentDetailPage() {
     }
   }
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading student data…</div>
+  if (loading) return <PageLoader message="Opening student data…" />
   if (error)   return <div style={{ padding: 40, color: 'var(--error)' }}>{error}</div>
   if (!data)   return null
 
-  const uGpa = (data.profile?.unweightedGpa ?? 0).toFixed(2)
-  const wGpa = (data.profile?.weightedGpa ?? 0).toFixed(2)
+  const uGpa = (data.profile?.unweightedGpa ?? 0).toFixed(3)
+  const wGpa = (data.profile?.weightedGpa ?? 0).toFixed(3)
   const today = new Date()
   const dueToday = data.assignments.filter(a => {
     if (a.completed) return false

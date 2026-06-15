@@ -30,8 +30,8 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
     })
 
     const firstName = user?.name?.split(' ')[0] ?? 'Student'
-    const wGpa = profile?.weightedGpa?.toFixed(2) ?? 'unknown'
-    const uGpa = profile?.unweightedGpa?.toFixed(2) ?? 'unknown'
+    const wGpa = profile?.weightedGpa?.toFixed(3) ?? 'unknown'
+    const uGpa = profile?.unweightedGpa?.toFixed(3) ?? 'unknown'
 
     const sorted = [...courses].sort((a, b) => {
       const ga = a.grades[0]?.percentage ?? 100
@@ -102,7 +102,6 @@ router.get('/study-plan', requireAuth, async (req: AuthRequest, res: Response): 
       title: a.title,
       subject: a.subject,
       dueDate: new Date(a.dueDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-      estimatedMinutes: a.estimatedMinutes,
     }))
 
     const aiResponse = await anthropic.messages.create({

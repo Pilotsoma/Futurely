@@ -9,14 +9,21 @@ const router = Router()
 const listQuerySchema = z.object({
   status: z.enum(['incomplete', 'complete', 'all']).default('all'),
   cursor: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
+  limit: z.coerce.number().int().min(1).max(100).default(100),
+})
+
+const createBodySchema = z.object({
+  title: z.string().min(1).max(200),
+  subject: z.string().max(100).optional(),
+  dueDate: z.string().min(1),
+  dueTime: z.string().max(20).optional(),
 })
 
 const patchBodySchema = z.object({
   completed: z.boolean(),
 })
 
-const patchParamsSchema = z.object({
+const idParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 })
 
@@ -71,13 +78,60 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<vo
   }
 })
 
+router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.userId === undefined) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED' } })
+    return
+  }
+
+  const parsed = createBodySchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(422).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', details: parsed.error.flatten() },
+    })
+    return
+  }
+
+  const { title, subject, dueDate, dueTime } = parsed.data
+
+  const parsedDate = new Date(dueDate)
+  if (isNaN(parsedDate.getTime())) {
+    res.status(422).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'Invalid dueDate' },
+    })
+    return
+  }
+
+  try {
+    const assignment = await prisma.assignment.create({
+      data: {
+        title: title.trim(),
+        subject: subject?.trim() || null,
+        dueDate: parsedDate,
+        dueTime: dueTime?.trim() || null,
+        userId: req.userId,
+      },
+    })
+
+    res.status(201).json({ data: assignment })
+  } catch (err) {
+    logger.error('Failed to create assignment', { err })
+    res.status(500).json({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to create assignment' },
+    })
+  }
+})
+
 router.patch('/:id/complete', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.userId === undefined) {
     res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED' } })
     return
   }
 
-  const params = patchParamsSchema.safeParse(req.params)
+  const params = idParamSchema.safeParse(req.params)
   const body = patchBodySchema.safeParse(req.body)
 
   if (!params.success || !body.success) {
@@ -115,13 +169,52 @@ router.patch('/:id/complete', requireAuth, async (req: AuthRequest, res: Respons
     }
 
     const updated = await prisma.assignment.findFirst({ where: { id, userId: req.userId } })
-
     res.status(200).json({ data: updated })
   } catch (err) {
     logger.error('Failed to update assignment completion', { err })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Failed to update assignment' },
+    })
+  }
+})
+
+router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.userId === undefined) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED' } })
+    return
+  }
+
+  const params = idParamSchema.safeParse(req.params)
+  if (!params.success) {
+    res.status(422).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', details: params.error.flatten() },
+    })
+    return
+  }
+
+  const { id } = params.data
+
+  try {
+    const result = await prisma.assignment.deleteMany({
+      where: { id, userId: req.userId },
+    })
+
+    if (result.count === 0) {
+      res.status(404).json({
+        data: null,
+        error: { code: 'NOT_FOUND', message: 'Assignment not found' },
+      })
+      return
+    }
+
+    res.status(200).json({ data: { deleted: true } })
+  } catch (err) {
+    logger.error('Failed to delete assignment', { err })
+    res.status(500).json({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to delete assignment' },
     })
   }
 })

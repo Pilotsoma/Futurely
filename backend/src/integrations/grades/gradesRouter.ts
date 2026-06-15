@@ -24,6 +24,9 @@ import { normalizeHacGrades, normalizePsGrades } from './normalizeGrades'
 import { encryptPassword, decryptPassword } from './credentialCrypto'
 
 const router = Router()
+const HAC_REFRESH_AFTER_MS = 45 * 60 * 1000
+
+type ResolvedSchoolSession = NonNullable<ReturnType<typeof getSessionByUserId>>
 
 // ── URL normalizer (mirrors extractOrigin in hacClient) ───────────────────────
 // Ensures the baseUrl stored in the session always ends with a trailing slash
@@ -105,7 +108,7 @@ function computeGPA(grades: Array<{ average: string | null; grade?: string | nul
 
   if (!points.length) return null
 
-  return Math.round((points.reduce((a, b) => a + b, 0) / points.length) * 100) / 100
+  return Math.round((points.reduce((a, b) => a + b, 0) / points.length) * 1000) / 1000
 }
 
 // ── Error helpers ──────────────────────────────────────────────────────────────
@@ -170,6 +173,39 @@ function sendError(res: Response, label: string, err: unknown, fallbackCode: str
       },
     },
   })
+}
+
+function isExpiredSchoolSessionError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase()
+  return (
+    message.includes('school session expired') ||
+    message.includes('please log in again') ||
+    message.includes('login form still present')
+  )
+}
+
+async function runWithAutoRelogin<T>(
+  userId: number,
+  entry: ResolvedSchoolSession,
+  action: (activeEntry: ResolvedSchoolSession) => Promise<T>,
+): Promise<T> {
+  try {
+    const result = await action(entry)
+    touchSession(userId)
+    return result
+  } catch (err) {
+    if (!isExpiredSchoolSessionError(err)) throw err
+
+    console.warn('[GRADES ROUTER] School session rejected by portal; attempting one auto-relogin for userId:', userId)
+    deleteSessionByUserId(userId)
+
+    const reloginResult = await autoRelogin(userId)
+    if (!reloginResult?.session) throw err
+
+    const result = await action(reloginResult.session)
+    touchSession(userId)
+    return result
+  }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -563,110 +599,86 @@ router.get('/current', async (req: AuthRequest, res: Response): Promise<void> =>
   if (!entry) return
 
   try {
-    // Extend session on successful access
-    touchSession(userId)
+    const data = await runWithAutoRelogin(userId, entry, async activeEntry => {
+      if (activeEntry.session.systemType === 'HAC') {
+        const { classes: rawHacGrades } = await hacGrades(activeEntry.token)
+        const normalizedGrades = normalizeHacGrades(rawHacGrades)
+        // Sync upcoming assignments from HAC into the planner.
+        // Collect all upcoming assignments across all courses.
+        const upcomingToSync = normalizedGrades.flatMap(course =>
+          (course.upcomingAssignments ?? []).map(a => ({
+            userId,
+            title: a.name,
+            subject: course.name,
+            dueDate: a.dateDue
+              ? (() => {
+                  const parsed = new Date(a.dateDue)
+                  return isNaN(parsed.getTime()) ? new Date(Date.now() + 7 * 86400000) : parsed
+                })()
+              : new Date(Date.now() + 7 * 86400000),
+          }))
+        )
 
-    if (entry.session.systemType === 'HAC') {
-      const { classes: rawHacGrades } = await hacGrades(entry.token)
-      const normalizedGrades = normalizeHacGrades(rawHacGrades)
-
-      // Sync upcoming assignments from HAC into the planner.
-      // Collect all upcoming assignments across all courses.
-      const upcomingToSync = normalizedGrades.flatMap(course =>
-        (course.upcomingAssignments ?? []).map(a => ({
-          userId,
-          title: a.name,
-          subject: course.name,
-          dueDate: a.dateDue
-            ? (() => {
-                const parsed = new Date(a.dateDue)
-                return isNaN(parsed.getTime()) ? new Date(Date.now() + 7 * 86400000) : parsed
-              })()
-            : new Date(Date.now() + 7 * 86400000), // default 1 week out if no date
-          estimatedMinutes: 30,
-        }))
-      )
-
-      // Upsert upcoming assignments — avoid duplicates by userId + title + subject
-      if (upcomingToSync.length > 0) {
-        for (const assignment of upcomingToSync) {
-          await prisma.assignment.upsert({
-            where: {
-              userId_title_subject: {
-                userId: assignment.userId,
-                title: assignment.title,
-                subject: assignment.subject,
-              },
-            },
-            update: {
-              dueDate: assignment.dueDate,
-            },
-            create: {
-              ...assignment,
-              completed: false,
-            },
-          }).catch(async () => {
-            // Fallback if unique constraint doesn't exist: findFirst + create
+        // Upsert upcoming assignments — avoid duplicates by userId + title + subject
+        if (upcomingToSync.length > 0) {
+          for (const assignment of upcomingToSync) {
             const existing = await prisma.assignment.findFirst({
               where: { userId: assignment.userId, title: assignment.title, subject: assignment.subject },
             })
-            if (!existing) {
+            if (existing) {
+              await prisma.assignment.update({
+                where: { id: existing.id },
+                data: { dueDate: assignment.dueDate },
+              })
+            } else {
               await prisma.assignment.create({ data: { ...assignment, completed: false } })
             }
-          })
+          }
+          console.log(`[GRADES ROUTER] Synced ${upcomingToSync.length} upcoming assignments from HAC`)
         }
-        console.log(`[GRADES ROUTER] Synced ${upcomingToSync.length} upcoming assignments from HAC`)
-      }
 
-      res.json({
-        data: {
-          systemType: entry.session.systemType,
+        return {
+          systemType: activeEntry.session.systemType,
           grades: normalizedGrades,
           upcomingAssignmentsSynced: upcomingToSync.length,
-        },
-      })
-    } else {
-      const rawPsGrades = await psGrades(entry.token)
-      const normalizedGrades = normalizePsGrades(rawPsGrades)
+        }
+      }
 
-      res.json({
-        data: {
-          systemType: entry.session.systemType,
-          grades: normalizedGrades,
-        },
-      })
-    }
+      const rawPsGrades = await psGrades(activeEntry.token)
+      return {
+        systemType: activeEntry.session.systemType,
+        grades: normalizePsGrades(rawPsGrades),
+      }
+    })
+
+    res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_CURRENT_GRADES', err, 'FETCH_ERROR')
   }
 })
 
 router.get('/transcript', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = await resolveSession(req.userId!, res)
+  const userId = req.userId!
+  const entry = await resolveSession(userId, res)
   if (!entry) return
 
   try {
-    let transcript: object
+    const data = await runWithAutoRelogin(userId, entry, async activeEntry => ({
+      systemType: activeEntry.session.systemType,
+      transcript: activeEntry.session.systemType === 'HAC'
+        ? await hacTranscript(activeEntry.token)
+        : await psTranscript(activeEntry.token),
+    }))
 
-    if (entry.session.systemType === 'HAC') {
-      transcript = await hacTranscript(entry.token)
-    } else {
-      transcript = await psTranscript(entry.token)
-    }
-
-    res.json({
-      data: {
-        systemType: entry.session.systemType,
-        transcript,
-      },
-    })
+    res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_TRANSCRIPT', err, 'FETCH_ERROR')
   }
 })
 
 router.get('/schedule', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = await resolveSession(req.userId!, res)
+  const userId = req.userId!
+  const entry = await resolveSession(userId, res)
   if (!entry) return
 
   if (entry.session.systemType !== 'HAC') {
@@ -682,7 +694,7 @@ router.get('/schedule', async (req: AuthRequest, res: Response): Promise<void> =
   }
 
   try {
-    const schedule = await getSchedule(entry.token)
+    const schedule = await runWithAutoRelogin(userId, entry, activeEntry => getSchedule(activeEntry.token))
 
     res.json({
       data: {
@@ -695,50 +707,54 @@ router.get('/schedule', async (req: AuthRequest, res: Response): Promise<void> =
 })
 
 router.get('/gpa', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = await resolveSession(req.userId!, res)
+  const userId = req.userId!
+  const entry = await resolveSession(userId, res)
   if (!entry) return
 
   try {
-    let unweightedGpa: number | null = null
-    let weightedGpa: number | null = null
-    let courseCount = 0
+    const data = await runWithAutoRelogin(userId, entry, async activeEntry => {
+      let unweightedGpa: number | null = null
+      let weightedGpa: number | null = null
+      let courseCount = 0
 
-    if (entry.session.systemType === 'HAC') {
-      // Pull the real cumulative GPAs that HAC calculates and displays on the transcript page
-      const transcript = await hacTranscript(entry.token)
-      const t = transcript as { weightedGPA?: string | null; unweightedGPA?: string | null; semesters?: Array<{ courses: unknown[] }> }
+      if (activeEntry.session.systemType === 'HAC') {
+        // Pull the real cumulative GPAs that HAC calculates and displays on the transcript page
+        const transcript = await hacTranscript(activeEntry.token)
+        const t = transcript as { weightedGPA?: string | null; unweightedGPA?: string | null; semesters?: Array<{ courses: unknown[] }> }
 
-      const w = parseFloat(t.weightedGPA ?? '')
-      const u = parseFloat(t.unweightedGPA ?? '')
-      if (!isNaN(w)) weightedGpa   = Math.round(w * 100) / 100
-      if (!isNaN(u)) unweightedGpa = Math.round(u * 100) / 100
+        const w = parseFloat(t.weightedGPA ?? '')
+        const u = parseFloat(t.unweightedGPA ?? '')
+        if (!isNaN(w)) weightedGpa   = Math.round(w * 1000) / 1000
+        if (!isNaN(u)) unweightedGpa = Math.round(u * 1000) / 1000
 
-      courseCount = (t.semesters ?? []).reduce((acc, s) => acc + (s.courses?.length ?? 0), 0)
-    } else {
-      const ps = await psGrades(entry.token)
-      courseCount = ps.length
-      const rawGrades = ps.map(c => ({ average: c.grade }))
-      const gpa = computeGPA(rawGrades)
-      unweightedGpa = gpa
-      weightedGpa   = gpa
-    }
+        courseCount = (t.semesters ?? []).reduce((acc, s) => acc + (s.courses?.length ?? 0), 0)
+      } else {
+        const ps = await psGrades(activeEntry.token)
+        courseCount = ps.length
+        const rawGrades = ps.map(c => ({ average: c.grade }))
+        const gpa = computeGPA(rawGrades)
+        unweightedGpa = gpa
+        weightedGpa   = gpa
+      }
 
-    res.json({
-      data: {
+      return {
         gpa: unweightedGpa,
         unweightedGpa,
         weightedGpa,
         courseCount,
-        systemType: entry.session.systemType,
-      },
+        systemType: activeEntry.session.systemType,
+      }
     })
+
+    res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_GPA', err, 'FETCH_ERROR')
   }
 })
 
 router.get('/info', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = await resolveSession(req.userId!, res)
+  const userId = req.userId!
+  const entry = await resolveSession(userId, res)
   if (!entry) return
 
   if (entry.session.systemType !== 'HAC') {
@@ -754,7 +770,7 @@ router.get('/info', async (req: AuthRequest, res: Response): Promise<void> => {
   }
 
   try {
-    const info = await getStudentInfo(entry.token)
+    const info = await runWithAutoRelogin(userId, entry, activeEntry => getStudentInfo(activeEntry.token))
 
     res.json({
       data: info,
@@ -789,23 +805,33 @@ router.delete('/session', async (req: AuthRequest, res: Response): Promise<void>
 router.get('/status', async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId!
 
+  // Try to resolve session silently — don't send 401 on failure,
+  // just report the connection status. This endpoint is called on
+  // app load to trigger auto-relogin in the background.
   let entry = getSessionByUserId(userId)
+  if (entry && Date.now() - entry.session.createdAt > HAC_REFRESH_AFTER_MS) {
+    console.log('[GRADES ROUTER] Existing school session is old; refreshing on status check for userId:', userId)
+    deleteSessionByUserId(userId)
+    const reloginResult = await autoRelogin(userId)
+    entry = reloginResult?.session ?? null
+  }
 
-  // If no in-memory session, try to restore from DB cache
   if (!entry) {
-    const cachedConnection = await prisma.schoolConnection.findUnique({ where: { userId } })
-
-    if (cachedConnection?.cachedSession) {
-      console.log('[GRADES ROUTER] Attempting session restore from DB cache for userId:', userId)
-      const restoredToken = restoreSessionFromCache(
-        userId,
-        cachedConnection.systemType as SchoolSystemType,
-        toOrigin(cachedConnection.districtUrl),
-        cachedConnection.cachedSession
-      )
-      if (restoredToken) {
-        entry = getSessionByUserId(userId)
-        console.log('[GRADES ROUTER] Session restored from cache:', Boolean(entry))
+    // Try auto-relogin (silently, no response on failure)
+    const reloginResult = await autoRelogin(userId)
+    if (reloginResult?.session) {
+      entry = reloginResult.session
+    } else {
+      // Last resort: try DB cache
+      const cachedConnection = await prisma.schoolConnection.findUnique({ where: { userId } }).catch(() => null)
+      if (cachedConnection?.cachedSession) {
+        const restoredToken = restoreSessionFromCache(
+          userId,
+          cachedConnection.systemType as SchoolSystemType,
+          toOrigin(cachedConnection.districtUrl),
+          cachedConnection.cachedSession,
+        )
+        if (restoredToken) entry = getSessionByUserId(userId)
       }
     }
   }
@@ -834,7 +860,8 @@ router.get('/status', async (req: AuthRequest, res: Response): Promise<void> => 
 })
 
 router.get('/classwork', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = await resolveSession(req.userId!, res)
+  const userId = req.userId!
+  const entry = await resolveSession(userId, res)
   if (!entry) return
 
   if (entry.session.systemType !== 'HAC') {
@@ -843,9 +870,12 @@ router.get('/classwork', async (req: AuthRequest, res: Response): Promise<void> 
   }
 
   try {
-    touchSession(req.userId!)
     const period = req.query.period as string | undefined
-    const { classes, availablePeriods, currentPeriod } = await hacGrades(entry.token, period)
+    const { classes, availablePeriods, currentPeriod } = await runWithAutoRelogin(
+      userId,
+      entry,
+      activeEntry => hacGrades(activeEntry.token, period),
+    )
     res.json({ data: { classes, availablePeriods, currentPeriod } })
   } catch (err: unknown) {
     sendError(res, 'FETCH_CLASSWORK', err, 'FETCH_ERROR')
@@ -853,7 +883,8 @@ router.get('/classwork', async (req: AuthRequest, res: Response): Promise<void> 
 })
 
 router.get('/report-card', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = await resolveSession(req.userId!, res)
+  const userId = req.userId!
+  const entry = await resolveSession(userId, res)
   if (!entry) return
 
   if (entry.session.systemType !== 'HAC') {
@@ -862,9 +893,12 @@ router.get('/report-card', async (req: AuthRequest, res: Response): Promise<void
   }
 
   try {
-    touchSession(req.userId!)
     const period = req.query.period as string | undefined
-    const { reportingPeriods, currentPeriod, semesters } = await getReportCard(entry.token, period)
+    const { reportingPeriods, currentPeriod, semesters } = await runWithAutoRelogin(
+      userId,
+      entry,
+      activeEntry => getReportCard(activeEntry.token, period),
+    )
     res.json({ data: { reportingPeriods, currentPeriod, semesters } })
   } catch (err: unknown) {
     sendError(res, 'FETCH_REPORT_CARD', err, 'FETCH_ERROR')
@@ -872,7 +906,8 @@ router.get('/report-card', async (req: AuthRequest, res: Response): Promise<void
 })
 
 router.get('/progress-report', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = await resolveSession(req.userId!, res)
+  const userId = req.userId!
+  const entry = await resolveSession(userId, res)
   if (!entry) return
 
   if (entry.session.systemType !== 'HAC') {
@@ -881,9 +916,8 @@ router.get('/progress-report', async (req: AuthRequest, res: Response): Promise<
   }
 
   try {
-    touchSession(req.userId!)
     const date = req.query.date as string | undefined
-    const data = await getProgressReport(entry.token, date)
+    const data = await runWithAutoRelogin(userId, entry, activeEntry => getProgressReport(activeEntry.token, date))
     res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_PROGRESS_REPORT', err, 'FETCH_ERROR')
@@ -891,7 +925,8 @@ router.get('/progress-report', async (req: AuthRequest, res: Response): Promise<
 })
 
 router.get('/attendance', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = await resolveSession(req.userId!, res)
+  const userId = req.userId!
+  const entry = await resolveSession(userId, res)
   if (!entry) return
 
   if (entry.session.systemType !== 'HAC') {
@@ -900,9 +935,8 @@ router.get('/attendance', async (req: AuthRequest, res: Response): Promise<void>
   }
 
   try {
-    touchSession(req.userId!)
     const offset = parseInt(String(req.query.monthOffset ?? '0')) || 0
-    const data = await getAttendance(entry.token, offset)
+    const data = await runWithAutoRelogin(userId, entry, activeEntry => getAttendance(activeEntry.token, offset))
     res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_ATTENDANCE', err, 'FETCH_ERROR')
@@ -910,7 +944,8 @@ router.get('/attendance', async (req: AuthRequest, res: Response): Promise<void>
 })
 
 router.get('/contact-teachers', async (req: AuthRequest, res: Response): Promise<void> => {
-  const entry = await resolveSession(req.userId!, res)
+  const userId = req.userId!
+  const entry = await resolveSession(userId, res)
   if (!entry) return
 
   if (entry.session.systemType !== 'HAC') {
@@ -919,8 +954,7 @@ router.get('/contact-teachers', async (req: AuthRequest, res: Response): Promise
   }
 
   try {
-    touchSession(req.userId!)
-    const data = await getContactTeachers(entry.token)
+    const data = await runWithAutoRelogin(userId, entry, activeEntry => getContactTeachers(activeEntry.token))
     res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_CONTACT_TEACHERS', err, 'FETCH_ERROR')
@@ -942,10 +976,9 @@ router.post('/sync-profile', async (req: AuthRequest, res: Response): Promise<vo
   }
 
   try {
-    touchSession(userId)
     console.log('[GRADES ROUTER] Re-syncing profile from HAC for userId:', userId)
 
-    const studentInfo = await getStudentInfo(entry.token)
+    const studentInfo = await runWithAutoRelogin(userId, entry, activeEntry => getStudentInfo(activeEntry.token))
     const profileUpdate: Record<string, unknown> = {}
     const userUpdate: Record<string, unknown> = {}
 

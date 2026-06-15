@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import PageLoader from '../../../../components/ui/PageLoader'
 
 // ── Official Katy ISD GPA Scale ───────────────────────────────────────────────
 // Regular:     A=4.0  B=3.0  C=2.0  F=0.0
@@ -189,7 +190,7 @@ export default function WhatIfGpaPage() {
 
   const clearAll = () => setSimCourses(prev => prev.map(c => ({ ...c, average: 0 })))
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading data…</div>
+  if (loading) return <PageLoader message="Opening GPA calculator…" />
 
   return (
     <div className="fade-up">

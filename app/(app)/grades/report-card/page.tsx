@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '../../../../lib/api'
+import PageLoader from '../../../../components/ui/PageLoader'
 
 interface RCCourse {
   name: string
@@ -87,7 +88,7 @@ export default function ReportCardPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading report card…</div>
+  if (loading) return <PageLoader message="Opening report card…" />
 
   const sem1 = data?.semesters.sem1 ?? []
   const sem2 = data?.semesters.sem2 ?? []

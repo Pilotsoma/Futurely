@@ -1,20 +1,12 @@
 import type { NextConfig } from "next";
 
-/** On Vercel the backend is served at /_/backend via experimentalServices.
- *  Locally we proxy to the dev server on port 3001. */
-const BACKEND_DEST =
-  process.env.VERCEL
-    ? "/_/backend"
-    : process.env.BACKEND_PROXY_URL ?? "http://localhost:3001";
-
 const nextConfig: NextConfig = {
   async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${BACKEND_DEST}/api/:path*`,
-      },
-    ];
+    // On Vercel, vercel.json routes handle /api/* directly — no rewrite needed.
+    // Locally, proxy to the Express dev server on port 3001.
+    if (process.env.VERCEL) return []
+    const dest = process.env.BACKEND_PROXY_URL ?? "http://localhost:3001"
+    return [{ source: "/api/:path*", destination: `${dest}/api/:path*` }]
   },
 };
 

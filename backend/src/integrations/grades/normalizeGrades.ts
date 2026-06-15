@@ -186,5 +186,5 @@ export function computeGpaFromNormalized(courses: NormalizedCourse[]): number | 
   }, 0)
 
   const gpa = total / graded.length
-  return Math.round(gpa * 100) / 100
+  return Math.round(gpa * 1000) / 1000
 }

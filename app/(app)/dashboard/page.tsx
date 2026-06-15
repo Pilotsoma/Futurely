@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, type StudentData } from '../../../lib/api'
 import AiBar from '../../../components/ui/AiBar'
+import PageLoader from '../../../components/ui/PageLoader'
 
 const GRADE_COLOR: Record<string, string> = { A: '#22C55E', B: '#10B981', C: '#F59E0B', D: '#F97316', F: '#EF4444' }
 const gradeColor = (g: string) => GRADE_COLOR[g?.charAt(0).toUpperCase()] ?? 'var(--text-muted)'
@@ -29,28 +30,109 @@ export default function DashboardPage() {
   const [error, setError]       = useState<string | null>(null)
   const [portalUGpa, setPortalUGpa] = useState<number | null>(null)
   const [portalWGpa, setPortalWGpa] = useState<number | null>(null)
+  const [courseCount, setCourseCount] = useState<number | null>(null)
+  const [semesterLabel, setSemesterLabel] = useState<string>('')
+  const [dayStreak, setDayStreak] = useState(0)
+  const [showStreakPopup, setShowStreakPopup] = useState(false)
+  const [showResyncPopup, setShowResyncPopup] = useState(false)
+  const [resyncing, setResyncing] = useState(false)
+  const [resyncError, setResyncError] = useState<string | null>(null)
+  const gpaNeedsResync = useRef(false)
 
   useEffect(() => {
+    // Track day streak using localStorage
+    const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+    const lastVisit = localStorage.getItem('ns_lastVisit')
+    const streak = parseInt(localStorage.getItem('ns_streak') ?? '0', 10)
+
+    if (lastVisit === today) {
+      // Already visited today, keep current streak
+      setDayStreak(streak)
+    } else if (lastVisit) {
+      const lastDate = new Date(lastVisit)
+      const todayDate = new Date(today)
+      const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / 86400000)
+      if (diffDays === 1) {
+        // Consecutive day, increment streak
+        const newStreak = streak + 1
+        localStorage.setItem('ns_streak', String(newStreak))
+        setDayStreak(newStreak)
+      } else {
+        // Streak broken, reset to 1
+        localStorage.setItem('ns_streak', '1')
+        setDayStreak(1)
+      }
+    } else {
+      // First visit ever
+      localStorage.setItem('ns_streak', '1')
+      setDayStreak(1)
+    }
+    localStorage.setItem('ns_lastVisit', today)
     api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed'))
     api.portalGpa()
       .then(g => { setPortalUGpa(g.unweightedGpa); setPortalWGpa(g.weightedGpa) })
-      .catch(() => { /* portal not connected or session expired — fall back to profile */ })
+      .catch(() => {})
+
+    api.portalStatus().then(status => {
+      if (!status.connected) return
+      const now = new Date()
+      const isFall = now.getMonth() >= 7
+      setSemesterLabel(isFall ? `Fall ${now.getFullYear()}` : `Spring ${now.getFullYear()}`)
+      api.portalGrades()
+        .then(g => { setCourseCount(new Set(g.grades.map(c => c.name)).size) })
+        .catch(() => { gpaNeedsResync.current = true })
+    }).catch(() => {})
+
+    const resyncTimer = setTimeout(() => {
+      if (gpaNeedsResync.current) setShowResyncPopup(true)
+    }, 10000)
+
+    return () => clearTimeout(resyncTimer)
   }, [])
 
+  async function handleResync() {
+    setResyncing(true)
+    setResyncError(null)
+    try {
+      await api.portalSyncProfile()
+      const [g, grades, freshData] = await Promise.all([api.portalGpa(), api.portalGrades(), api.me()])
+      setPortalUGpa(g.unweightedGpa)
+      setPortalWGpa(g.weightedGpa)
+      setCourseCount(new Set(grades.grades.map(c => c.name)).size)
+      setData(freshData)
+      setShowResyncPopup(false)
+    } catch (err) {
+      setResyncError(err instanceof Error ? err.message : 'Re-sync failed')
+    } finally {
+      setResyncing(false)
+    }
+  }
+
   if (error) return <div style={{ padding: 40, color: 'var(--error)' }}>{error}</div>
-  if (!data)  return (
-    <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading dashboard…</div>
-  )
+  if (!data) return <PageLoader message="Opening dashboard…" />
 
   const firstName = data.name?.split(' ')[0] ?? 'Student'
-  const uGpa = (portalUGpa ?? data.profile?.unweightedGpa ?? 0).toFixed(2)
-  const wGpa = (portalWGpa ?? data.profile?.weightedGpa ?? 0).toFixed(2)
+  const uGpa = (portalUGpa ?? data.profile?.unweightedGpa ?? 0).toFixed(3)
+  const wGpa = (portalWGpa ?? data.profile?.weightedGpa ?? 0).toFixed(3)
   const today = new Date()
   const dueToday = data.assignments.filter(a => {
     if (a.completed) return false
     const d = new Date(a.dueDate)
     return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
   })
+
+  // Count courses by semester from database as fallback
+  const dbCourseCount = (() => {
+    const now = new Date()
+    const month = now.getMonth()
+    const year = now.getFullYear()
+    const isFall = month >= 7
+    const semSuffix = isFall ? 'FA' : 'SP'
+    const semKey = `${year}-${semSuffix}`
+    return data.courses.filter(c => c.semester === semKey).length
+  })()
+
+  const displayCourseCount = courseCount || dbCourseCount
 
   return (
     <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
@@ -65,14 +147,8 @@ export default function DashboardPage() {
 
       {/* GPA + Due Today */}
       <div style={S.topRow}>
-        <div className="ns-card" style={{ ...S.card, flex: 1 }}>
-          <p style={S.cardLabel}>
-            GPA
-            <button onClick={() => router.push('/grades/what-if')}
-              style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: 11, cursor: 'pointer', padding: 0, marginLeft: 8 }}>
-              What-If →
-            </button>
-          </p>
+        <div className="ns-card" style={{ ...S.card, flex: 1, cursor: 'pointer' }} onClick={() => router.push('/grades/what-if')}>
+          <p style={S.cardLabel}>GPA</p>
           <div style={S.gpaRow}>
             <div style={S.gpaBlock}>
               <div style={S.gpaNum}>{uGpa}</div>
@@ -84,9 +160,18 @@ export default function DashboardPage() {
               <div style={S.gpaTag}>Weighted</div>
             </div>
           </div>
+          {showResyncPopup && (
+            <button
+              onClick={e => { e.stopPropagation(); setShowResyncPopup(true) }}
+              style={S.resyncBanner}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+              Some data didn't load · Re-sync
+            </button>
+          )}
         </div>
 
-        <div className="ns-card" style={{ ...S.card, flex: 1 }}>
+        <div className="ns-card" style={{ ...S.card, flex: 1, cursor: 'pointer' }} onClick={() => router.push('/planner')}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <p style={S.cardLabel}>Due Today</p>
             {dueToday.length > 0 && <span style={S.countPill}>{dueToday.length}</span>}
@@ -110,17 +195,22 @@ export default function DashboardPage() {
 
       {/* Stat row */}
       <div style={S.statsRow}>
-        {[
-          { v: data.stats.totalCourses, l: 'Courses' },
-          { v: data.stats.assignmentsDueThisWeek, l: 'Due This Week' },
-          { v: data.stats.pendingAssignments, l: 'Pending' },
-          { v: '3', l: 'Day Streak 🔥' },
-        ].map(s => (
-          <div key={s.l} className="ns-card" style={S.statCard}>
-            <div style={S.statNum}>{s.v}</div>
-            <div style={S.statLabel}>{s.l}</div>
-          </div>
-        ))}
+        <div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/grades/schedule')}>
+          <div style={S.statNum}>{displayCourseCount}</div>
+          <div style={S.statLabel}>Courses · {semesterLabel || 'This Semester'}</div>
+        </div>
+        <div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/planner')}>
+          <div style={S.statNum}>{data.stats.assignmentsDueThisWeek}</div>
+          <div style={S.statLabel}>Due This Week</div>
+        </div>
+        <div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/planner')}>
+          <div style={S.statNum}>{data.stats.pendingAssignments}</div>
+          <div style={S.statLabel}>Pending</div>
+        </div>
+        <div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)}>
+          <div style={S.statNum}>{dayStreak}</div>
+          <div style={S.statLabel}>Day Streak 🔥</div>
+        </div>
       </div>
 
       {/* Quick navigation */}
@@ -139,6 +229,91 @@ export default function DashboardPage() {
       </div>
 
       <div style={{ flex: 1 }} />
+
+      {/* Streak Popup */}
+      {showStreakPopup && (
+        <div style={S.popupOverlay} onClick={() => setShowStreakPopup(false)}>
+          <div style={S.popupCard} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowStreakPopup(false)} style={S.popupClose}>×</button>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🔥</div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+              {dayStreak} Day Streak!
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+              You've opened the app <strong>{dayStreak} day{dayStreak !== 1 ? 's' : ''}</strong> in a row! Keep it up to unlock rewards and stay on top of your learning.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={S.popupBenefit}>
+                <span style={{ fontSize: 16 }}>📚</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Stay on Track</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Daily check-ins help you manage assignments and never miss a deadline.</div>
+                </div>
+              </div>
+              <div style={S.popupBenefit}>
+                <span style={{ fontSize: 16 }}>🎯</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Build Habits</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Consistent study habits lead to better grades and less stress.</div>
+                </div>
+              </div>
+              <div style={S.popupBenefit}>
+                <span style={{ fontSize: 16 }}>🏆</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Unlock Rewards</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Reach milestones like 7, 14, and 30-day streaks to earn special badges.</div>
+                </div>
+              </div>
+              <div style={S.popupBenefit}>
+                <span style={{ fontSize: 16 }}>🧠</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>AI-Powered Insights</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>The more you use the app, the smarter your AI study recommendations become.</div>
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setShowStreakPopup(false)} style={S.popupButton}>
+              Got it!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* HAC session expired / resync popup */}
+      {showResyncPopup && (
+        <div style={S.popupOverlay} onClick={() => setShowResyncPopup(false)}>
+          <div style={S.popupCard} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowResyncPopup(false)} style={S.popupClose}>×</button>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🔄</div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+              Couldn't load your school data
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+              Your HAC session may have expired since you last logged in. This can happen automatically after a period of inactivity. Tap "Re-sync" below to reconnect and pull your latest grades, GPA, and courses back into the app.
+            </p>
+            {resyncError && (
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--error)' }}>
+                {resyncError}
+                <div style={{ marginTop: 6 }}>
+                  <button onClick={() => { setShowResyncPopup(false); router.push('/settings') }} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                    Go to Settings to reconnect →
+                  </button>
+                </div>
+              </div>
+            )}
+            <button
+              onClick={handleResync}
+              disabled={resyncing}
+              style={{ ...S.popupButton, opacity: resyncing ? 0.7 : 1, cursor: resyncing ? 'not-allowed' : 'pointer' }}
+            >
+              {resyncing ? 'Syncing…' : 'Re-sync with HAC'}
+            </button>
+            <button onClick={() => setShowResyncPopup(false)} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginTop: 8 }}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* AI bar */}
       <div style={S.aiBarWrap}>
@@ -186,4 +361,10 @@ const S: Record<string, React.CSSProperties> = {
   tileTitle:  { fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 2 },
   tileSub:    { fontSize: 12, color: 'var(--text-secondary)' },
   aiBarWrap:  { paddingBottom: 20 },
+  popupOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 },
+  popupCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, maxWidth: 380, width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
+  popupClose: { position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', padding: 4, lineHeight: 1 },
+  popupBenefit: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 10 },
+  popupButton: { width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 16 },
+  resyncBanner: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.1)', color: '#F59E0B', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.1px' },
 }

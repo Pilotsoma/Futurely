@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '../../../../lib/api'
 import WhatIfScorer from '../../../../components/ui/WhatIfScorer'
+import PageLoader from '../../../../components/ui/PageLoader'
 
 interface Assignment {
   name: string
@@ -90,7 +91,7 @@ export default function ClassworkPage() {
     setExpanded(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })
   }
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading grades…</div>
+  if (loading) return <PageLoader message="Opening grades…" />
 
   return (
     <div className="fade-up">

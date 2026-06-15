@@ -1289,14 +1289,14 @@ export async function getSchedule(sessionToken: string): Promise<object[]> {
 
   const headers: string[] = []
 
-  // Strategy 1: standard sg-asp-table headers
-  $('tr.sg-asp-table-header-row th').each((_i, th) => {
+  // Strategy 1: sg-asp-table headers — Katy ISD HAC uses <td> not <th> in the header row
+  $('tr.sg-asp-table-header-row td, tr.sg-asp-table-header-row th').each((_i, th) => {
     headers.push($(th).text().trim())
   })
 
   // Strategy 2: generic thead/th if no sg-asp headers
   if (headers.length === 0) {
-    $('thead th, table:first th').each((_i, th) => {
+    $('thead td, thead th, table:first th').each((_i, th) => {
       const t = $(th).text().trim()
       if (t) headers.push(t)
     })
@@ -1836,41 +1836,78 @@ export async function getAttendance(sessionToken: string, monthOffset: number = 
   const origin = stored.baseUrl
 
   await sleep(800 + Math.random() * 400)
-  const initialRes = await http.get(`${origin}HomeAccess/Attendance/MonthView`, {
+  const mainAttendanceUrl = `${origin}HomeAccess/Attendance/MonthView`
+  const initialRes = await http.get(mainAttendanceUrl, {
     headers: { Referer: `${origin}HomeAccess/Home.aspx` },
   })
 
   let html = initialRes.data as string
+
+  // Katy ISD (and some other HAC districts) render the calendar in a legacy iframe.
+  // The shell page has no table cells — we must fetch the iframe URL to get the calendar.
+  const $shell = cheerio.load(html)
+  const iframeSrc = $shell('iframe.sg-legacy-iframe, iframe[src*="MonthlyView"], iframe[src*="Attendance/Month"]').attr('src')
+  let attendanceUrl = mainAttendanceUrl
+  if (iframeSrc) {
+    attendanceUrl = iframeSrc.startsWith('http') ? iframeSrc : new URL(iframeSrc, mainAttendanceUrl).toString()
+    console.log('[ATTENDANCE] Shell page — fetching iframe:', attendanceUrl)
+    try {
+      await sleep(300 + Math.random() * 200)
+      const iframeRes = await http.get(attendanceUrl, { headers: { Referer: mainAttendanceUrl } })
+      if (typeof iframeRes.data === 'string' && iframeRes.data.length > 500) html = iframeRes.data
+    } catch (e) {
+      console.warn('[ATTENDANCE] iframe fetch failed:', e instanceof Error ? e.message : String(e))
+    }
+  }
+
   dumpDebugHtml('attendance', html)
 
-  // Navigate months via ASP.NET postback if offset != 0
+  // Navigate months via ASP.NET postback if offset != 0.
+  // Always POST to attendanceUrl (the iframe URL when applicable — that's where the form lives).
+  // Katy ISD (HAC) uses __doPostBack on the calendar control, NOT lbPrev/lbNext link IDs.
   if (monthOffset !== 0) {
     const steps = Math.abs(monthOffset)
+    const direction = monthOffset < 0 ? 'previous' : 'next'
     for (let s = 0; s < steps; s++) {
       const $nav = cheerio.load(html)
-      const prevId = $nav('[id*="lbPrev"]').attr('id') ?? 'ctl00$plnMain$lbPrev'
-      const nextId = $nav('[id*="lbNext"]').attr('id') ?? 'ctl00$plnMain$lbNext'
-      const target = (monthOffset < 0 ? prevId : nextId).replace(/#/g, '')
+
+      // Parse __doPostBack('target','arg') from the prev/next month link
+      const linkHref = $nav(`a[title*="${direction} month"], a[title*="${direction === 'previous' ? 'Previous' : 'Next'}"]`).attr('href') ?? ''
+      const pbMatch = linkHref.match(/javascript:__doPostBack\('([^']+)','([^']*)'\)/)
+
+      // Fallback: legacy lbPrev / lbNext ID pattern
+      const legacyTarget = ($nav(direction === 'previous' ? '[id*="lbPrev"]' : '[id*="lbNext"]').attr('id') ?? '').replace(/#/g, '')
+
+      const eventTarget = pbMatch ? pbMatch[1] : (legacyTarget || `ctl00$plnMain$cldAttendance`)
+      const eventArg    = pbMatch ? pbMatch[2] : ''
+
       const formData = new URLSearchParams({
-        __EVENTTARGET: target,
-        __EVENTARGUMENT: '',
-        __VIEWSTATE: ($nav('[id="__VIEWSTATE"]').val() as string) ?? '',
-        __EVENTVALIDATION: ($nav('[id="__EVENTVALIDATION"]').val() as string) ?? '',
+        __EVENTTARGET:      eventTarget,
+        __EVENTARGUMENT:    eventArg,
+        __VIEWSTATE:        ($nav('[id="__VIEWSTATE"]').val() as string) ?? '',
+        __EVENTVALIDATION:  ($nav('[id="__EVENTVALIDATION"]').val() as string) ?? '',
         __VIEWSTATEGENERATOR: ($nav('[id="__VIEWSTATEGENERATOR"]').val() as string) ?? '',
       })
-      const navRes = await http.post(`${origin}HomeAccess/Attendance/MonthView`, formData.toString(), {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: `${origin}HomeAccess/Attendance/MonthView` },
+
+      console.log(`[ATTENDANCE] navigating ${direction}: target=${eventTarget} arg=${eventArg}`)
+      const navRes = await http.post(attendanceUrl, formData.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: attendanceUrl },
       })
       html = navRes.data as string
-      await sleep(300)
+      await sleep(400)
     }
     dumpDebugHtml('attendance_nav', html)
   }
 
   const $ = cheerio.load(html)
 
-  // Extract month/year heading
-  const heading = $('[id*="lblMonthYear"], [id*="lbMonthYear"], caption, .sg-header-heading, h2').first().text().trim()
+  // Extract month/year heading.
+  // Katy ISD: inside <table class="sg-asp-calendar-header"><tr><td align="center">May 2026</td>
+  // Other HAC versions: id="lblMonthYear" or "lbMonthYear"
+  const heading = $('.sg-asp-calendar-header td[align="center"]').first().text().trim()
+    || $('[id*="lblMonthYear"], [id*="lbMonthYear"]').first().text().trim()
+    || $('caption').first().text().trim()
+    || $('h2').first().text().trim()
   const monthYear = heading || new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   const MONTH_NAMES_ATT = ['january','february','march','april','may','june','july','august','september','october','november','december']
@@ -1884,16 +1921,75 @@ export async function getAttendance(sessionToken: string, monthOffset: number = 
     year = parseInt(mymatch[2])
   }
 
+  // Full color-to-code map derived from the HAC color legend.
+  // Codes: A=Absent(Unexcused) T=Tardy/Late(Unexcused) X=Excused S=SchoolActivity U=Suspension P=Present C=Closed
+  const BG_CODE: Record<string, string> = {
+    '#660000': 'A',   // Absent - Unexcused, Informed Concern
+    '#ff0000': 'A',   // Absent - Unexcused, Truancy
+    '#000000': 'U',   // In-School Suspension, Remote Unengaged
+    '#666666': 'U',   // Out of School Suspension
+    '#00cc00': 'X',   // KISD Approved Absence, Doctor Note, Religious, Excused Absence, etc.
+    '#006600': 'X',   // College Visit / Military Visit
+    '#0000cc': 'X',   // Doctor Note
+    '#6600cc': 'X',   // Ex Absence due to healthcare
+    '#6666ff': 'X',   // Dr. Note due to excessive abs.
+    '#cc00cc': 'X',   // Personal Illness w/note
+    '#00cccc': 'X',   // Excused Late/Early Dismissal
+    '#00ffff': 'X',   // Late arrival / District Outage / Excused Late
+    '#996600': 'S',   // UIL Activities, School Activities non-UIL, School Sponsored
+    '#666600': 'S',   // CV Related
+    '#cc66ff': 'T',   // No show / Remote Conferencing
+    '#ffff00': 'T',   // Unex Late Arrival/Early Depart
+    '#ff6600': 'T',   // SYA Unexcused Absence
+    '#cccccc': 'P',   // Present, School Closed, Present b/not in class
+    '#ffffff': '',
+    'white':   '',
+  }
+
+  const BG_STATUS: Record<string, string> = {
+    A: 'Absent - Unexcused', T: 'Tardy / Late', X: 'Excused', S: 'School Activity / UIL',
+    U: 'Suspension', P: 'Present', C: 'School Closed',
+  }
+
+  // Text-based classifier — covers any bg color we haven't mapped and mixed-code days (#FFCC99)
+  function classifyText(t: string): string {
+    if (/absent.*unexcused|unexcused.*absent|truancy|informed concern/i.test(t)) return 'A'
+    if (/tardy|unex.*late.*arriv|unex.*early.*depart|sya unexcused|\bno.?show\b/i.test(t)) return 'T'
+    if (/suspension/i.test(t)) return 'U'
+    if (/uil.activit|school.activit|school.sponsor|college.visit|military.visit|cv.related|mentorship|present.*b.*not.*in.*class|present.*b\/not/i.test(t)) return 'S'
+    if (/kisd.approved|doctor.note|dr\..*note|excused|personal.illness.*note|court.appear|religious.holy|healthcare|homebound|human.services|mckinney|outage|tech.*issue|late.*arrival.*after|early.*dismissal/i.test(t)) return 'X'
+    if (/school.closed|holiday/i.test(t)) return 'C'
+    if (/\bpresent\b/i.test(t)) return 'P'
+    return ''
+  }
+
+  // Build a human-readable per-period breakdown from the aria-label.
+  // Format: "15, 1, Absent - Unexcused, 2, Absent - Unexcused, ..."
+  function parseAriaDescription(ariaLabel: string): string {
+    const parts = ariaLabel.split(', ')
+    if (parts.length < 3) return ariaLabel
+    const entries: string[] = []
+    for (let i = 1; i + 1 < parts.length; i += 2) {
+      const period = parts[i]?.trim()
+      const desc   = parts[i + 1]?.trim()
+      if (period && desc && !/^\d+$/.test(period) === false || period) {
+        entries.push(`Period ${period}: ${desc}`)
+      }
+    }
+    return entries.length > 0 ? entries.join(' · ') : ariaLabel
+  }
+
   const days: Array<{ date: string; dayOfWeek: string; status: string; code: string; description: string }> = []
 
-  $('table td').each((_i, cell) => {
+  $('table.sg-asp-calendar td, table td').each((_i, cell) => {
     const $cell = $(cell)
-    const cellClass = ($cell.attr('class') ?? '').toLowerCase()
-    const title = ($cell.attr('title') ?? '').toLowerCase()
 
-    // Get the first visible number from this cell — that's the day number
+    // Get the day number from this cell.
+    // Event days: <span role="img" aria-label="15, ...">15</span>
+    // Plain days: bare text <td>1</td>
     const dayText = $cell.find('[id*="lblDate"], .sg-cal-date, span').first().text().trim()
       || $cell.children('span').first().text().trim()
+      || $cell.clone().children().remove().end().text().trim()
     const dayNum = parseInt(dayText)
     if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) return
 
@@ -1901,29 +1997,59 @@ export async function getAttendance(sessionToken: string, monthOffset: number = 
     const d = new Date(year, monthIndex, dayNum)
     const dayOfWeek = DAY_NAMES[d.getDay()] ?? ''
 
-    // Determine attendance code from class names, title attribute, or child image IDs
-    let code = ''
-    let status = ''
-    const childClasses = $cell.find('*').map((_j, el) => ($(el).attr('class') ?? '').toLowerCase()).get().join(' ')
-    const allClasses = cellClass + ' ' + childClasses
-    const hasImg = (id: string) => $cell.find(`[id*="${id}"]`).length > 0
+    // Read aria-label from the span (most structured source)
+    const ariaLabel = $cell.find('span[role="img"], span[aria-label]').first().attr('aria-label') ?? ''
+    const titleAttr = $cell.attr('title') ?? ''
+    const fullText  = ariaLabel + ' ' + titleAttr
 
-    if (/absent/i.test(title) || /absent/.test(allClasses) || hasImg('imgAbsent') || hasImg('Absent')) { code = 'A'; status = 'Absent' }
-    else if (/tardy/i.test(title) || /tardy/.test(allClasses) || hasImg('imgTardy') || hasImg('Tardy')) { code = 'T'; status = 'Tardy' }
-    else if (/excused/i.test(title) || /excused/.test(allClasses) || hasImg('imgExcused') || hasImg('Excused')) { code = 'E'; status = 'Excused' }
-    else if (/present/i.test(title) || /present/.test(allClasses)) { code = 'P'; status = 'Present' }
+    // Get background color from inline style
+    const styleAttr = $cell.attr('style') ?? ''
+    const bgMatch   = styleAttr.match(/background-color\s*:\s*(#[0-9a-fA-F]+|white)/i)
+    const bg        = (bgMatch?.[1] ?? '').toLowerCase()
 
-    days.push({ date: dateStr, dayOfWeek, status, code, description: ($cell.attr('title') ?? '') })
+    // 1. Direct background color lookup (most reliable)
+    let code   = BG_CODE[bg] ?? ''
+    let status = code ? (BG_STATUS[code] ?? '') : ''
+
+    // 2. Mixed-code day (#FFCC99) or unknown color → text classification
+    if (!code || bg === '#ffcc99') {
+      const textCode = classifyText(fullText)
+      if (bg === '#ffcc99') {
+        // Mixed: pick most severe code across all period descriptions
+        const allDetected = new Set<string>()
+        const parts = ariaLabel.split(', ')
+        for (let i = 2; i < parts.length; i += 2) {
+          const c = classifyText(parts[i] ?? '')
+          if (c) allDetected.add(c)
+        }
+        for (const c of ['A', 'U', 'T', 'X', 'S', 'C', 'P']) {
+          if (allDetected.has(c)) { code = c; status = BG_STATUS[c] ?? ''; break }
+        }
+        if (!code) { code = textCode; status = BG_STATUS[textCode] ?? '' }
+      } else {
+        code = textCode; status = BG_STATUS[textCode] ?? ''
+      }
+    }
+
+    // 3. School-closed check: gray (#CCCCCC) days with no real event in aria-label
+    if (bg === '#cccccc' && /school.closed|holiday/i.test(fullText)) {
+      code = 'C'; status = 'School Closed'
+    }
+
+    // Build readable description from aria-label
+    const description = ariaLabel ? parseAriaDescription(ariaLabel) : titleAttr
+
+    days.push({ date: dateStr, dayOfWeek, status, code, description })
   })
 
-  // De-duplicate by date (table can have multiple cells per day in some layouts)
+  // De-duplicate by date
   const seen = new Set<string>()
   const uniqueDays = days.filter(d => { if (seen.has(d.date)) return false; seen.add(d.date); return true })
 
   const absences = uniqueDays.filter(d => d.code === 'A').length
-  const tardies  = uniqueDays.filter(d => d.code === 'T').length
-  const excused  = uniqueDays.filter(d => d.code === 'E').length
+  const tardies  = uniqueDays.filter(d => ['T'].includes(d.code)).length
+  const excused  = uniqueDays.filter(d => ['X', 'E'].includes(d.code)).length
 
-  console.log(`[ATTENDANCE] ${monthYear}: ${uniqueDays.length} days parsed, A=${absences} T=${tardies} E=${excused}`)
+  console.log(`[ATTENDANCE] ${monthYear}: ${uniqueDays.length} days, A=${absences} T=${tardies} X=${excused}`)
   return { month: monthYear, year, monthIndex, days: uniqueDays, summary: { absences, tardies, excused } }
 }
