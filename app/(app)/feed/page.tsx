@@ -1072,25 +1072,25 @@ export default function StudyFeedPage() {
     loadPosts(1)
   }, [loadPosts])
 
-  // Fetch existing notifications
-  useEffect(() => {
-    api.getNotifications().then(d => {
-      setNotifs(d.notifications)
-      setUnread(d.unreadCount)
-    }).catch(() => null)
-  }, [])
+  // (notifications fetched by polling effect below)
 
-  // WebSocket for real-time notifications
+  // Real-time notifications via WebSocket + polling fallback
+  const seenNotifIds = useRef<Set<number>>(new Set())
+
   const pushToast = useCallback((notif: AppNotification) => {
+    if (seenNotifIds.current.has(notif.id)) return
+    seenNotifIds.current.add(notif.id)
     const id = `${Date.now()}-${notif.id}`
     setToasts(prev => [...prev, { id, notif }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000)
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 6000)
   }, [])
 
+  // WebSocket — derive URL from API URL so it works in production
   useEffect(() => {
     const token = localStorage.getItem('ns_token')
     if (!token) return
-    const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:3001'
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+    const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws')
     let ws: WebSocket
     let dead = false
     function connect() {
@@ -1111,6 +1111,28 @@ export default function StudyFeedPage() {
     }
     connect()
     return () => { dead = true; ws?.close() }
+  }, [pushToast])
+
+  // Polling fallback — catches notifications when WebSocket misses them
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const d = await api.getNotifications()
+        setUnread(d.unreadCount)
+        const fresh = d.notifications.filter(n => !seenNotifIds.current.has(n.id))
+        // Only toast the newest one to avoid a burst on first load
+        const unseen = fresh.filter(n => !n.read)
+        setNotifs(d.notifications)
+        unseen.slice(0, 3).forEach(n => {
+          setUnread(c => c)   // keep count in sync (already set above)
+          pushToast(n)
+        })
+        d.notifications.forEach(n => seenNotifIds.current.add(n.id))
+      } catch { /* ignore */ }
+    }
+    poll()
+    const t = setInterval(poll, 30_000)
+    return () => clearInterval(t)
   }, [pushToast])
 
   // Close panel on outside click
@@ -1508,26 +1530,37 @@ export default function StudyFeedPage() {
 
     </div>
 
-    {/* Toast stack — outside fade-up so position:fixed works correctly */}
-    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column-reverse', gap: 10, pointerEvents: 'none' }}>
-      {toasts.map(t => (
-        <div key={t.id} style={N.toast}>
-          <span style={{ fontSize: 18, flexShrink: 0 }}>
-            {t.notif.type === 'FOLLOW' ? '👤' : t.notif.type === 'LIKE' ? '❤️' : t.notif.type === 'GIVEAWAY_WIN' ? '🎉' : '💬'}
-          </span>
-          <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--text)', lineHeight: 1.35, fontWeight: 500 }}>
-            {t.notif.type === 'GIVEAWAY_WIN'
-              ? (t.notif.preview ?? 'You won a giveaway!')
-              : <>
-                  {t.notif.sender.name ?? t.notif.sender.email.split('@')[0]}
-                  {t.notif.type === 'FOLLOW' ? ' started following you' : t.notif.type === 'LIKE' ? ' liked your post' : ' commented on your post'}
-                </>
-            }
+    {/* Toast stack — rendered outside fade-up container so position:fixed works */}
+    <div style={{ position: 'fixed', bottom: 24, right: 16, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, pointerEvents: 'none', maxWidth: 360, width: 'calc(100vw - 32px)' }}>
+      {toasts.map(t => {
+        const { emoji, accent, text } = (() => {
+          const sender = t.notif.sender.name ?? t.notif.sender.email.split('@')[0]
+          switch (t.notif.type) {
+            case 'LIKE':             return { emoji: '❤️', accent: '#EF4444', text: `${sender} liked your post` }
+            case 'COMMENT':          return { emoji: '💬', accent: '#3B82F6', text: `${sender} commented on your post` }
+            case 'FOLLOW':           return { emoji: '👤', accent: '#00C896', text: `${sender} started following you` }
+            case 'GIVEAWAY_WIN':     return { emoji: '🎉', accent: '#EAB308', text: t.notif.preview ?? 'You won a giveaway!' }
+            case 'TRADE_OFFER':      return { emoji: '🔄', accent: '#8B5CF6', text: `${sender} sent you a trade offer` }
+            case 'TRADE_ACCEPTED':   return { emoji: '✅', accent: '#22C55E', text: `${sender} accepted your trade` }
+            case 'TRADE_DECLINED':   return { emoji: '❌', accent: '#EF4444', text: `${sender} declined your trade` }
+            case 'LISTING_SOLD':     return { emoji: '💰', accent: '#EAB308', text: `Your listing sold — ${t.notif.preview ?? ''}` }
+            default:                 return { emoji: '🔔', accent: 'var(--primary)', text: t.notif.preview ?? 'New notification' }
+          }
+        })()
+        return (
+          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `4px solid ${accent}`, borderRadius: 12, padding: '13px 14px', boxShadow: '0 6px 24px rgba(0,0,0,0.4)', pointerEvents: 'auto', animation: 'fadeUp 0.2s ease' }}>
+            <span style={{ fontSize: 20, flexShrink: 0, lineHeight: 1 }}>{emoji}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{text}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{timeAgo(t.notif.createdAt)}</div>
+            </div>
+            <button
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1, flexShrink: 0, padding: '0 0 0 4px', pointerEvents: 'auto' }}
+              onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
+            >×</button>
           </div>
-          <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1, flexShrink: 0, padding: 0, pointerEvents: 'auto' }}
-            onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}>×</button>
-        </div>
-      ))}
+        )
+      })}
     </div>
 
     {commentPostId !== null && (
