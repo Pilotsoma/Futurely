@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
-  api, InventoryData, BoxResult, MarketplaceItem, TagInventoryItem,
+  api, ApiError, InventoryData, BoxResult, MarketplaceItem, TagInventoryItem,
   MarketplaceListing, TradeOffer, TradeItem, UserPublicInventory, FeedUserProfile,
 } from '../../../lib/api'
 
@@ -192,6 +193,7 @@ export default function MarketplacePage() {
   const [listingsLoading, setListingsLoading] = useState(false)
   const [buyingId, setBuyingId] = useState<number | null>(null)
   const [buyMsg, setBuyMsg] = useState<{ id: number; msg: string } | null>(null)
+  const [cooldownPopup, setCooldownPopup] = useState<{ secondsRemaining: number } | null>(null)
 
   // Listing an item
   const [listingItem, setListingItem] = useState<{ type: string; id: string; name: string } | null>(null)
@@ -409,8 +411,12 @@ export default function MarketplacePage() {
       fetchListings()
       refreshInventory()
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Purchase failed'
-      setBuyMsg({ id: listingId, msg })
+      if (e instanceof ApiError && e.secondsRemaining != null) {
+        setCooldownPopup({ secondsRemaining: e.secondsRemaining })
+      } else {
+        const msg = e instanceof Error ? e.message : 'Purchase failed'
+        setBuyMsg({ id: listingId, msg })
+      }
     } finally { setBuyingId(null) }
   }
 
@@ -1347,6 +1353,35 @@ export default function MarketplacePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Cooldown purchase modal */}
+      {cooldownPopup && createPortal(
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setCooldownPopup(null)}
+        >
+          <div
+            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 36, marginBottom: 12 }}>⏳</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#EAB308', marginBottom: 8 }}>Too Soon to Buy</div>
+            <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+              This item was just listed. You can buy it in{' '}
+              <strong style={{ color: 'var(--text)' }}>
+                {Math.floor(cooldownPopup.secondsRemaining / 60)}m {cooldownPopup.secondsRemaining % 60}s
+              </strong>.
+            </div>
+            <button
+              style={{ width: '100%', padding: '10px 0', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#060D10', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+              onClick={() => setCooldownPopup(null)}
+            >
+              Got it
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   )

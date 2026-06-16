@@ -709,6 +709,13 @@ router.post('/listings/:id/buy', requireAuth, async (req: AuthRequest, res: Resp
     if (listing.status !== 'ACTIVE') { res.status(400).json({ error: 'Listing is no longer available' }); return }
     if (listing.sellerId === req.userId) { res.status(400).json({ error: 'Cannot buy your own listing' }); return }
 
+    const COOLDOWN_MS = 5 * 60 * 1000
+    const elapsed = Date.now() - listing.createdAt.getTime()
+    if (elapsed < COOLDOWN_MS) {
+      const secondsRemaining = Math.ceil((COOLDOWN_MS - elapsed) / 1000)
+      res.status(400).json({ error: 'COOLDOWN_REQUIRED', secondsRemaining }); return
+    }
+
     const buyer = await prisma.user.findUnique({
       where: { id: req.userId },
       select: { coins: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true, tag: true, nameColor: true, pfpEffect: true },

@@ -1,10 +1,12 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
-class ApiError extends Error {
+export class ApiError extends Error {
   code?: string
-  constructor(message: string, code?: string) {
+  secondsRemaining?: number
+  constructor(message: string, code?: string, secondsRemaining?: number) {
     super(message)
     this.code = code
+    this.secondsRemaining = secondsRemaining
   }
 }
 
@@ -19,10 +21,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     },
   })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string } }
+    const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }
     const msg  = typeof body?.error === 'string' ? body.error : body?.error?.message
     const code = typeof body?.error === 'object' ? body?.error?.code : undefined
-    throw new ApiError(msg ?? `HTTP ${res.status}`, code)
+    throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining)
   }
   const { data } = await res.json() as { data: T }
   return data
