@@ -539,6 +539,9 @@ export const api = {
   marketplaceCancelTrade: (tradeId: number) =>
     request<{ ok: boolean }>(`/api/marketplace/trades/${tradeId}/cancel`, { method: 'POST' }),
 
+  getItemPrices: () =>
+    request<Record<string, number>>('/api/marketplace/prices'),
+
   // ── Parent API ────────────────────────────────────────────────────────────────
 
   parentLinkStudent: (credentials: { districtUrl: string; username: string; password: string }) =>

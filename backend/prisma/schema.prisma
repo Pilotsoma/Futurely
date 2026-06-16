@@ -325,3 +325,12 @@ model CollegeListItem {
   @@unique([userId, name])
   @@index([userId])
 }
+
+model ItemPrice {
+  id       Int    @id @default(autoincrement())
+  itemType String
+  itemId   String
+  price    Int
+
+  @@unique([itemType, itemId])
+}

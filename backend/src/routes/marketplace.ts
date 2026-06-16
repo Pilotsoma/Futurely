@@ -68,6 +68,34 @@ const RARITY_RANK: Record<string, number> = {
   Common: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5,
 }
 
+// ── Estimated item prices (seed; updated dynamically on each sale) ─────────────
+
+const SEED_PRICES: Record<string, number> = {
+  // Tags
+  'tag:grinder': 45,        'tag:focused': 45,        'tag:scholar': 45,
+  'tag:honors-student': 350, 'tag:ap-student': 350,
+  'tag:deans-list': 2500,   'tag:top-performer': 2500,
+  'tag:ace': 12000,          'tag:prodigy': 12000,
+  'tag:mastermind': 55000,   'tag:genius': 55000,
+  'tag:goat': 100000,
+  // Name Colors
+  'name-color:forest-green': 25,  'name-color:navy-blue': 25,   'name-color:dark-red': 25,
+  'name-color:slate-blue': 25,    'name-color:teal': 25,
+  'name-color:bright-orange': 250, 'name-color:violet': 250,    'name-color:cyan': 250,
+  'name-color:hot-pink': 2000,    'name-color:gold': 2000,      'name-color:lime-green': 2000,
+  'name-color:electric-blue': 10000, 'name-color:magenta': 10000,
+  'name-color:pure-white': 50000, 'name-color:black': 50000,
+  'name-color:rainbow': 350000,
+  // PFP Effects
+  'pfp:border-green': 25,   'pfp:border-blue': 25,    'pfp:border-red': 25,
+  'pfp:border-navy': 25,    'pfp:border-teal': 25,
+  'pfp:border-orange': 250, 'pfp:border-violet': 250, 'pfp:border-cyan': 250,
+  'pfp:border-hotpink': 2000, 'pfp:border-gold': 2000, 'pfp:border-lime': 2000,
+  'pfp:glow-pink': 10000,   'pfp:glow-purple': 10000,
+  'pfp:glow-gold': 60000,   'pfp:frame-black': 60000,
+  'pfp:rainbow': 500000,
+}
+
 // ── Trade item type ────────────────────────────────────────────────────────────
 
 interface TradeItem {
@@ -233,6 +261,29 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
     ownedPfpEffects: JSON.stringify(pfpEffects),
   }
 }
+
+// ── Item Prices ───────────────────────────────────────────────────────────────
+
+router.get('/prices', async (_req, res: Response): Promise<void> => {
+  try {
+    const entries = Object.entries(SEED_PRICES)
+    await Promise.all(entries.map(([key, price]) => {
+      const [itemType, ...rest] = key.split(':')
+      const itemId = rest.join(':')
+      return prisma.itemPrice.upsert({
+        where: { itemType_itemId: { itemType, itemId } },
+        create: { itemType, itemId, price },
+        update: {},
+      })
+    }))
+    const all = await prisma.itemPrice.findMany()
+    const map: Record<string, number> = {}
+    for (const row of all) map[`${row.itemType}:${row.itemId}`] = row.price
+    res.json({ data: map })
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch prices' })
+  }
+})
 
 // ── Daily Coins ───────────────────────────────────────────────────────────────
 
@@ -737,6 +788,21 @@ router.post('/listings/:id/buy', requireAuth, async (req: AuthRequest, res: Resp
       prisma.user.update({ where: { id: listing.sellerId }, data: { coins: { increment: listing.price } } }),
       prisma.marketplaceListing.update({ where: { id: listingId }, data: { status: 'SOLD', buyerId: req.userId } }),
     ])
+
+    // Update estimated price: rolling average of current price and actual sale price
+    try {
+      const current = await prisma.itemPrice.findUnique({
+        where: { itemType_itemId: { itemType: listing.itemType, itemId: listing.itemId } },
+      })
+      const seedKey = `${listing.itemType}:${listing.itemId}`
+      const currentPrice = current?.price ?? SEED_PRICES[seedKey] ?? listing.price
+      const newPrice = Math.round((currentPrice + listing.price) / 2)
+      await prisma.itemPrice.upsert({
+        where: { itemType_itemId: { itemType: listing.itemType, itemId: listing.itemId } },
+        create: { itemType: listing.itemType, itemId: listing.itemId, price: newPrice },
+        update: { price: newPrice },
+      })
+    } catch { /* non-critical, don't fail the purchase */ }
 
     // Create notification outside transaction so we can include sender relation and push via WebSocket
     const notif = await prisma.notification.create({
