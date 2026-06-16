@@ -193,6 +193,7 @@ export default function ParentStudentDetailPage() {
           {/* Grade Distribution */}
           <div className="ns-card" style={{ padding: 20, marginBottom: 16 }}>
             <p style={S.cardLabel}>Grade Distribution</p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: -8, marginBottom: 12 }}>Based on most recent grading period</p>
             {gradedClasses.length === 0 ? (
               <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>No graded courses yet.</p>
             ) : (

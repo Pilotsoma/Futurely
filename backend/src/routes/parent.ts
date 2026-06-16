@@ -183,46 +183,31 @@ router.get('/students', async (req: AuthRequest, res: Response): Promise<void> =
       let cached: CachedStudentData | null = null
       try { if (conn.cachedData) cached = JSON.parse(conn.cachedData) } catch { /* skip */ }
 
+      // Always fetch Futurely data to get accurate pending assignment count.
+      // HAC cached courses count "upcoming" from the scraper — that's not the same as
+      // what the student has actually created/tracked in their Futurely account.
+      const futurley = await getStudentHacData(conn.hacUsername, conn.districtUrl).catch(() => null)
+      const pendingAssignments = futurley?.assignments.filter(a => !a.completed).length ?? 0
+
       let hacCourses = cached?.courses ?? []
-      let pendingAssignments = hacCourses.reduce((sum, c) => sum + (c.upcomingAssignments?.length ?? 0), 0)
       let weightedGpa = cached?.weightedGpa ?? cached?.unweightedGpa ?? 0
       let unweightedGpa = cached?.unweightedGpa ?? 0
 
-      // If cached data has no courses, fall back to Futurely student data via SchoolConnection
-      if (hacCourses.length === 0) {
-        try {
-          const schoolConn = await prisma.schoolConnection.findFirst({
-            where: { hacUsername: conn.hacUsername },
-            include: {
-              user: {
-                include: {
-                  courses: { include: { grades: { orderBy: { createdAt: 'desc' }, take: 1 } } },
-                  assignments: { where: { completed: false } },
-                  profile: true,
-                },
-              },
-            },
-          })
-          if (schoolConn) {
-            const futurleyStudent = schoolConn.user
-            const hacCache = schoolConn.hacDataCache as Record<string, { data: unknown; cachedAt: number }> | null
-            const classworkEntry = hacCache?.['classwork:__default__']?.data as { classes?: unknown[] } | undefined
-            if (Array.isArray(classworkEntry?.classes) && classworkEntry.classes.length > 0) {
-              const normalized = normalizeHacGrades(classworkEntry.classes as Parameters<typeof normalizeHacGrades>[0])
-              hacCourses = normalized.map(c => ({ ...c, upcomingAssignments: c.upcomingAssignments }))
-            } else if (futurleyStudent.courses.length > 0) {
-              hacCourses = futurleyStudent.courses.map(c => ({
-                id: String(c.id), name: c.name, teacher: c.teacher, period: String(c.period),
-                average: c.grades[0]?.percentage ?? null, letterGrade: c.grades[0]?.letterGrade ?? null, upcomingAssignments: [],
-              }))
-            }
-            pendingAssignments = futurleyStudent.assignments.length
-            if (futurleyStudent.profile && weightedGpa === 0 && unweightedGpa === 0) {
-              weightedGpa = futurleyStudent.profile.weightedGpa ?? 0
-              unweightedGpa = futurleyStudent.profile.unweightedGpa ?? 0
-            }
-          }
-        } catch { /* non-fatal */ }
+      // If no HAC cached courses, fall back to Futurely's own cached grade data
+      if (hacCourses.length === 0 && futurley) {
+        if (futurley.hacClasses.length > 0) {
+          hacCourses = futurley.hacClasses.map(c => ({
+            id: c.name, name: c.name, teacher: c.teacher, period: c.period,
+            average: c.average != null ? parseFloat(c.average) : null,
+            letterGrade: c.average != null ? (parseFloat(c.average) >= 90 ? 'A' : parseFloat(c.average) >= 80 ? 'B' : parseFloat(c.average) >= 70 ? 'C' : parseFloat(c.average) >= 60 ? 'D' : 'F') : null,
+            upcomingAssignments: [],
+          }))
+        }
+      }
+
+      if ((weightedGpa === 0 && unweightedGpa === 0) && futurley) {
+        weightedGpa = futurley.weightedGpa
+        unweightedGpa = futurley.unweightedGpa
       }
 
       const courses = hacCourses.map(c => ({
@@ -260,7 +245,7 @@ type RawHacClass = {
   scores: Array<{ name: string; category: string; score: number | null; totalPoints: number | null; percentage: string; dateDue: string }>
 }
 
-async function getStudentHacData(hacUsername: string): Promise<{
+async function getStudentHacData(hacUsername: string, districtUrl?: string): Promise<{
   schoolConnId: number | null
   hacClasses: RawHacClass[]
   availablePeriods: string[]
@@ -273,23 +258,82 @@ async function getStudentHacData(hacUsername: string): Promise<{
   graduationYear: number | null
   studentName: string | null
 }> {
-  const schoolConn = await prisma.schoolConnection.findFirst({
-    where: { hacUsername },
-    include: {
-      user: {
-        include: {
-          assignments: { orderBy: { dueDate: 'asc' } },
-          courses: { include: { grades: { orderBy: { createdAt: 'desc' }, take: 1 } } },
-          profile: true,
-        },
+  const includeClause = {
+    user: {
+      include: {
+        // 'SEED' assignments are garbage data from broken HAC imports — exclude them.
+        // Only show MANUAL (user-created) and HAC (properly synced) assignments.
+        assignments: { where: { source: { not: 'SEED' } }, orderBy: { dueDate: 'asc' as const } },
+        courses: { include: { grades: { orderBy: { createdAt: 'desc' as const }, take: 1 } } },
+        profile: true,
       },
     },
+  } as const
+
+  // Strip trailing slash so "https://host.com" and "https://host.com/" both match the same record.
+  // There may be multiple SchoolConnections for the same hacUsername (e.g. one with/without trailing
+  // slash, or a leftover test account). Always pick the one with the most Futurely assignments so
+  // we find the real active student account.
+  const districtBase = districtUrl?.replace(/\/$/, '')
+  const districtVariants = districtBase
+    ? [districtBase, districtBase + '/']
+    : []
+
+  const candidates = await prisma.schoolConnection.findMany({
+    where: {
+      hacUsername: { equals: hacUsername, mode: 'insensitive' },
+      ...(districtVariants.length > 0 ? { districtUrl: { in: districtVariants } } : {}),
+    },
+    include: includeClause,
+  })
+
+  // If no candidates with district filter, fall back to any matching username
+  const allCandidates = candidates.length > 0
+    ? candidates
+    : await prisma.schoolConnection.findMany({
+        where: { hacUsername: { equals: hacUsername, mode: 'insensitive' } },
+        include: includeClause,
+      })
+
+  // Pick the account with the most assignments — this is the real active student account
+  const schoolConn = allCandidates.sort(
+    (a, b) => (b.user?.assignments?.length ?? 0) - (a.user?.assignments?.length ?? 0)
+  )[0] ?? null
+
+  console.log('[PARENT] getStudentHacData lookup:', {
+    hacUsername,
+    candidateCount: allCandidates.length,
+    chosen: schoolConn ? { userId: schoolConn.userId, assignmentCount: schoolConn.user?.assignments?.length ?? 0, name: schoolConn.user?.name } : null,
   })
 
   if (!schoolConn) {
+    console.log('[PARENT] getStudentHacData: no SchoolConnection found for hacUsername:', hacUsername)
     return { schoolConnId: null, hacClasses: [], availablePeriods: [], currentPeriod: '', assignments: [], completedAssignments: 0, weightedGpa: 0, unweightedGpa: 0, gradeLevel: null, graduationYear: null, studentName: null }
   }
 
+  return buildHacDataResult(schoolConn)
+}
+
+interface SchoolConnWithUser {
+  id: number
+  userId: number
+  hacDataCache: unknown
+  user: {
+    name: string | null
+    assignments: Array<{
+      id: number; title: string; subject: string; dueDate: Date
+      estimatedMinutes: number | null; completed: boolean
+      completedAt: Date | null; priority: string | null
+    }>
+    courses: Array<{
+      name: string; teacher: string; period: number
+      grades: Array<{ percentage: number | null }>
+    }>
+    profile: { weightedGpa: number; unweightedGpa: number; gradeLevel: number; graduationYear: number | null } | null
+  }
+}
+
+function buildHacDataResult(schoolConn: SchoolConnWithUser) {
   const student = schoolConn.user
   const hacCache = schoolConn.hacDataCache as Record<string, { data: unknown }> | null
   const classworkRaw = hacCache?.['classwork:__default__']?.data as { classes?: RawHacClass[]; availablePeriods?: string[]; currentPeriod?: string } | undefined
@@ -350,7 +394,15 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
     }
 
     // Get the student's Futurely data (assignments + GPA + any cached grades)
-    const futurley = await getStudentHacData(conn.hacUsername).catch(() => null)
+    const futurley = await getStudentHacData(conn.hacUsername, conn.districtUrl).catch(e => {
+      console.error('[PARENT] getStudentHacData threw:', e instanceof Error ? e.message : String(e))
+      return null
+    })
+    console.log('[PARENT] detail futurley result:', {
+      null: futurley === null,
+      assignments: futurley?.assignments?.length ?? 'n/a',
+      hacClasses: futurley?.hacClasses?.length ?? 'n/a',
+    })
 
     let hacClasses: RawHacClass[] = futurley?.hacClasses ?? []
     let availablePeriods: string[] = futurley?.availablePeriods ?? []
@@ -411,28 +463,10 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
     }
     const mappedCourses = hacClasses.map(mapCourse)
 
-    // Build assignments from two sources, merged and deduped by title:
-    // 1. Futurely account assignments (manually created, have completed status)
-    // 2. HAC upcoming assignments extracted from the grades data (always available)
-    const futurleyAssignments = futurley?.assignments ?? []
-    const seen = new Set(futurleyAssignments.map(a => a.title.toLowerCase()))
-    const normalized = normalizeHacGrades(hacClasses as Parameters<typeof normalizeHacGrades>[0])
-    const hacUpcoming = normalized.flatMap(c =>
-      c.upcomingAssignments.map(a => ({
-        title: a.name,
-        subject: c.name,
-        dueDate: (() => { const d = a.dateDue ? new Date(a.dateDue) : null; return d && !isNaN(d.getTime()) ? d.toISOString() : new Date(Date.now() + 7 * 86400000).toISOString() })(),
-        estimatedMinutes: 0,
-        completed: false,
-        completedAt: null as string | null,
-        priority: null as string | null,
-      })),
-    ).filter(a => !seen.has(a.title.toLowerCase()))
-
-    const assignments = [
-      ...futurleyAssignments,
-      ...hacUpcoming.map((a, i) => ({ ...a, id: futurleyAssignments.length + i + 1 })),
-    ]
+    // Assignments: use ONLY the student's Futurely assignments (not HAC-scraped data).
+    // HAC data flows through hacGrades for the Grades tab; Futurely assignments are
+    // what the student themselves has created/tracked in their account.
+    const assignments = futurley?.assignments ?? []
 
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -461,7 +495,7 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
           pendingAssignments: pending.length,
           assignmentsDueToday: pending.filter(a => { const d = new Date(a.dueDate); return d >= todayStart && d < todayEnd }).length,
           assignmentsDueThisWeek: pending.filter(a => { const d = new Date(a.dueDate); return d >= todayStart && d < weekEnd }).length,
-          completedAssignments: futurley?.completedAssignments ?? 0,
+          completedAssignments: assignments.filter(a => a.completed).length,
         },
       },
     })
