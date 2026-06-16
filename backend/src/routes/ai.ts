@@ -20,17 +20,19 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
   try {
     const { message: userMessage } = req.body as { message: string }
 
-    const profile = await prisma.profile.findUnique({ where: { userId: req.userId } })
-    const user = await prisma.user.findUnique({ where: { id: req.userId } })
-    const courses = await prisma.course.findMany({
-      where: { userId: req.userId },
-      include: { grades: { where: { gradingPeriod: 'CURRENT' }, take: 1 } },
-    })
-    const assignments = await prisma.assignment.findMany({
-      where: { userId: req.userId, completed: false },
-      orderBy: { dueDate: 'asc' },
-      take: 3,
-    })
+    const [profile, user, courses, assignments] = await Promise.all([
+      prisma.profile.findUnique({ where: { userId: req.userId } }),
+      prisma.user.findUnique({ where: { id: req.userId } }),
+      prisma.course.findMany({
+        where: { userId: req.userId },
+        include: { grades: { where: { gradingPeriod: 'CURRENT' }, take: 1 } },
+      }),
+      prisma.assignment.findMany({
+        where: { userId: req.userId, completed: false },
+        orderBy: { dueDate: 'asc' },
+        take: 3,
+      }),
+    ])
 
     const firstName = user?.name?.split(' ')[0] ?? 'Student'
     const wGpa = profile?.weightedGpa?.toFixed(3) ?? 'unknown'
@@ -66,7 +68,7 @@ Be encouraging, concise, and specific. Only reference the student data above —
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
       ],
-      max_tokens: 512,
+      max_tokens: 250,
     })
 
     const reply = response.choices[0]?.message?.content ?? 'Sorry, I could not generate a response right now.'
