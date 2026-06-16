@@ -179,19 +179,57 @@ router.get('/students', async (req: AuthRequest, res: Response): Promise<void> =
       orderBy: { createdAt: 'asc' },
     })
 
-    const students = connections.map(conn => {
+    const students = await Promise.all(connections.map(async conn => {
       let cached: CachedStudentData | null = null
       try { if (conn.cachedData) cached = JSON.parse(conn.cachedData) } catch { /* skip */ }
 
-      const courses = (cached?.courses ?? []).map(c => ({
+      let hacCourses = cached?.courses ?? []
+      let pendingAssignments = hacCourses.reduce((sum, c) => sum + (c.upcomingAssignments?.length ?? 0), 0)
+      let weightedGpa = cached?.weightedGpa ?? cached?.unweightedGpa ?? 0
+      let unweightedGpa = cached?.unweightedGpa ?? 0
+
+      // If cached data has no courses, fall back to Futurely student data via SchoolConnection
+      if (hacCourses.length === 0) {
+        try {
+          const schoolConn = await prisma.schoolConnection.findFirst({
+            where: { hacUsername: conn.hacUsername },
+            include: {
+              user: {
+                include: {
+                  courses: { include: { grades: { orderBy: { createdAt: 'desc' }, take: 1 } } },
+                  assignments: { where: { completed: false } },
+                  profile: true,
+                },
+              },
+            },
+          })
+          if (schoolConn) {
+            const futurleyStudent = schoolConn.user
+            const hacCache = schoolConn.hacDataCache as Record<string, { data: unknown; cachedAt: number }> | null
+            const classworkEntry = hacCache?.['classwork:__default__']?.data as { classes?: unknown[] } | undefined
+            if (Array.isArray(classworkEntry?.classes) && classworkEntry.classes.length > 0) {
+              const normalized = normalizeHacGrades(classworkEntry.classes as Parameters<typeof normalizeHacGrades>[0])
+              hacCourses = normalized.map(c => ({ ...c, upcomingAssignments: c.upcomingAssignments }))
+            } else if (futurleyStudent.courses.length > 0) {
+              hacCourses = futurleyStudent.courses.map(c => ({
+                id: String(c.id), name: c.name, teacher: c.teacher, period: String(c.period),
+                average: c.grades[0]?.percentage ?? null, letterGrade: c.grades[0]?.letterGrade ?? null, upcomingAssignments: [],
+              }))
+            }
+            pendingAssignments = futurleyStudent.assignments.length
+            if (futurleyStudent.profile && weightedGpa === 0 && unweightedGpa === 0) {
+              weightedGpa = futurleyStudent.profile.weightedGpa ?? 0
+              unweightedGpa = futurleyStudent.profile.unweightedGpa ?? 0
+            }
+          }
+        } catch { /* non-fatal */ }
+      }
+
+      const courses = hacCourses.map(c => ({
         name: c.name,
         letterGrade: c.letterGrade,
         percentage: c.average,
       }))
-
-      const pendingAssignments = (cached?.courses ?? []).reduce(
-        (sum, c) => sum + (c.upcomingAssignments?.length ?? 0), 0,
-      )
 
       return {
         id: conn.id,
@@ -199,13 +237,13 @@ router.get('/students', async (req: AuthRequest, res: Response): Promise<void> =
         email: conn.hacUsername,
         gradeLevel: conn.gradeLevel,
         graduationYear: conn.graduationYear,
-        weightedGpa: cached?.weightedGpa ?? cached?.unweightedGpa ?? 0,
-        unweightedGpa: cached?.unweightedGpa ?? 0,
+        weightedGpa,
+        unweightedGpa,
         pendingAssignments,
         totalCourses: courses.length,
         courses,
       }
-    })
+    }))
 
     res.json({ data: students })
   } catch (e) {
@@ -238,7 +276,13 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
       try {
         const decrypted = decryptPassword(conn.hacPasswordEncrypted)
         const result = await scrapeStudentData(conn.districtUrl, conn.hacUsername, decrypted, tempId)
-        cached = result.data
+        const fresh = result.data
+        // Preserve existing cached courses if the live re-fetch returned none — grades
+        // scraping can fail silently while login succeeds, and we must not overwrite good data.
+        if (fresh.courses.length === 0 && (cached?.courses.length ?? 0) > 0) {
+          fresh.courses = cached!.courses
+        }
+        cached = fresh
         await prisma.parentPortalConnection.update({
           where: { id: connId },
           data: {
