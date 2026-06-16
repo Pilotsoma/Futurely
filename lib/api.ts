@@ -456,6 +456,29 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // ── Canvas Integration ────────────────────────────────────────────────────────
+
+  canvasStatus: () =>
+    request<CanvasStatus>('/api/integrations/canvas/status'),
+
+  canvasConnect: (canvasInstanceUrl: string, accessToken: string) =>
+    request<{ connected: boolean; canvasUserName: string; canvasInstanceUrl: string }>(
+      '/api/integrations/canvas/connect',
+      { method: 'POST', body: JSON.stringify({ canvasInstanceUrl, accessToken }) }
+    ),
+
+  canvasSync: () =>
+    request<{ syncedCount: number; assignments: Array<{ title: string; subject: string; dueDate: string }> }>(
+      '/api/integrations/canvas/sync',
+      { method: 'POST' }
+    ),
+
+  canvasDisconnect: () =>
+    request<{ disconnected: boolean; deletedAssignmentsCount: number }>(
+      '/api/integrations/canvas/disconnect',
+      { method: 'DELETE' }
+    ),
+
   // ── Colleges ──────────────────────────────────────────────────────────────────
 
   collegeList: () =>
@@ -601,6 +624,16 @@ export interface PlannerItem {
   completed: boolean
   completedAt: string | null
   userId: number
+  source?: string
+}
+
+export interface CanvasStatus {
+  connected: boolean
+  canvasInstanceUrl: string | null
+  canvasUserName: string | null
+  lastSynced: string | null
+  syncStatus: string | null
+  syncError: string | null
 }
 
 // ── Study Feed types ───────────────────────────────────────────────────────

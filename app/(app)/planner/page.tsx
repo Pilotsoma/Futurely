@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { api, type PlannerItem, type StudentData } from '../../../lib/api'
+import { api, type PlannerItem, type CanvasStatus } from '../../../lib/api'
 import PageLoader from '../../../components/ui/PageLoader'
 
 type GroupKey = 'Overdue' | 'Today' | 'Tomorrow' | 'This Week' | 'Later' | 'Completed'
@@ -43,11 +43,32 @@ function formatDueDate(item: PlannerItem): string {
   return dateStr
 }
 
+function formatRelativeTime(isoString: string | null): string {
+  if (!isoString) return 'Never'
+  const date = new Date(isoString)
+  const diffMs = Date.now() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  const diffDay = Math.floor(diffHr / 24)
+  return `${diffDay}d ago`
+}
+
 export default function PlannerPage() {
   const [items, setItems] = useState<PlannerItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [toggling, setToggling] = useState<Set<number>>(new Set())
+
+  // Canvas state
+  const [canvasStatus, setCanvasStatus] = useState<CanvasStatus | null>(null)
+  const [canvasLoading, setCanvasLoading] = useState(false)
+  const [showCanvasForm, setShowCanvasForm] = useState(false)
+  const [canvasUrl, setCanvasUrl] = useState('')
+  const [canvasToken, setCanvasToken] = useState('')
+  const [canvasError, setCanvasError] = useState<string | null>(null)
 
   // Form state
   const [showForm, setShowForm] = useState(false)
@@ -60,8 +81,12 @@ export default function PlannerPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const assignments = await api.plannerList()
+      const [assignments, status] = await Promise.all([
+        api.plannerList(),
+        api.canvasStatus(),
+      ])
       setItems(assignments)
+      setCanvasStatus(status)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load planner')
     } finally {
@@ -69,7 +94,7 @@ export default function PlannerPage() {
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { void fetchData() }, [fetchData])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -122,7 +147,68 @@ export default function PlannerPage() {
       await api.plannerDelete(id)
     } catch {
       // Refetch on failure
-      fetchData()
+      void fetchData()
+    }
+  }
+
+  async function handleCanvasSync() {
+    setCanvasLoading(true)
+    try {
+      await api.canvasSync()
+      const assignments = await api.plannerList()
+      setItems(assignments)
+      const status = await api.canvasStatus()
+      setCanvasStatus(status)
+    } catch (e) {
+      setCanvasError(e instanceof Error ? e.message : 'Sync failed')
+    } finally {
+      setCanvasLoading(false)
+    }
+  }
+
+  async function handleCanvasConnect(e: React.FormEvent) {
+    e.preventDefault()
+    setCanvasLoading(true)
+    setCanvasError(null)
+    try {
+      const result = await api.canvasConnect(canvasUrl.trim(), canvasToken.trim())
+      setCanvasStatus({
+        connected: true,
+        canvasInstanceUrl: result.canvasInstanceUrl,
+        canvasUserName: result.canvasUserName,
+        lastSynced: null,
+        syncStatus: null,
+        syncError: null,
+      })
+      setShowCanvasForm(false)
+      setCanvasUrl('')
+      setCanvasToken('')
+      // Auto-sync after connecting
+      await handleCanvasSync()
+    } catch (e) {
+      setCanvasError(e instanceof Error ? e.message : 'Failed to connect Canvas')
+    } finally {
+      setCanvasLoading(false)
+    }
+  }
+
+  async function handleCanvasDisconnect() {
+    setCanvasLoading(true)
+    try {
+      await api.canvasDisconnect()
+      setCanvasStatus({
+        connected: false,
+        canvasInstanceUrl: null,
+        canvasUserName: null,
+        lastSynced: null,
+        syncStatus: null,
+        syncError: null,
+      })
+      setItems(prev => prev.filter(item => item.source !== 'CANVAS'))
+    } catch (e) {
+      setCanvasError(e instanceof Error ? e.message : 'Failed to disconnect')
+    } finally {
+      setCanvasLoading(false)
     }
   }
 
@@ -153,6 +239,147 @@ export default function PlannerPage() {
           {showForm ? 'Cancel' : '+ New Task'}
         </button>
       </div>
+
+      {/* Canvas Panel */}
+      {canvasStatus?.connected ? (
+        <div className="ns-card" style={{ padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {canvasStatus.syncError === 'TOKEN_REVOKED' && (
+            <span style={{ fontSize: 12, color: '#F59E0B', fontWeight: 600, marginRight: 4 }}>
+              Token expired — reconnect Canvas
+            </span>
+          )}
+          <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: '#22C55E', fontWeight: 700 }}>✓</span>
+            Canvas connected
+          </span>
+          <span style={{ color: 'var(--border)', fontSize: 13 }}>•</span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+            Synced {formatRelativeTime(canvasStatus.lastSynced)}
+          </span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => void handleCanvasSync()}
+              disabled={canvasLoading}
+              style={{
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 7,
+                padding: '6px 12px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text)',
+                cursor: canvasLoading ? 'not-allowed' : 'pointer',
+                opacity: canvasLoading ? 0.6 : 1,
+              }}
+            >
+              {canvasLoading ? 'Syncing…' : 'Sync Now'}
+            </button>
+            <button
+              onClick={() => void handleCanvasDisconnect()}
+              disabled={canvasLoading}
+              style={{
+                background: 'none',
+                border: '1px solid var(--border)',
+                borderRadius: 7,
+                padding: '6px 12px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                cursor: canvasLoading ? 'not-allowed' : 'pointer',
+                opacity: canvasLoading ? 0.6 : 1,
+              }}
+            >
+              Disconnect
+            </button>
+          </div>
+          {canvasError && (
+            <div style={{ width: '100%', fontSize: 12, color: '#EF4444', marginTop: 4 }}>{canvasError}</div>
+          )}
+        </div>
+      ) : showCanvasForm ? (
+        <div className="ns-card" style={{ padding: '16px 18px', marginBottom: 16 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>
+            Link your Canvas account
+          </p>
+          <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
+            Get your token: Canvas → Profile → Settings → Approved Integrations → New Access Token
+          </p>
+          <form onSubmit={e => void handleCanvasConnect(e)}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+              <input
+                type="text"
+                placeholder="katyisd.instructure.com"
+                value={canvasUrl}
+                onChange={e => setCanvasUrl(e.target.value)}
+                required
+                style={S.input}
+              />
+              <input
+                type="password"
+                placeholder="Canvas Personal Access Token"
+                value={canvasToken}
+                onChange={e => setCanvasToken(e.target.value)}
+                required
+                style={S.input}
+              />
+            </div>
+            {canvasError && (
+              <div style={{ fontSize: 12, color: '#EF4444', marginBottom: 8 }}>{canvasError}</div>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="submit"
+                disabled={canvasLoading || !canvasUrl.trim() || !canvasToken.trim()}
+                style={{
+                  ...S.button,
+                  opacity: canvasLoading || !canvasUrl.trim() || !canvasToken.trim() ? 0.5 : 1,
+                }}
+              >
+                {canvasLoading ? 'Connecting…' : 'Connect Canvas'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCanvasForm(false)
+                  setCanvasUrl('')
+                  setCanvasToken('')
+                  setCanvasError(null)
+                }}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-2)',
+                  color: 'var(--text)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 16 }}>
+          <button
+            onClick={() => setShowCanvasForm(true)}
+            style={{
+              background: 'none',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: '7px 14px',
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+            }}
+          >
+            Link Canvas
+          </button>
+        </div>
+      )}
 
       {/* Create Form */}
       {showForm && (
@@ -210,7 +437,7 @@ export default function PlannerPage() {
         <div style={S.empty}>
           <div style={S.emptyIcon}>✓</div>
           <p style={{ fontSize: 17, fontWeight: 700, marginBottom: 5 }}>No tasks yet</p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Click "+ New Task" to add your first assignment.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Click &quot;+ New Task&quot; to add your first assignment.</p>
         </div>
       ) : groups.map(group => {
         const meta = GROUP_META[group.key]
@@ -265,8 +492,21 @@ export default function PlannerPage() {
                       }}>
                         {item.title}
                       </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                         {item.subject && <span>{item.subject}</span>}
+                        {item.source === 'CANVAS' && (
+                          <span style={{
+                            background: 'rgba(229, 57, 53, 0.12)',
+                            color: '#E53935',
+                            borderRadius: 4,
+                            padding: '1px 5px',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: '0.3px',
+                          }}>
+                            Canvas
+                          </span>
+                        )}
                         <span>Due {formatDueDate(item)}</span>
                       </div>
                     </div>

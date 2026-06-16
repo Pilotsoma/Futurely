@@ -16,6 +16,7 @@ import collegesRouter from './routes/colleges'
 import marketplaceRouter from './routes/marketplace'
 import { requireAuth } from './middleware/auth'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
+import canvasRouter from './integrations/canvas/canvasRouter'
 
 const app = express()
 
@@ -129,6 +130,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/feed', devBypass, feedRouter)
   app.use('/notifications', devBypass, notificationsRouter)
   app.use('/integrations/grades', devBypass, gradesIntegrationRouter)
+  app.use('/integrations/canvas', devBypass, canvasRouter)
   app.use('/colleges', devBypass, collegesRouter)
   app.use('/marketplace', devBypass, marketplaceRouter)
 } else {
@@ -139,6 +141,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/feed', requireAuth, feedRouter)
   app.use('/notifications', requireAuth, notificationsRouter)
   app.use('/integrations/grades', requireAuth, gradesIntegrationRouter)
+  app.use('/integrations/canvas', requireAuth, canvasRouter)
   app.use('/colleges', requireAuth, collegesRouter)
   app.use('/marketplace', requireAuth, marketplaceRouter)
 }

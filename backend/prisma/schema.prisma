@@ -54,6 +54,7 @@ model User {
   tradesReceived           TradeOffer[]             @relation("TradesReceived")
   marketplaceListings      MarketplaceListing[]     @relation("ListingsSold")
   listingsPurchased        MarketplaceListing[]     @relation("ListingsBought")
+  canvasConnection         CanvasConnection?
 }
 
 model Profile {
@@ -343,4 +344,19 @@ model ItemPrice {
   price    Int
 
   @@unique([itemType, itemId])
+}
+
+model CanvasConnection {
+  id                Int       @id @default(autoincrement())
+  userId            Int       @unique
+  canvasInstanceUrl String
+  encryptedToken    String
+  canvasUserId      String?
+  canvasUserName    String?
+  lastSynced        DateTime?
+  syncStatus        String?
+  syncError         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
