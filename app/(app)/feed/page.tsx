@@ -689,6 +689,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
   const canDelete = post.userId === currentUserId || isDevUser
   const isPinned = !!post.pinnedUntil && new Date(post.pinnedUntil) > new Date()
   const isGiveaway = post.type === 'giveaway'
+  const isUnbox = post.type === 'UNBOX'
   const isCoinGiveaway = isGiveaway && !!post.giveawayCoinAmount
   const isNameColorGiveaway = isGiveaway && post.giveawayItemType === 'name-color'
   const isPfpGiveaway = isGiveaway && post.giveawayItemType === 'pfp'
@@ -743,6 +744,60 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
       {/* Body */}
       <div style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--text)', marginBottom: 14, whiteSpace: 'pre-wrap' as const }}>{post.body}</div>
+
+      {/* Unbox section */}
+      {isUnbox && post.unboxItemName && (
+        <div style={{ border: `1px solid ${post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'}0d` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <span style={{ fontSize: 20 }}>{post.unboxItemRarity === 'Mythic' ? '👑' : '🌟'}</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308', letterSpacing: '0.5px' }}>
+                {post.unboxItemType === 'tag' ? 'TAG UNBOX' : post.unboxItemType === 'name-color' ? 'NAME COLOR UNBOX' : 'PFP UNBOX'}
+              </div>
+            </div>
+            <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, color: post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308', background: `${post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'}18`, border: `1px solid ${post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'}44` }}>
+              {post.unboxItemRarity}
+            </span>
+          </div>
+
+          {/* Item preview card */}
+          <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)' }}>
+            {/* DUMMY avatar preview */}
+            {post.unboxItemType === 'pfp' ? (
+              <div className={pfpClass(post.unboxItemTagColor)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemTagColor) }}>D</div>
+            ) : post.unboxItemType === 'name-color' && post.unboxItemTagColor ? (
+              <div className={post.unboxItemTagColor === 'rainbow' ? 'name-rainbow' : ''} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...(post.unboxItemTagColor !== 'rainbow' ? { color: post.unboxItemTagColor } : {}) }}>D</div>
+            ) : (
+              <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>D</div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>
+                  {post.unboxItemName}
+                </span>
+                {/* Show item value (tag color name or name color hex) */}
+                {post.unboxItemValue && (
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: `${post.unboxItemTagColor || '#6B7280'}22`, color: post.unboxItemTagColor || '#6B7280', border: `1px solid ${post.unboxItemTagColor || '#6B7280'}` }}>
+                    {post.unboxItemValue}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>DUMMY</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>[Student]</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Estimated value */}
+          {post.unboxItemEstValue != null && post.unboxItemEstValue > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+              <span style={{ fontSize: 13 }}>💰</span>
+              <span>Est. value: <strong style={{ color: '#EAB308' }}>🪙 {post.unboxItemEstValue?.toLocaleString()}</strong></span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Giveaway section */}
       {isGiveaway && (

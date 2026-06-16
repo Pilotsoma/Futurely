@@ -1,7 +1,7 @@
 import { Router, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
-import { sendToUser } from '../lib/websocket'
+import { sendToUser, broadcast } from '../lib/websocket'
 
 const router = Router()
 
@@ -387,6 +387,53 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
   }
 })
 
+// ── Unbox auto-post helper ────────────────────────────────────────────────────
+
+async function autoPostUnbox(
+  userId: number,
+  boxType: string,
+  itemId: string,
+  itemName: string,
+  itemValue: string | undefined,
+  itemRarity: string,
+  itemTagColor: string | undefined,
+): Promise<void> {
+  try {
+    const emoji = itemRarity === 'Mythic' ? '👑' : '🌟'
+    const seedKey = `${boxType}:${itemId}`
+    const estValue = SEED_PRICES[seedKey] ?? 0
+
+    const postUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true },
+    })
+    if (!postUser) return
+
+    const newPost = await prisma.post.create({
+      data: {
+        body: `${emoji} I just unboxed ${itemName}!`,
+        userId,
+        type: 'UNBOX',
+        unboxItemType: boxType,
+        unboxItemId: itemId,
+        unboxItemName: itemName,
+        unboxItemValue: itemValue ?? itemTagColor ?? null,
+        unboxItemRarity: itemRarity,
+        unboxItemEstValue: estValue,
+        unboxItemTagColor: itemTagColor ?? null,
+      },
+      include: {
+        likes: { select: { userId: true } },
+        giveawayEntries: { select: { userId: true } },
+        giveawayWinner: { select: { id: true, name: true, email: true } },
+        _count: { select: { likes: true, comments: true, giveawayEntries: true } },
+      },
+    })
+
+    broadcast('NEW_POST', { ...newPost, user: postUser, likedByMe: false, enteredByMe: false })
+  } catch { /* silent — never fail the unbox */ }
+}
+
 // ── Open Box ──────────────────────────────────────────────────────────────────
 
 router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
@@ -421,6 +468,11 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
       })
       res.json({ data: { coins: updated.coins, won: { ...won, type: 'tag' }, alreadyHad: alreadyHas } })
 
+      // Auto-post for Legendary/Mythic unboxes
+      if (!alreadyHas && (won.rarity === 'Legendary' || won.rarity === 'Mythic')) {
+        autoPostUnbox(req.userId, 'tag', won.id, won.tag, undefined, won.rarity, won.tagColor)
+      }
+
     } else if (boxType === 'name-color') {
       const won = weightedRandom(NAME_COLOR_BOX_ITEMS)
       const owned = parseJsonArr(user.ownedNameColors)
@@ -434,6 +486,11 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
       })
       res.json({ data: { coins: updated.coins, won: { ...won, type: 'name-color' }, alreadyHad: alreadyHas } })
 
+      // Auto-post for Legendary/Mythic unboxes
+      if (!alreadyHas && (won.rarity === 'Legendary' || won.rarity === 'Mythic')) {
+        autoPostUnbox(req.userId, 'name-color', won.id, won.name, won.value, won.rarity, undefined)
+      }
+
     } else {
       const won = weightedRandom(PFP_EFFECT_BOX_ITEMS)
       const owned = parseJsonArr(user.ownedPfpEffects)
@@ -446,6 +503,11 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
         select: { coins: true },
       })
       res.json({ data: { coins: updated.coins, won: { ...won, type: 'pfp' }, alreadyHad: alreadyHas } })
+
+      // Auto-post for Legendary/Mythic unboxes
+      if (!alreadyHas && (won.rarity === 'Legendary' || won.rarity === 'Mythic')) {
+        autoPostUnbox(req.userId, 'pfp', won.id, won.name, won.value, won.rarity, undefined)
+      }
     }
   } catch {
     res.status(500).json({ error: 'Failed to open box' })

@@ -618,6 +618,13 @@ export interface FeedPost {
   giveawayItemType: string | null
   giveawayItemId: string | null
   giveawayItemRarity: string | null
+  unboxItemType: string | null
+  unboxItemId: string | null
+  unboxItemName: string | null
+  unboxItemValue: string | null
+  unboxItemRarity: string | null
+  unboxItemEstValue: number | null
+  unboxItemTagColor: string | null
   _count: { likes: number; comments: number; giveawayEntries: number }
 }
 

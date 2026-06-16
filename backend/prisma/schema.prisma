@@ -145,6 +145,13 @@ model Post {
   giveawayItemType   String?
   giveawayItemId     String?
   giveawayItemRarity String?
+  unboxItemType     String?
+  unboxItemId       String?
+  unboxItemName     String?
+  unboxItemValue    String?
+  unboxItemRarity   String?
+  unboxItemEstValue Int?
+  unboxItemTagColor String?
   pinnedUntil      DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
