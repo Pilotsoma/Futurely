@@ -703,7 +703,8 @@ export default function MarketplacePage() {
             ...(effectStyle.boxShadow ? { boxShadow: effectStyle.boxShadow } : {}),
           }
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <PriceTooltip key={i} price={prices[`${item.type}:${item.id}`]}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
               {/* Type badge */}
               <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: 'var(--text-muted)', flexShrink: 0 }}>
                 {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
@@ -720,6 +721,7 @@ export default function MarketplacePage() {
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{item.name ?? item.tag}</span>
               <RarityBadge rarity={item.rarity} />
             </div>
+            </PriceTooltip>
           )
         })}
         {items.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nothing</span>}
@@ -1341,6 +1343,22 @@ export default function MarketplacePage() {
             </div>
           ) : (
             <>
+              {Object.keys(prices).length > 0 && (() => {
+                let worth = 0
+                for (const t of (inv?.ownedTags ?? [])) worth += prices[`tag:${t.id}`] ?? 0
+                for (const c of (inv?.ownedNameColors ?? [])) worth += prices[`name-color:${c.id}`] ?? 0
+                for (const p of (inv?.ownedPfpEffects ?? [])) worth += prices[`pfp:${p.id}`] ?? 0
+                return (
+                  <div className="ns-card" style={{ padding: 16, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 4 }}>Est. Inventory Worth</div>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: '#EAB308', letterSpacing: '-0.5px' }}>🪙 {worth.toLocaleString()}</div>
+                    </div>
+                    <div style={{ fontSize: 28 }}>💰</div>
+                  </div>
+                )
+              })()}
+
               {(inv?.ownedTags ?? []).length > 0 && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>🏷️ Tags</div>
