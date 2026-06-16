@@ -21,8 +21,8 @@ const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'ace',            tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      weight: 1.75 },
   { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#EC4899', rarity: 'Epic',      weight: 1.75 },
   { id: 'mastermind',     tag: 'Mastermind',      tagColor: '#EAB308', rarity: 'Legendary', weight: 0.5  },
-  { id: 'genius',         tag: 'Genius',          tagColor: '#EC4899', rarity: 'Legendary', weight: 0.5  },
-  { id: 'god',            tag: 'GOD',             tagColor: '#EAB308', rarity: 'Mythic',    weight: 0.5  },
+  { id: 'genius',         tag: 'Genius',          tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
+  { id: 'god',            tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    weight: 0.5  },
 ]
 
 const NAME_COLOR_BOX_ITEMS: ColorItem[] = [
