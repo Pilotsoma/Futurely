@@ -74,6 +74,42 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
   },
 ]
 
+type SimItem = { id: string; label: string; rarity: string; type: 'tag' | 'name-color' | 'pfp'; tag?: string; tagColor?: string; value?: string; name?: string }
+const SIM_ITEMS: Record<'tag' | 'name-color' | 'pfp', SimItem[]> = {
+  tag: [
+    { id: 'grinder',        label: 'Grinder (Common)',          rarity: 'Common',    type: 'tag', tag: 'Grinder',        tagColor: '#6B7280' },
+    { id: 'focused',        label: 'Focused (Common)',          rarity: 'Common',    type: 'tag', tag: 'Focused',         tagColor: '#6B7280' },
+    { id: 'scholar',        label: 'Scholar (Common)',          rarity: 'Common',    type: 'tag', tag: 'Scholar',         tagColor: '#6B7280' },
+    { id: 'honors-student', label: 'Honors Student (Uncommon)', rarity: 'Uncommon',  type: 'tag', tag: 'Honors Student',  tagColor: '#3B82F6' },
+    { id: 'ap-student',     label: 'AP Student (Uncommon)',     rarity: 'Uncommon',  type: 'tag', tag: 'AP Student',      tagColor: '#06B6D4' },
+    { id: 'deans-list',     label: "Dean's List (Rare)",        rarity: 'Rare',      type: 'tag', tag: "Dean's List",     tagColor: '#8B5CF6' },
+    { id: 'top-performer',  label: 'Top Performer (Rare)',      rarity: 'Rare',      type: 'tag', tag: 'Top Performer',   tagColor: '#8B5CF6' },
+    { id: 'ace',            label: 'Ace (Epic)',                rarity: 'Epic',      type: 'tag', tag: 'Ace',             tagColor: '#F97316' },
+    { id: 'prodigy',        label: 'Prodigy (Epic)',            rarity: 'Epic',      type: 'tag', tag: 'Prodigy',         tagColor: '#EC4899' },
+    { id: 'mastermind',     label: 'Mastermind (Legendary)',    rarity: 'Legendary', type: 'tag', tag: 'Mastermind',      tagColor: '#EAB308' },
+    { id: 'genius',         label: 'Genius (Legendary)',        rarity: 'Legendary', type: 'tag', tag: 'Genius',          tagColor: '#EC4899' },
+    { id: 'goat',           label: 'GOAT (Mythic)',             rarity: 'Mythic',    type: 'tag', tag: 'GOAT',            tagColor: '#EAB308' },
+  ],
+  'name-color': [
+    { id: 'forest-green',  label: 'Forest Green (Common)',    rarity: 'Common',    type: 'name-color', name: 'Forest Green',  value: '#15803D' },
+    { id: 'navy-blue',     label: 'Navy Blue (Common)',       rarity: 'Common',    type: 'name-color', name: 'Navy Blue',      value: '#1D4ED8' },
+    { id: 'hot-pink',      label: 'Hot Pink (Rare)',          rarity: 'Rare',      type: 'name-color', name: 'Hot Pink',       value: '#DB2777' },
+    { id: 'electric-blue', label: 'Electric Blue (Epic)',     rarity: 'Epic',      type: 'name-color', name: 'Electric Blue',  value: '#2563EB' },
+    { id: 'magenta',       label: 'Magenta (Epic)',           rarity: 'Epic',      type: 'name-color', name: 'Magenta',        value: '#C026D3' },
+    { id: 'pure-white',    label: 'Pure White (Legendary)',   rarity: 'Legendary', type: 'name-color', name: 'Pure White',     value: '#F8FAFC' },
+    { id: 'black',         label: 'Black (Legendary)',        rarity: 'Legendary', type: 'name-color', name: 'Black',          value: '#111111' },
+    { id: 'rainbow',       label: 'Rainbow RGB ✨ (Mythic)',  rarity: 'Mythic',    type: 'name-color', name: 'Rainbow RGB',    value: 'rainbow' },
+  ],
+  pfp: [
+    { id: 'border-green',   label: 'Green Border (Common)',      rarity: 'Common',    type: 'pfp', name: 'Green Border',     value: 'border-green' },
+    { id: 'glow-pink',      label: 'Pink Glow (Epic)',           rarity: 'Epic',      type: 'pfp', name: 'Pink Glow',        value: 'glow-pink' },
+    { id: 'glow-purple',    label: 'Purple Glow (Epic)',         rarity: 'Epic',      type: 'pfp', name: 'Purple Glow',      value: 'glow-purple' },
+    { id: 'glow-gold',      label: 'Gold Fill (Legendary)',      rarity: 'Legendary', type: 'pfp', name: 'Gold Fill',        value: 'glow-gold' },
+    { id: 'frame-black',    label: 'Void Fill (Legendary)',      rarity: 'Legendary', type: 'pfp', name: 'Void Fill',        value: 'frame-black' },
+    { id: 'rainbow',        label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic',  type: 'pfp', name: 'Rainbow Animated', value: 'rainbow' },
+  ],
+}
+
 type Tab = 'boxes' | 'shop' | 'trade' | 'inventory'
 type TradeSubTab = 'new' | 'incoming' | 'sent'
 
@@ -125,6 +161,8 @@ export default function MarketplacePage() {
   const [devItemId, setDevItemId] = useState('')
   const [devGranting, setDevGranting] = useState(false)
   const [devMsg, setDevMsg] = useState('')
+  const [simBoxType, setSimBoxType] = useState<'tag' | 'name-color' | 'pfp'>('name-color')
+  const [simItemId, setSimItemId] = useState('')
 
   // Shop (listings)
   const [listings, setListings] = useState<MarketplaceListing[]>([])
@@ -607,11 +645,13 @@ export default function MarketplacePage() {
       {/* ── BOXES TAB ── */}
       {tab === 'boxes' && (
         <>
-          {result && !result.dismissed && (
-            <div className="ns-card box-pop" style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${RARITY_COLOR[result.won.rarity] ?? 'var(--border)'}55`, background: `${RARITY_COLOR[result.won.rarity] ?? '#000'}08` }}>
-              <div style={{ fontSize: 48, marginBottom: 10 }}>🎉</div>
+          {result && !result.dismissed && (() => {
+            const isRainbow = result.won.value === 'rainbow'
+            return (
+            <div className={`ns-card box-pop${isRainbow ? ' box-rainbow' : ''}`} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? 'var(--border)')}55`, background: isRainbow ? 'rgba(255,107,107,0.06)' : `${RARITY_COLOR[result.won.rarity] ?? '#000'}08` }}>
+              <div style={{ fontSize: 48, marginBottom: 10 }}>{isRainbow ? '🌈' : '🎉'}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: RARITY_COLOR[result.won.rarity] ?? 'var(--text)', marginBottom: 4 }}>
+              <div className={isRainbow ? 'name-rainbow' : ''} style={{ fontSize: 24, fontWeight: 800, color: isRainbow ? undefined : (RARITY_COLOR[result.won.rarity] ?? 'var(--text)'), marginBottom: 4 }}>
                 {result.won.name ?? result.won.tag}
               </div>
               <div style={{ fontSize: 13, color: RARITY_COLOR[result.won.rarity] ?? 'var(--text-muted)', fontWeight: 700, marginBottom: 16 }}>
@@ -634,7 +674,8 @@ export default function MarketplacePage() {
                 </button>
               </div>
             </div>
-          )}
+            )
+          })()}
 
           <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 12 }}>Open a Box — spend coins to unlock rewards</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
@@ -1182,6 +1223,41 @@ export default function MarketplacePage() {
               </button>
             </div>
             {devMsg && <div style={{ fontSize: 12, color: devMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600 }}>{devMsg}</div>}
+
+            {/* Simulate unlock */}
+            <div style={{ borderTop: '1px solid rgba(255,107,107,0.2)', paddingTop: 14, marginTop: 2 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🎰 Simulate Unlock</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
+                <select value={simBoxType} onChange={e => { setSimBoxType(e.target.value as 'tag' | 'name-color' | 'pfp'); setSimItemId('') }}
+                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
+                  <option value="tag">Tag Box</option>
+                  <option value="name-color">Name Color Box</option>
+                  <option value="pfp">PFP Box</option>
+                </select>
+                <select value={simItemId} onChange={e => setSimItemId(e.target.value)}
+                  style={{ flex: 1, minWidth: 160, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
+                  <option value="">Pick an item…</option>
+                  {SIM_ITEMS[simBoxType].map(i => (
+                    <option key={i.id} value={i.id}>{i.label}</option>
+                  ))}
+                </select>
+                <button
+                  disabled={!simItemId}
+                  onClick={() => {
+                    const item = SIM_ITEMS[simBoxType].find(i => i.id === simItemId)
+                    if (!item) return
+                    setResult({
+                      coins: inv?.coins ?? 0,
+                      won: { id: item.id, name: item.name, tag: item.tag, tagColor: item.tagColor, value: item.value, rarity: item.rarity, type: item.type },
+                      alreadyHad: false,
+                    })
+                    setTab('boxes')
+                  }}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#8B5CF6', color: '#fff', fontWeight: 700, fontSize: 13, cursor: simItemId ? 'pointer' : 'not-allowed', opacity: simItemId ? 1 : 0.5 }}>
+                  Simulate
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
