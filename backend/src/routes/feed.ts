@@ -812,7 +812,7 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
     if (!profile) return res.status(404).json({ error: 'User not found' });
     if (profile.deletedAt) {
       const isDev = await hasDevPowers(userId);
-      if (!isDev) return res.status(404).json({ error: 'User not found' });
+      if (!isDev && userId !== targetId) return res.status(404).json({ error: 'User not found' });
     }
 
     const [totalLikes, isFollowingRow] = await Promise.all([
@@ -1055,7 +1055,7 @@ router.delete('/users/:id', async (req: Request, res: Response) => {
     const target = await prisma.user.findUnique({ where: { id: targetId }, select: { chatBanned: true } });
     if (!target) return res.status(404).json({ error: 'User not found' });
     if (!target.chatBanned) return res.status(400).json({ error: 'User must be banned before their account can be deleted' });
-    await prisma.user.delete({ where: { id: targetId } });
+    await prisma.user.update({ where: { id: targetId }, data: { deletedAt: new Date() } });
     res.json({ data: { deleted: true } });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete account' });

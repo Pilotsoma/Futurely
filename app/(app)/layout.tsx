@@ -52,6 +52,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
   const pathname = usePathname()
   const [checked, setChecked]   = useState(false)
+  const [isDeleted, setIsDeleted] = useState(false)
   const [userName, setUserName] = useState<string>('Student')
   const [collapsed, setCollapsed] = useState(true)
 
@@ -91,6 +92,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           setUserName(n.split(' ')[0])
         }
       }
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1])) as { sub?: number }
+        const uid = payload.sub
+        if (uid) {
+          api.feedUserProfile(uid).then(p => {
+            if (p.deletedAt) setIsDeleted(true)
+          }).catch(() => {})
+        }
+      } catch { /* malformed token — auth will fail naturally */ }
       api.portalStatus()
         .catch(() => {})
         .finally(() => setChecked(true))
@@ -117,6 +127,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         Refreshing session…
       </motion.span>
+    </div>
+  )
+
+  if (isDeleted) return (
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--surface)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, zIndex: 9999 }}>
+      <div style={{ fontSize: 52 }}>🚫</div>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', margin: 0 }}>Your account has been deleted</h1>
+      <p style={{ fontSize: 14, color: 'var(--text-muted)', textAlign: 'center' as const, maxWidth: 360, margin: 0, lineHeight: 1.6 }}>
+        Your Futurely account has been permanently removed by an administrator.
+      </p>
+      <button className="ns-btn-ghost" style={{ marginTop: 8 }} onClick={handleLogout}>Log out</button>
     </div>
   )
 

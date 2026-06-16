@@ -653,6 +653,7 @@ export interface FeedUserProfile {
   totalLikes: number
   chatBanned: boolean
   chatMutedUntil: string | null
+  deletedAt?: string | null
   allTags: Array<{ tag: string; tagColor: string }>
   _count: { followers: number; following: number; posts: number }
 }
