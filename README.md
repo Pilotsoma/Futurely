@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-# NextStep MVP Productsssassssssssssssssssssssssssk
-=======
 # NextStep MVP Product
->>>>>>> 144e69b (SSSS)
 
 AI-powered academic companion for high school students.
 
