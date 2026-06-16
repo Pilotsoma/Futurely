@@ -1283,9 +1283,13 @@ export default function StudyFeedPage() {
       if (dead) return
       ws = new WebSocket(wsBase)
       ws.onopen = () => ws.send(JSON.stringify({ type: 'AUTH', token }))
-      ws.onmessage = (e) => {
+          ws.onmessage = (e) => {
         try {
-          const msg = JSON.parse(e.data as string) as { event: string; data: AppNotification }
+          const msg = JSON.parse(e.data as string) as { event: string; data: any }
+          if (msg.event === 'NEW_POST') {
+            // New post (unbox, etc.) — prepend to feed
+            setPosts(prev => [{ ...msg.data, likedByMe: false, enteredByMe: false }, ...prev])
+          }
           if (msg.event === 'NOTIFICATION') {
             setNotifs(prev => [msg.data, ...prev])
             setUnread(c => c + 1)
