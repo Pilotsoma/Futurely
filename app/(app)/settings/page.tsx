@@ -89,6 +89,22 @@ export default function SettingsPage() {
   const [saveMsg, setSaveMsg]           = useState<string | null>(null)
   const [dirty, setDirty]               = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [avatarUrl, setAvatarUrl]             = useState('')
+  const [avatarSaving, setAvatarSaving]       = useState(false)
+  const [avatarMsg, setAvatarMsg]             = useState<string | null>(null)
+
+  async function handleSaveAvatar() {
+    setAvatarSaving(true); setAvatarMsg(null)
+    try {
+      await api.updateAvatarUrl(avatarUrl.trim() || null)
+      setAvatarMsg('Saved!')
+    } catch {
+      setAvatarMsg('Failed to save')
+    } finally {
+      setAvatarSaving(false)
+      setTimeout(() => setAvatarMsg(null), 2000)
+    }
+  }
 
   useEffect(() => {
     api.me().then(d => {
@@ -395,6 +411,47 @@ export default function SettingsPage() {
             </svg>
             Sign Out
           </button>
+
+          {/* DEV-only: profile picture URL */}
+          {data?.role === 'ADMIN' && (
+            <div className="ns-card" style={{ ...S.card, border: '1px solid rgba(75,110,255,0.25)' }}>
+              <p style={{ ...S.cardLabel, color: 'var(--primary)' }}>DEV — Avatar URL</p>
+              <div style={S.fieldRow}>
+                <label style={S.fieldRowLabel}>Image URL</label>
+                <input
+                  className="ns-input"
+                  type="url"
+                  placeholder="https://..."
+                  value={avatarUrl}
+                  onChange={e => setAvatarUrl(e.target.value)}
+                  style={{ ...S.inlineInput, width: 200 }}
+                />
+              </div>
+              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button
+                  className="ns-btn-primary"
+                  style={{ height: 36, padding: '0 18px', fontSize: 13 }}
+                  onClick={handleSaveAvatar}
+                  disabled={avatarSaving}
+                >
+                  {avatarSaving ? 'Saving…' : 'Set Avatar'}
+                </button>
+                <button
+                  className="ns-btn-ghost"
+                  style={{ height: 36, padding: '0 14px', fontSize: 13 }}
+                  onClick={() => { setAvatarUrl(''); api.updateAvatarUrl(null).then(() => setAvatarMsg('Cleared!')).catch(() => null) }}
+                  disabled={avatarSaving}
+                >
+                  Clear
+                </button>
+                {avatarMsg && (
+                  <span style={{ fontSize: 13, color: avatarMsg === 'Saved!' || avatarMsg === 'Cleared!' ? '#22C55E' : 'var(--error)' }}>
+                    {avatarMsg}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Danger zone */}
           <div className="ns-card" style={{ ...S.card, marginTop: 16, border: '1px solid rgba(239,68,68,0.25)' }}>

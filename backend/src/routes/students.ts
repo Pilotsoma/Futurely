@@ -161,6 +161,19 @@ router.patch('/me/profile', requireAuth, async (req: AuthRequest, res: Response)
   }
 })
 
+router.patch('/me/avatar', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true } })
+    if (user?.role !== 'ADMIN') { res.status(403).json({ error: 'DEV only' }); return }
+    const { avatarUrl } = req.body as { avatarUrl: string | null }
+    const updated = await prisma.user.update({ where: { id: req.userId }, data: { avatarUrl: avatarUrl ?? null }, select: { avatarUrl: true } })
+    res.json({ data: updated })
+  } catch {
+    res.status(500).json({ error: 'Failed to update avatar' })
+  }
+})
+
 router.post('/me/streak-reward', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }); return }
   const { streak } = req.body as { streak?: number }

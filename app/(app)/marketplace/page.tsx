@@ -1116,9 +1116,11 @@ export default function MarketplacePage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
                   <div
                     className={pfpClass(profilePanel.pfpEffect)}
-                    style={{ width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0, ...pfpStyle(profilePanel.pfpEffect) }}
+                    style={{ width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0, ...pfpStyle(profilePanel.pfpEffect), ...(profilePanel.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                   >
-                    {(profilePanel.name ?? profilePanel.email).slice(0, 2).toUpperCase()}
+                    {profilePanel.avatarUrl
+                      ? <img src={profilePanel.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                      : (profilePanel.name ?? profilePanel.email).slice(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <div className={profilePanel.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 19, fontWeight: 800, marginBottom: 3, ...(profilePanel.nameColor && profilePanel.nameColor !== 'rainbow' ? { color: profilePanel.nameColor } : { color: 'var(--text)' }) }}>

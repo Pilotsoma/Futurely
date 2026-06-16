@@ -98,6 +98,11 @@ export const api = {
       '/api/students/me/streak-reward',
       { method: 'POST', body: JSON.stringify({ streak }) }
     ),
+  updateAvatarUrl: (avatarUrl: string | null) =>
+    request<{ avatarUrl: string | null }>('/api/students/me/avatar', {
+      method: 'PATCH',
+      body: JSON.stringify({ avatarUrl }),
+    }),
   roadmap: () => request<{
     gradeLevel: number
     creditsCompleted: number
@@ -573,6 +578,7 @@ export interface FeedUser {
   tagColor: string | null
   nameColor: string | null
   pfpEffect: string | null
+  avatarUrl?: string | null
 }
 
 export interface FeedPost {
@@ -614,6 +620,7 @@ export interface FeedUserProfile {
   tagColor: string | null
   nameColor: string | null
   pfpEffect: string | null
+  avatarUrl?: string | null
   role: string
   isFollowing: boolean
   totalLikes: number

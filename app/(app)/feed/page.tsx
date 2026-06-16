@@ -42,6 +42,10 @@ function pfpStyle(effect: string | null | undefined): React.CSSProperties {
 function pfpClass(effect: string | null | undefined): string {
   return effect === 'rainbow' ? 'pfp-rainbow' : ''
 }
+function avatarContent(user: { name: string | null; email: string; avatarUrl?: string | null }): React.ReactNode {
+  if (user.avatarUrl) return <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+  return initials(user)
+}
 function nameColorStyle(color: string | null | undefined): React.CSSProperties {
   return color && color !== 'rainbow' ? { color } : {}
 }
@@ -162,7 +166,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
         ) : (
           <>
             <div style={O.header}>
-              <div className={pfpClass(profile.pfpEffect)} style={{ ...O.avatar, ...pfpStyle(profile.pfpEffect) }}>{initials(profile)}</div>
+              <div className={pfpClass(profile.pfpEffect)} style={{ ...O.avatar, ...pfpStyle(profile.pfpEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(profile)}</div>
               <div style={{ flex: 1 }}>
                 <div className={nameColorClass(profile.nameColor)} style={{ ...O.name, ...nameColorStyle(profile.nameColor) }}>{displayName(profile)}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 3 }}>
@@ -618,7 +622,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <div className={pfpClass(post.user.pfpEffect)} style={{ ...P.avatar, ...pfpStyle(post.user.pfpEffect) }}>{initials(post.user)}</div>
+        <div className={pfpClass(post.user.pfpEffect)} style={{ ...P.avatar, ...pfpStyle(post.user.pfpEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(post.user)}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
             <span className={nameColorClass(post.user.nameColor)} style={{ ...P.authorName, ...nameColorStyle(post.user.nameColor) }} onClick={() => onOpenProfile(post.user.id)}>{displayName(post.user)}</span>
@@ -824,10 +828,10 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                   <div
                     className={pfpClass(c.user.pfpEffect)}
-                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect) }}
+                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                     onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                   >
-                    {initials(c.user)}
+                    {avatarContent(c.user)}
                   </div>
                   <button
                     className={nameColorClass(c.user.nameColor)}
@@ -923,8 +927,8 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
       {searching && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Searching…</div>}
       {results.map(u => (
         <div key={u.id} className="ns-card" style={{ padding: '12px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ ...P.avatar, width: 36, height: 36, fontSize: 12, cursor: 'pointer' }} onClick={() => onOpenProfile(u.id)}>
-            {initials(u)}
+          <div style={{ ...P.avatar, width: 36, height: 36, fontSize: 12, cursor: 'pointer', ...(u.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }} onClick={() => onOpenProfile(u.id)}>
+            {avatarContent(u)}
           </div>
           <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => onOpenProfile(u.id)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
