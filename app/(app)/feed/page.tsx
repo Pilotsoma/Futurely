@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification } from '@/lib/api'
 
 function timeAgo(dateStr: string): string {
@@ -702,28 +703,33 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             </div>
           ) : (
             /* Active giveaway */
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                {post._count.giveawayEntries} {post._count.giveawayEntries === 1 ? 'entry' : 'entries'} ·{' '}
-                {post.giveawayEndsAt && <GiveawayCountdown endsAt={post.giveawayEndsAt} />}
-              </span>
-              <div style={{ marginLeft: 'auto' }}>
-                {post.enteredByMe ? (
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', padding: '6px 14px', border: '1px solid #22C55E', borderRadius: 6, display: 'inline-block' }}>✓ Entered</span>
-                ) : (
-                  <button
-                    style={{ background: giveawayAccent, color: '#000', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
-                    onClick={() => {
-                      if (!post.likedByMe) { setShowLikeRequired(true); return }
-                      onEnterGiveaway(post.id)
-                    }}
-                  >
-                    Enter Giveaway
-                  </button>
-                )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {post._count.giveawayEntries} {post._count.giveawayEntries === 1 ? 'entry' : 'entries'} ·{' '}
+                  {post.giveawayEndsAt && <GiveawayCountdown endsAt={post.giveawayEndsAt} />}
+                </span>
+                <div style={{ marginLeft: 'auto' }}>
+                  {post.enteredByMe ? (
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', padding: '6px 14px', border: '1px solid #22C55E', borderRadius: 6, display: 'inline-block' }}>✓ Entered</span>
+                  ) : (
+                    <button
+                      style={{ background: giveawayAccent, color: '#000', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
+                      onClick={() => {
+                        if (!post.likedByMe) { setShowLikeRequired(true); return }
+                        onEnterGiveaway(post.id)
+                      }}
+                    >
+                      Enter Giveaway
+                    </button>
+                  )}
+                </div>
               </div>
-              {showLikeRequired && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowLikeRequired(false)}>
+              {!post.enteredByMe && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>♥ You must like this post to enter</div>
+              )}
+              {showLikeRequired && createPortal(
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowLikeRequired(false)}>
                   <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                     <div style={{ fontSize: 36, marginBottom: 12 }}>🚫</div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--error)', marginBottom: 8 }}>Entry Denied</div>
@@ -737,7 +743,8 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                       Got it
                     </button>
                   </div>
-                </div>
+                </div>,
+                document.body
               )}
             </div>
           )}
