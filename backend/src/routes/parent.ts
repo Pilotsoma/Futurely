@@ -387,16 +387,20 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
       }
     }
 
-    // Name: always prefer the HAC-scraped name (official school name), not the Futurely display name
+    // Name/metadata: always prefer HAC-scraped values (official school data), not Futurely display values
     let studentName: string | null = conn.studentName
     let gradeLevel: number | null = conn.gradeLevel
     let gradYear: number | null = conn.graduationYear
+    let cachedWeightedGpa: number | null = null
+    let cachedUnweightedGpa: number | null = null
     try {
       if (conn.cachedData) {
         const cd = JSON.parse(conn.cachedData) as CachedStudentData
         studentName = cd.studentName ?? studentName
         gradeLevel = cd.gradeLevel ?? gradeLevel
         gradYear = cd.graduationYear ?? gradYear
+        cachedWeightedGpa = cd.weightedGpa ?? cachedWeightedGpa
+        cachedUnweightedGpa = cd.unweightedGpa ?? cachedUnweightedGpa
       }
     } catch { /* skip */ }
 
@@ -421,8 +425,8 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
         email: conn.hacUsername,
         role: 'STUDENT',
         profile: {
-          weightedGpa: futurley?.weightedGpa ?? 0,
-          unweightedGpa: futurley?.unweightedGpa ?? 0,
+          weightedGpa: futurley?.weightedGpa || cachedWeightedGpa || 0,
+          unweightedGpa: futurley?.unweightedGpa || cachedUnweightedGpa || 0,
           gradeLevel: futurley?.gradeLevel ?? gradeLevel ?? 0,
           graduationYear: futurley?.graduationYear ?? gradYear ?? 0,
           futureDecision: null, satScore: null, actScore: null, counselorName: null,
