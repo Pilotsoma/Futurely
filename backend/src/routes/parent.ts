@@ -260,30 +260,50 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
     let gpaUW = cached?.unweightedGpa ?? 0
     const studentName = cached?.studentName ?? conn.studentName
 
-    // If HAC scraping returned no courses, fall back to student's own Futurely data.
-    // Match by email: HAC username is usually the student's school email.
-    if (courses.length === 0) {
-      console.log('[PARENT] HAC returned 0 courses — trying Futurely fallback for:', conn.hacUsername)
-      try {
-        const futurleyStudent = await prisma.user.findUnique({
-          where: { email: conn.hacUsername },
-          include: {
-            schoolConnection: { select: { hacDataCache: true } },
-            courses: { include: { grades: { orderBy: { createdAt: 'desc' }, take: 1 } } },
-            assignments: {
-              where: { completed: false },
-              orderBy: { dueDate: 'asc' },
-              take: 100,
+    // Always try to find the Futurely student by HAC username via SchoolConnection,
+    // which stores the exact HAC username (e.g. "K2008105") separate from the email.
+    let futurleyAssignments: Array<{
+      id: number; title: string; subject: string; dueDate: string;
+      estimatedMinutes: number; completed: boolean; completedAt: string | null; priority: string | null
+    }> = []
+
+    try {
+      const schoolConn = await prisma.schoolConnection.findFirst({
+        where: { hacUsername: conn.hacUsername },
+        include: {
+          user: {
+            include: {
+              courses: { include: { grades: { orderBy: { createdAt: 'desc' }, take: 1 } } },
+              assignments: {
+                where: { completed: false },
+                orderBy: { dueDate: 'asc' },
+                take: 100,
+              },
+              profile: true,
             },
-            profile: true,
           },
-        })
+        },
+      })
 
-        if (futurleyStudent) {
-          console.log('[PARENT] Found Futurely student user id:', futurleyStudent.id)
+      if (schoolConn) {
+        const futurleyStudent = schoolConn.user
+        console.log('[PARENT] Matched Futurely student id:', futurleyStudent.id, 'via HAC username:', conn.hacUsername)
 
-          // Try student's own HAC cache first (richest data)
-          const hacCache = futurleyStudent.schoolConnection?.hacDataCache as Record<string, { data: unknown; cachedAt: number }> | null
+        // Pull assignments from Futurely Assignment table
+        futurleyAssignments = futurleyStudent.assignments.map((a, i) => ({
+          id: i + 1,
+          title: a.title,
+          subject: a.subject,
+          dueDate: a.dueDate.toISOString(),
+          estimatedMinutes: 0,
+          completed: false,
+          completedAt: null,
+          priority: null,
+        }))
+
+        // Pull courses from HAC cache or Futurely Course/Grade tables if HAC scrape is empty
+        if (courses.length === 0) {
+          const hacCache = schoolConn.hacDataCache as Record<string, { data: unknown; cachedAt: number }> | null
           const classworkEntry = hacCache?.['classwork:__default__']?.data as { classes?: unknown[] } | undefined
           if (Array.isArray(classworkEntry?.classes) && classworkEntry.classes.length > 0) {
             console.log('[PARENT] Using student HAC cache:', classworkEntry.classes.length, 'classes')
@@ -298,7 +318,6 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
               upcomingAssignments: c.upcomingAssignments,
             }))
           } else if (futurleyStudent.courses.length > 0) {
-            // Fall back to Futurely Course/Grade tables
             console.log('[PARENT] Using Futurely Course table:', futurleyStudent.courses.length, 'courses')
             courses = futurleyStudent.courses.map(c => ({
               id: String(c.id),
@@ -310,16 +329,18 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
               upcomingAssignments: [],
             }))
           }
-
-          // Pull Futurely profile GPA if cached HAC GPA is 0
-          if (futurleyStudent.profile && gpaW === 0 && gpaUW === 0) {
-            gpaW = futurleyStudent.profile.weightedGpa ?? 0
-            gpaUW = futurleyStudent.profile.unweightedGpa ?? 0
-          }
         }
-      } catch (fallbackErr) {
-        console.warn('[PARENT] Futurely fallback failed:', fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr))
+
+        // Pull GPA from Futurely Profile if HAC has none
+        if (futurleyStudent.profile && gpaW === 0 && gpaUW === 0) {
+          gpaW = futurleyStudent.profile.weightedGpa ?? 0
+          gpaUW = futurleyStudent.profile.unweightedGpa ?? 0
+        }
+      } else {
+        console.log('[PARENT] No Futurely SchoolConnection found for HAC username:', conn.hacUsername)
       }
+    } catch (fallbackErr) {
+      console.warn('[PARENT] Futurely lookup failed:', fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr))
     }
 
     const now = new Date()
@@ -327,8 +348,9 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
     const todayEnd = new Date(todayStart.getTime() + 86_400_000)
     const weekEnd = new Date(todayStart.getTime() + 7 * 86_400_000)
 
-    let assignmentId = 0
-    const assignments = courses.flatMap(c =>
+    // Build assignment list: Futurely assignments take priority; supplement with HAC upcoming if any
+    let assignmentId = futurleyAssignments.length
+    const hacUpcomingAssignments = courses.flatMap(c =>
       (c.upcomingAssignments ?? []).map(a => {
         const dueDate = a.dateDue ? new Date(a.dateDue) : null
         return {
@@ -343,8 +365,14 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
         }
       }),
     )
+    // Merge: Futurely assignments first, then HAC upcoming not already present by title
+    const futurleyTitles = new Set(futurleyAssignments.map(a => a.title.toLowerCase()))
+    const assignments = [
+      ...futurleyAssignments,
+      ...hacUpcomingAssignments.filter(a => !futurleyTitles.has(a.title.toLowerCase())),
+    ]
 
-    const pendingAssignments = assignments.length
+    const pendingAssignments = assignments.filter(a => !a.completed).length
     const assignmentsDueToday = assignments.filter(a => {
       const d = new Date(a.dueDate)
       return d >= todayStart && d < todayEnd
