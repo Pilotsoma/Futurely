@@ -111,7 +111,15 @@ const SIM_ITEMS: Record<'tag' | 'name-color' | 'pfp', SimItem[]> = {
 }
 
 const QUICKSELL_PRICES: Record<string, number> = {
-  Common: 5, Uncommon: 10, Rare: 20, Epic: 40, Legendary: 100, Mythic: 500,
+  Common: 2, Uncommon: 5, Rare: 10, Epic: 20, Legendary: 75, Mythic: 500,
+}
+
+const RARITY_RANK: Record<string, number> = {
+  Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5,
+}
+
+function byRarity<T extends { rarity: string }>(arr: T[]): T[] {
+  return [...arr].sort((a, b) => (RARITY_RANK[a.rarity] ?? 99) - (RARITY_RANK[b.rarity] ?? 99))
 }
 
 function groupById<T extends { id: string }>(arr: T[]): Array<T & { count: number }> {
@@ -1184,7 +1192,7 @@ export default function MarketplacePage() {
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>🏷️ Tags</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>Equip tags from Settings → Profile</div>
-                  {groupById(inv?.ownedTags ?? []).map(t =>
+                  {groupById(byRarity(inv?.ownedTags ?? [])).map(t =>
                     renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag', false, t.count)
                   )}
                 </div>
@@ -1193,7 +1201,7 @@ export default function MarketplacePage() {
               {(inv?.ownedNameColors ?? []).length > 0 && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🎨 Name Colors</div>
-                  {groupById(inv!.ownedNameColors).map(item =>
+                  {groupById(byRarity(inv!.ownedNameColors)).map(item =>
                     renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'name-color', inv!.nameColor === item.value, item.count)
                   )}
                 </div>
@@ -1202,7 +1210,7 @@ export default function MarketplacePage() {
               {(inv?.ownedPfpEffects ?? []).length > 0 && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🖼️ Profile Picture Effects</div>
-                  {groupById(inv!.ownedPfpEffects).map(item =>
+                  {groupById(byRarity(inv!.ownedPfpEffects)).map(item =>
                     renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'pfp', inv!.pfpEffect === item.value, item.count)
                   )}
                 </div>
