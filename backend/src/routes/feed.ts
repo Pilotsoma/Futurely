@@ -117,13 +117,12 @@ router.get('/posts', async (req: Request, res: Response) => {
     // Auto-draw any giveaways that have expired
     await autoDrawExpiredGiveaways();
 
-    // Social feed: last 24h posts, active giveaways, and currently-pinned posts
+    // Social feed: last 24h posts + currently-pinned posts (all types expire after 24h)
     const allPosts = await prisma.post.findMany({
       where: {
         user: { deletedAt: null },
         OR: [
           { createdAt: { gte: cutoff } },
-          { type: 'giveaway' },
           { pinnedUntil: { gt: now } },
         ],
       },
@@ -145,15 +144,20 @@ router.get('/posts', async (req: Request, res: Response) => {
       },
     });
 
-    // Ranking: pinned first (sort by pinnedUntil desc), then engagement score.
-    // DEV/BOT get a moderate boost (not always-first).
+    // Ranking: pinned first, then recency-weighted score.
+    // Recency is the dominant factor — newer posts rank higher.
+    // Engagement (likes/comments) adds a bonus but cannot override recency.
+    // DEV/BOT posts get a moderate boost.
     const ranked = allPosts
       .map(p => {
         const isPinned = p.pinnedUntil && p.pinnedUntil > now;
         const isPromoted = p.user.tag === 'DEV' || p.user.tag === 'BOT';
+        const hoursSinceCreation = Math.max(0, (now.getTime() - p.createdAt.getTime()) / (1000 * 60 * 60));
+        const recencyScore = Math.max(0, 24 - hoursSinceCreation) * 1000; // 24000 → 0
         const score =
           (isPinned ? 10_000_000 : 0) +
-          (isPromoted ? 30 : 0) +
+          recencyScore +
+          (isPromoted ? 500 : 0) +
           p.user._count.followers * 3 +
           p._count.likes * 2 +
           p._count.comments;
