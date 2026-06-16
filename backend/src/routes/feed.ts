@@ -144,23 +144,23 @@ router.get('/posts', async (req: Request, res: Response) => {
       },
     });
 
-    // Ranking: pinned first, then recency-weighted score.
-    // Recency is the dominant factor — newer posts rank higher.
-    // Engagement (likes/comments) adds a bonus but cannot override recency.
+    // Ranking: pinned first, then balanced recency + engagement.
+    // New posts get a freshness boost, but trending posts with active
+    // engagement can climb above quiet new posts.
     // DEV/BOT posts get a moderate boost.
     const ranked = allPosts
       .map(p => {
         const isPinned = p.pinnedUntil && p.pinnedUntil > now;
         const isPromoted = p.user.tag === 'DEV' || p.user.tag === 'BOT';
         const hoursSinceCreation = Math.max(0, (now.getTime() - p.createdAt.getTime()) / (1000 * 60 * 60));
-        const recencyScore = Math.max(0, 24 - hoursSinceCreation) * 1000; // 24000 → 0
+        const recencyScore = Math.max(0, 24 - hoursSinceCreation) * 200; // 4800 → 0
+        const engagementScore = p._count.likes * 5 + p._count.comments * 8;
         const score =
           (isPinned ? 10_000_000 : 0) +
           recencyScore +
+          engagementScore +
           (isPromoted ? 500 : 0) +
-          p.user._count.followers * 3 +
-          p._count.likes * 2 +
-          p._count.comments;
+          p.user._count.followers * 3;
         return { ...p, _score: score };
       })
       .sort((a, b) => b._score - a._score);
