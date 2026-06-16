@@ -646,12 +646,18 @@ export default function MarketplacePage() {
       {tab === 'boxes' && (
         <>
           {result && !result.dismissed && (() => {
-            const isRainbow = result.won.value === 'rainbow'
+            const isRainbow  = result.won.value === 'rainbow'
+            const isMythic   = result.won.rarity === 'Mythic'   && !isRainbow
+            const isLegend   = result.won.rarity === 'Legendary'
+            const cardClass  = `ns-card box-pop${isRainbow ? ' box-rainbow' : isMythic ? ' box-mythic' : isLegend ? ' box-legendary' : ''}`
+            const nameClass  = isRainbow ? 'name-rainbow' : isMythic ? 'mythic-text' : isLegend ? 'legendary-text' : ''
+            const emoji      = isRainbow ? '🌈' : isMythic ? '👑' : isLegend ? '🌟' : '🎉'
+            const borderColor = isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? 'var(--border)')
             return (
-            <div className={`ns-card box-pop${isRainbow ? ' box-rainbow' : ''}`} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? 'var(--border)')}55`, background: isRainbow ? 'rgba(255,107,107,0.06)' : `${RARITY_COLOR[result.won.rarity] ?? '#000'}08` }}>
-              <div style={{ fontSize: 48, marginBottom: 10 }}>{isRainbow ? '🌈' : '🎉'}</div>
+            <div className={cardClass} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? '#000')}08` }}>
+              <div style={{ fontSize: 48, marginBottom: 10 }}>{emoji}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
-              <div className={isRainbow ? 'name-rainbow' : ''} style={{ fontSize: 24, fontWeight: 800, color: isRainbow ? undefined : (RARITY_COLOR[result.won.rarity] ?? 'var(--text)'), marginBottom: 4 }}>
+              <div className={nameClass} style={{ fontSize: 24, fontWeight: 800, color: nameClass ? undefined : (RARITY_COLOR[result.won.rarity] ?? 'var(--text)'), marginBottom: 4 }}>
                 {result.won.name ?? result.won.tag}
               </div>
               <div style={{ fontSize: 13, color: RARITY_COLOR[result.won.rarity] ?? 'var(--text-muted)', fontWeight: 700, marginBottom: 16 }}>

@@ -239,6 +239,30 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 }
 .box-rainbow { animation: boxRainbow 3s linear infinite; }
 
+@keyframes legendaryPulse {
+  0%, 100% { border-color: #EAB308; box-shadow: 0 0 16px #EAB30855; }
+  50%       { border-color: #FDE68A; box-shadow: 0 0 38px #EAB308aa; }
+}
+.box-legendary { animation: legendaryPulse 2s ease-in-out infinite; }
+
+@keyframes legendaryText {
+  0%, 100% { color: #EAB308; }
+  50%       { color: #FDE68A; }
+}
+.legendary-text { animation: legendaryText 2s ease-in-out infinite; }
+
+@keyframes mythicPulse {
+  0%, 100% { border-color: #EC4899; box-shadow: 0 0 20px #EC489960, 0 0 50px #EC489920; }
+  50%       { border-color: #F9A8D4; box-shadow: 0 0 45px #EC4899cc, 0 0 90px #EC489940; }
+}
+.box-mythic { animation: mythicPulse 1.5s ease-in-out infinite; }
+
+@keyframes mythicText {
+  0%, 100% { color: #EC4899; }
+  50%       { color: #F9A8D4; }
+}
+.mythic-text { animation: mythicText 1.5s ease-in-out infinite; }
+
 /* ── Spinner ──────────────────────────────────────────────────────────────── */
 @keyframes spin {
   from { transform: rotate(0deg); }
