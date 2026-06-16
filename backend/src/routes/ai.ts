@@ -12,44 +12,66 @@ const openrouter = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
 })
 
-// Read live grade data from the HAC/PowerSchool cache stored on SchoolConnection
+// Read all available portal data from the HAC/PowerSchool cache
 async function getPortalData(userId: number) {
   try {
     const conn = await prisma.schoolConnection.findUnique({
       where: { userId },
       select: { hacDataCache: true, systemType: true },
     })
-    if (!conn) return null
+    if (!conn?.hacDataCache) return null
 
+    const cache = conn.hacDataCache as Record<string, { data: unknown; cachedAt: number }>
+
+    // GPA + transcript history
     let weightedGpa: number | null = null
     let unweightedGpa: number | null = null
-    let courseList: string[] = []
+    let classRank: string | null = null
+    let transcriptSummary = ''
 
-    // HAC: GPA lives in transcript cache, grades in classwork cache
-    if (conn.hacDataCache) {
-      const cache = conn.hacDataCache as Record<string, { data: unknown; cachedAt: number }>
-
-      const transcript = cache['transcript']?.data as { weightedGPA?: string; unweightedGPA?: string } | undefined
-      if (transcript) {
-        const w = parseFloat(transcript.weightedGPA ?? '')
-        const u = parseFloat(transcript.unweightedGPA ?? '')
-        if (!isNaN(w)) weightedGpa = Math.round(w * 1000) / 1000
-        if (!isNaN(u)) unweightedGpa = Math.round(u * 1000) / 1000
-      }
-
-      // Find classwork cache (key is like "classwork:__default__" or "classwork:1")
-      const classworkKey = Object.keys(cache).find(k => k.startsWith('classwork:'))
-      if (classworkKey) {
-        const classwork = cache[classworkKey].data as { classes?: Array<{ name?: string; average?: string | null }> } | undefined
-        if (classwork?.classes) {
-          courseList = classwork.classes
-            .filter(c => c.name)
-            .map(c => `${c.name}: ${c.average ?? 'N/A'}`)
-        }
+    const transcript = cache['transcript']?.data as {
+      weightedGPA?: string; unweightedGPA?: string; classRank?: string; quartile?: string; cumulativeGPA?: string
+      semesters?: Array<{ year: string; semester: string; courses: Array<{ name: string; grade: string; credits: string }> }>
+    } | undefined
+    if (transcript) {
+      const w = parseFloat(transcript.weightedGPA ?? '')
+      const u = parseFloat(transcript.unweightedGPA ?? '')
+      if (!isNaN(w)) weightedGpa = Math.round(w * 1000) / 1000
+      if (!isNaN(u)) unweightedGpa = Math.round(u * 1000) / 1000
+      if (transcript.classRank) classRank = `${transcript.classRank}${transcript.quartile ? ` (${transcript.quartile} quartile)` : ''}`
+      if (transcript.semesters?.length) {
+        transcriptSummary = transcript.semesters.map(s =>
+          `${s.year} ${s.semester}: ${s.courses.map(c => `${c.name} ${c.grade}`).join(', ')}`
+        ).join(' | ')
       }
     }
 
-    return { weightedGpa, unweightedGpa, courseList }
+    // Current course grades
+    let courseList: string[] = []
+    const classworkKey = Object.keys(cache).find(k => k.startsWith('classwork:'))
+    if (classworkKey) {
+      const classwork = cache[classworkKey].data as {
+        classes?: Array<{ name?: string; average?: string | null; letterGrade?: string | null }>
+      } | undefined
+      if (classwork?.classes) {
+        courseList = classwork.classes
+          .filter(c => c.name)
+          .map(c => `${c.name}: ${c.letterGrade ?? ''} ${c.average ?? 'N/A'}%`.trim())
+      }
+    }
+
+    // Attendance summary (month 0 = current month)
+    let attendanceSummary = ''
+    const attendance = cache['attendance:0']?.data as {
+      month?: string; year?: number
+      summary?: { absences: number; excused: number; tardies: number }
+    } | undefined
+    if (attendance?.summary) {
+      const s = attendance.summary
+      attendanceSummary = `${attendance.month ?? ''} ${attendance.year ?? ''}: ${s.absences} absence(s), ${s.excused} excused, ${s.tardies} tardy(ies)`
+    }
+
+    return { weightedGpa, unweightedGpa, classRank, courseList, transcriptSummary, attendanceSummary }
   } catch { return null }
 }
 
@@ -74,7 +96,6 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
 
     const firstName = user?.name?.split(' ')[0] ?? 'Student'
 
-    // Prefer live portal GPA over manually entered profile GPA
     const wGpa = (portalData?.weightedGpa ?? profile?.weightedGpa)?.toFixed(3) ?? 'unknown'
     const uGpa = (portalData?.unweightedGpa ?? profile?.unweightedGpa)?.toFixed(3) ?? 'unknown'
     const courseList = portalData?.courseList?.join(', ') || 'none on record'
@@ -83,15 +104,14 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
       .map(a => `"${a.title}" (${a.subject}) due ${new Date(a.dueDate).toLocaleDateString()}`)
       .join(', ')
 
-    const systemPrompt = `You are NextStep AI, an academic companion for high school students.
-Student: ${firstName}, Grade ${profile?.gradeLevel ?? 'unknown'}
-GPA: ${uGpa} unweighted, ${wGpa} weighted
-Current courses and grades: ${courseList}
-Pending assignments: ${assignmentList || 'none'}
-SAT score: ${profile?.satScore ?? 'not entered'}
-College goal: ${profile?.futureDecision ?? 'not specified'}
+    const systemPrompt = `You are NextStep AI, an academic companion for high school students. Answer based only on the student data below — never invent numbers or facts. Be encouraging, concise, and specific. Keep responses under 4 sentences.
 
-Be encouraging, concise, and specific. Only reference the student data above — never invent numbers or facts. Keep responses under 3 sentences.`
+Student: ${firstName}, Grade ${profile?.gradeLevel ?? 'unknown'}
+GPA: ${uGpa} unweighted, ${wGpa} weighted${portalData?.classRank ? `\nClass rank: ${portalData.classRank}` : ''}
+Current courses & grades: ${courseList}
+Pending assignments: ${assignmentList || 'none'}${portalData?.attendanceSummary ? `\nAttendance: ${portalData.attendanceSummary}` : ''}${portalData?.transcriptSummary ? `\nTranscript history: ${portalData.transcriptSummary}` : ''}
+SAT score: ${profile?.satScore ?? 'not entered'}
+College goal: ${profile?.futureDecision ?? 'not specified'}`
 
     const response = await openrouter.chat.completions.create({
       model: FREE_MODEL,
