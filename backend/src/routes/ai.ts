@@ -39,10 +39,10 @@ async function getPortalData(userId: number) {
       if (!isNaN(w)) weightedGpa = Math.round(w * 1000) / 1000
       if (!isNaN(u)) unweightedGpa = Math.round(u * 1000) / 1000
       if (transcript.classRank) classRank = `${transcript.classRank}${transcript.quartile ? ` (${transcript.quartile} quartile)` : ''}`
+      // Only include the most recent semester from transcript to avoid overwhelming the model
       if (transcript.semesters?.length) {
-        transcriptSummary = transcript.semesters.map(s =>
-          `${s.year} ${s.semester}: ${s.courses.map(c => `${c.name} ${c.grade}`).join(', ')}`
-        ).join(' | ')
+        const recent = transcript.semesters[transcript.semesters.length - 1]
+        transcriptSummary = `Most recent semester (${recent.year} ${recent.semester}): ${recent.courses.map(c => `${c.name} ${c.grade}`).join(', ')}`
       }
     }
 
@@ -119,7 +119,7 @@ College goal: ${profile?.futureDecision ?? 'not specified'}`
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
       ],
-      max_tokens: 250,
+      max_tokens: 300,
     })
 
     const reply = response.choices[0]?.message?.content ?? 'Sorry, I could not generate a response right now.'
