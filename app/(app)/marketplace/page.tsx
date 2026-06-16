@@ -48,9 +48,9 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
       { rarity: 'Common',    pct: '60%',   items: ['Grinder', 'Focused', 'Scholar'] },
       { rarity: 'Uncommon',  pct: '25%',   items: ['Honors Student', 'AP Student'] },
       { rarity: 'Rare',      pct: '10%',   items: ["Dean's List", 'Top Performer'] },
-      { rarity: 'Epic',      pct: '3.5%',  items: ['Ace', 'Prodigy'] },
+      { rarity: 'Epic',      pct: '3.7%',  items: ['Ace', 'Prodigy'] },
       { rarity: 'Legendary', pct: '1%',    items: ['Mastermind', 'Genius'] },
-      { rarity: 'Mythic',    pct: '0.5%',  items: ['GOD'] },
+      { rarity: 'Mythic',    pct: '0.3%',  items: ['GOD'] },
     ],
   },
   {
@@ -59,9 +59,9 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
       { rarity: 'Common',    pct: '60%',    items: ['Forest Green', 'Navy Blue', 'Dark Red', 'Slate Blue', 'Teal'] },
       { rarity: 'Uncommon',  pct: '24.99%', items: ['Bright Orange', 'Violet', 'Cyan'] },
       { rarity: 'Rare',      pct: '10%',    items: ['Hot Pink', 'Gold', 'Lime Green'] },
-      { rarity: 'Epic',      pct: '4%',     items: ['Electric Blue', 'Magenta'] },
+      { rarity: 'Epic',      pct: '3.96%',  items: ['Electric Blue', 'Magenta'] },
       { rarity: 'Legendary', pct: '1%',     items: ['Pure White', 'Black'] },
-      { rarity: 'Mythic',    pct: '0.01%',  items: ['Rainbow RGB ✨'] },
+      { rarity: 'Mythic',    pct: '0.05%',  items: ['Rainbow RGB ✨'] },
     ],
   },
   {
@@ -70,9 +70,9 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
       { rarity: 'Common',    pct: '60%',    items: ['Green Border', 'Blue Border', 'Red Border', 'Navy Border', 'Teal Border'] },
       { rarity: 'Uncommon',  pct: '24.99%', items: ['Orange Border', 'Violet Border', 'Cyan Border'] },
       { rarity: 'Rare',      pct: '10%',    items: ['Hot Pink Border', 'Gold Border', 'Lime Border'] },
-      { rarity: 'Epic',      pct: '4%',     items: ['Pink Glow', 'Purple Glow'] },
+      { rarity: 'Epic',      pct: '3.96%',  items: ['Pink Glow', 'Purple Glow'] },
       { rarity: 'Legendary', pct: '1%',     items: ['Gold Fill', 'Void Fill'] },
-      { rarity: 'Mythic',    pct: '0.01%',  items: ['Rainbow Animated ✨'] },
+      { rarity: 'Mythic',    pct: '0.05%',  items: ['Rainbow Animated ✨'] },
     ],
   },
 ]
@@ -121,8 +121,12 @@ const RARITY_RANK: Record<string, number> = {
   Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5,
 }
 
-function byRarity<T extends { rarity: string }>(arr: T[]): T[] {
-  return [...arr].sort((a, b) => (RARITY_RANK[a.rarity] ?? 99) - (RARITY_RANK[b.rarity] ?? 99))
+function byRarity<T extends { rarity: string; id: string }>(arr: T[]): T[] {
+  return [...arr].sort((a, b) => {
+    const diff = (RARITY_RANK[a.rarity] ?? 99) - (RARITY_RANK[b.rarity] ?? 99)
+    if (diff !== 0) return diff
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+  })
 }
 
 function groupById<T extends { id: string }>(arr: T[]): Array<T & { count: number }> {
@@ -213,10 +217,29 @@ export default function MarketplacePage() {
   const [equipping, setEquipping] = useState<string | null>(null)
   const [quickselling, setQuickselling] = useState<string | null>(null)
 
+  // Quicksell confirmation (last copy or legendary/mythic)
+  const [quicksellConfirm, setQuicksellConfirm] = useState<{
+    itemType: 'tag' | 'name-color' | 'pfp'
+    itemId: string
+    itemName: string
+    rarity: string
+    coins: number
+    isLastCopy: boolean
+    isRare: boolean
+  } | null>(null)
+
+  // Sell all duplicates confirmation
+  const [sellDupsConfirm, setSellDupsConfirm] = useState<{
+    items: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number; coinsEach: number }>
+    totalCoins: number
+    hasRare: boolean
+  } | null>(null)
+  const [sellingDups, setSellingDups] = useState(false)
+
   // DEV panel
   const [isDevUser, setIsDevUser] = useState(false)
   const [devCoins, setDevCoins] = useState('500')
-  const [devType, setDevType] = useState<'name-color' | 'pfp'>('name-color')
+  const [devType, setDevType] = useState<'name-color' | 'pfp' | 'tag'>('name-color')
   const [devItemId, setDevItemId] = useState('')
   const [devGranting, setDevGranting] = useState(false)
   const [devMsg, setDevMsg] = useState('')
@@ -394,7 +417,7 @@ export default function MarketplacePage() {
     finally { setEquipping(null) }
   }
 
-  async function handleQuicksell(itemType: 'tag' | 'name-color' | 'pfp', itemId: string) {
+  async function doQuicksell(itemType: 'tag' | 'name-color' | 'pfp', itemId: string) {
     const key = `${itemType}:${itemId}`
     if (quickselling || !inv) return
     setQuickselling(key)
@@ -423,7 +446,80 @@ export default function MarketplacePage() {
     finally { setQuickselling(null) }
   }
 
-  async function handleDevGrant(grantType: 'coins' | 'name-color' | 'pfp') {
+  function handleQuicksell(itemType: 'tag' | 'name-color' | 'pfp', itemId: string) {
+    if (!inv) return
+    const allOfType = itemType === 'tag'
+      ? (inv.ownedTags ?? [])
+      : itemType === 'name-color'
+        ? inv.ownedNameColors
+        : inv.ownedPfpEffects
+    const count = allOfType.filter((i: { id: string }) => i.id === itemId).length
+    const first = allOfType.find((i: { id: string }) => i.id === itemId) as { id: string; rarity: string; tag?: string; name?: string } | undefined
+    if (!first) return
+    const rarity = first.rarity
+    const itemName = itemType === 'tag' ? ((first as { tag?: string }).tag ?? itemId) : ((first as { name?: string }).name ?? itemId)
+    const isLastCopy = count === 1
+    const isRare = rarity === 'Legendary' || rarity === 'Mythic'
+    const coins = QUICKSELL_PRICES[rarity] ?? 5
+
+    if (isLastCopy || isRare) {
+      setQuicksellConfirm({ itemType, itemId, itemName, rarity, coins, isLastCopy, isRare })
+      return
+    }
+    void doQuicksell(itemType, itemId)
+  }
+
+  function computeDuplicates() {
+    if (!inv) return []
+    const result: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number; coinsEach: number }> = []
+
+    const tagMap = new Map<string, number>()
+    for (const t of (inv.ownedTags ?? [])) tagMap.set(t.id, (tagMap.get(t.id) ?? 0) + 1)
+    for (const [id, cnt] of tagMap) {
+      if (cnt > 1) {
+        const t = (inv.ownedTags ?? []).find(x => x.id === id)!
+        result.push({ type: 'tag', id, name: t.tag, rarity: t.rarity, count: cnt - 1, coinsEach: QUICKSELL_PRICES[t.rarity] ?? 5 })
+      }
+    }
+    const colorMap = new Map<string, number>()
+    for (const c of inv.ownedNameColors) colorMap.set(c.id, (colorMap.get(c.id) ?? 0) + 1)
+    for (const [id, cnt] of colorMap) {
+      if (cnt > 1) {
+        const c = inv.ownedNameColors.find(x => x.id === id)!
+        result.push({ type: 'name-color', id, name: c.name, rarity: c.rarity, count: cnt - 1, coinsEach: QUICKSELL_PRICES[c.rarity] ?? 5 })
+      }
+    }
+    const pfpMap = new Map<string, number>()
+    for (const p of inv.ownedPfpEffects) pfpMap.set(p.id, (pfpMap.get(p.id) ?? 0) + 1)
+    for (const [id, cnt] of pfpMap) {
+      if (cnt > 1) {
+        const p = inv.ownedPfpEffects.find(x => x.id === id)!
+        result.push({ type: 'pfp', id, name: p.name, rarity: p.rarity, count: cnt - 1, coinsEach: QUICKSELL_PRICES[p.rarity] ?? 5 })
+      }
+    }
+    return result
+  }
+
+  function handleSellAllDuplicatesClick() {
+    const dups = computeDuplicates()
+    if (dups.length === 0) return
+    const totalCoins = dups.reduce((s, d) => s + d.count * d.coinsEach, 0)
+    const hasRare = dups.some(d => d.rarity === 'Legendary' || d.rarity === 'Mythic')
+    setSellDupsConfirm({ items: dups, totalCoins, hasRare })
+  }
+
+  async function handleSellAllDuplicatesConfirm() {
+    if (sellingDups) return
+    setSellingDups(true)
+    try {
+      await api.marketplaceQuicksellDuplicates()
+      setSellDupsConfirm(null)
+      refreshInventory()
+    } catch { /* ignore */ }
+    finally { setSellingDups(false) }
+  }
+
+  async function handleDevGrant(grantType: 'coins' | 'name-color' | 'pfp' | 'tag') {
     if (devGranting) return
     setDevGranting(true); setDevMsg('')
     try {
@@ -435,9 +531,13 @@ export default function MarketplacePage() {
         setDevMsg(`✓ Granted ${amount} coins`)
       } else {
         if (!devItemId.trim()) { setDevMsg('Enter an item ID'); return }
-        const r = await api.marketplaceAdminGrant({ type: grantType === 'name-color' ? 'name-color' : 'pfp', itemId: devItemId.trim() })
-        setDevMsg(`✓ Granted: ${r.granted?.name}`)
-        refreshInventory()
+        const r = await api.marketplaceAdminGrant({ type: grantType, itemId: devItemId.trim() })
+        if (grantType === 'tag') {
+          setDevMsg(`✓ Granted tag: ${r.granted?.tag ?? devItemId}`)
+        } else {
+          setDevMsg(`✓ Granted: ${r.granted?.name ?? devItemId}`)
+          refreshInventory()
+        }
       }
     } catch { setDevMsg('Grant failed') }
     finally { setDevGranting(false) }
@@ -667,7 +767,7 @@ export default function MarketplacePage() {
               </button>
             )}
             <button
-              onClick={() => void handleQuicksell(type, item.id)}
+              onClick={() => handleQuicksell(type, item.id)}
               disabled={isQS}
               style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #EAB30855', background: 'transparent', color: '#EAB308', fontSize: 11, fontWeight: 700, cursor: isQS ? 'not-allowed' : 'pointer', opacity: isQS ? 0.6 : 1 }}
             >
@@ -891,7 +991,7 @@ export default function MarketplacePage() {
             const wonPrice = prices[`${result.won.type}:${result.won.id}`]
             return (
             <PriceTooltip price={wonPrice}>
-            <div className={cardClass} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? '#000')}08` }}>
+            <div className={cardClass} onClick={() => setResult(r => r ? { ...r, dismissed: true } : r)} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? '#000')}08`, cursor: 'pointer' }}>
               <div style={{ fontSize: 48, marginBottom: 10 }}>{emoji}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
               {itemPreview}
@@ -1407,6 +1507,22 @@ export default function MarketplacePage() {
                 )
               })()}
 
+              {(() => {
+                const dups = computeDuplicates()
+                if (dups.length === 0) return null
+                const total = dups.reduce((s, d) => s + d.count * d.coinsEach, 0)
+                return (
+                  <div style={{ marginBottom: 14 }}>
+                    <button
+                      onClick={handleSellAllDuplicatesClick}
+                      style={{ width: '100%', padding: '11px 0', borderRadius: 9, border: '1px solid #EAB30866', background: '#EAB30810', color: '#EAB308', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                    >
+                      Sell All Duplicates — 🪙 {total.toLocaleString()}
+                    </button>
+                  </div>
+                )
+              })()}
+
               {(inv?.ownedTags ?? []).length > 0 && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>🏷️ Tags</div>
@@ -1516,12 +1632,13 @@ export default function MarketplacePage() {
               </button>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
-              <select value={devType} onChange={e => setDevType(e.target.value as 'name-color' | 'pfp')}
+              <select value={devType} onChange={e => setDevType(e.target.value as 'name-color' | 'pfp' | 'tag')}
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
                 <option value="name-color">Name Color</option>
                 <option value="pfp">PFP Effect</option>
+                <option value="tag">Tag</option>
               </select>
-              <input value={devItemId} onChange={e => setDevItemId(e.target.value)} placeholder="item-id  (e.g. rainbow)"
+              <input value={devItemId} onChange={e => setDevItemId(e.target.value)} placeholder={devType === 'tag' ? 'tag-id  (e.g. genius)' : 'item-id  (e.g. rainbow)'}
                 style={{ flex: 1, minWidth: 140, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }} />
               <button onClick={() => void handleDevGrant(devType)} disabled={devGranting}
                 style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#ff6b6b', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
@@ -1592,6 +1709,113 @@ export default function MarketplacePage() {
             >
               Got it
             </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Quicksell confirmation modal (last copy / legendary / mythic) */}
+      {quicksellConfirm && createPortal(
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setQuicksellConfirm(null)}
+        >
+          <div
+            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>Are you sure?</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
+              {quicksellConfirm.isLastCopy && (
+                <div style={{ fontSize: 13, color: '#EF4444', fontWeight: 600, background: 'rgba(239,68,68,0.08)', borderRadius: 8, padding: '8px 12px' }}>
+                  This is your last copy of <strong>{quicksellConfirm.itemName}</strong>!
+                </div>
+              )}
+              {quicksellConfirm.isRare && (
+                <div style={{ fontSize: 13, color: RARITY_COLOR[quicksellConfirm.rarity], fontWeight: 600, background: `${RARITY_COLOR[quicksellConfirm.rarity]}12`, borderRadius: 8, padding: '8px 12px' }}>
+                  This is a <strong>{quicksellConfirm.rarity}</strong> rarity item!
+                </div>
+              )}
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+                You will receive <strong style={{ color: '#EAB308' }}>🪙 {quicksellConfirm.coins}</strong> for selling it.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => {
+                  const { itemType, itemId } = quicksellConfirm
+                  setQuicksellConfirm(null)
+                  void doQuicksell(itemType, itemId)
+                }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: '#EF4444', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+              >
+                Yes, Sell It
+              </button>
+              <button
+                onClick={() => setQuicksellConfirm(null)}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              >
+                No, Keep It
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Sell All Duplicates confirmation modal */}
+      {sellDupsConfirm && createPortal(
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => !sellingDups && setSellDupsConfirm(null)}
+        >
+          <div
+            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 16, padding: 24, width: '90%', maxWidth: 420 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>Sell All Duplicates</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>Keeps 1 copy of each item, sells the rest.</div>
+
+            {sellDupsConfirm.hasRare && (
+              <div style={{ fontSize: 12, color: RARITY_COLOR['Legendary'], fontWeight: 600, background: `${RARITY_COLOR['Legendary']}12`, borderRadius: 8, padding: '8px 12px', marginBottom: 14 }}>
+                ⚠️ Some duplicates are Legendary or Mythic rarity!
+              </div>
+            )}
+
+            <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+              {sellDupsConfirm.items.map(d => (
+                <div key={`${d.type}:${d.id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 11 }}>{d.type === 'tag' ? '🏷️' : d.type === 'name-color' ? '🎨' : '🖼️'}</span>
+                  <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{d.name}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: RARITY_COLOR[d.rarity] ?? '#6B7280', background: `${RARITY_COLOR[d.rarity] ?? '#6B7280'}18`, padding: '2px 6px', borderRadius: 99 }}>{d.rarity}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>×{d.count}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>🪙 {(d.count * d.coinsEach).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ padding: '10px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 16, textAlign: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Total: </span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: '#EAB308' }}>🪙 {sellDupsConfirm.totalCoins.toLocaleString()}</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => void handleSellAllDuplicatesConfirm()}
+                disabled={sellingDups}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: '#EAB308', color: '#060D10', fontWeight: 700, fontSize: 13, cursor: sellingDups ? 'not-allowed' : 'pointer', opacity: sellingDups ? 0.6 : 1 }}
+              >
+                {sellingDups ? 'Selling…' : `Yes, Sell All — 🪙 ${sellDupsConfirm.totalCoins.toLocaleString()}`}
+              </button>
+              <button
+                onClick={() => setSellDupsConfirm(null)}
+                disabled={sellingDups}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>,
         document.body

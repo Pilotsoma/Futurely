@@ -18,11 +18,11 @@ const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'ap-student',     tag: 'AP Student',      tagColor: '#06B6D4', rarity: 'Uncommon',  weight: 12.5 },
   { id: 'deans-list',     tag: "Dean's List",     tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
   { id: 'top-performer',  tag: 'Top Performer',   tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
-  { id: 'ace',            tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      weight: 1.75 },
-  { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#EC4899', rarity: 'Epic',      weight: 1.75 },
+  { id: 'ace',            tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      weight: 1.85 },
+  { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#EC4899', rarity: 'Epic',      weight: 1.85 },
   { id: 'mastermind',     tag: 'Mastermind',      tagColor: '#EAB308', rarity: 'Legendary', weight: 0.5  },
   { id: 'genius',         tag: 'Genius',          tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
-  { id: 'god',            tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    weight: 0.5  },
+  { id: 'god',            tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    weight: 0.3  },
 ]
 
 const NAME_COLOR_BOX_ITEMS: ColorItem[] = [
@@ -37,11 +37,11 @@ const NAME_COLOR_BOX_ITEMS: ColorItem[] = [
   { id: 'hot-pink',      name: 'Hot Pink',       value: '#DB2777', rarity: 'Rare',      weight: 3.34  },
   { id: 'gold',          name: 'Gold',           value: '#D97706', rarity: 'Rare',      weight: 3.33  },
   { id: 'lime-green',    name: 'Lime Green',     value: '#65A30D', rarity: 'Rare',      weight: 3.33  },
-  { id: 'electric-blue', name: 'Electric Blue',  value: '#2563EB', rarity: 'Epic',      weight: 2     },
-  { id: 'magenta',       name: 'Magenta',        value: '#C026D3', rarity: 'Epic',      weight: 2     },
+  { id: 'electric-blue', name: 'Electric Blue',  value: '#2563EB', rarity: 'Epic',      weight: 1.98  },
+  { id: 'magenta',       name: 'Magenta',        value: '#C026D3', rarity: 'Epic',      weight: 1.98  },
   { id: 'pure-white',    name: 'Pure White',     value: '#F8FAFC', rarity: 'Legendary', weight: 0.5   },
   { id: 'black',         name: 'Black',          value: '#111111', rarity: 'Legendary', weight: 0.5   },
-  { id: 'rainbow',       name: 'Rainbow RGB',    value: 'rainbow', rarity: 'Mythic',    weight: 0.01  },
+  { id: 'rainbow',       name: 'Rainbow RGB',    value: 'rainbow', rarity: 'Mythic',    weight: 0.05  },
 ]
 
 const PFP_EFFECT_BOX_ITEMS: ColorItem[] = [
@@ -56,11 +56,11 @@ const PFP_EFFECT_BOX_ITEMS: ColorItem[] = [
   { id: 'border-hotpink',  name: 'Hot Pink Border',  value: 'border-hotpink', rarity: 'Rare',      weight: 3.34 },
   { id: 'border-gold',     name: 'Gold Border',      value: 'border-gold',    rarity: 'Rare',      weight: 3.33 },
   { id: 'border-lime',     name: 'Lime Border',      value: 'border-lime',    rarity: 'Rare',      weight: 3.33 },
-  { id: 'glow-pink',       name: 'Pink Glow',        value: 'glow-pink',      rarity: 'Epic',      weight: 2    },
-  { id: 'glow-purple',     name: 'Purple Glow',      value: 'glow-purple',    rarity: 'Epic',      weight: 2    },
+  { id: 'glow-pink',       name: 'Pink Glow',        value: 'glow-pink',      rarity: 'Epic',      weight: 1.98 },
+  { id: 'glow-purple',     name: 'Purple Glow',      value: 'glow-purple',    rarity: 'Epic',      weight: 1.98 },
   { id: 'glow-gold',       name: 'Gold Fill',        value: 'glow-gold',      rarity: 'Legendary', weight: 0.5  },
   { id: 'frame-black',     name: 'Void Fill',        value: 'frame-black',    rarity: 'Legendary', weight: 0.5  },
-  { id: 'rainbow',         name: 'Rainbow Animated', value: 'rainbow',        rarity: 'Mythic',    weight: 0.01 },
+  { id: 'rainbow',         name: 'Rainbow Animated', value: 'rainbow',        rarity: 'Mythic',    weight: 0.05 },
 ]
 
 export const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
@@ -77,7 +77,7 @@ const SEED_PRICES: Record<string, number> = {
   'tag:deans-list': 50,      'tag:top-performer': 50,
   'tag:ace': 250,             'tag:prodigy': 250,
   'tag:mastermind': 1000,     'tag:genius': 1000,
-  'tag:god': 50000,
+  'tag:god': 5000,
   // GOAT is the day-100 streak tag (non-tradeable, seed only for inventory worth display)
   'tag:GOAT': 50000,
   // Name Colors (Common 15, Uncommon 30, Rare 75, Epic 350, Legendary 2k, Mythic RGB 250k)
@@ -87,7 +87,7 @@ const SEED_PRICES: Record<string, number> = {
   'name-color:hot-pink': 75,       'name-color:gold': 75,        'name-color:lime-green': 75,
   'name-color:electric-blue': 350, 'name-color:magenta': 350,
   'name-color:pure-white': 2000,   'name-color:black': 2000,
-  'name-color:rainbow': 250000,
+  'name-color:rainbow': 50000,
   // PFP Effects (Common 20, Uncommon 40, Rare 100, Epic 400, Legendary 3k, Mythic RGB 300k)
   'pfp:border-green': 20,    'pfp:border-blue': 20,    'pfp:border-red': 20,
   'pfp:border-navy': 20,     'pfp:border-teal': 20,
@@ -95,7 +95,7 @@ const SEED_PRICES: Record<string, number> = {
   'pfp:border-hotpink': 100, 'pfp:border-gold': 100,   'pfp:border-lime': 100,
   'pfp:glow-pink': 400,      'pfp:glow-purple': 400,
   'pfp:glow-gold': 3000,     'pfp:frame-black': 3000,
-  'pfp:rainbow': 300000,
+  'pfp:rainbow': 75000,
 }
 
 // Tags that can never be listed or traded (streak-earned exclusives)
@@ -458,6 +458,70 @@ const QUICKSELL_PRICES: Record<string, number> = {
   Common: 2, Uncommon: 5, Rare: 10, Epic: 20, Legendary: 75, Mythic: 500,
 }
 
+router.post('/quicksell/duplicates', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { coins: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true },
+    })
+    if (!user) { res.status(404).json({ error: 'User not found' }); return }
+
+    const rawTags = parseTagArr(user.allTags)
+    const rawColors = parseJsonArr(user.ownedNameColors) as Array<{ id: string; rarity?: string; [k: string]: unknown }>
+    const rawPfps  = parseJsonArr(user.ownedPfpEffects)  as Array<{ id: string; rarity?: string; [k: string]: unknown }>
+
+    let totalPayout = 0
+
+    // Keep first occurrence of each tag; sell remaining duplicates
+    const finalTags: typeof rawTags = []
+    const tagKept = new Set<string>()
+    for (const t of rawTags) {
+      if (!tagKept.has(t.tag)) { finalTags.push(t); tagKept.add(t.tag) }
+      else {
+        const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
+        totalPayout += QUICKSELL_PRICES[def?.rarity ?? 'Common'] ?? 5
+      }
+    }
+
+    // Keep first occurrence of each name-color id
+    const finalColors: typeof rawColors = []
+    const colorKept = new Set<string>()
+    for (const c of rawColors) {
+      if (!colorKept.has(c.id)) { finalColors.push(c); colorKept.add(c.id) }
+      else { totalPayout += QUICKSELL_PRICES[c.rarity ?? 'Common'] ?? 5 }
+    }
+
+    // Keep first occurrence of each pfp id
+    const finalPfps: typeof rawPfps = []
+    const pfpKept = new Set<string>()
+    for (const p of rawPfps) {
+      if (!pfpKept.has(p.id)) { finalPfps.push(p); pfpKept.add(p.id) }
+      else { totalPayout += QUICKSELL_PRICES[p.rarity ?? 'Common'] ?? 5 }
+    }
+
+    if (totalPayout === 0) {
+      res.json({ data: { coins: user.coins, sold: 0, totalPayout: 0 } })
+      return
+    }
+
+    const sold = (rawTags.length - finalTags.length) + (rawColors.length - finalColors.length) + (rawPfps.length - finalPfps.length)
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: {
+        allTags: JSON.stringify(finalTags),
+        ownedNameColors: JSON.stringify(finalColors),
+        ownedPfpEffects: JSON.stringify(finalPfps),
+        coins: { increment: totalPayout },
+      },
+      select: { coins: true },
+    })
+    res.json({ data: { coins: updated.coins, sold, totalPayout } })
+  } catch {
+    res.status(500).json({ error: 'Failed to sell duplicates' })
+  }
+})
+
 router.post('/quicksell', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const { itemType, itemId } = req.body as { itemType?: string; itemId?: string }
@@ -604,6 +668,26 @@ router.post('/admin/grant', requireAuth, async (req: AuthRequest, res: Response)
       owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
       await prisma.user.update({ where: { id: req.userId }, data: { ownedPfpEffects: JSON.stringify(owned) } })
       res.json({ data: { granted: item } })
+
+    } else if (type === 'tag') {
+      if (!itemId?.trim()) { res.status(400).json({ error: 'Provide a tag id' }); return }
+      const tagDef = TAG_BOX_ITEMS.find(t => t.id === itemId.trim())
+      if (!tagDef) { res.status(400).json({ error: 'Unknown tag id' }); return }
+      const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { allTags: true, tag: true } })
+      const existing = parseTagArr(user?.allTags)
+      const filtered = existing.filter(t => t.tag !== tagDef.tag)
+      const newAllTags = [...filtered, { tag: tagDef.tag, tagColor: tagDef.tagColor }]
+      const updated = await prisma.user.update({
+        where: { id: req.userId },
+        data: {
+          allTags: JSON.stringify(newAllTags),
+          ...(!user?.tag || user.tag === 'Student' || user.tag === 'Parent'
+            ? { tag: tagDef.tag, tagColor: tagDef.tagColor }
+            : {}),
+        },
+        select: { tag: true, tagColor: true },
+      })
+      res.json({ data: { granted: { id: tagDef.id, tag: tagDef.tag, tagColor: tagDef.tagColor, rarity: tagDef.rarity }, tag: updated.tag, tagColor: updated.tagColor } })
 
     } else {
       res.status(400).json({ error: 'Unknown grant type' })

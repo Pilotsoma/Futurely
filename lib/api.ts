@@ -399,7 +399,7 @@ export const api = {
   feedDeleteUser: (targetUserId: number) =>
     request<{ deleted: boolean }>(`/api/feed/users/${targetUserId}`, { method: 'DELETE' }),
 
-  feedCreateGiveaway: (data: { body: string; durationMinutes: number; giveawayTag?: string; giveawayTagColor?: string; giveawayCoinAmount?: number }) =>
+  feedCreateGiveaway: (data: { body: string; durationMinutes: number; giveawayTag?: string; giveawayTagColor?: string; giveawayCoinAmount?: number; giveawayItemType?: string; giveawayItemId?: string; giveawayItemRarity?: string }) =>
     request<FeedPost>('/api/feed/posts/giveaway', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -491,14 +491,17 @@ export const api = {
       body: JSON.stringify({ itemType, itemId }),
     }),
 
+  marketplaceQuicksellDuplicates: () =>
+    request<{ coins: number; sold: number; totalPayout: number }>('/api/marketplace/quicksell/duplicates', { method: 'POST' }),
+
   marketplaceEquip: (type: 'name-color' | 'pfp', itemId: string | null) =>
     request<{ nameColor?: string | null; pfpEffect?: string | null }>('/api/marketplace/equip', {
       method: 'PUT',
       body: JSON.stringify({ type, itemId }),
     }),
 
-  marketplaceAdminGrant: (payload: { type: 'coins'; amount: number } | { type: 'name-color' | 'pfp'; itemId: string }) =>
-    request<{ coins?: number; granted?: MarketplaceItem }>('/api/marketplace/admin/grant', {
+  marketplaceAdminGrant: (payload: { type: 'coins'; amount: number } | { type: 'name-color' | 'pfp' | 'tag'; itemId: string }) =>
+    request<{ coins?: number; granted?: MarketplaceItem & { tag?: string; tagColor?: string }; tag?: string; tagColor?: string }>('/api/marketplace/admin/grant', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
@@ -612,6 +615,9 @@ export interface FeedPost {
   giveawayEndsAt: string | null
   giveawayWinnerId: number | null
   giveawayWinner: { id: number; name: string | null; email: string } | null
+  giveawayItemType: string | null
+  giveawayItemId: string | null
+  giveawayItemRarity: string | null
   _count: { likes: number; comments: number; giveawayEntries: number }
 }
 
