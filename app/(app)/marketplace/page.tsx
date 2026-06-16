@@ -1693,6 +1693,7 @@ export default function MarketplacePage() {
                       won: { id: item.id, name: item.name, tag: item.tag, tagColor: item.tagColor, value: item.value, rarity: item.rarity, type: item.type },
                       alreadyHad: false,
                     })
+                    setResultId(id => id + 1)
                     setTab('boxes')
                   }}
                   style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#8B5CF6', color: '#fff', fontWeight: 700, fontSize: 13, cursor: simItemId ? 'pointer' : 'not-allowed', opacity: simItemId ? 1 : 0.5 }}>
