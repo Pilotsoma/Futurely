@@ -739,7 +739,7 @@ export default function MarketplacePage() {
     )
   }
 
-  if (streak !== null && streak < 3) {
+  if (streak !== null && streak < 3 && !isDevUser) {
     return (
       <div className="fade-up" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
         <div style={{ marginBottom: 20 }}>
