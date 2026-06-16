@@ -472,7 +472,7 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
       res.json({ data: { coins: updated.coins, won: { ...won, type: 'tag' }, alreadyHad: alreadyHas } })
 
       // Auto-post for Legendary/Mythic unboxes
-      if (!alreadyHas && (won.rarity === 'Legendary' || won.rarity === 'Mythic')) {
+      if (won.rarity === 'Legendary' || won.rarity === 'Mythic') {
         autoPostUnbox(req.userId, 'tag', won.id, won.tag, undefined, won.rarity, won.tagColor)
       }
 
@@ -490,7 +490,7 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
       res.json({ data: { coins: updated.coins, won: { ...won, type: 'name-color' }, alreadyHad: alreadyHas } })
 
       // Auto-post for Legendary/Mythic unboxes
-      if (!alreadyHas && (won.rarity === 'Legendary' || won.rarity === 'Mythic')) {
+      if (won.rarity === 'Legendary' || won.rarity === 'Mythic') {
         autoPostUnbox(req.userId, 'name-color', won.id, won.name, won.value, won.rarity, undefined)
       }
 
@@ -508,7 +508,7 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
       res.json({ data: { coins: updated.coins, won: { ...won, type: 'pfp' }, alreadyHad: alreadyHas } })
 
       // Auto-post for Legendary/Mythic unboxes
-      if (!alreadyHas && (won.rarity === 'Legendary' || won.rarity === 'Mythic')) {
+      if (won.rarity === 'Legendary' || won.rarity === 'Mythic') {
         autoPostUnbox(req.userId, 'pfp', won.id, won.name, won.value, won.rarity, undefined)
       }
     }
