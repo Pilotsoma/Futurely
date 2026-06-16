@@ -80,6 +80,7 @@ async function scrapeStudentData(
   try {
     const rawGrades = await getGrades(sessionToken)
     const normalized = normalizeHacGrades(rawGrades.classes ?? [])
+    console.log('[PARENT] HAC grades scraped:', normalized.length, 'courses')
     courses = normalized.map(c => ({
       id: c.id,
       name: c.name,
@@ -89,7 +90,9 @@ async function scrapeStudentData(
       letterGrade: c.letterGrade,
       upcomingAssignments: c.upcomingAssignments,
     }))
-  } catch { /* non-fatal */ }
+  } catch (e) {
+    console.warn('[PARENT] HAC grades fetch failed (non-fatal):', e instanceof Error ? e.message : String(e))
+  }
 
   return {
     sessionToken,
@@ -246,14 +249,78 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
             lastSynced: new Date(),
           },
         })
-      } catch { /* fall through to cached */ }
+      } catch (e) {
+        console.warn('[PARENT] Live HAC re-fetch failed, using cached data:', e instanceof Error ? e.message : String(e))
+      }
       deleteSessionByUserId(tempId)
     }
 
-    const courses = cached?.courses ?? []
-    const gpaW = cached?.weightedGpa ?? cached?.unweightedGpa ?? 0
-    const gpaUW = cached?.unweightedGpa ?? 0
+    let courses = cached?.courses ?? []
+    let gpaW = cached?.weightedGpa ?? cached?.unweightedGpa ?? 0
+    let gpaUW = cached?.unweightedGpa ?? 0
     const studentName = cached?.studentName ?? conn.studentName
+
+    // If HAC scraping returned no courses, fall back to student's own Futurely data.
+    // Match by email: HAC username is usually the student's school email.
+    if (courses.length === 0) {
+      console.log('[PARENT] HAC returned 0 courses — trying Futurely fallback for:', conn.hacUsername)
+      try {
+        const futurleyStudent = await prisma.user.findUnique({
+          where: { email: conn.hacUsername },
+          include: {
+            schoolConnection: { select: { hacDataCache: true } },
+            courses: { include: { grades: { orderBy: { createdAt: 'desc' }, take: 1 } } },
+            assignments: {
+              where: { completed: false },
+              orderBy: { dueDate: 'asc' },
+              take: 100,
+            },
+            profile: true,
+          },
+        })
+
+        if (futurleyStudent) {
+          console.log('[PARENT] Found Futurely student user id:', futurleyStudent.id)
+
+          // Try student's own HAC cache first (richest data)
+          const hacCache = futurleyStudent.schoolConnection?.hacDataCache as Record<string, { data: unknown; cachedAt: number }> | null
+          const classworkEntry = hacCache?.['classwork:__default__']?.data as { classes?: unknown[] } | undefined
+          if (Array.isArray(classworkEntry?.classes) && classworkEntry.classes.length > 0) {
+            console.log('[PARENT] Using student HAC cache:', classworkEntry.classes.length, 'classes')
+            const normalized = normalizeHacGrades(classworkEntry.classes as Parameters<typeof normalizeHacGrades>[0])
+            courses = normalized.map(c => ({
+              id: c.id,
+              name: c.name,
+              teacher: c.teacher,
+              period: c.period,
+              average: c.average,
+              letterGrade: c.letterGrade,
+              upcomingAssignments: c.upcomingAssignments,
+            }))
+          } else if (futurleyStudent.courses.length > 0) {
+            // Fall back to Futurely Course/Grade tables
+            console.log('[PARENT] Using Futurely Course table:', futurleyStudent.courses.length, 'courses')
+            courses = futurleyStudent.courses.map(c => ({
+              id: String(c.id),
+              name: c.name,
+              teacher: c.teacher,
+              period: String(c.period),
+              average: c.grades[0]?.percentage ?? null,
+              letterGrade: c.grades[0]?.letterGrade ?? null,
+              upcomingAssignments: [],
+            }))
+          }
+
+          // Pull Futurely profile GPA if cached HAC GPA is 0
+          if (futurleyStudent.profile && gpaW === 0 && gpaUW === 0) {
+            gpaW = futurleyStudent.profile.weightedGpa ?? 0
+            gpaUW = futurleyStudent.profile.unweightedGpa ?? 0
+          }
+        }
+      } catch (fallbackErr) {
+        console.warn('[PARENT] Futurely fallback failed:', fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr))
+      }
+    }
 
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
