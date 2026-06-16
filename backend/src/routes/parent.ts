@@ -349,77 +349,92 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
       return
     }
 
-    // Primary source: student's own Futurely data (matched by HAC username)
+    // Get the student's Futurely data (assignments + GPA + any cached grades)
     const futurley = await getStudentHacData(conn.hacUsername).catch(() => null)
 
-    // Derive courses from the raw HAC classes
-    const hacClasses = futurley?.hacClasses ?? []
-    const mappedCourses = hacClasses.map((c, i) => {
-      const avg = c.average ? parseFloat(c.average) : null
-      const letter = avg !== null && !isNaN(avg)
-        ? (avg >= 90 ? 'A' : avg >= 80 ? 'B' : avg >= 70 ? 'C' : avg >= 60 ? 'D' : 'F')
-        : null
-      return {
-        id: i + 1,
-        name: c.name,
-        teacher: c.teacher,
-        period: parseInt(c.period) || (i + 1),
-        courseType: 'REGULAR',
-        semester: 'FALL',
-        creditHours: 1,
-        grade: avg !== null && !isNaN(avg) ? { letterGrade: letter ?? '—', percentage: avg } : null,
+    let hacClasses: RawHacClass[] = futurley?.hacClasses ?? []
+    let availablePeriods: string[] = futurley?.availablePeriods ?? []
+    let currentPeriod: string = futurley?.currentPeriod ?? ''
+
+    // If no grades in Futurely cache, do a live HAC fetch with the parent's stored credentials.
+    // This is the authoritative fallback — and we cache the result into the student's
+    // SchoolConnection so future loads are instant.
+    if (hacClasses.length === 0 && conn.hacPasswordEncrypted) {
+      const tempId = tempSessionId(parentId)
+      try {
+        const decrypted = decryptPassword(conn.hacPasswordEncrypted)
+        console.log('[PARENT] Live HAC fetch for grades:', conn.hacUsername)
+        const sessionToken = await loginHAC(conn.districtUrl, conn.hacUsername, decrypted, tempId)
+        const gradeResult = await getGrades(sessionToken)
+        hacClasses = gradeResult.classes as RawHacClass[]
+        availablePeriods = gradeResult.availablePeriods
+        currentPeriod = gradeResult.currentPeriod
+        console.log('[PARENT] Live fetch got', hacClasses.length, 'classes,', availablePeriods.length, 'periods')
+
+        // Cache into the student's own SchoolConnection so future loads skip the live fetch
+        if (futurley?.schoolConnId) {
+          const sc = await prisma.schoolConnection.findUnique({ where: { id: futurley.schoolConnId }, select: { hacDataCache: true } })
+          const prev = (sc?.hacDataCache ?? {}) as Record<string, unknown>
+          await prisma.schoolConnection.update({
+            where: { id: futurley.schoolConnId },
+            data: { hacDataCache: { ...prev, 'classwork:__default__': { data: gradeResult, cachedAt: Date.now() } } as object },
+          })
+        }
+      } catch (e) {
+        console.warn('[PARENT] Live HAC grades fetch failed:', e instanceof Error ? e.message : String(e))
+      } finally {
+        deleteSessionByUserId(tempId)
       }
-    })
+    }
+
+    // Name: always prefer the HAC-scraped name (official school name), not the Futurely display name
+    let studentName: string | null = conn.studentName
+    let gradeLevel: number | null = conn.gradeLevel
+    let gradYear: number | null = conn.graduationYear
+    try {
+      if (conn.cachedData) {
+        const cd = JSON.parse(conn.cachedData) as CachedStudentData
+        studentName = cd.studentName ?? studentName
+        gradeLevel = cd.gradeLevel ?? gradeLevel
+        gradYear = cd.graduationYear ?? gradYear
+      }
+    } catch { /* skip */ }
+
+    const mapCourse = (c: RawHacClass, i: number) => {
+      const avg = c.average ? parseFloat(c.average) : null
+      const letter = avg !== null && !isNaN(avg) ? (avg >= 90 ? 'A' : avg >= 80 ? 'B' : avg >= 70 ? 'C' : avg >= 60 ? 'D' : 'F') : null
+      return { id: i + 1, name: c.name, teacher: c.teacher, period: parseInt(c.period) || (i + 1), courseType: 'REGULAR', semester: 'FALL', creditHours: 1, grade: avg !== null && !isNaN(avg) ? { letterGrade: letter ?? '—', percentage: avg } : null }
+    }
+    const mappedCourses = hacClasses.map(mapCourse)
 
     const assignments = futurley?.assignments ?? []
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const todayEnd = new Date(todayStart.getTime() + 86_400_000)
     const weekEnd = new Date(todayStart.getTime() + 7 * 86_400_000)
-
     const pending = assignments.filter(a => !a.completed)
-    const pendingAssignments = pending.length
-    const assignmentsDueToday = pending.filter(a => { const d = new Date(a.dueDate); return d >= todayStart && d < todayEnd }).length
-    const assignmentsDueThisWeek = pending.filter(a => { const d = new Date(a.dueDate); return d >= todayStart && d < weekEnd }).length
-
-    // Fall back to parent's own cached HAC data for name/gradeLevel/graduationYear
-    let cachedName: string | null = conn.studentName
-    let cachedGradeLevel: number | null = conn.gradeLevel
-    let cachedGradYear: number | null = conn.graduationYear
-    try {
-      if (conn.cachedData) {
-        const c = JSON.parse(conn.cachedData) as CachedStudentData
-        cachedName = c.studentName ?? cachedName
-        cachedGradeLevel = c.gradeLevel ?? cachedGradeLevel
-        cachedGradYear = c.graduationYear ?? cachedGradYear
-      }
-    } catch { /* skip */ }
 
     res.json({
       data: {
         id: conn.id,
-        name: futurley?.studentName ?? cachedName,
+        name: studentName,
         email: conn.hacUsername,
         role: 'STUDENT',
         profile: {
           weightedGpa: futurley?.weightedGpa ?? 0,
           unweightedGpa: futurley?.unweightedGpa ?? 0,
-          gradeLevel: futurley?.gradeLevel ?? cachedGradeLevel ?? 0,
-          graduationYear: futurley?.graduationYear ?? cachedGradYear ?? 0,
+          gradeLevel: futurley?.gradeLevel ?? gradeLevel ?? 0,
+          graduationYear: futurley?.graduationYear ?? gradYear ?? 0,
           futureDecision: null, satScore: null, actScore: null, counselorName: null,
         },
         courses: mappedCourses,
         assignments,
-        hacGrades: {
-          classes: hacClasses,
-          availablePeriods: futurley?.availablePeriods ?? [],
-          currentPeriod: futurley?.currentPeriod ?? '',
-        },
+        hacGrades: { classes: hacClasses, availablePeriods, currentPeriod },
         stats: {
           totalCourses: mappedCourses.length,
-          pendingAssignments,
-          assignmentsDueToday,
-          assignmentsDueThisWeek,
+          pendingAssignments: pending.length,
+          assignmentsDueToday: pending.filter(a => { const d = new Date(a.dueDate); return d >= todayStart && d < todayEnd }).length,
+          assignmentsDueThisWeek: pending.filter(a => { const d = new Date(a.dueDate); return d >= todayStart && d < weekEnd }).length,
           completedAssignments: futurley?.completedAssignments ?? 0,
         },
       },
@@ -459,7 +474,7 @@ router.get('/students/:studentId/grades', async (req: AuthRequest, res: Response
       }
     }
 
-    // Fall back to parent's own HAC credentials for a live fetch
+    // Fall back to parent's own HAC credentials for a live fetch, and cache the result
     if (conn.hacPasswordEncrypted) {
       const tempId = tempSessionId(parentId)
       try {
@@ -467,6 +482,17 @@ router.get('/students/:studentId/grades', async (req: AuthRequest, res: Response
         const sessionToken = await loginHAC(conn.districtUrl, conn.hacUsername, decrypted, tempId)
         const result = await getGrades(sessionToken, period)
         deleteSessionByUserId(tempId)
+
+        // Cache into student's SchoolConnection for future reads
+        if (schoolConn) {
+          const sc = await prisma.schoolConnection.findFirst({ where: { hacUsername: conn.hacUsername }, select: { id: true, hacDataCache: true } })
+          if (sc) {
+            const key = period ? `classwork:${period}` : 'classwork:__default__'
+            const prev = (sc.hacDataCache ?? {}) as Record<string, unknown>
+            await prisma.schoolConnection.update({ where: { id: sc.id }, data: { hacDataCache: { ...prev, [key]: { data: result, cachedAt: Date.now() } } as object } })
+          }
+        }
+
         res.json({ data: { classes: result.classes, availablePeriods: result.availablePeriods, currentPeriod: result.currentPeriod } })
         return
       } catch (e) {
