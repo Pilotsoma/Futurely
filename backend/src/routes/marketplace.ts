@@ -505,10 +505,8 @@ router.post('/admin/grant', requireAuth, async (req: AuthRequest, res: Response)
       if (!item) { res.status(400).json({ error: 'Unknown name-color itemId' }); return }
       const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { ownedNameColors: true } })
       const owned = parseJsonArr(user?.ownedNameColors)
-      if (!owned.some(i => i.id === item.id)) {
-        owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
-        await prisma.user.update({ where: { id: req.userId }, data: { ownedNameColors: JSON.stringify(owned) } })
-      }
+      owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
+      await prisma.user.update({ where: { id: req.userId }, data: { ownedNameColors: JSON.stringify(owned) } })
       res.json({ data: { granted: item } })
 
     } else if (type === 'pfp') {
@@ -517,10 +515,8 @@ router.post('/admin/grant', requireAuth, async (req: AuthRequest, res: Response)
       if (!item) { res.status(400).json({ error: 'Unknown pfp itemId' }); return }
       const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { ownedPfpEffects: true } })
       const owned = parseJsonArr(user?.ownedPfpEffects)
-      if (!owned.some(i => i.id === item.id)) {
-        owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
-        await prisma.user.update({ where: { id: req.userId }, data: { ownedPfpEffects: JSON.stringify(owned) } })
-      }
+      owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
+      await prisma.user.update({ where: { id: req.userId }, data: { ownedPfpEffects: JSON.stringify(owned) } })
       res.json({ data: { granted: item } })
 
     } else {

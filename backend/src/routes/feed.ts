@@ -800,9 +800,7 @@ router.put('/users/:id/tag', async (req: Request, res: Response) => {
 
     const target = await prisma.user.findUnique({ where: { id: targetId } });
     const existing = parseAllTags(target?.allTags || '[]');
-    // Replace entry if same tag name exists, otherwise append
-    const filtered = existing.filter(t => t.tag !== tag);
-    const newAllTags = [...filtered, { tag, tagColor: tagColor || 'grey' }];
+    const newAllTags = [...existing, { tag, tagColor: tagColor || 'grey' }];
 
     const updated = await prisma.user.update({
       where: { id: targetId },
