@@ -214,6 +214,8 @@ export default function MarketplacePage() {
   const [opening, setOpening] = useState<'tag' | 'name-color' | 'pfp' | null>(null)
   const [hoveredBox, setHoveredBox] = useState<'tag' | 'name-color' | 'pfp' | null>(null)
   const [result, setResult] = useState<(BoxResult & { dismissed?: boolean }) | null>(null)
+  const [resultId, setResultId] = useState(0)
+  const [dismissCountdown, setDismissCountdown] = useState(0)
   const [equipping, setEquipping] = useState<string | null>(null)
   const [quickselling, setQuickselling] = useState<string | null>(null)
 
@@ -355,6 +357,21 @@ export default function MarketplacePage() {
     if (tab === 'inventory') fetchMyActiveListings()
   }, [tab, fetchListings, fetchMyActiveListings, fetchTrades])
 
+  // 3-second mandatory hold for Legendary/Mythic unbox results
+  useEffect(() => {
+    if (!result || result.dismissed) { setDismissCountdown(0); return }
+    const isHighRarity = result.won.rarity === 'Legendary' || result.won.rarity === 'Mythic'
+    if (!isHighRarity) { setDismissCountdown(0); return }
+    setDismissCountdown(3)
+    const interval = setInterval(() => {
+      setDismissCountdown(c => {
+        if (c <= 1) { clearInterval(interval); return 0 }
+        return c - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [resultId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   async function openProfile(userId: number) {
@@ -397,6 +414,7 @@ export default function MarketplacePage() {
         return next
       })
       setResult(r)
+      setResultId(id => id + 1)
     } catch { /* ignore */ }
     finally { setOpening(null) }
   }
@@ -991,7 +1009,7 @@ export default function MarketplacePage() {
             const wonPrice = prices[`${result.won.type}:${result.won.id}`]
             return (
             <PriceTooltip price={wonPrice}>
-            <div className={cardClass} onClick={() => setResult(r => r ? { ...r, dismissed: true } : r)} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? '#000')}08`, cursor: 'pointer' }}>
+            <div className={cardClass} onClick={() => { if (dismissCountdown === 0) setResult(r => r ? { ...r, dismissed: true } : r) }} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? '#000')}08`, cursor: dismissCountdown > 0 ? 'default' : 'pointer' }}>
               <div style={{ fontSize: 48, marginBottom: 10 }}>{emoji}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
               {itemPreview}
@@ -1014,10 +1032,11 @@ export default function MarketplacePage() {
                   </button>
                 )}
                 <button
-                  onClick={() => setResult(r => r ? { ...r, dismissed: true } : r)}
-                  style={{ padding: '10px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                  onClick={() => { if (dismissCountdown === 0) setResult(r => r ? { ...r, dismissed: true } : r) }}
+                  disabled={dismissCountdown > 0}
+                  style={{ padding: '10px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: dismissCountdown > 0 ? RARITY_COLOR[result.won.rarity] ?? 'var(--text-muted)' : 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: dismissCountdown > 0 ? 'not-allowed' : 'pointer', opacity: dismissCountdown > 0 ? 0.8 : 1, transition: 'all 0.3s' }}
                 >
-                  Nice!
+                  {dismissCountdown > 0 ? `⏳ ${dismissCountdown}s` : 'Nice!'}
                 </button>
               </div>
             </div>
