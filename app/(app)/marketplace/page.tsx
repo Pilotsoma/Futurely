@@ -647,13 +647,32 @@ export default function MarketplacePage() {
   function renderTradeItems(items: TradeItem[]) {
     return (
       <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
-        {items.map((item, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <ItemIcon item={{ type: item.type, value: item.value ?? item.tagColor }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{item.name ?? item.tag}</span>
-            <RarityBadge rarity={item.rarity} />
-          </div>
-        ))}
+        {items.map((item, i) => {
+          const effectStyle = pfpStyle(item.type === 'pfp' ? item.value : undefined)
+          const imgBorderStyle: React.CSSProperties = {
+            ...(effectStyle.border    ? { border:    effectStyle.border }    : {}),
+            ...(effectStyle.boxShadow ? { boxShadow: effectStyle.boxShadow } : {}),
+          }
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              {/* Type badge */}
+              <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
+              </span>
+              {/* Visual preview */}
+              {item.type === 'tag' ? (
+                <span style={{ fontSize: 12, fontWeight: 800, color: item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
+              ) : item.type === 'name-color' ? (
+                <span className={item.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 12, fontWeight: 800, color: item.value === 'rainbow' ? undefined : item.value }}>DUMMY</span>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={DUMMY_PFP} alt="" className={pfpClass(item.value)} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0, ...imgBorderStyle }} />
+              )}
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{item.name ?? item.tag}</span>
+              <RarityBadge rarity={item.rarity} />
+            </div>
+          )
+        })}
         {items.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nothing</span>}
       </div>
     )
@@ -990,38 +1009,44 @@ export default function MarketplacePage() {
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>No tradeable items</div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {tradeTarget.tags.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
                           {tradeTarget.tags.map(t => {
                             const item: TradeItem = { type: 'tag', id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }
                             const sel = selectedRequest.some(i => i.id === t.id && i.type === 'tag')
                             return (
                               <div key={t.id} onClick={() => toggleRequest(item)}
                                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)', cursor: 'pointer' }}>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: t.tagColor }}>{t.tag}</span>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: t.tagColor }}>[{t.tag}]</span>
                                 <RarityBadge rarity={t.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
                               </div>
                             )
                           })}
+                          {tradeTarget.nameColors.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🎨 Name Colors</div>}
                           {tradeTarget.nameColors.map(c => {
                             const item: TradeItem = { type: 'name-color', id: c.id, name: c.name, value: c.value, rarity: c.rarity }
                             const sel = selectedRequest.some(i => i.id === c.id && i.type === 'name-color')
                             return (
                               <div key={c.id} onClick={() => toggleRequest(item)}
                                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)', cursor: 'pointer' }}>
-                                <span style={{ width: 16, height: 16, borderRadius: '50%', display: 'inline-block', background: c.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : c.value, border: '1px solid var(--border)', flexShrink: 0 }} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{c.name}</span>
+                                <span className={c.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 800, color: c.value === 'rainbow' ? undefined : c.value, flexShrink: 0 }}>DUMMY</span>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{c.name}</span>
                                 <RarityBadge rarity={c.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
                               </div>
                             )
                           })}
+                          {tradeTarget.pfpEffects.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🖼️ PFP Effects</div>}
                           {tradeTarget.pfpEffects.map(p => {
                             const item: TradeItem = { type: 'pfp', id: p.id, name: p.name, value: p.value, rarity: p.rarity }
                             const sel = selectedRequest.some(i => i.id === p.id && i.type === 'pfp')
+                            const es = pfpStyle(p.value)
+                            const imgS: React.CSSProperties = { ...(es.border ? { border: es.border } : {}), ...(es.boxShadow ? { boxShadow: es.boxShadow } : {}) }
                             return (
                               <div key={p.id} onClick={() => toggleRequest(item)}
                                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)', cursor: 'pointer' }}>
-                                <div className={pfpClass(p.value)} style={{ width: 16, height: 16, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', flexShrink: 0, ...pfpStyle(p.value) }} />
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={DUMMY_PFP} alt="" className={pfpClass(p.value)} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, ...imgS }} />
                                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{p.name}</span>
                                 <RarityBadge rarity={p.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
@@ -1041,38 +1066,44 @@ export default function MarketplacePage() {
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>No items to offer</div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`)).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
                           {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`)).map(t => {
                             const item: TradeItem = { type: 'tag', id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }
                             const sel = selectedOffer.some(i => i.id === t.id && i.type === 'tag')
                             return (
                               <div key={t.id} onClick={() => toggleOffer(item)}
                                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)', cursor: 'pointer' }}>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: t.tagColor }}>{t.tag}</span>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: t.tagColor }}>[{t.tag}]</span>
                                 <RarityBadge rarity={t.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
                               </div>
                             )
                           })}
+                          {(inv?.ownedNameColors ?? []).filter(c => !myListedIds.has(`name-color:${c.id}`)).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🎨 Name Colors</div>}
                           {(inv?.ownedNameColors ?? []).filter(c => !myListedIds.has(`name-color:${c.id}`)).map(c => {
                             const item: TradeItem = { type: 'name-color', id: c.id, name: c.name, value: c.value, rarity: c.rarity }
                             const sel = selectedOffer.some(i => i.id === c.id && i.type === 'name-color')
                             return (
                               <div key={c.id} onClick={() => toggleOffer(item)}
                                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)', cursor: 'pointer' }}>
-                                <span style={{ width: 16, height: 16, borderRadius: '50%', display: 'inline-block', background: c.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : c.value, border: '1px solid var(--border)', flexShrink: 0 }} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{c.name}</span>
+                                <span className={c.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 800, color: c.value === 'rainbow' ? undefined : c.value, flexShrink: 0 }}>DUMMY</span>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{c.name}</span>
                                 <RarityBadge rarity={c.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
                               </div>
                             )
                           })}
+                          {(inv?.ownedPfpEffects ?? []).filter(p => !myListedIds.has(`pfp:${p.id}`)).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🖼️ PFP Effects</div>}
                           {(inv?.ownedPfpEffects ?? []).filter(p => !myListedIds.has(`pfp:${p.id}`)).map(p => {
                             const item: TradeItem = { type: 'pfp', id: p.id, name: p.name, value: p.value, rarity: p.rarity }
                             const sel = selectedOffer.some(i => i.id === p.id && i.type === 'pfp')
+                            const es = pfpStyle(p.value)
+                            const imgS: React.CSSProperties = { ...(es.border ? { border: es.border } : {}), ...(es.boxShadow ? { boxShadow: es.boxShadow } : {}) }
                             return (
                               <div key={p.id} onClick={() => toggleOffer(item)}
                                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)', cursor: 'pointer' }}>
-                                <div className={pfpClass(p.value)} style={{ width: 16, height: 16, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', flexShrink: 0, ...pfpStyle(p.value) }} />
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={DUMMY_PFP} alt="" className={pfpClass(p.value)} style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, ...imgS }} />
                                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{p.name}</span>
                                 <RarityBadge rarity={p.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
