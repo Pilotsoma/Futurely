@@ -22,7 +22,7 @@ const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#EC4899', rarity: 'Epic',      weight: 1.75 },
   { id: 'mastermind',     tag: 'Mastermind',      tagColor: '#EAB308', rarity: 'Legendary', weight: 0.5  },
   { id: 'genius',         tag: 'Genius',          tagColor: '#EC4899', rarity: 'Legendary', weight: 0.5  },
-  { id: 'goat',           tag: 'GOAT',            tagColor: '#EAB308', rarity: 'Mythic',    weight: 0.5  },
+  { id: 'god',            tag: 'GOD',             tagColor: '#EAB308', rarity: 'Mythic',    weight: 0.5  },
 ]
 
 const NAME_COLOR_BOX_ITEMS: ColorItem[] = [
@@ -71,30 +71,35 @@ const RARITY_RANK: Record<string, number> = {
 // ── Estimated item prices (seed; updated dynamically on each sale) ─────────────
 
 const SEED_PRICES: Record<string, number> = {
-  // Tags
-  'tag:grinder': 45,        'tag:focused': 45,        'tag:scholar': 45,
-  'tag:honors-student': 350, 'tag:ap-student': 350,
-  'tag:deans-list': 2500,   'tag:top-performer': 2500,
-  'tag:ace': 12000,          'tag:prodigy': 12000,
-  'tag:mastermind': 55000,   'tag:genius': 55000,
-  'tag:goat': 100000,
-  // Name Colors
-  'name-color:forest-green': 25,  'name-color:navy-blue': 25,   'name-color:dark-red': 25,
-  'name-color:slate-blue': 25,    'name-color:teal': 25,
-  'name-color:bright-orange': 250, 'name-color:violet': 250,    'name-color:cyan': 250,
-  'name-color:hot-pink': 2000,    'name-color:gold': 2000,      'name-color:lime-green': 2000,
-  'name-color:electric-blue': 10000, 'name-color:magenta': 10000,
-  'name-color:pure-white': 50000, 'name-color:black': 50000,
-  'name-color:rainbow': 350000,
-  // PFP Effects
-  'pfp:border-green': 25,   'pfp:border-blue': 25,    'pfp:border-red': 25,
-  'pfp:border-navy': 25,    'pfp:border-teal': 25,
-  'pfp:border-orange': 250, 'pfp:border-violet': 250, 'pfp:border-cyan': 250,
-  'pfp:border-hotpink': 2000, 'pfp:border-gold': 2000, 'pfp:border-lime': 2000,
-  'pfp:glow-pink': 10000,   'pfp:glow-purple': 10000,
-  'pfp:glow-gold': 60000,   'pfp:frame-black': 60000,
-  'pfp:rainbow': 500000,
+  // Tags (Common 10, Uncommon 20, Rare 50, Epic 250, Legendary 1k, Mythic GOD 50k)
+  'tag:grinder': 10,         'tag:focused': 10,         'tag:scholar': 10,
+  'tag:honors-student': 20,  'tag:ap-student': 20,
+  'tag:deans-list': 50,      'tag:top-performer': 50,
+  'tag:ace': 250,             'tag:prodigy': 250,
+  'tag:mastermind': 1000,     'tag:genius': 1000,
+  'tag:god': 50000,
+  // GOAT is the day-100 streak tag (non-tradeable, seed only for inventory worth display)
+  'tag:GOAT': 50000,
+  // Name Colors (Common 15, Uncommon 30, Rare 75, Epic 350, Legendary 2k, Mythic RGB 250k)
+  'name-color:forest-green': 15,   'name-color:navy-blue': 15,   'name-color:dark-red': 15,
+  'name-color:slate-blue': 15,     'name-color:teal': 15,
+  'name-color:bright-orange': 30,  'name-color:violet': 30,      'name-color:cyan': 30,
+  'name-color:hot-pink': 75,       'name-color:gold': 75,        'name-color:lime-green': 75,
+  'name-color:electric-blue': 350, 'name-color:magenta': 350,
+  'name-color:pure-white': 2000,   'name-color:black': 2000,
+  'name-color:rainbow': 250000,
+  // PFP Effects (Common 20, Uncommon 40, Rare 100, Epic 400, Legendary 3k, Mythic RGB 300k)
+  'pfp:border-green': 20,    'pfp:border-blue': 20,    'pfp:border-red': 20,
+  'pfp:border-navy': 20,     'pfp:border-teal': 20,
+  'pfp:border-orange': 40,   'pfp:border-violet': 40,  'pfp:border-cyan': 40,
+  'pfp:border-hotpink': 100, 'pfp:border-gold': 100,   'pfp:border-lime': 100,
+  'pfp:glow-pink': 400,      'pfp:glow-purple': 400,
+  'pfp:glow-gold': 3000,     'pfp:frame-black': 3000,
+  'pfp:rainbow': 300000,
 }
+
+// Tags that can never be listed or traded (streak-earned exclusives)
+const NON_TRADEABLE_TAGS = new Set(['GOAT'])
 
 // ── Trade item type ────────────────────────────────────────────────────────────
 
@@ -631,6 +636,9 @@ router.post('/listings', requireAuth, async (req: AuthRequest, res: Response): P
   if (typeof price !== 'number' || price < 10 || !Number.isInteger(price)) {
     res.status(400).json({ error: 'price must be an integer >= 10' }); return
   }
+  if (itemType === 'tag' && NON_TRADEABLE_TAGS.has(itemId)) {
+    res.status(403).json({ error: 'This tag cannot be listed on the marketplace' }); return
+  }
 
   const listingFee = Math.floor(price * 0.1)
 
@@ -852,10 +860,12 @@ router.get('/users/:userId/inventory', requireAuth, async (req: AuthRequest, res
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
     const rawTags = parseTagArr(user.allTags)
-    const tags = rawTags.map(t => {
-      const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
-      return { id: def?.id ?? t.tag, tag: t.tag, tagColor: t.tagColor, rarity: def?.rarity ?? 'Common' }
-    })
+    const tags = rawTags
+      .filter(t => !NON_TRADEABLE_TAGS.has(t.tag))
+      .map(t => {
+        const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
+        return { id: def?.id ?? t.tag, tag: t.tag, tagColor: t.tagColor, rarity: def?.rarity ?? 'Common' }
+      })
 
     res.json({
       data: {
@@ -918,6 +928,11 @@ router.post('/trades', requireAuth, async (req: AuthRequest, res: Response): Pro
   if (receiverId === req.userId) { res.status(400).json({ error: 'Cannot trade with yourself' }); return }
   if (!Array.isArray(senderItems) || senderItems.length === 0) { res.status(400).json({ error: 'senderItems must be a non-empty array' }); return }
   if (!Array.isArray(receiverItems) || receiverItems.length === 0) { res.status(400).json({ error: 'receiverItems must be a non-empty array' }); return }
+
+  const hasNonTradeable = [...senderItems, ...receiverItems].some(
+    i => i.type === 'tag' && NON_TRADEABLE_TAGS.has(i.id)
+  )
+  if (hasNonTradeable) { res.status(403).json({ error: 'One or more items cannot be traded' }); return }
 
   const TRADE_COST = 5
   try {

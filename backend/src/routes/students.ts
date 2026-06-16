@@ -10,7 +10,7 @@ const STREAK_MILESTONES: Array<{ days: number; tag: string; tagColor: string }> 
   { days: 14,  tag: 'Pro',      tagColor: '#3B82F6' },
   { days: 30,  tag: 'Veteran',  tagColor: '#F97316' },
   { days: 50,  tag: 'Legend',   tagColor: '#EC4899' },
-  { days: 100, tag: 'GOD',      tagColor: '#EAB308' },
+  { days: 100, tag: 'GOAT',     tagColor: '#EAB308' },
 ]
 
 function parseAllTags(raw: unknown): Array<{ tag: string; tagColor: string }> {

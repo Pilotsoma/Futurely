@@ -50,7 +50,7 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
       { rarity: 'Rare',      pct: '10%',   items: ["Dean's List", 'Top Performer'] },
       { rarity: 'Epic',      pct: '3.5%',  items: ['Ace', 'Prodigy'] },
       { rarity: 'Legendary', pct: '1%',    items: ['Mastermind', 'Genius'] },
-      { rarity: 'Mythic',    pct: '0.5%',  items: ['GOAT'] },
+      { rarity: 'Mythic',    pct: '0.5%',  items: ['GOD'] },
     ],
   },
   {
@@ -91,7 +91,7 @@ const SIM_ITEMS: Record<'tag' | 'name-color' | 'pfp', SimItem[]> = {
     { id: 'prodigy',        label: 'Prodigy (Epic)',            rarity: 'Epic',      type: 'tag', tag: 'Prodigy',         tagColor: '#EC4899' },
     { id: 'mastermind',     label: 'Mastermind (Legendary)',    rarity: 'Legendary', type: 'tag', tag: 'Mastermind',      tagColor: '#EAB308' },
     { id: 'genius',         label: 'Genius (Legendary)',        rarity: 'Legendary', type: 'tag', tag: 'Genius',          tagColor: '#EC4899' },
-    { id: 'goat',           label: 'GOAT (Mythic)',             rarity: 'Mythic',    type: 'tag', tag: 'GOAT',            tagColor: '#EAB308' },
+    { id: 'god',            label: 'GOD (Mythic)',              rarity: 'Mythic',    type: 'tag', tag: 'GOD',             tagColor: '#EAB308' },
   ],
   'name-color': [
     { id: 'forest-green',  label: 'Forest Green (Common)',    rarity: 'Common',    type: 'name-color', name: 'Forest Green',  value: '#15803D' },
@@ -590,6 +590,7 @@ export default function MarketplacePage() {
     count = 1,
   ) {
     const itemKey = `${type}:${item.id}`
+    const isNonTradeable = type === 'tag' && (item.id === 'GOAT' || item.tag === 'GOAT')
     const isListed = myListedIds.has(itemKey)
     const listing = myActiveListings.find(l => l.itemType === type && l.itemId === item.id)
     const isListingThis = listingItem?.type === type && listingItem?.id === item.id
@@ -651,15 +652,17 @@ export default function MarketplacePage() {
                 {isEquipped ? 'Unequip' : 'Equip'}
               </button>
             )}
-            <button
-              onClick={() => {
-                setListingItem({ type, id: item.id, name: item.name ?? item.tag ?? item.id })
-                setListingPrice('100'); setListingMsg('')
-              }}
-              style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-            >
-              List
-            </button>
+            {!isNonTradeable && (
+              <button
+                onClick={() => {
+                  setListingItem({ type, id: item.id, name: item.name ?? item.tag ?? item.id })
+                  setListingPrice('100'); setListingMsg('')
+                }}
+                style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              >
+                List
+              </button>
+            )}
             <button
               onClick={() => void handleQuicksell(type, item.id)}
               disabled={isQS}
@@ -694,37 +697,41 @@ export default function MarketplacePage() {
   }
 
   function renderTradeItems(items: TradeItem[]) {
+    const total = items.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
     return (
-      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
-        {items.map((item, i) => {
-          const effectStyle = pfpStyle(item.type === 'pfp' ? item.value : undefined)
-          const imgBorderStyle: React.CSSProperties = {
-            ...(effectStyle.border    ? { border:    effectStyle.border }    : {}),
-            ...(effectStyle.boxShadow ? { boxShadow: effectStyle.boxShadow } : {}),
-          }
-          return (
-            <PriceTooltip key={i} price={prices[`${item.type}:${item.id}`]}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-              {/* Type badge */}
-              <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: 'var(--text-muted)', flexShrink: 0 }}>
-                {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
-              </span>
-              {/* Visual preview */}
-              {item.type === 'tag' ? (
-                <span style={{ fontSize: 12, fontWeight: 800, color: item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
-              ) : item.type === 'name-color' ? (
-                <span className={item.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 12, fontWeight: 800, color: item.value === 'rainbow' ? undefined : item.value }}>DUMMY</span>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={DUMMY_PFP} alt="" className={pfpClass(item.value)} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0, ...imgBorderStyle }} />
-              )}
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{item.name ?? item.tag}</span>
-              <RarityBadge rarity={item.rarity} />
-            </div>
-            </PriceTooltip>
-          )
-        })}
-        {items.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nothing</span>}
+      <div>
+        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+          {items.map((item, i) => {
+            const effectStyle = pfpStyle(item.type === 'pfp' ? item.value : undefined)
+            const imgBorderStyle: React.CSSProperties = {
+              ...(effectStyle.border    ? { border:    effectStyle.border }    : {}),
+              ...(effectStyle.boxShadow ? { boxShadow: effectStyle.boxShadow } : {}),
+            }
+            return (
+              <PriceTooltip key={i} price={prices[`${item.type}:${item.id}`]}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                  {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
+                </span>
+                {item.type === 'tag' ? (
+                  <span style={{ fontSize: 12, fontWeight: 800, color: item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
+                ) : item.type === 'name-color' ? (
+                  <span className={item.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 12, fontWeight: 800, color: item.value === 'rainbow' ? undefined : item.value }}>DUMMY</span>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={DUMMY_PFP} alt="" className={pfpClass(item.value)} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0, ...imgBorderStyle }} />
+                )}
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{item.name ?? item.tag}</span>
+                <RarityBadge rarity={item.rarity} />
+              </div>
+              </PriceTooltip>
+            )
+          })}
+          {items.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nothing</span>}
+        </div>
+        {items.length > 0 && total > 0 && (
+          <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 5 }}>Est. 🪙 {total.toLocaleString()}</div>
+        )}
       </div>
     )
   }
@@ -1075,12 +1082,12 @@ export default function MarketplacePage() {
                       <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 10 }}>
                         Their Items — tap to request
                       </div>
-                      {tradeTarget.tags.length === 0 && tradeTarget.nameColors.length === 0 && tradeTarget.pfpEffects.length === 0 ? (
+                      {tradeTarget.tags.filter(t => t.tag !== 'GOAT' && t.id !== 'GOAT').length === 0 && tradeTarget.nameColors.length === 0 && tradeTarget.pfpEffects.length === 0 ? (
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>No tradeable items</div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {tradeTarget.tags.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
-                          {tradeTarget.tags.map(t => {
+                          {tradeTarget.tags.filter(t => t.tag !== 'GOAT' && t.id !== 'GOAT').length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
+                          {tradeTarget.tags.filter(t => t.tag !== 'GOAT' && t.id !== 'GOAT').map(t => {
                             const item: TradeItem = { type: 'tag', id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }
                             const sel = selectedRequest.some(i => i.id === t.id && i.type === 'tag')
                             return (
@@ -1129,6 +1136,14 @@ export default function MarketplacePage() {
                               </PriceTooltip>
                             )
                           })}
+                          {selectedRequest.length > 0 && (() => {
+                            const t = selectedRequest.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
+                            return t > 0 ? (
+                              <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+                                Selected: 🪙 {t.toLocaleString()}
+                              </div>
+                            ) : null
+                          })()}
                         </div>
                       )}
                     </div>
@@ -1142,8 +1157,8 @@ export default function MarketplacePage() {
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>No items to offer</div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`)).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
-                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`)).map(t => {
+                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`) && t.tag !== 'GOAT' && t.id !== 'GOAT').length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
+                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`) && t.tag !== 'GOAT' && t.id !== 'GOAT').map(t => {
                             const item: TradeItem = { type: 'tag', id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }
                             const sel = selectedOffer.some(i => i.id === t.id && i.type === 'tag')
                             return (
@@ -1192,6 +1207,14 @@ export default function MarketplacePage() {
                               </PriceTooltip>
                             )
                           })}
+                          {selectedOffer.length > 0 && (() => {
+                            const t = selectedOffer.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
+                            return t > 0 ? (
+                              <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+                                Selected: 🪙 {t.toLocaleString()}
+                              </div>
+                            ) : null
+                          })()}
                         </div>
                       )}
                     </div>
