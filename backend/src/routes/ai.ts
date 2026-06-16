@@ -5,7 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
-const FREE_MODEL = 'google/gemma-4-26b-a4b-it:free'
+const FREE_MODEL = 'openrouter/free'
 
 const openrouter = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY ?? '',
