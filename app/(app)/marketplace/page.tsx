@@ -707,16 +707,32 @@ export default function MarketplacePage() {
             const isMythic   = result.won.rarity === 'Mythic'   && !isRainbow
             const isLegend   = result.won.rarity === 'Legendary'
             const cardClass  = `ns-card box-pop${isRainbow ? ' box-rainbow' : isMythic ? ' box-mythic' : isLegend ? ' box-legendary' : ''}`
-            const nameClass  = isRainbow ? 'name-rainbow' : isMythic ? 'mythic-text' : isLegend ? 'legendary-text' : ''
             const emoji      = isRainbow ? '🌈' : isMythic ? '👑' : isLegend ? '🌟' : '🎉'
             const borderColor = isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? 'var(--border)')
+
+            const itemPreview = result.won.type === 'tag' ? (
+              <div style={{ fontSize: 22, fontWeight: 800, color: result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
+                [{result.won.tag}]
+              </div>
+            ) : result.won.type === 'name-color' ? (
+              <div className={isRainbow ? 'name-rainbow' : ''} style={{ fontSize: 24, fontWeight: 800, color: isRainbow ? undefined : result.won.value, marginBottom: 4 }}>
+                {result.won.name}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <div
+                  className={pfpClass(result.won.value)}
+                  style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: '#060D10', ...pfpStyle(result.won.value) }}
+                >✦</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{result.won.name}</div>
+              </div>
+            )
+
             return (
             <div className={cardClass} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? '#000')}08` }}>
               <div style={{ fontSize: 48, marginBottom: 10 }}>{emoji}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
-              <div className={nameClass} style={{ fontSize: 24, fontWeight: 800, color: nameClass ? undefined : (RARITY_COLOR[result.won.rarity] ?? 'var(--text)'), marginBottom: 4 }}>
-                {result.won.name ?? result.won.tag}
-              </div>
+              {itemPreview}
               <div style={{ fontSize: 13, color: RARITY_COLOR[result.won.rarity] ?? 'var(--text-muted)', fontWeight: 700, marginBottom: 16 }}>
                 {result.won.rarity}{result.alreadyHad ? ' · already owned' : ''}
               </div>
