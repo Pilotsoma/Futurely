@@ -152,7 +152,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div style={{ ...S.logoRow, justifyContent: collapsed ? 'center' : 'flex-start' }}>
           <a href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
-            <Image src="/logo.svg" alt="NextStep" width={28} height={28} style={{ flexShrink: 0 }} />
+            <Image src="/logo.svg" alt="Futurely" width={28} height={28} style={{ flexShrink: 0 }} />
             <AnimatePresence>
               {!collapsed && (
                 <motion.span
@@ -163,7 +163,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   transition={fastSpring}
                   style={S.logoText}
                 >
-                  NextStep
+                  Futurely
                 </motion.span>
               )}
             </AnimatePresence>

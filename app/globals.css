@@ -369,6 +369,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   to   { transform: rotate(360deg); }
 }
 
+/* ── Landing pulse dot ───────────────────────────────────────────────────── */
+@keyframes futurePulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(0,200,150,0.8); }
+  50%       { opacity: 0.5; box-shadow: 0 0 4px rgba(0,200,150,0.3); }
+}
+
 /* ── Shimmer loading ─────────────────────────────────────────────────────── */
 @keyframes shimmer {
   from { background-position: -400px 0; }

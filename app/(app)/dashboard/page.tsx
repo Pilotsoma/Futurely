@@ -451,7 +451,7 @@ export default function DashboardPage() {
 
       {/* AI bar */}
       <div style={S.aiBarWrap}>
-        <p style={{ ...S.cardLabel, marginBottom: 10 }}>Ask NextStep AI</p>
+        <p style={{ ...S.cardLabel, marginBottom: 10 }}>Ask Futurely AI</p>
         <AiBar />
       </div>
     </div>

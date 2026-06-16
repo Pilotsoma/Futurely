@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'NextStep — AI Academic Companion',
-  description: 'NextStep helps high school students track grades, plan assignments, and prepare for college.',
+  title: 'Futurely — AI Academic Companion',
+  description: 'Futurely helps high school students track grades, plan assignments, and prepare for college.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

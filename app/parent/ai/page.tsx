@@ -57,7 +57,7 @@ export default function ParentAIChatPage() {
             </svg>
           </div>
           <div>
-            <div style={S.aiName}>NextStep AI</div>
+            <div style={S.aiName}>Futurely AI</div>
             <div style={S.aiSub}>Parent advisor</div>
           </div>
         </div>

@@ -66,7 +66,7 @@ export default function AIChatPage() {
             </svg>
           </div>
           <div>
-            <div style={S.aiName}>NextStep AI</div>
+            <div style={S.aiName}>Futurely AI</div>
             <div style={S.aiSub}>Academic advisor</div>
           </div>
         </div>
