@@ -904,7 +904,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
 
 function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: { currentUserId: number; onOpenProfile: (userId: number) => void; followedUsers: Set<number>; onFollow: (userId: number) => void }) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Array<{ id: number; name: string | null; email: string; tag: string | null; tagColor: string | null }>>([])
+  const [results, setResults] = useState<Array<{ id: number; name: string | null; email: string; tag: string | null; tagColor: string | null; avatarUrl?: string | null }>>([])
   const [searching, setSearching] = useState(false)
 
   useEffect(() => {
