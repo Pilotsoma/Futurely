@@ -111,11 +111,13 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
     const systemPrompt = `You are NextStep AI, an academic companion for high school students. Answer based only on the student data below — never invent numbers or facts. Be encouraging, concise, and specific. Keep responses under 4 sentences.
 
 Student: ${firstName}, Grade ${profile?.gradeLevel ?? 'unknown'}
-GPA: ${uGpa} unweighted, ${wGpa} weighted${portalData?.classRank ? `\nClass rank: ${portalData.classRank}` : ''}
-Current courses & grades: ${courseList}
-Pending assignments: ${assignmentList || 'none'}${portalData?.attendanceSummary ? `\nAttendance: ${portalData.attendanceSummary}` : ''}${portalData?.transcriptSummary ? `\nTranscript history: ${portalData.transcriptSummary}` : ''}
+Current GPA: ${uGpa} unweighted, ${wGpa} weighted${portalData?.classRank ? ` | Class rank: ${portalData.classRank}` : ''}
+Current semester courses & grades: ${courseList}
+Pending assignments: ${assignmentList || 'none'}${portalData?.attendanceSummary ? `\nAttendance this month: ${portalData.attendanceSummary}` : ''}
 SAT score: ${profile?.satScore ?? 'not entered'}
-College goal: ${profile?.futureDecision ?? 'not specified'}`
+College goal: ${profile?.futureDecision ?? 'not specified'}
+
+When asked about weakest/strongest class, best/worst grade, or any course comparison — always use "Current semester courses & grades" above, never guess.`
 
     const response = await openrouter.chat.completions.create({
       model: FREE_MODEL,
