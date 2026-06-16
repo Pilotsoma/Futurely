@@ -584,6 +584,16 @@ export default function MarketplacePage() {
         {isListed ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>🪙 {listing?.price}</span>
+            {/* If user has extra copies, let them equip the unlisted one */}
+            {type !== 'tag' && count > 1 && (
+              <button
+                onClick={() => void handleEquip(type as 'name-color' | 'pfp', isEquipped ? null : item.id)}
+                disabled={!!equipping}
+                style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${isEquipped ? 'var(--border)' : 'var(--primary)'}`, background: isEquipped ? 'var(--surface-2)' : 'transparent', color: isEquipped ? 'var(--text-muted)' : 'var(--primary)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {isEquipped ? 'Unequip' : 'Equip'}
+              </button>
+            )}
             <button
               onClick={() => listing && void handleCancelListing(listing.id)}
               disabled={cancellingListing === listing?.id}
