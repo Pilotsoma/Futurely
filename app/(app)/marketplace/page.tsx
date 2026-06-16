@@ -9,6 +9,8 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+const DUMMY_PFP = 'https://i.pinimg.com/474x/13/74/20/137420f5b9c39bc911e472f5d20f053e.jpg'
+
 const RARITY_COLOR: Record<string, string> = {
   Common: '#6B7280', Uncommon: '#3B82F6', Rare: '#8B5CF6',
   Epic: '#F97316', Legendary: '#EAB308', Mythic: '#EC4899',
@@ -742,11 +744,45 @@ export default function MarketplacePage() {
               </div>
             )
 
+            // For pfp wins: apply border/glow to the image but strip background fills
+            const effectStyle = pfpStyle(result.won.type === 'pfp' ? result.won.value : undefined)
+            const dummyImgStyle: React.CSSProperties = {
+              ...(effectStyle.border     ? { border:     effectStyle.border }     : {}),
+              ...(effectStyle.boxShadow  ? { boxShadow:  effectStyle.boxShadow }  : {}),
+            }
+
+            const dummyComment = (
+              <div style={{ background: 'var(--surface-2,#1a1a1a)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0 4px', border: '1px solid var(--border)', textAlign: 'left' as const }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={DUMMY_PFP}
+                  alt="DUMMY"
+                  className={result.won.type === 'pfp' ? pfpClass(result.won.value) : ''}
+                  style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0, ...dummyImgStyle }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
+                    <span
+                      className={result.won.type === 'name-color' && isRainbow ? 'name-rainbow' : ''}
+                      style={{ fontSize: 13, fontWeight: 700, color: result.won.type === 'name-color' && !isRainbow ? result.won.value : 'var(--text)' }}
+                    >
+                      DUMMY
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: result.won.type === 'tag' ? (result.won.tagColor ?? '#6B7280') : '#6B7280' }}>
+                      [{result.won.type === 'tag' ? result.won.tag : 'DUMMY'}]
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Here&apos;s a preview of your new item ✨</div>
+                </div>
+              </div>
+            )
+
             return (
             <div className={cardClass} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? '#000')}08` }}>
               <div style={{ fontSize: 48, marginBottom: 10 }}>{emoji}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
               {itemPreview}
+              {dummyComment}
               <div style={{ fontSize: 13, color: RARITY_COLOR[result.won.rarity] ?? 'var(--text-muted)', fontWeight: 700, marginBottom: 16 }}>
                 {result.won.rarity}{result.alreadyHad ? ' · already owned' : ''}
               </div>
