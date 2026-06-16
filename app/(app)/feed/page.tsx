@@ -599,6 +599,8 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
   followedUsers: Set<number>
   isDevUser: boolean
 }) {
+  const [showLikeRequired, setShowLikeRequired] = useState(false)
+
   const tagColor = (post.user as { tagColor?: string }).tagColor || 'grey'
   const isDevTag = post.user.tag === 'DEV'
   const isFollowing = followedUsers.has(post.userId)
@@ -711,12 +713,32 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                 ) : (
                   <button
                     style={{ background: giveawayAccent, color: '#000', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
-                    onClick={() => onEnterGiveaway(post.id)}
+                    onClick={() => {
+                      if (!post.likedByMe) { setShowLikeRequired(true); return }
+                      onEnterGiveaway(post.id)
+                    }}
                   >
                     Enter Giveaway
                   </button>
                 )}
               </div>
+              {showLikeRequired && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowLikeRequired(false)}>
+                  <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                    <div style={{ fontSize: 36, marginBottom: 12 }}>🚫</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--error)', marginBottom: 8 }}>Entry Denied</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+                      You must like this post before you can enter the giveaway.
+                    </div>
+                    <button
+                      style={{ width: '100%', padding: '10px 0', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#060D10', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                      onClick={() => setShowLikeRequired(false)}
+                    >
+                      Got it
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

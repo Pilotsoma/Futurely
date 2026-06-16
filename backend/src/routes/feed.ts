@@ -438,12 +438,15 @@ router.post('/posts/:id/giveaway/enter', async (req: Request, res: Response) => 
     const postId = parseInt(req.params.id);
     const userId = (req as any).userId as number;
 
-    const post = await prisma.post.findUnique({ where: { id: postId } });
+    const [post, like, existing] = await Promise.all([
+      prisma.post.findUnique({ where: { id: postId } }),
+      prisma.like.findFirst({ where: { postId, userId } }),
+      prisma.giveawayEntry.findFirst({ where: { postId, userId } }),
+    ]);
     if (!post || post.type !== 'giveaway') return res.status(404).json({ error: 'Giveaway not found' });
     if (post.giveawayEndsAt && post.giveawayEndsAt <= new Date())
       return res.status(400).json({ error: 'This giveaway has ended' });
-
-    const existing = await prisma.giveawayEntry.findFirst({ where: { postId, userId } });
+    if (!like) return res.status(403).json({ error: 'LIKE_REQUIRED' });
     if (existing) return res.status(400).json({ error: 'Already entered' });
 
     await prisma.giveawayEntry.create({ data: { postId, userId } });
