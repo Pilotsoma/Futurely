@@ -763,7 +763,9 @@ export default function MarketplacePage() {
               </div>
             )
 
-            // For pfp wins: apply border/glow to the image but strip background fills
+            // Fill effects replace the entire circle — show a pure div, no image
+            const PFP_FILL_EFFECTS = new Set(['rainbow', 'glow-gold', 'frame-black'])
+            const isPfpFill = result.won.type === 'pfp' && PFP_FILL_EFFECTS.has(result.won.value ?? '')
             const effectStyle = pfpStyle(result.won.type === 'pfp' ? result.won.value : undefined)
             const dummyImgStyle: React.CSSProperties = {
               ...(effectStyle.border     ? { border:     effectStyle.border }     : {}),
@@ -772,13 +774,20 @@ export default function MarketplacePage() {
 
             const dummyComment = (
               <div style={{ background: 'var(--surface-2,#1a1a1a)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0 4px', border: '1px solid var(--border)', textAlign: 'left' as const }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={DUMMY_PFP}
-                  alt="DUMMY"
-                  className={result.won.type === 'pfp' ? pfpClass(result.won.value) : ''}
-                  style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0, ...dummyImgStyle }}
-                />
+                {isPfpFill ? (
+                  <div
+                    className={pfpClass(result.won.value)}
+                    style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, ...effectStyle }}
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={DUMMY_PFP}
+                    alt="DUMMY"
+                    className={result.won.type === 'pfp' ? pfpClass(result.won.value) : ''}
+                    style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0, ...dummyImgStyle }}
+                  />
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
                     <span
