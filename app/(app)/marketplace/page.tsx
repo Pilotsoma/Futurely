@@ -362,7 +362,7 @@ export default function MarketplacePage() {
     if (!result || result.dismissed) { setDismissCountdown(0); return }
     const isHighRarity = result.won.rarity === 'Legendary' || result.won.rarity === 'Mythic'
     if (!isHighRarity) { setDismissCountdown(0); return }
-    setDismissCountdown(3)
+    setDismissCountdown(2)
     const interval = setInterval(() => {
       setDismissCountdown(c => {
         if (c <= 1) { clearInterval(interval); return 0 }
