@@ -411,7 +411,29 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
     }
     const mappedCourses = hacClasses.map(mapCourse)
 
-    const assignments = futurley?.assignments ?? []
+    // Build assignments from two sources, merged and deduped by title:
+    // 1. Futurely account assignments (manually created, have completed status)
+    // 2. HAC upcoming assignments extracted from the grades data (always available)
+    const futurleyAssignments = futurley?.assignments ?? []
+    const seen = new Set(futurleyAssignments.map(a => a.title.toLowerCase()))
+    const normalized = normalizeHacGrades(hacClasses as Parameters<typeof normalizeHacGrades>[0])
+    const hacUpcoming = normalized.flatMap(c =>
+      c.upcomingAssignments.map(a => ({
+        title: a.name,
+        subject: c.name,
+        dueDate: (() => { const d = a.dateDue ? new Date(a.dateDue) : null; return d && !isNaN(d.getTime()) ? d.toISOString() : new Date(Date.now() + 7 * 86400000).toISOString() })(),
+        estimatedMinutes: 0,
+        completed: false,
+        completedAt: null as string | null,
+        priority: null as string | null,
+      })),
+    ).filter(a => !seen.has(a.title.toLowerCase()))
+
+    const assignments = [
+      ...futurleyAssignments,
+      ...hacUpcoming.map((a, i) => ({ ...a, id: futurleyAssignments.length + i + 1 })),
+    ]
+
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const todayEnd = new Date(todayStart.getTime() + 86_400_000)
