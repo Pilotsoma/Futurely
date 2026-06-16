@@ -374,10 +374,10 @@ export default function DashboardPage() {
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{earned ? m.emoji : '🔒'}</span>
                     <div style={{ flex: 1 }}>
                       {m.tag ? (
-                        <span style={{
+                        <span className={m.tag === 'GOD' ? 'tag-god' : ''} style={{
                           fontSize: 13, fontWeight: 700,
-                          color: '#fff',
-                          background: m.tagColor,
+                          color: m.tag === 'GOD' ? undefined : '#fff',
+                          background: m.tag === 'GOD' ? undefined : m.tagColor,
                           borderRadius: 6, padding: '2px 8px',
                           marginRight: 4,
                         }}>
