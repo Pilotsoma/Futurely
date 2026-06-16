@@ -269,9 +269,12 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 // ── Item Prices ───────────────────────────────────────────────────────────────
 
+// Bump this number whenever SEED_PRICES changes — forces a one-time DB reset
+// to the new values, after which dynamic pricing takes over again.
+const SEED_VERSION = 2
+
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
-    // Create table if it doesn't exist yet (handles first deploy without manual migration)
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "ItemPrice" (
         "id" SERIAL PRIMARY KEY,
@@ -281,6 +284,13 @@ router.get('/prices', async (_req, res: Response): Promise<void> => {
         CONSTRAINT "ItemPrice_itemType_itemId_key" UNIQUE ("itemType", "itemId")
       )
     `)
+
+    // Check if DB prices are from the current seed version
+    const versionRow = await prisma.itemPrice.findUnique({
+      where: { itemType_itemId: { itemType: 'meta', itemId: 'seed_version' } },
+    })
+    const needsReseed = !versionRow || versionRow.price !== SEED_VERSION
+
     const entries = Object.entries(SEED_PRICES)
     await Promise.all(entries.map(([key, price]) => {
       const [itemType, ...rest] = key.split(':')
@@ -288,10 +298,20 @@ router.get('/prices', async (_req, res: Response): Promise<void> => {
       return prisma.itemPrice.upsert({
         where: { itemType_itemId: { itemType, itemId } },
         create: { itemType, itemId, price },
-        update: {},
+        // Force-reset to seed when version changed; otherwise preserve learned prices
+        update: needsReseed ? { price } : {},
       })
     }))
-    const all = await prisma.itemPrice.findMany()
+
+    if (needsReseed) {
+      await prisma.itemPrice.upsert({
+        where: { itemType_itemId: { itemType: 'meta', itemId: 'seed_version' } },
+        create: { itemType: 'meta', itemId: 'seed_version', price: SEED_VERSION },
+        update: { price: SEED_VERSION },
+      })
+    }
+
+    const all = await prisma.itemPrice.findMany({ where: { itemType: { not: 'meta' } } })
     const map: Record<string, number> = {}
     for (const row of all) map[`${row.itemType}:${row.itemId}`] = row.price
     res.json({ data: map })
