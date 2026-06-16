@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api, type StudentData } from '../../../../lib/api'
 import PageLoader from '../../../../components/ui/PageLoader'
 
 type Tab = 'overview' | 'grades' | 'assignments' | 'chat'
+
+type HacClass = NonNullable<StudentData['hacGrades']>['classes'][number]
 
 const GRADE_COLORS: Record<string, string> = {
   A: '#22C55E', B: '#10B981', C: '#F59E0B', D: '#F97316', F: '#EF4444',
@@ -15,18 +17,46 @@ function gradeColor(letter: string | null) {
   return GRADE_COLORS[letter.charAt(0).toUpperCase()] ?? 'var(--text-muted)'
 }
 
+function letterFromAvg(avg: string | null): string {
+  if (!avg) return ''
+  const n = parseFloat(avg)
+  if (isNaN(n)) return avg.charAt(0).toUpperCase()
+  if (n >= 90) return 'A'
+  if (n >= 80) return 'B'
+  if (n >= 70) return 'C'
+  if (n >= 60) return 'D'
+  return 'F'
+}
+
+const ORDINALS: Record<string, string> = { '1': '1st', '2': '2nd', '3': '3rd', '4': '4th', '5': '5th', '6': '6th', '7': '7th', '8': '8th' }
+function periodLabel(p: string): string {
+  if (/^\(.*\)$/.test(p)) return 'All Periods'
+  const ord = ORDINALS[p.trim()]
+  if (ord) return `${ord} 6 Wks`
+  return p
+}
+
 interface ChatMsg { id: string; role: 'user' | 'ai'; text: string }
 
 export default function ParentStudentDetailPage() {
-  const { id }     = useParams<{ id: string }>()
-  const router     = useRouter()
-  const studentId  = parseInt(id)
+  const { id }    = useParams<{ id: string }>()
+  const router    = useRouter()
+  const studentId = parseInt(id)
 
   const [data, setData]       = useState<StudentData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
   const [tab, setTab]         = useState<Tab>('overview')
 
+  // Grades tab state
+  const [hacClasses, setHacClasses]           = useState<HacClass[]>([])
+  const [availablePeriods, setAvailablePeriods] = useState<string[]>([])
+  const [currentPeriod, setCurrentPeriod]     = useState('')
+  const [selectedPeriod, setSelectedPeriod]   = useState('')
+  const [periodLoading, setPeriodLoading]     = useState(false)
+  const [expanded, setExpanded]               = useState<Set<number>>(new Set())
+
+  // Chat state
   const [messages, setMessages]   = useState<ChatMsg[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatSending, setChatSending] = useState(false)
@@ -34,10 +64,36 @@ export default function ParentStudentDetailPage() {
 
   useEffect(() => {
     api.parentStudentDetail(studentId)
-      .then(setData)
+      .then(d => {
+        setData(d)
+        if (d.hacGrades) {
+          setHacClasses(d.hacGrades.classes)
+          setAvailablePeriods(d.hacGrades.availablePeriods)
+          setCurrentPeriod(d.hacGrades.currentPeriod)
+          setSelectedPeriod(d.hacGrades.currentPeriod)
+        }
+      })
       .catch(e => setError(e instanceof Error ? e.message : 'Failed to load student'))
       .finally(() => setLoading(false))
   }, [studentId])
+
+  const loadPeriod = useCallback((period: string) => {
+    setPeriodLoading(true)
+    setExpanded(new Set())
+    api.parentStudentGrades(studentId, period)
+      .then(d => {
+        setHacClasses(d.classes)
+        if (d.availablePeriods.length > 0) setAvailablePeriods(d.availablePeriods)
+        setCurrentPeriod(d.currentPeriod || period)
+        setSelectedPeriod(period)
+      })
+      .catch(() => {})
+      .finally(() => setPeriodLoading(false))
+  }, [studentId])
+
+  function toggleRow(i: number) {
+    setExpanded(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })
+  }
 
   async function handleChat(textOverride?: string) {
     const text = (textOverride ?? chatInput).trim()
@@ -62,6 +118,8 @@ export default function ParentStudentDetailPage() {
 
   const uGpa = (data.profile?.unweightedGpa ?? 0).toFixed(3)
   const wGpa = (data.profile?.weightedGpa ?? 0).toFixed(3)
+  const firstName = data.name?.split(' ')[0] ?? 'Student'
+
   const today = new Date()
   const dueToday = data.assignments.filter(a => {
     if (a.completed) return false
@@ -69,22 +127,18 @@ export default function ParentStudentDetailPage() {
     return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
   })
 
-  const gradedCourses = data.courses.filter(c => c.grade)
-  const gradeDist = gradedCourses.reduce<Record<string, number>>((acc, c) => {
-    const letter = c.grade!.letterGrade.charAt(0)
-    acc[letter] = (acc[letter] ?? 0) + 1
+  // Grade distribution from HAC classes
+  const gradedClasses = hacClasses.filter(c => c.average != null)
+  const gradeDist = gradedClasses.reduce<Record<string, number>>((acc, c) => {
+    const letter = letterFromAvg(c.average)
+    if (letter) acc[letter] = (acc[letter] ?? 0) + 1
     return acc
   }, {})
 
-  const firstName = data.name?.split(' ')[0] ?? 'Student'
-
   return (
     <div className="fade-up">
-      {/* Back */}
       <button style={S.backBtn} onClick={() => router.push('/parent/dashboard')}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
         Back to Students
       </button>
 
@@ -127,7 +181,7 @@ export default function ParentStudentDetailPage() {
               { v: String(data.stats.pendingAssignments), l: 'Pending', highlight: data.stats.pendingAssignments > 3 },
               { v: String(data.stats.assignmentsDueToday), l: 'Due Today', highlight: data.stats.assignmentsDueToday > 0 },
               { v: String(data.stats.assignmentsDueThisWeek), l: 'Due This Week' },
-              { v: '—', l: 'Completed' },
+              { v: String(data.stats.completedAssignments ?? 0), l: 'Completed' },
             ].map(s => (
               <div key={s.l} className="ns-card" style={{ padding: 16, textAlign: 'center', border: s.highlight ? '1px solid rgba(239,68,68,0.3)' : undefined }}>
                 <div style={{ fontSize: 26, fontWeight: 800, color: s.highlight ? 'var(--error)' : 'var(--text)', marginBottom: 4 }}>{s.v}</div>
@@ -136,9 +190,10 @@ export default function ParentStudentDetailPage() {
             ))}
           </div>
 
+          {/* Grade Distribution */}
           <div className="ns-card" style={{ padding: 20, marginBottom: 16 }}>
             <p style={S.cardLabel}>Grade Distribution</p>
-            {gradedCourses.length === 0 ? (
+            {gradedClasses.length === 0 ? (
               <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>No graded courses yet.</p>
             ) : (
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
@@ -153,22 +208,26 @@ export default function ParentStudentDetailPage() {
 
             <p style={{ ...S.cardLabel, marginTop: 4 }}>All Courses</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {data.courses.map(c => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                  <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 500 }}>{c.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{c.teacher} · Period {c.period}</div>
+              {hacClasses.map((c, i) => {
+                const letter = letterFromAvg(c.average)
+                return (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 500 }}>{c.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{c.teacher || '—'} · Period {c.period}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' as const }}>
+                      {c.average != null ? (
+                        <>
+                          <span style={{ fontSize: 17, fontWeight: 700, color: gradeColor(letter) }}>{letter}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 6 }}>{parseFloat(c.average).toFixed(1)}%</span>
+                        </>
+                      ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' as const }}>
-                    {c.grade ? (
-                      <>
-                        <span style={{ fontSize: 17, fontWeight: 700, color: gradeColor(c.grade.letterGrade) }}>{c.grade.letterGrade}</span>
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 6 }}>{c.grade.percentage.toFixed(1)}%</span>
-                      </>
-                    ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
+              {hacClasses.length === 0 && <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>No course data available yet.</p>}
             </div>
           </div>
 
@@ -181,7 +240,6 @@ export default function ParentStudentDetailPage() {
                     <div style={{ fontSize: 13.5 }}>{a.title}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{a.subject}</div>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{a.estimatedMinutes}m</div>
                 </div>
               ))}
             </div>
@@ -191,50 +249,118 @@ export default function ParentStudentDetailPage() {
 
       {/* ── GRADES ── */}
       {tab === 'grades' && (
-        <div className="ns-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div>
           {/* GPA summary */}
-          <div style={{ display: 'flex', padding: '18px 0', borderBottom: '1px solid var(--border)' }}>
-            {[
-              { label: 'Unweighted GPA', val: uGpa, gradient: false },
-              { label: 'Weighted GPA', val: wGpa, gradient: true },
-              { label: 'Courses', val: String(data.courses.length), gradient: false },
-            ].map((item, i) => (
-              <div key={item.label} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                {i > 0 && <div style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch', margin: '0 4px' }} />}
-                <div style={{ flex: 1, textAlign: 'center' as const }}>
-                  <div style={item.gradient ? { ...S.bigNum, ...gradientStyle } : S.bigNum}>{item.val}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</div>
+          <div className="ns-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
+            <div style={{ display: 'flex', padding: '18px 0', borderBottom: availablePeriods.length > 0 || hacClasses.length > 0 ? '1px solid var(--border)' : undefined }}>
+              {[
+                { label: 'Unweighted GPA', val: uGpa, gradient: false },
+                { label: 'Weighted GPA', val: wGpa, gradient: true },
+                { label: 'Courses', val: String(hacClasses.length), gradient: false },
+              ].map((item, i) => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                  {i > 0 && <div style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch', margin: '0 4px' }} />}
+                  <div style={{ flex: 1, textAlign: 'center' as const }}>
+                    <div style={item.gradient ? { ...S.bigNum, ...gradientStyle } : S.bigNum}>{item.val}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
-            <thead>
-              <tr>
-                {['Course', 'Teacher', 'Period', 'Type', 'Grade', '%'].map(h => (
-                  <th key={h} style={S.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.courses.map(c => (
-                <tr key={c.id} className="ns-tr" style={{ borderTop: '1px solid var(--border)' }}>
-                  <td style={S.td}>{c.name}</td>
-                  <td style={{ ...S.td, color: 'var(--text-secondary)' }}>{c.teacher}</td>
-                  <td style={{ ...S.td, color: 'var(--text-secondary)' }}>{c.period}</td>
-                  <td style={S.td}>
-                    <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: c.courseType === 'AP' ? 'rgba(88,166,255,0.12)' : c.courseType === 'HONORS' ? 'rgba(167,139,250,0.12)' : 'var(--surface-3)', color: c.courseType === 'AP' ? '#58A6FF' : c.courseType === 'HONORS' ? '#A78BFA' : 'var(--text-secondary)' }}>
-                      {c.courseType === 'REGULAR' ? 'REG' : c.courseType}
-                    </span>
-                  </td>
-                  <td style={S.td}>
-                    {c.grade ? <span style={{ color: gradeColor(c.grade.letterGrade), fontWeight: 700, fontSize: 16 }}>{c.grade.letterGrade}</span> : <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                  </td>
-                  <td style={{ ...S.td, color: 'var(--text-secondary)' }}>{c.grade ? `${c.grade.percentage.toFixed(1)}%` : '—'}</td>
-                </tr>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Period dropdown */}
+            {availablePeriods.length > 0 && (
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.5px', display: 'block', marginBottom: 8 }}>
+                  Grading Period
+                </label>
+                <select
+                  value={selectedPeriod}
+                  onChange={e => loadPeriod(e.target.value)}
+                  disabled={periodLoading}
+                  style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', fontSize: 13.5, fontWeight: 500, cursor: 'pointer', minWidth: 200, appearance: 'auto', outline: 'none' }}
+                >
+                  {availablePeriods.map(p => <option key={p} value={p}>{periodLabel(p)}</option>)}
+                </select>
+              </div>
+            )}
+
+            {periodLoading && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 16 }}>
+                {[1, 2, 3, 4, 5].map(i => <div key={i} style={{ height: 52, background: 'rgba(255,255,255,0.04)', borderRadius: 8 }} />)}
+              </div>
+            )}
+
+            {!periodLoading && hacClasses.length === 0 && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13, padding: 16 }}>
+                No grade data yet. The student needs to sync their grades in Futurely first.
+              </p>
+            )}
+
+            {!periodLoading && hacClasses.length > 0 && (
+              <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
+                <thead>
+                  <tr>
+                    {['Course', 'Teacher', 'Period', 'Avg', 'Grade'].map(h => (
+                      <th key={h} style={S.th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {hacClasses.flatMap((c, i) => {
+                    const letter = letterFromAvg(c.average)
+                    const isExpanded = expanded.has(i)
+                    return [
+                      <tr key={i} className="ns-tr"
+                        style={{ borderTop: '1px solid var(--border)', cursor: c.scores.length > 0 ? 'pointer' : 'default' }}
+                        onClick={() => c.scores.length > 0 && toggleRow(i)}>
+                        <td style={S.td}>
+                          {c.name}
+                          {c.scores.length > 0 && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 6 }}>{isExpanded ? '▲' : '▼'}</span>}
+                        </td>
+                        <td style={{ ...S.td, color: 'var(--text-secondary)' }}>{c.teacher || '—'}</td>
+                        <td style={{ ...S.td, color: 'var(--text-secondary)' }}>{c.period || '—'}</td>
+                        <td style={{ ...S.td, color: gradeColor(letter), fontWeight: 700 }}>{c.average ?? '—'}</td>
+                        <td style={S.td}>
+                          {letter ? <span style={{ color: gradeColor(letter), fontWeight: 700, fontSize: 16 }}>{letter}</span> : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                        </td>
+                      </tr>,
+                      isExpanded && (
+                        <tr key={`${i}-exp`}>
+                          <td colSpan={5} style={{ background: 'rgba(0,0,0,0.25)', padding: '12px 20px' }}>
+                            <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.4px', marginBottom: 10 }}>
+                              Assignments ({c.scores.length})
+                            </div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: 12.5 }}>
+                              <thead>
+                                <tr>{['Assignment', 'Category', 'Due', 'Score'].map(h => (
+                                  <th key={h} style={{ textAlign: 'left' as const, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase' as const }}>{h}</th>
+                                ))}</tr>
+                              </thead>
+                              <tbody>
+                                {c.scores.map((a, j) => (
+                                  <tr key={j} style={{ borderTop: '1px solid var(--border)' }}>
+                                    <td style={{ padding: '7px 8px', color: 'var(--text)' }}>{a.name}</td>
+                                    <td style={{ padding: '7px 8px', color: 'var(--text-secondary)' }}>{a.category || '—'}</td>
+                                    <td style={{ padding: '7px 8px', color: 'var(--text-muted)' }}>{a.dateDue || '—'}</td>
+                                    <td style={{ padding: '7px 8px' }}>
+                                      {a.score !== null && a.totalPoints !== null
+                                        ? <span style={{ color: gradeColor(letterFromAvg(String((a.score / (a.totalPoints || 1)) * 100))) }}>{a.score}/{a.totalPoints}</span>
+                                        : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      ),
+                    ].filter(Boolean)
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 
@@ -263,7 +389,7 @@ export default function ParentStudentDetailPage() {
                       <td style={{ ...S.td, color: isOverdue ? 'var(--error)' : 'var(--text-secondary)' }}>
                         {due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </td>
-                      <td style={{ ...S.td, color: 'var(--text-muted)' }}>{a.estimatedMinutes}m</td>
+                      <td style={{ ...S.td, color: 'var(--text-muted)' }}>{a.estimatedMinutes ?? 0}m</td>
                       <td style={S.td}>
                         <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: a.completed ? 'rgba(34,197,94,0.12)' : isOverdue ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)', color: a.completed ? '#22C55E' : isOverdue ? 'var(--error)' : 'var(--warning)' }}>
                           {a.completed ? 'Done' : isOverdue ? 'Overdue' : 'Pending'}

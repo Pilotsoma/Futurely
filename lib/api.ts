@@ -75,6 +75,19 @@ interface StudentData {
     pendingAssignments: number
     assignmentsDueToday: number
     assignmentsDueThisWeek: number
+    completedAssignments?: number
+  }
+  hacGrades?: {
+    classes: Array<{
+      name: string
+      teacher: string
+      period: string
+      room: string
+      average: string | null
+      scores: Array<{ name: string; category: string; score: number | null; totalPoints: number | null; percentage: string; dateDue: string }>
+    }>
+    availablePeriods: string[]
+    currentPeriod: string
   }
 }
 
@@ -561,6 +574,11 @@ export const api = {
 
   parentStudentDetail: (studentId: number) =>
     request<StudentData>(`/api/parent/students/${studentId}`),
+
+  parentStudentGrades: (studentId: number, period?: string) =>
+    request<{ classes: NonNullable<StudentData['hacGrades']>['classes']; availablePeriods: string[]; currentPeriod: string }>(
+      `/api/parent/students/${studentId}/grades${period ? `?period=${encodeURIComponent(period)}` : ''}`,
+    ),
 
   parentUnlinkStudent: (studentId: number) =>
     request<{ unlinked: boolean }>(`/api/parent/students/${studentId}`, { method: 'DELETE' }),
