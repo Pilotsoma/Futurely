@@ -116,11 +116,15 @@ type UserSnap = {
   pfpEffect?: string | null
 }
 
+function resolveTagName(item: TradeItem): string {
+  const def = TAG_BOX_ITEMS.find(t => t.id === item.id)
+  return def ? def.tag : (item.tag ?? item.id)
+}
+
 function userOwnsItem(user: UserSnap, item: TradeItem): boolean {
   if (item.type === 'tag') {
-    const tagDef = TAG_BOX_ITEMS.find(t => t.id === item.id)
-    if (!tagDef) return false
-    return parseTagArr(user.allTags).some(t => t.tag === tagDef.tag)
+    const tagName = resolveTagName(item)
+    return parseTagArr(user.allTags).some(t => t.tag === tagName)
   }
   if (item.type === 'name-color') return parseJsonArr(user.ownedNameColors).some(i => i.id === item.id)
   if (item.type === 'pfp') return parseJsonArr(user.ownedPfpEffects).some(i => i.id === item.id)
@@ -130,10 +134,10 @@ function userOwnsItem(user: UserSnap, item: TradeItem): boolean {
 function removeItem(user: UserSnap, item: TradeItem): Record<string, string | null> {
   const updates: Record<string, string | null> = {}
   if (item.type === 'tag') {
-    const tagDef = TAG_BOX_ITEMS.find(t => t.id === item.id)!
-    const tags = parseTagArr(user.allTags).filter(t => t.tag !== tagDef.tag)
+    const tagName = resolveTagName(item)
+    const tags = parseTagArr(user.allTags).filter(t => t.tag !== tagName)
     updates.allTags = JSON.stringify(tags)
-    if (user.tag === tagDef.tag) { updates.tag = 'Student'; updates.tagColor = null }
+    if (user.tag === tagName) { updates.tag = 'Student'; updates.tagColor = null }
   } else if (item.type === 'name-color') {
     const owned = parseJsonArr(user.ownedNameColors).filter(i => i.id !== item.id)
     updates.ownedNameColors = JSON.stringify(owned)
@@ -151,9 +155,11 @@ function removeItem(user: UserSnap, item: TradeItem): Record<string, string | nu
 function addItem(user: UserSnap, item: TradeItem): Record<string, string> {
   const updates: Record<string, string> = {}
   if (item.type === 'tag') {
-    const tagDef = TAG_BOX_ITEMS.find(t => t.id === item.id)!
+    const tagDef = TAG_BOX_ITEMS.find(t => t.id === item.id)
+    const tagName = tagDef ? tagDef.tag : (item.tag ?? item.id)
+    const tagColor = tagDef ? tagDef.tagColor : (item.tagColor ?? '#6B7280')
     const tags = parseTagArr(user.allTags)
-    if (!tags.some(t => t.tag === tagDef.tag)) tags.push({ tag: tagDef.tag, tagColor: tagDef.tagColor })
+    if (!tags.some(t => t.tag === tagName)) tags.push({ tag: tagName, tagColor })
     updates.allTags = JSON.stringify(tags)
   } else if (item.type === 'name-color') {
     const owned = parseJsonArr(user.ownedNameColors)
@@ -179,9 +185,9 @@ function applyMultipleRemoves(user: UserSnap, items: TradeItem[]): Record<string
 
   for (const item of items) {
     if (item.type === 'tag') {
-      const def = TAG_BOX_ITEMS.find(t => t.id === item.id)!
-      tags = tags.filter(t => t.tag !== def.tag)
-      if (user.tag === def.tag) { updates.tag = 'Student'; updates.tagColor = null }
+      const tagName = resolveTagName(item)
+      tags = tags.filter(t => t.tag !== tagName)
+      if (user.tag === tagName) { updates.tag = 'Student'; updates.tagColor = null }
     } else if (item.type === 'name-color') {
       nameColors = nameColors.filter(i => i.id !== item.id)
       const def = NAME_COLOR_BOX_ITEMS.find(c => c.id === item.id)
@@ -206,8 +212,10 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
   for (const item of items) {
     if (item.type === 'tag') {
-      const def = TAG_BOX_ITEMS.find(t => t.id === item.id)!
-      if (!tags.some(t => t.tag === def.tag)) tags.push({ tag: def.tag, tagColor: def.tagColor })
+      const def = TAG_BOX_ITEMS.find(t => t.id === item.id)
+      const tagName = def ? def.tag : (item.tag ?? item.id)
+      const tagColor = def ? def.tagColor : (item.tagColor ?? '#6B7280')
+      if (!tags.some(t => t.tag === tagName)) tags.push({ tag: tagName, tagColor })
     } else if (item.type === 'name-color') {
       if (!nameColors.some(i => i.id === item.id)) {
         nameColors.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
@@ -587,13 +595,20 @@ router.post('/listings', requireAuth, async (req: AuthRequest, res: Response): P
 
     if (itemType === 'tag') {
       const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
-      if (!def) { res.status(400).json({ error: 'Unknown tag item' }); return }
       const ownedTags = parseTagArr(user.allTags)
-      if (!ownedTags.some(t => t.tag === def.tag)) {
-        res.status(403).json({ error: 'You do not own this tag' }); return
+      if (def) {
+        if (!ownedTags.some(t => t.tag === def.tag)) {
+          res.status(403).json({ error: 'You do not own this tag' }); return
+        }
+        itemName = def.tag; itemValue = def.tagColor; itemRarity = def.rarity
+        tradeItem.tag = def.tag; tradeItem.tagColor = def.tagColor; tradeItem.rarity = def.rarity
+      } else {
+        // Awarded/admin-granted tag — itemId is the tag string itself
+        const owned = ownedTags.find(t => t.tag === itemId)
+        if (!owned) { res.status(403).json({ error: 'You do not own this tag' }); return }
+        itemName = owned.tag; itemValue = owned.tagColor; itemRarity = 'Common'
+        tradeItem.tag = owned.tag; tradeItem.tagColor = owned.tagColor; tradeItem.rarity = 'Common'
       }
-      itemName = def.tag; itemValue = def.tagColor; itemRarity = def.rarity
-      tradeItem.tag = def.tag; tradeItem.tagColor = def.tagColor; tradeItem.rarity = def.rarity
     } else if (itemType === 'name-color') {
       const owned = parseJsonArr(user.ownedNameColors)
       const def = owned.find(i => i.id === itemId) as { id: string; name: string; value: string; rarity: string } | undefined
