@@ -339,6 +339,17 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 }
 .box-rainbow { animation: boxRainbow 3s linear infinite; }
 
+/* ── GOD tag — divine gold shimmer ─────────────────────────────────────── */
+@keyframes godShimmer {
+  0%   { color: #b8860b; border-color: rgba(184,134,11,0.55); background: rgba(184,134,11,0.10); box-shadow: 0 0 4px rgba(184,134,11,0.25); }
+  50%  { color: #fff0a0; border-color: rgba(255,215,0,0.95); background: rgba(255,215,0,0.16); box-shadow: 0 0 14px rgba(255,215,0,0.55); }
+  100% { color: #b8860b; border-color: rgba(184,134,11,0.55); background: rgba(184,134,11,0.10); box-shadow: 0 0 4px rgba(184,134,11,0.25); }
+}
+.tag-god {
+  animation: godShimmer 2.4s ease-in-out infinite;
+  font-weight: 700 !important;
+}
+
 @keyframes legendaryPulse {
   0%, 100% { border-color: #EAB308; box-shadow: 0 0 16px #EAB30855; }
   50%       { border-color: #FDE68A; box-shadow: 0 0 38px #EAB308aa; }

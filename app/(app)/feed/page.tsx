@@ -209,6 +209,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
   }
 
   const isDevTag = profile?.tag === 'DEV'
+  const isGodTag = profile?.tag === 'GOD'
 
   return (
     <div style={O.overlay} onClick={onClose}>
@@ -230,7 +231,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
                     </span>
                   )}
                   {profile.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
-                    <span className={isDevTag ? 'tag-rainbow' : ''} style={isDevTag ? O.tagDev : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
+                    <span className={isDevTag ? 'tag-rainbow' : isGodTag ? 'tag-god' : ''} style={isDevTag ? O.tagDev : isGodTag ? O.tagGod : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
                       {profile.tag}
                     </span>
                   )}
@@ -689,12 +690,13 @@ function OwnTagPicker({ profile, onUpdateTag }: {
           {allTags.map(t => {
             const isActive = profile.tag === t.tag
             const isDev = t.tag === 'DEV'
+            const isGod = t.tag === 'GOD'
             return (
               <button
                 key={t.tag}
                 disabled={!!saving}
                 onClick={() => void handleSelect(t.tag, t.tagColor)}
-                className={isDev && isActive ? 'tag-rainbow' : ''}
+                className={isDev && isActive ? 'tag-rainbow' : isGod && isActive ? 'tag-god' : ''}
                 style={{
                   border: `2px solid ${isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.6)' : t.tagColor) : 'transparent'}`,
                   background: isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`) : 'var(--surface-2)',
@@ -759,6 +761,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
   const tagColor = (post.user as { tagColor?: string }).tagColor || 'grey'
   const isDevTag = post.user.tag === 'DEV'
+  const isGodTag = post.user.tag === 'GOD'
   const isFollowing = followedUsers.has(post.userId)
   const canDelete = post.userId === currentUserId || isDevUser || isModUser
   const isPinned = !!post.pinnedUntil && new Date(post.pinnedUntil) > new Date()
@@ -796,7 +799,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
             <span className={nameColorClass(post.user.nameColor)} style={{ ...P.authorName, ...nameColorStyle(post.user.nameColor) }} onClick={() => onOpenProfile(post.user.id)}>{displayName(post.user)}</span>
             {post.user.tag && (
-              <span className={isDevTag ? 'tag-rainbow' : ''} style={isDevTag ? P.tagDev : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
+              <span className={isDevTag ? 'tag-rainbow' : isGodTag ? 'tag-god' : ''} style={isDevTag ? P.tagDev : isGodTag ? P.tagGod : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
                 {post.user.tag}
               </span>
             )}
@@ -1110,6 +1113,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No comments yet. Be the first!</div>
           ) : sorted.map(c => {
             const isDevTag = c.user.tag === 'DEV'
+            const isGodTag = c.user.tag === 'GOD'
             const tagColor = c.user.tagColor || 'grey'
             return (
               <div key={c.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
@@ -1130,9 +1134,11 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                   </button>
                   {c.user.tag && (
                     <span
-                      className={isDevTag ? 'tag-rainbow' : ''}
+                      className={isDevTag ? 'tag-rainbow' : isGodTag ? 'tag-god' : ''}
                       style={isDevTag
                         ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' }
+                        : isGodTag
+                        ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' }
                         : { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }
                       }
                     >
@@ -1223,8 +1229,8 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
               <span style={{ fontSize: 14, fontWeight: 600 }}>{displayName(u)}</span>
               {u.tag && (
                 <span
-                  className={u.tag === 'DEV' ? 'tag-rainbow' : ''}
-                  style={u.tag === 'DEV' ? P.tagDev : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
+                  className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'GOD' ? 'tag-god' : ''}
+                  style={u.tag === 'DEV' ? P.tagDev : u.tag === 'GOD' ? P.tagGod : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
                 >{u.tag}</span>
               )}
             </div>
@@ -1913,6 +1919,7 @@ const P: Record<string, React.CSSProperties> = {
   authorName: { fontSize: 14, fontWeight: 700, color: 'var(--text)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 },
   tag:        { fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4 },
   tagDev:     { fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' },
+  tagGod:     { fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' },
   followBtn:  { padding: '2px 9px', borderRadius: 5, border: '1px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontWeight: 600, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' as const },
   deleteBtn:  { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center' },
   actionBtn:  { background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 6, fontWeight: 600 },
@@ -1939,6 +1946,7 @@ const O: Record<string, React.CSSProperties> = {
   name:       { fontSize: 19, fontWeight: 800, color: 'var(--text)', marginBottom: 3 },
   tag:        { fontSize: 12, fontWeight: 700, color: 'var(--primary)', background: 'rgba(0,200,150,0.1)', padding: '2px 8px', borderRadius: 4, display: 'inline-block' },
   tagDev:     { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)', display: 'inline-block' },
+  tagGod:     { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)', display: 'inline-block' },
   email:      { fontSize: 12, color: 'var(--text-muted)', marginTop: 3 },
   closeBtn:   { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: 6, display: 'flex', alignItems: 'center', flexShrink: 0 },
   stats:      { display: 'flex', justifyContent: 'space-around', padding: '14px 0', borderBottom: '1px solid var(--border)', marginBottom: 16 },
