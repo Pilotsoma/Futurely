@@ -381,13 +381,21 @@ router.post('/quicksell', requireAuth, async (req: AuthRequest, res: Response): 
     let data: Record<string, unknown> = {}
 
     if (itemType === 'tag') {
-      const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
-      if (!def) { res.status(404).json({ error: 'Item not found' }); return }
-      rarity = def.rarity
       const tags = parseTagArr(user.allTags)
-      const idx = tags.findIndex(t => t.tag === def.tag)
-      if (idx === -1) { res.status(404).json({ error: 'You do not own this item' }); return }
-      tags.splice(idx, 1)
+      const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
+      if (def) {
+        // Box tag — match by tag name from definition
+        rarity = def.rarity
+        const idx = tags.findIndex(t => t.tag === def.tag)
+        if (idx === -1) { res.status(404).json({ error: 'You do not own this item' }); return }
+        tags.splice(idx, 1)
+      } else {
+        // Awarded/admin-granted tag — itemId is the tag string itself
+        const idx = tags.findIndex(t => t.tag === itemId)
+        if (idx === -1) { res.status(404).json({ error: 'You do not own this item' }); return }
+        rarity = 'Common'
+        tags.splice(idx, 1)
+      }
       data = { allTags: JSON.stringify(tags) }
     } else if (itemType === 'name-color') {
       const owned = parseJsonArr(user.ownedNameColors)
