@@ -183,6 +183,24 @@ export default function DashboardPage() {
     }
   }
 
+  // ── Derived values (computed before hooks so they can be passed as targets) ──
+  const dbCourseCount = (() => {
+    if (!data) return 0
+    const now = new Date()
+    const isFall = now.getMonth() >= 7
+    const semKey = `${now.getFullYear()}-${isFall ? 'FA' : 'SP'}`
+    return data.courses.filter(c => c.semester === semKey).length
+  })()
+  const displayCourseCount = courseCount || dbCourseCount
+
+  // ── All hooks must be called before any early return ──────────────────────
+  const animCourses = useCountUp(data ? displayCourseCount : null, 600)
+  const animDueWeek = useCountUp(data ? data.stats.assignmentsDueThisWeek : null, 700)
+  const animPending = useCountUp(data ? data.stats.pendingAssignments : null, 750)
+  const animStreak  = useCountUp(dayStreak, 500)
+  const animUGpa    = useCountUpFloat(portalUGpa ?? data?.profile?.unweightedGpa ?? null, 900)
+  const animWGpa    = useCountUpFloat(portalWGpa ?? data?.profile?.weightedGpa ?? null, 900)
+
   if (error) return <div style={{ padding: 40, color: 'var(--error)' }}>{error}</div>
   if (!data) return <PageLoader message="Opening dashboard…" />
 
@@ -196,34 +214,12 @@ export default function DashboardPage() {
     }
     return cap(n.split(' ')[0]) || 'Student'
   })()
-  const uGpa = (portalUGpa ?? data.profile?.unweightedGpa ?? 0).toFixed(3)
-  const wGpa = (portalWGpa ?? data.profile?.weightedGpa ?? 0).toFixed(3)
   const today = new Date()
   const dueToday = data.assignments.filter(a => {
     if (a.completed) return false
     const d = new Date(a.dueDate)
     return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
   })
-
-  // Count courses by semester from database as fallback
-  const dbCourseCount = (() => {
-    const now = new Date()
-    const month = now.getMonth()
-    const year = now.getFullYear()
-    const isFall = month >= 7
-    const semSuffix = isFall ? 'FA' : 'SP'
-    const semKey = `${year}-${semSuffix}`
-    return data.courses.filter(c => c.semester === semKey).length
-  })()
-
-  const displayCourseCount = courseCount || dbCourseCount
-
-  const animCourses  = useCountUp(displayCourseCount, 600)
-  const animDueWeek  = useCountUp(data.stats.assignmentsDueThisWeek, 700)
-  const animPending  = useCountUp(data.stats.pendingAssignments, 750)
-  const animStreak   = useCountUp(dayStreak, 500)
-  const animUGpa     = useCountUpFloat(portalUGpa ?? data.profile?.unweightedGpa ?? null, 900)
-  const animWGpa     = useCountUpFloat(portalWGpa ?? data.profile?.weightedGpa ?? null, 900)
 
   const staggerItem = (i: number) => ({
     initial: { opacity: 0, y: 12 },
