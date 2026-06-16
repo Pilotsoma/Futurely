@@ -41,7 +41,7 @@ function useCountUpFloat(target: number | null, duration = 900): string {
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [target, duration])
-  return val.toFixed(2)
+  return val.toFixed(3)
 }
 
 const STREAK_MILESTONES: Array<{ days: number; emoji: string; tag?: string; tagColor?: string; perk?: string; perkColor?: string }> = [
