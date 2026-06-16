@@ -12,6 +12,47 @@ const openrouter = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
 })
 
+// Read live grade data from the HAC/PowerSchool cache stored on SchoolConnection
+async function getPortalData(userId: number) {
+  try {
+    const conn = await prisma.schoolConnection.findUnique({
+      where: { userId },
+      select: { hacDataCache: true, systemType: true },
+    })
+    if (!conn) return null
+
+    let weightedGpa: number | null = null
+    let unweightedGpa: number | null = null
+    let courseList: string[] = []
+
+    // HAC: GPA lives in transcript cache, grades in classwork cache
+    if (conn.hacDataCache) {
+      const cache = conn.hacDataCache as Record<string, { data: unknown; cachedAt: number }>
+
+      const transcript = cache['transcript']?.data as { weightedGPA?: string; unweightedGPA?: string } | undefined
+      if (transcript) {
+        const w = parseFloat(transcript.weightedGPA ?? '')
+        const u = parseFloat(transcript.unweightedGPA ?? '')
+        if (!isNaN(w)) weightedGpa = Math.round(w * 1000) / 1000
+        if (!isNaN(u)) unweightedGpa = Math.round(u * 1000) / 1000
+      }
+
+      // Find classwork cache (key is like "classwork:__default__" or "classwork:1")
+      const classworkKey = Object.keys(cache).find(k => k.startsWith('classwork:'))
+      if (classworkKey) {
+        const classwork = cache[classworkKey].data as { classes?: Array<{ name?: string; average?: string | null }> } | undefined
+        if (classwork?.classes) {
+          courseList = classwork.classes
+            .filter(c => c.name)
+            .map(c => `${c.name}: ${c.average ?? 'N/A'}`)
+        }
+      }
+    }
+
+    return { weightedGpa, unweightedGpa, courseList }
+  } catch { return null }
+}
+
 router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.userId === undefined) {
     res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } })
@@ -20,33 +61,23 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
   try {
     const { message: userMessage } = req.body as { message: string }
 
-    const [profile, user, courses, assignments] = await Promise.all([
+    const [profile, user, assignments, portalData] = await Promise.all([
       prisma.profile.findUnique({ where: { userId: req.userId } }),
       prisma.user.findUnique({ where: { id: req.userId } }),
-      prisma.course.findMany({
-        where: { userId: req.userId },
-        include: { grades: { where: { gradingPeriod: 'CURRENT' }, take: 1 } },
-      }),
       prisma.assignment.findMany({
         where: { userId: req.userId, completed: false },
         orderBy: { dueDate: 'asc' },
-        take: 3,
+        take: 5,
       }),
+      getPortalData(req.userId),
     ])
 
     const firstName = user?.name?.split(' ')[0] ?? 'Student'
-    const wGpa = profile?.weightedGpa?.toFixed(3) ?? 'unknown'
-    const uGpa = profile?.unweightedGpa?.toFixed(3) ?? 'unknown'
 
-    const sorted = [...courses].sort((a, b) => {
-      const ga = a.grades[0]?.percentage ?? 100
-      const gb = b.grades[0]?.percentage ?? 100
-      return ga - gb
-    })
-
-    const courseList = sorted
-      .map(c => `${c.name}: ${c.grades[0]?.percentage ?? 'N/A'}%`)
-      .join(', ')
+    // Prefer live portal GPA over manually entered profile GPA
+    const wGpa = (portalData?.weightedGpa ?? profile?.weightedGpa)?.toFixed(3) ?? 'unknown'
+    const uGpa = (portalData?.unweightedGpa ?? profile?.unweightedGpa)?.toFixed(3) ?? 'unknown'
+    const courseList = portalData?.courseList?.join(', ') || 'none on record'
 
     const assignmentList = assignments
       .map(a => `"${a.title}" (${a.subject}) due ${new Date(a.dueDate).toLocaleDateString()}`)
@@ -55,7 +86,7 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
     const systemPrompt = `You are NextStep AI, an academic companion for high school students.
 Student: ${firstName}, Grade ${profile?.gradeLevel ?? 'unknown'}
 GPA: ${uGpa} unweighted, ${wGpa} weighted
-Courses: ${courseList || 'none on record'}
+Current courses and grades: ${courseList}
 Pending assignments: ${assignmentList || 'none'}
 SAT score: ${profile?.satScore ?? 'not entered'}
 College goal: ${profile?.futureDecision ?? 'not specified'}
