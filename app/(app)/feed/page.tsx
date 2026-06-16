@@ -269,6 +269,13 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
               onDeleted={onClose}
             />
 
+            <ModPanel
+              userId={userId}
+              currentUserId={currentUserId}
+              profile={profile}
+              onUpdateMute={mu => setProfile(prev => prev ? { ...prev, chatMutedUntil: mu } : prev)}
+            />
+
             {/* Tag picker — only shown on own profile */}
             {userId === currentUserId && (profile.allTags ?? []).length > 0 && (
               <OwnTagPicker
@@ -428,7 +435,7 @@ function DevAdminPanel({
   }
 
   const isMutedTarget = profile.chatMutedUntil != null && new Date(profile.chatMutedUntil) > new Date()
-  const allTags = profile.allTags ?? []
+  const allTags = Array.from(new Map((profile.allTags ?? []).map(t => [t.tag, t])).values())
   const hasDevTag = allTags.some(t => t.tag === 'DEV')
   const hasModTag = allTags.some(t => t.tag === 'MOD')
   const isAdmin = profile.role === 'ADMIN'
@@ -586,6 +593,72 @@ function DevAdminPanel({
   )
 }
 
+// ── MOD Panel ─────────────────────────────────────────────────────────────────
+
+function ModPanel({ userId, currentUserId, profile, onUpdateMute }: {
+  userId: number
+  currentUserId: number
+  profile: FeedUserProfile
+  onUpdateMute: (mutedUntil: string | null) => void
+}) {
+  const [myAllTags, setMyAllTags] = useState<Array<{ tag: string; tagColor: string }>>([])
+  const [muteMinutes, setMuteMinutes] = useState('60')
+  const [muteSaving, setMuteSaving] = useState(false)
+
+  useEffect(() => {
+    api.feedUserProfile(currentUserId).then(p => setMyAllTags(p.allTags ?? [])).catch(() => {})
+  }, [currentUserId])
+
+  const isMod = myAllTags.some(t => t.tag === 'MOD')
+  const isDevOrAdmin = myAllTags.some(t => t.tag === 'DEV')
+  if (!isMod || isDevOrAdmin || userId === currentUserId) return null
+
+  const isMutedTarget = !!profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()
+
+  async function handleMute() {
+    const mins = parseInt(muteMinutes)
+    if (isNaN(mins) || muteSaving) return
+    setMuteSaving(true)
+    try {
+      const result = await api.feedMuteUser(userId, mins > 0 ? mins : null)
+      onUpdateMute(result.mutedUntil)
+    } catch { /* ignore */ }
+    finally { setMuteSaving(false) }
+  }
+
+  async function handleUnmute() {
+    if (muteSaving) return
+    setMuteSaving(true)
+    try {
+      const result = await api.feedMuteUser(userId, null)
+      onUpdateMute(result.mutedUntil)
+    } catch { /* ignore */ }
+    finally { setMuteSaving(false) }
+  }
+
+  return (
+    <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+      <p style={{ fontSize: 12, fontWeight: 700, color: '#818cf8', marginBottom: 10 }}>MOD — Moderation</p>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>MUTE (max 24h)</p>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const }}>
+        <select className="ns-input" style={{ flex: 1, height: 34, fontSize: 12 }} value={muteMinutes} onChange={e => setMuteMinutes(e.target.value)}>
+          <option value="5">5 minutes</option>
+          <option value="60">1 hour</option>
+          <option value="1440">1 day (max)</option>
+        </select>
+        <button style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={handleMute} disabled={muteSaving}>
+          {muteSaving ? '…' : 'Mute'}
+        </button>
+        {isMutedTarget && (
+          <button className="ns-btn-ghost" style={{ height: 34, padding: '0 10px', fontSize: 12 }} onClick={handleUnmute} disabled={muteSaving}>
+            Unmute
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Own Tag Picker ────────────────────────────────────────────────────────────
 
 function OwnTagPicker({ profile, onUpdateTag }: {
@@ -594,7 +667,7 @@ function OwnTagPicker({ profile, onUpdateTag }: {
 }) {
   const [saving, setSaving] = useState<string | null>(null)
   const isBannedOrMuted = profile.chatBanned || (!!profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())
-  const allTags = profile.allTags ?? []
+  const allTags = Array.from(new Map((profile.allTags ?? []).map(t => [t.tag, t])).values())
 
   async function handleSelect(tag: string, tagColor: string) {
     if (saving || isBannedOrMuted) return
@@ -667,7 +740,7 @@ function GiveawayCountdown({ endsAt }: { endsAt: string }) {
   return <span>{label}</span>
 }
 
-function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFollow, onEnterGiveaway, onDrawGiveaway, onPin, currentUserId, followedUsers, isDevUser }: {
+function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFollow, onEnterGiveaway, onDrawGiveaway, onPin, currentUserId, followedUsers, isDevUser, isModUser }: {
   post: FeedPost
   onLike: (id: number) => void
   onDelete: (id: number) => void
@@ -680,13 +753,14 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
   currentUserId: number
   followedUsers: Set<number>
   isDevUser: boolean
+  isModUser: boolean
 }) {
   const [showLikeRequired, setShowLikeRequired] = useState(false)
 
   const tagColor = (post.user as { tagColor?: string }).tagColor || 'grey'
   const isDevTag = post.user.tag === 'DEV'
   const isFollowing = followedUsers.has(post.userId)
-  const canDelete = post.userId === currentUserId || isDevUser
+  const canDelete = post.userId === currentUserId || isDevUser || isModUser
   const isPinned = !!post.pinnedUntil && new Date(post.pinnedUntil) > new Date()
   const isGiveaway = post.type === 'giveaway'
   const isUnbox = post.type === 'UNBOX'
@@ -1187,6 +1261,7 @@ export default function StudyFeedPage() {
   const [profileUserId, setProfileUserId] = useState<number | null>(null)
   const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set())
   const [isDevUser, setIsDevUser] = useState(false)
+  const [isModUser, setIsModUser] = useState(false)
   const [isBanned, setIsBanned] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [mutedUntil, setMutedUntil] = useState<string | null>(null)
@@ -1242,6 +1317,7 @@ export default function StudyFeedPage() {
         if (uid) {
           api.feedUserProfile(uid).then(p => {
             setIsDevUser(p.role === 'ADMIN' || p.tag === 'DEV')
+            setIsModUser((p.allTags ?? []).some(t => t.tag === 'MOD'))
             setIsBanned(p.chatBanned)
             const activeMute = !!p.chatMutedUntil && new Date(p.chatMutedUntil) > new Date()
             setIsMuted(activeMute)
@@ -1732,7 +1808,7 @@ export default function StudyFeedPage() {
                     onOpenComments={id => setCommentPostId(id)} onOpenProfile={id => setProfileUserId(id)}
                     onFollow={handleFollow} onEnterGiveaway={handleEnterGiveaway}
                     onDrawGiveaway={handleDrawGiveaway} onPin={handlePin}
-                    currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} />
+                    currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} isModUser={isModUser} />
                 ))}
                 {hasMore && (
                   <button className="ns-btn-ghost" style={{ width: '100%', height: 42, marginTop: 8 }}
@@ -1759,7 +1835,7 @@ export default function StudyFeedPage() {
                   onOpenComments={id => setCommentPostId(id)} onOpenProfile={id => setProfileUserId(id)}
                   onFollow={handleFollow} onEnterGiveaway={handleEnterGiveaway}
                   onDrawGiveaway={handleDrawGiveaway} onPin={handlePin}
-                  currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} />
+                  currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} isModUser={isModUser} />
               ))}
               {followingHasMore && (
                 <button className="ns-btn-ghost" style={{ width: '100%', height: 42, marginTop: 8 }}

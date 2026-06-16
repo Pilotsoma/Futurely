@@ -12,6 +12,31 @@ async function hasDevPowers(userId: number): Promise<boolean> {
   return user?.role === 'ADMIN' || user?.tag === 'DEV';
 }
 
+async function hasModTag(userId: number): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { allTags: true } });
+  const tags = (user?.allTags as Array<{ tag: string }> | null) ?? [];
+  return tags.some(t => t.tag === 'MOD');
+}
+
+const modDeleteLog = new Map<number, { date: string; count: number }>();
+const MOD_DAILY_DELETE_LIMIT = 5;
+
+function getModDeletesToday(userId: number): number {
+  const today = new Date().toISOString().slice(0, 10);
+  const entry = modDeleteLog.get(userId);
+  return (entry && entry.date === today) ? entry.count : 0;
+}
+
+function recordModDelete(userId: number) {
+  const today = new Date().toISOString().slice(0, 10);
+  const entry = modDeleteLog.get(userId);
+  if (!entry || entry.date !== today) {
+    modDeleteLog.set(userId, { date: today, count: 1 });
+  } else {
+    entry.count++;
+  }
+}
+
 const USER_SELECT = {
   id: true, name: true, email: true,
   tag: true, tagColor: true,
@@ -483,8 +508,17 @@ router.delete('/posts/:id', async (req: Request, res: Response) => {
     const post = await prisma.post.findUnique({ where: { id } });
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
+    const isOwn = post.userId === userId;
     const isDev = await hasDevPowers(userId);
-    if (post.userId !== userId && !isDev) return res.status(403).json({ error: 'Unauthorized' });
+
+    if (!isOwn && !isDev) {
+      const isMod = await hasModTag(userId);
+      if (!isMod) return res.status(403).json({ error: 'Unauthorized' });
+      const deletedToday = getModDeletesToday(userId);
+      if (deletedToday >= MOD_DAILY_DELETE_LIMIT)
+        return res.status(403).json({ error: `MODs can delete at most ${MOD_DAILY_DELETE_LIMIT} posts per day` });
+      recordModDelete(userId);
+    }
 
     await prisma.post.delete({ where: { id } });
     broadcast('POST_DELETED', { postId: id });
@@ -993,9 +1027,13 @@ router.put('/users/:id/mute', async (req: Request, res: Response) => {
   try {
     const actorId = (req as any).userId as number;
     const targetId = parseInt(req.params.id);
-    const { minutes } = req.body as { minutes?: number | null };
+    let { minutes } = req.body as { minutes?: number | null };
     const isDev = await hasDevPowers(actorId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
+    if (!isDev) {
+      const isMod = await hasModTag(actorId);
+      if (!isMod) return res.status(403).json({ error: 'Unauthorized' });
+      if (minutes != null && minutes > 1440) minutes = 1440;
+    }
     const mutedUntil = (minutes != null && minutes > 0)
       ? new Date(Date.now() + minutes * 60 * 1000)
       : null;
