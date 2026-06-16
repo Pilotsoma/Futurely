@@ -55,8 +55,11 @@ async function getPortalData(userId: number) {
       } | undefined
       if (classwork?.classes) {
         courseList = classwork.classes
-          .filter(c => c.name)
-          .map(c => `${c.name}: ${c.letterGrade ?? ''} ${c.average ?? 'N/A'}%`.trim())
+          .filter(c => c.name && (c.average != null || c.letterGrade != null))
+          .map(c => {
+            const grade = c.letterGrade ? `${c.letterGrade} (${c.average ?? '?'}%)` : `${c.average}%`
+            return `${c.name}: ${grade}`
+          })
       }
     }
 
@@ -68,7 +71,8 @@ async function getPortalData(userId: number) {
     } | undefined
     if (attendance?.summary) {
       const s = attendance.summary
-      attendanceSummary = `${attendance.month ?? ''} ${attendance.year ?? ''}: ${s.absences} absence(s), ${s.excused} excused, ${s.tardies} tardy(ies)`
+      const month = attendance.month && attendance.year ? `${attendance.month} ${attendance.year}` : 'This month'
+      attendanceSummary = `${month}: ${s.absences} absence(s), ${s.excused} excused, ${s.tardies} tardy(ies)`
     }
 
     return { weightedGpa, unweightedGpa, classRank, courseList, transcriptSummary, attendanceSummary }
