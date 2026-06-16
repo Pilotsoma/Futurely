@@ -318,7 +318,7 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
       const won = weightedRandom(TAG_BOX_ITEMS)
       const existingTags = parseTagArr(user.allTags)
       const alreadyHas = existingTags.some(t => t.tag === won.tag)
-      const newAllTags = alreadyHas ? existingTags : [...existingTags, { tag: won.tag, tagColor: won.tagColor }]
+      const newAllTags = [...existingTags, { tag: won.tag, tagColor: won.tagColor }]
 
       const updated = await prisma.user.update({
         where: { id: req.userId },
@@ -331,7 +331,7 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
       const won = weightedRandom(NAME_COLOR_BOX_ITEMS)
       const owned = parseJsonArr(user.ownedNameColors)
       const alreadyHas = owned.some(i => i.id === won.id)
-      const newOwned = alreadyHas ? owned : [...owned, { id: won.id, name: won.name, value: won.value, rarity: won.rarity }]
+      const newOwned = [...owned, { id: won.id, name: won.name, value: won.value, rarity: won.rarity }]
 
       const updated = await prisma.user.update({
         where: { id: req.userId },
@@ -344,7 +344,7 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
       const won = weightedRandom(PFP_EFFECT_BOX_ITEMS)
       const owned = parseJsonArr(user.ownedPfpEffects)
       const alreadyHas = owned.some(i => i.id === won.id)
-      const newOwned = alreadyHas ? owned : [...owned, { id: won.id, name: won.name, value: won.value, rarity: won.rarity }]
+      const newOwned = [...owned, { id: won.id, name: won.name, value: won.value, rarity: won.rarity }]
 
       const updated = await prisma.user.update({
         where: { id: req.userId },
@@ -355,6 +355,65 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
     }
   } catch {
     res.status(500).json({ error: 'Failed to open box' })
+  }
+})
+
+// ── Quicksell ─────────────────────────────────────────────────────────────────
+
+const QUICKSELL_PRICES: Record<string, number> = {
+  Common: 5, Uncommon: 10, Rare: 20, Epic: 40, Legendary: 100, Mythic: 500,
+}
+
+router.post('/quicksell', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  const { itemType, itemId } = req.body as { itemType?: string; itemId?: string }
+  if (!itemType || !['tag', 'name-color', 'pfp'].includes(itemType) || !itemId) {
+    res.status(400).json({ error: 'itemType and itemId are required' }); return
+  }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { coins: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true },
+    })
+    if (!user) { res.status(404).json({ error: 'User not found' }); return }
+
+    let rarity = 'Common'
+    let data: Record<string, unknown> = {}
+
+    if (itemType === 'tag') {
+      const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
+      if (!def) { res.status(404).json({ error: 'Item not found' }); return }
+      rarity = def.rarity
+      const tags = parseTagArr(user.allTags)
+      const idx = tags.findIndex(t => t.tag === def.tag)
+      if (idx === -1) { res.status(404).json({ error: 'You do not own this item' }); return }
+      tags.splice(idx, 1)
+      data = { allTags: JSON.stringify(tags) }
+    } else if (itemType === 'name-color') {
+      const owned = parseJsonArr(user.ownedNameColors)
+      const idx = owned.findIndex((i: { id: string; rarity?: string }) => i.id === itemId)
+      if (idx === -1) { res.status(404).json({ error: 'You do not own this item' }); return }
+      rarity = (owned[idx] as { rarity?: string }).rarity ?? 'Common'
+      owned.splice(idx, 1)
+      data = { ownedNameColors: JSON.stringify(owned) }
+    } else {
+      const owned = parseJsonArr(user.ownedPfpEffects)
+      const idx = owned.findIndex((i: { id: string; rarity?: string }) => i.id === itemId)
+      if (idx === -1) { res.status(404).json({ error: 'You do not own this item' }); return }
+      rarity = (owned[idx] as { rarity?: string }).rarity ?? 'Common'
+      owned.splice(idx, 1)
+      data = { ownedPfpEffects: JSON.stringify(owned) }
+    }
+
+    const payout = QUICKSELL_PRICES[rarity] ?? 5
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: { ...data, coins: { increment: payout } },
+      select: { coins: true },
+    })
+    res.json({ data: { coins: updated.coins, payout } })
+  } catch {
+    res.status(500).json({ error: 'Failed to quicksell' })
   }
 })
 

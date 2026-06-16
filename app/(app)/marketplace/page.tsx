@@ -110,6 +110,20 @@ const SIM_ITEMS: Record<'tag' | 'name-color' | 'pfp', SimItem[]> = {
   ],
 }
 
+const QUICKSELL_PRICES: Record<string, number> = {
+  Common: 5, Uncommon: 10, Rare: 20, Epic: 40, Legendary: 100, Mythic: 500,
+}
+
+function groupById<T extends { id: string }>(arr: T[]): Array<T & { count: number }> {
+  const map = new Map<string, T & { count: number }>()
+  for (const item of arr) {
+    const e = map.get(item.id)
+    if (e) e.count++
+    else map.set(item.id, { ...item, count: 1 })
+  }
+  return [...map.values()]
+}
+
 type Tab = 'boxes' | 'shop' | 'trade' | 'inventory'
 type TradeSubTab = 'new' | 'incoming' | 'sent'
 
@@ -153,6 +167,7 @@ export default function MarketplacePage() {
   const [hoveredBox, setHoveredBox] = useState<'tag' | 'name-color' | 'pfp' | null>(null)
   const [result, setResult] = useState<(BoxResult & { dismissed?: boolean }) | null>(null)
   const [equipping, setEquipping] = useState<string | null>(null)
+  const [quickselling, setQuickselling] = useState<string | null>(null)
 
   // DEV panel
   const [isDevUser, setIsDevUser] = useState(false)
@@ -327,6 +342,35 @@ export default function MarketplacePage() {
     finally { setEquipping(null) }
   }
 
+  async function handleQuicksell(itemType: 'tag' | 'name-color' | 'pfp', itemId: string) {
+    const key = `${itemType}:${itemId}`
+    if (quickselling || !inv) return
+    setQuickselling(key)
+    try {
+      const res = await api.marketplaceQuicksell(itemType, itemId)
+      setInv(prev => {
+        if (!prev) return prev
+        if (itemType === 'tag') {
+          const tags = [...(prev.ownedTags ?? [])]
+          const idx = tags.findIndex(t => t.id === itemId)
+          if (idx !== -1) tags.splice(idx, 1)
+          return { ...prev, coins: res.coins, ownedTags: tags }
+        }
+        if (itemType === 'name-color') {
+          const items = [...prev.ownedNameColors]
+          const idx = items.findIndex(i => i.id === itemId)
+          if (idx !== -1) items.splice(idx, 1)
+          return { ...prev, coins: res.coins, ownedNameColors: items }
+        }
+        const items = [...prev.ownedPfpEffects]
+        const idx = items.findIndex(i => i.id === itemId)
+        if (idx !== -1) items.splice(idx, 1)
+        return { ...prev, coins: res.coins, ownedPfpEffects: items }
+      })
+    } catch { /* ignore */ }
+    finally { setQuickselling(null) }
+  }
+
   async function handleDevGrant(grantType: 'coins' | 'name-color' | 'pfp') {
     if (devGranting) return
     setDevGranting(true); setDevMsg('')
@@ -490,11 +534,14 @@ export default function MarketplacePage() {
     item: { id: string; name?: string; tag?: string; tagColor?: string; value?: string; rarity: string },
     type: 'tag' | 'name-color' | 'pfp',
     isEquipped: boolean,
+    count = 1,
   ) {
     const itemKey = `${type}:${item.id}`
     const isListed = myListedIds.has(itemKey)
     const listing = myActiveListings.find(l => l.itemType === type && l.itemId === item.id)
     const isListingThis = listingItem?.type === type && listingItem?.id === item.id
+    const sellPrice = QUICKSELL_PRICES[item.rarity] ?? 5
+    const isQS = quickselling === itemKey
 
     return (
       <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
@@ -514,6 +561,9 @@ export default function MarketplacePage() {
         )}
         {type === 'tag' && <span style={{ flex: 1 }} />}
         <RarityBadge rarity={item.rarity} />
+        {count > 1 && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 99, padding: '1px 7px' }}>x{count}</span>
+        )}
 
         {isListed ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -545,6 +595,13 @@ export default function MarketplacePage() {
               style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
             >
               List
+            </button>
+            <button
+              onClick={() => void handleQuicksell(type, item.id)}
+              disabled={isQS}
+              style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #EAB30855', background: 'transparent', color: '#EAB308', fontSize: 11, fontWeight: 700, cursor: isQS ? 'not-allowed' : 'pointer', opacity: isQS ? 0.6 : 1 }}
+            >
+              {isQS ? '…' : `Sell 🪙${sellPrice}`}
             </button>
           </div>
         )}
@@ -1111,8 +1168,8 @@ export default function MarketplacePage() {
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>🏷️ Tags</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>Equip tags from Settings → Profile</div>
-                  {(inv?.ownedTags ?? []).map(t =>
-                    renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag', false)
+                  {groupById(inv?.ownedTags ?? []).map(t =>
+                    renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag', false, t.count)
                   )}
                 </div>
               )}
@@ -1120,8 +1177,8 @@ export default function MarketplacePage() {
               {(inv?.ownedNameColors ?? []).length > 0 && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🎨 Name Colors</div>
-                  {inv!.ownedNameColors.map(item =>
-                    renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'name-color', inv!.nameColor === item.value)
+                  {groupById(inv!.ownedNameColors).map(item =>
+                    renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'name-color', inv!.nameColor === item.value, item.count)
                   )}
                 </div>
               )}
@@ -1129,8 +1186,8 @@ export default function MarketplacePage() {
               {(inv?.ownedPfpEffects ?? []).length > 0 && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🖼️ Profile Picture Effects</div>
-                  {inv!.ownedPfpEffects.map(item =>
-                    renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'pfp', inv!.pfpEffect === item.value)
+                  {groupById(inv!.ownedPfpEffects).map(item =>
+                    renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'pfp', inv!.pfpEffect === item.value, item.count)
                   )}
                 </div>
               )}

@@ -480,6 +480,12 @@ export const api = {
   marketplaceOpenBox: (boxType: 'tag' | 'name-color' | 'pfp') =>
     request<BoxResult>('/api/marketplace/open-box', { method: 'POST', body: JSON.stringify({ boxType }) }),
 
+  marketplaceQuicksell: (itemType: 'tag' | 'name-color' | 'pfp', itemId: string) =>
+    request<{ coins: number; payout: number }>('/api/marketplace/quicksell', {
+      method: 'POST',
+      body: JSON.stringify({ itemType, itemId }),
+    }),
+
   marketplaceEquip: (type: 'name-color' | 'pfp', itemId: string | null) =>
     request<{ nameColor?: string | null; pfpEffect?: string | null }>('/api/marketplace/equip', {
       method: 'PUT',
