@@ -8,8 +8,11 @@ const router = Router();
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 async function hasDevPowers(userId: number): Promise<boolean> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  return user?.role === 'ADMIN' || user?.tag === 'DEV';
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, tag: true, allTags: true } });
+  if (!user) return false;
+  if (user.role === 'ADMIN' || user.tag === 'DEV') return true;
+  const tags = (user.allTags as Array<{ tag: string }> | null) ?? [];
+  return Array.isArray(tags) && tags.some(t => t.tag === 'DEV');
 }
 
 async function hasModTag(userId: number): Promise<boolean> {
