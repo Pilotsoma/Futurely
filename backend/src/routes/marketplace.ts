@@ -266,6 +266,16 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
+    // Create table if it doesn't exist yet (handles first deploy without manual migration)
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ItemPrice" (
+        "id" SERIAL PRIMARY KEY,
+        "itemType" TEXT NOT NULL,
+        "itemId" TEXT NOT NULL,
+        "price" INTEGER NOT NULL,
+        CONSTRAINT "ItemPrice_itemType_itemId_key" UNIQUE ("itemType", "itemId")
+      )
+    `)
     const entries = Object.entries(SEED_PRICES)
     await Promise.all(entries.map(([key, price]) => {
       const [itemType, ...rest] = key.split(':')
