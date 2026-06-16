@@ -142,6 +142,9 @@ model Post {
   giveawayCoinAmount Int?
   giveawayEndsAt     DateTime?
   giveawayWinnerId   Int?
+  giveawayItemType   String?
+  giveawayItemId     String?
+  giveawayItemRarity String?
   pinnedUntil      DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt

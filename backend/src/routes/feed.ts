@@ -57,6 +57,22 @@ async function autoDrawExpiredGiveaways() {
         where: { id: winner.userId },
         data: { coins: { increment: ga.giveawayCoinAmount } },
       });
+    } else if (ga.giveawayItemType === 'name-color' && ga.giveawayItemId && ga.giveawayTag && ga.giveawayTagColor) {
+      const winnerUser = await prisma.user.findUnique({ where: { id: winner.userId }, select: { ownedNameColors: true } });
+      if (winnerUser) {
+        let owned: Array<{ id: string; name: string; value: string; rarity: string }> = [];
+        try { owned = JSON.parse(String(winnerUser.ownedNameColors ?? '[]')); } catch { owned = []; }
+        owned.push({ id: ga.giveawayItemId, name: ga.giveawayTag, value: ga.giveawayTagColor, rarity: ga.giveawayItemRarity ?? 'Common' });
+        await prisma.user.update({ where: { id: winner.userId }, data: { ownedNameColors: JSON.stringify(owned) } });
+      }
+    } else if (ga.giveawayItemType === 'pfp' && ga.giveawayItemId && ga.giveawayTag && ga.giveawayTagColor) {
+      const winnerUser = await prisma.user.findUnique({ where: { id: winner.userId }, select: { ownedPfpEffects: true } });
+      if (winnerUser) {
+        let owned: Array<{ id: string; name: string; value: string; rarity: string }> = [];
+        try { owned = JSON.parse(String(winnerUser.ownedPfpEffects ?? '[]')); } catch { owned = []; }
+        owned.push({ id: ga.giveawayItemId, name: ga.giveawayTag, value: ga.giveawayTagColor, rarity: ga.giveawayItemRarity ?? 'Common' });
+        await prisma.user.update({ where: { id: winner.userId }, data: { ownedPfpEffects: JSON.stringify(owned) } });
+      }
     } else if (ga.giveawayTag) {
       const winnerUser = await prisma.user.findUnique({ where: { id: winner.userId } });
       if (winnerUser) {
@@ -74,7 +90,13 @@ async function autoDrawExpiredGiveaways() {
         });
       }
     }
-    const prize = ga.giveawayCoinAmount ? `🪙 ${ga.giveawayCoinAmount} coins` : `the "${ga.giveawayTag}" tag`;
+    const prize = ga.giveawayCoinAmount
+      ? `🪙 ${ga.giveawayCoinAmount} coins`
+      : ga.giveawayItemType === 'name-color'
+        ? `the "${ga.giveawayTag}" name color`
+        : ga.giveawayItemType === 'pfp'
+          ? `the "${ga.giveawayTag}" PFP effect`
+          : `the "${ga.giveawayTag}" tag`;
     const notif = await prisma.notification.create({
       data: { userId: winner.userId, fromUserId: ga.userId, type: 'GIVEAWAY_WIN', postId: ga.id, preview: `You won a giveaway and received ${prize}!` },
       include: { sender: { select: USER_SELECT } },
@@ -204,13 +226,15 @@ router.post('/posts', async (req: Request, res: Response) => {
 router.post('/posts/giveaway', async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as number;
-    const { body, giveawayTag, giveawayTagColor, giveawayCoinAmount, durationMinutes } = req.body as {
+    const { body, giveawayTag, giveawayTagColor, giveawayCoinAmount, durationMinutes, giveawayItemType, giveawayItemId, giveawayItemRarity } = req.body as {
       body?: string; giveawayTag?: string; giveawayTagColor?: string; giveawayCoinAmount?: number; durationMinutes?: number;
+      giveawayItemType?: string; giveawayItemId?: string; giveawayItemRarity?: string;
     };
     if (!body?.trim()) return res.status(400).json({ error: 'Body is required' });
     if (!durationMinutes || durationMinutes < 1) return res.status(400).json({ error: 'Duration must be at least 1 minute' });
     const isCoinGiveaway = typeof giveawayCoinAmount === 'number' && giveawayCoinAmount > 0;
-    if (!isCoinGiveaway && !giveawayTag?.trim()) return res.status(400).json({ error: 'Tag name or coin amount is required' });
+    const isItemGiveaway = !!giveawayItemType && !!giveawayItemId && !!giveawayTag;
+    if (!isCoinGiveaway && !isItemGiveaway && !giveawayTag?.trim()) return res.status(400).json({ error: 'Tag name or coin amount is required' });
 
     const isDev = await hasDevPowers(userId);
     if (!isDev) return res.status(403).json({ error: 'Only DEV/admin can create giveaways' });
@@ -232,7 +256,11 @@ router.post('/posts/giveaway', async (req: Request, res: Response) => {
           type: 'giveaway',
           ...(isCoinGiveaway
             ? { giveawayCoinAmount }
-            : { giveawayTag: giveawayTag!.trim(), giveawayTagColor: (giveawayTagColor || 'gold').trim() }),
+            : {
+                giveawayTag: giveawayTag!.trim(),
+                giveawayTagColor: (giveawayTagColor || 'gold').trim(),
+                ...(isItemGiveaway ? { giveawayItemType, giveawayItemId, giveawayItemRarity } : {}),
+              }),
           giveawayEndsAt,
         },
         include: {
@@ -512,6 +540,22 @@ router.post('/posts/:id/giveaway/draw', async (req: Request, res: Response) => {
         where: { id: winnerEntry.userId },
         data: { coins: { increment: post.giveawayCoinAmount } },
       });
+    } else if (post.giveawayItemType === 'name-color' && post.giveawayItemId && post.giveawayTag && post.giveawayTagColor) {
+      const winnerUser = await prisma.user.findUnique({ where: { id: winnerEntry.userId }, select: { ownedNameColors: true } });
+      if (winnerUser) {
+        let owned: Array<{ id: string; name: string; value: string; rarity: string }> = [];
+        try { owned = JSON.parse(String(winnerUser.ownedNameColors ?? '[]')); } catch { owned = []; }
+        owned.push({ id: post.giveawayItemId, name: post.giveawayTag, value: post.giveawayTagColor, rarity: post.giveawayItemRarity ?? 'Common' });
+        await prisma.user.update({ where: { id: winnerEntry.userId }, data: { ownedNameColors: JSON.stringify(owned) } });
+      }
+    } else if (post.giveawayItemType === 'pfp' && post.giveawayItemId && post.giveawayTag && post.giveawayTagColor) {
+      const winnerUser = await prisma.user.findUnique({ where: { id: winnerEntry.userId }, select: { ownedPfpEffects: true } });
+      if (winnerUser) {
+        let owned: Array<{ id: string; name: string; value: string; rarity: string }> = [];
+        try { owned = JSON.parse(String(winnerUser.ownedPfpEffects ?? '[]')); } catch { owned = []; }
+        owned.push({ id: post.giveawayItemId, name: post.giveawayTag, value: post.giveawayTagColor, rarity: post.giveawayItemRarity ?? 'Common' });
+        await prisma.user.update({ where: { id: winnerEntry.userId }, data: { ownedPfpEffects: JSON.stringify(owned) } });
+      }
     } else if (post.giveawayTag) {
       const winnerUser = await prisma.user.findUnique({ where: { id: winnerEntry.userId } });
       if (winnerUser) {
@@ -533,7 +577,13 @@ router.post('/posts/:id/giveaway/draw', async (req: Request, res: Response) => {
     const winner = await prisma.user.findUnique({ where: { id: winnerEntry.userId }, select: { id: true, name: true, email: true } });
     broadcast('GIVEAWAY_WINNER', { postId, winner });
 
-    const prize = post.giveawayCoinAmount ? `🪙 ${post.giveawayCoinAmount} coins` : `the "${post.giveawayTag}" tag`;
+    const prize = post.giveawayCoinAmount
+      ? `🪙 ${post.giveawayCoinAmount} coins`
+      : post.giveawayItemType === 'name-color'
+        ? `the "${post.giveawayTag}" name color`
+        : post.giveawayItemType === 'pfp'
+          ? `the "${post.giveawayTag}" PFP effect`
+          : `the "${post.giveawayTag}" tag`;
     const notif = await prisma.notification.create({
       data: { userId: winnerEntry.userId, fromUserId: post.userId, type: 'GIVEAWAY_WIN', postId, preview: `You won a giveaway and received ${prize}!` },
       include: { sender: { select: USER_SELECT } },
