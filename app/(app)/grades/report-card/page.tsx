@@ -20,7 +20,7 @@ interface ReportCardData {
   semesters: { sem1: RCCourse[]; sem2: RCCourse[] }
 }
 
-const GRADE_COLOR: Record<string, string> = { A: '#22C55E', B: '#10B981', C: '#F59E0B', D: '#F97316', F: '#EF4444' }
+const GRADE_COLOR: Record<string, string> = { A: 'var(--gc-a)', B: 'var(--gc-b)', C: 'var(--gc-c)', D: 'var(--gc-d)', F: 'var(--gc-f)' }
 const letterColor = (l: string) => GRADE_COLOR[l?.toUpperCase().charAt(0)] ?? 'var(--text-muted)'
 
 
@@ -71,22 +71,39 @@ function CourseTable({ courses, empty }: { courses: RCCourse[]; empty: string })
 
 export default function ReportCardPage() {
   const router = useRouter()
-  const [data, setData]     = useState<ReportCardData | null>(null)
+  const [data, setData]       = useState<ReportCardData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError]   = useState<string | null>(null)
-  const [active, setActive] = useState<'sem1' | 'sem2'>('sem1')
+  const [error, setError]     = useState<string | null>(null)
+  const [resyncing, setResyncing] = useState(false)
+  const [active, setActive]   = useState<'sem1' | 'sem2'>('sem1')
 
-  useEffect(() => {
+  function loadData() {
+    setLoading(true)
+    setError(null)
     api.portalReportCard()
       .then(json => {
         setData(json)
-        // Default to whichever semester has data; prefer sem2 if populated
         if (json.semesters.sem2.some(c => c.numericGrade)) setActive('sem2')
         else setActive('sem1')
       })
       .catch(e => setError(e instanceof Error ? e.message : 'Failed to load report card'))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadData() }, [])
+
+  async function handleResync() {
+    setResyncing(true)
+    setError(null)
+    try {
+      await api.portalSyncProfile()
+      loadData()
+    } catch {
+      setError('Resync failed. Try again.')
+    } finally {
+      setResyncing(false)
+    }
+  }
 
   if (loading) return <PageLoader message="Opening report card…" />
 
@@ -101,10 +118,17 @@ export default function ReportCardPage() {
 
       {error && (
         <div style={S.errorBanner}>
-          {error}
-          {error.toLowerCase().includes('session') && (
-            <span> — <a href="/settings" style={{ color: 'var(--warning)', textDecoration: 'underline' }}>reconnect in Settings</a></span>
-          )}
+          {error.toLowerCase().includes('session') ? (
+            <span>
+              Session expired.{' '}
+              <span
+                onClick={handleResync}
+                style={{ textDecoration: 'underline', cursor: resyncing ? 'not-allowed' : 'pointer', opacity: resyncing ? 0.6 : 1 }}
+              >
+                {resyncing ? 'Resyncing…' : 'Click to resync'}
+              </span>
+            </span>
+          ) : error}
         </div>
       )}
 

@@ -24,7 +24,7 @@ interface Course {
   scores: Assignment[]
 }
 
-const GRADE_COLOR: Record<string, string> = { A: '#22C55E', B: '#10B981', C: '#F59E0B', D: '#F97316', F: '#EF4444' }
+const GRADE_COLOR: Record<string, string> = { A: 'var(--gc-a)', B: 'var(--gc-b)', C: 'var(--gc-c)', D: 'var(--gc-d)', F: 'var(--gc-f)' }
 
 const ORDINALS: Record<string, string> = { '1': '1st', '2': '2nd', '3': '3rd', '4': '4th', '5': '5th', '6': '6th', '7': '7th', '8': '8th' }
 function periodLabel(p: string): string {
@@ -59,6 +59,7 @@ export default function ClassworkPage() {
   const [loading, setLoading] = useState(true)
   const [periodLoading, setPeriodLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [resyncing, setResyncing] = useState(false)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [openWhatIf, setOpenWhatIf] = useState<number | null>(null)
 
@@ -80,6 +81,19 @@ export default function ClassworkPage() {
 
   useEffect(() => { loadPeriod() }, [loadPeriod])
 
+  async function handleResync() {
+    setResyncing(true)
+    setError(null)
+    try {
+      await api.portalSyncProfile()
+      loadPeriod()
+    } catch {
+      setError('Resync failed. Try again.')
+    } finally {
+      setResyncing(false)
+    }
+  }
+
   function handlePeriodChange(p: string) {
     setSelectedPeriod(p)
     loadPeriod(p)
@@ -100,10 +114,17 @@ export default function ClassworkPage() {
 
       {error && (
         <div style={S.errorBanner}>
-          {error}
-          {error.toLowerCase().includes('session') && (
-            <span> — <a href="/settings" style={{ color: 'var(--warning)', textDecoration: 'underline' }}>reconnect in Settings</a></span>
-          )}
+          {error.toLowerCase().includes('session') ? (
+            <span>
+              Session expired.{' '}
+              <span
+                onClick={handleResync}
+                style={{ textDecoration: 'underline', cursor: resyncing ? 'not-allowed' : 'pointer', opacity: resyncing ? 0.6 : 1 }}
+              >
+                {resyncing ? 'Resyncing…' : 'Click to resync'}
+              </span>
+            </span>
+          ) : error}
         </div>
       )}
 

@@ -25,11 +25,11 @@
 
 const BLOCKED: readonly string[] = [
   // ── Profanity: base + common bypass forms ────────────────────────────────
-  'fuck', 'fck', 'fuk', 'fuq', 'fxck',
+  'fuck', 'fck', 'fuk', 'fuq', 'fxck', 'fk', 'fku',
   'shit', 'sht', 'shyt', 'shiit',
-  'bitch', 'btch', 'bich', 'biatch',
+  'bitch', 'btch', 'bich', 'biatch', 'bith', 'bih', 'btc',
   'cunt', 'cnt', 'cvnt',
-  'dick', 'dck', 'dik',
+  'dick', 'dck', 'dik', 'dih',
   'cock', 'cck', 'cok',
   'pussy', 'pssy', 'pvssy',
   'ass', 'asshole', 'azzhole', 'ahole',
@@ -42,8 +42,12 @@ const BLOCKED: readonly string[] = [
   'wanker', 'wnkr',
   'bollocks',
   'arse', 'arsehole',
+  // ── Abbreviations / internet slang bypasses ──────────────────────────────
+  'smd',   // suck my dick
+  'stfu',  // shut the fuck up
   // ── Slurs: base + 1-deletion + consonant-skeleton forms ──────────────────
   'nigger', 'nigga',
+  'nig',    // standalone slur fragment
   'nigg',   // "nig g", "n i g g" — catches partial spelling with separator
   'niger',  // "nig er", "n i g e r" (negative lookahead protects "Nigeria")
   'nigr',   // typed consonant skeleton
@@ -129,6 +133,8 @@ function leetNorm(text: string): string {
 // start so derived forms ("fucking", "pornographic") are still caught.
 const FULL_BOUNDARY = new Set([
   'sex', 'sext', 'ass', 'cum', 'fag', 'tit', 'gay', 'kys', 'ngr', 'fgg', 'dyk', 'bnr',
+  // New short forms — must be standalone words to avoid false positives
+  'fk', 'fku', 'btc', 'bith', 'bih', 'dih', 'smd', 'stfu', 'nig',
 ])
 
 // Layer 2: spaced patterns.
@@ -194,4 +200,34 @@ export function filterUsername(name: string): FilterResult {
     return { ok: false, reason: 'Name must be 30 characters or fewer' }
   }
   return filterContent(trimmed)
+}
+
+// ── Repeat-violation auto-mute tracker ───────────────────────────────────────
+// Tracks how many times a user has attempted to post blocked content within a
+// rolling 15-minute window. On the 3rd violation, the caller should mute them
+// for 1 hour. State is in-memory (resets on server restart) which is fine —
+// the mute itself is persisted in the database.
+
+const VIOLATION_WINDOW_MS  = 15 * 60 * 1000  // 15 minutes
+const VIOLATION_THRESHOLD  = 3
+
+interface ViolationRecord { count: number; windowStart: number }
+const violationTracker = new Map<number, ViolationRecord>()
+
+export function recordViolation(userId: number): { shouldMute: boolean } {
+  const now = Date.now()
+  const rec = violationTracker.get(userId)
+
+  if (!rec || now - rec.windowStart > VIOLATION_WINDOW_MS) {
+    violationTracker.set(userId, { count: 1, windowStart: now })
+    return { shouldMute: false }
+  }
+
+  rec.count++
+  if (rec.count >= VIOLATION_THRESHOLD) {
+    violationTracker.delete(userId)
+    return { shouldMute: true }
+  }
+
+  return { shouldMute: false }
 }

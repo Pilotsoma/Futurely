@@ -396,6 +396,9 @@ export const api = {
       body: JSON.stringify({ role }),
     }),
 
+  feedDeleteUser: (targetUserId: number) =>
+    request<{ deleted: boolean }>(`/api/feed/users/${targetUserId}`, { method: 'DELETE' }),
+
   feedCreateGiveaway: (data: { body: string; durationMinutes: number; giveawayTag?: string; giveawayTagColor?: string; giveawayCoinAmount?: number }) =>
     request<FeedPost>('/api/feed/posts/giveaway', {
       method: 'POST',

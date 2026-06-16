@@ -2,11 +2,50 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { api, type StudentData } from '../../../lib/api'
 import AiBar from '../../../components/ui/AiBar'
 import PageLoader from '../../../components/ui/PageLoader'
 
-const STREAK_MILESTONES = [
+function useCountUp(target: number | null, duration = 700): number {
+  const [val, setVal] = useState(0)
+  useEffect(() => {
+    if (target === null || target === 0) return
+    const t = target
+    const start = Date.now()
+    let raf: number
+    function tick() {
+      const p = Math.min((Date.now() - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setVal(Math.round(t * eased))
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, duration])
+  return val
+}
+
+function useCountUpFloat(target: number | null, duration = 900): string {
+  const [val, setVal] = useState(0)
+  useEffect(() => {
+    if (target === null) return
+    const start = Date.now()
+    let raf: number
+    function tick() {
+      const p = Math.min((Date.now() - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setVal((target ?? 0) * eased)
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, duration])
+  return val.toFixed(2)
+}
+
+const STREAK_MILESTONES: Array<{ days: number; emoji: string; tag?: string; tagColor?: string; perk?: string; perkColor?: string }> = [
+  { days: 3,   perk: 'Marketplace Access', perkColor: '#F97316', emoji: '🛒' },
   { days: 7,   tag: 'Novice',  tagColor: '#22C55E', emoji: '✅' },
   { days: 14,  tag: 'Pro',     tagColor: '#3B82F6', emoji: '⚡' },
   { days: 30,  tag: 'Veteran', tagColor: '#F97316', emoji: '🏅' },
@@ -22,7 +61,7 @@ function getNextMilestone(streak: number) {
   return STREAK_MILESTONES.find(m => m.days > streak) ?? null
 }
 
-const GRADE_COLOR: Record<string, string> = { A: '#22C55E', B: '#10B981', C: '#F59E0B', D: '#F97316', F: '#EF4444' }
+const GRADE_COLOR: Record<string, string> = { A: 'var(--gc-a)', B: 'var(--gc-b)', C: 'var(--gc-c)', D: 'var(--gc-d)', F: 'var(--gc-f)' }
 const gradeColor = (g: string) => GRADE_COLOR[g?.charAt(0).toUpperCase()] ?? 'var(--text-muted)'
 
 function formatDate() {
@@ -137,7 +176,7 @@ export default function DashboardPage() {
       if (code === 'NOT_CONNECTED' || code === 'NO_CREDENTIALS' || code === 'RELOGIN_FAILED') {
         setNeedsReconnect(true)
       } else {
-        setResyncError(err instanceof Error ? err.message : 'Re-sync failed')
+        setResyncError('Something went wrong, try again')
       }
     } finally {
       setResyncing(false)
@@ -147,7 +186,16 @@ export default function DashboardPage() {
   if (error) return <div style={{ padding: 40, color: 'var(--error)' }}>{error}</div>
   if (!data) return <PageLoader message="Opening dashboard…" />
 
-  const firstName = data.name?.split(' ')[0] ?? 'Student'
+  const firstName = (() => {
+    const n = data.name
+    if (!n) return 'Student'
+    const cap = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ''
+    if (n.includes(',')) {
+      const rest = n.split(',')[1]?.trim() ?? ''
+      return cap(rest.split(' ')[0]) || 'Student'
+    }
+    return cap(n.split(' ')[0]) || 'Student'
+  })()
   const uGpa = (portalUGpa ?? data.profile?.unweightedGpa ?? 0).toFixed(3)
   const wGpa = (portalWGpa ?? data.profile?.weightedGpa ?? 0).toFixed(3)
   const today = new Date()
@@ -170,8 +218,21 @@ export default function DashboardPage() {
 
   const displayCourseCount = courseCount || dbCourseCount
 
+  const animCourses  = useCountUp(displayCourseCount, 600)
+  const animDueWeek  = useCountUp(data.stats.assignmentsDueThisWeek, 700)
+  const animPending  = useCountUp(data.stats.pendingAssignments, 750)
+  const animStreak   = useCountUp(dayStreak, 500)
+  const animUGpa     = useCountUpFloat(portalUGpa ?? data.profile?.unweightedGpa ?? null, 900)
+  const animWGpa     = useCountUpFloat(portalWGpa ?? data.profile?.weightedGpa ?? null, 900)
+
+  const staggerItem = (i: number) => ({
+    initial: { opacity: 0, y: 12 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.28, ease: [0.19, 1, 0.22, 1] as [number, number, number, number], delay: i * 0.05 },
+  })
+
   return (
-    <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
       {/* Header */}
       <div style={S.pageHeader}>
         <div>
@@ -189,17 +250,17 @@ export default function DashboardPage() {
       </div>
 
       {/* GPA + Due Today */}
-      <div style={S.topRow}>
+      <motion.div style={S.topRow} {...staggerItem(0)}>
         <div className="ns-card" style={{ ...S.card, flex: 1, cursor: 'pointer' }} onClick={() => router.push('/grades/what-if')}>
           <p style={S.cardLabel}>GPA</p>
           <div style={S.gpaRow}>
             <div style={S.gpaBlock}>
-              <div style={S.gpaNum}>{uGpa}</div>
+              <div style={S.gpaNum}>{animUGpa}</div>
               <div style={S.gpaTag}>Unweighted</div>
             </div>
             <div style={S.gpaDivider} />
             <div style={S.gpaBlock}>
-              <div style={{ ...S.gpaNum, ...gradientStyle }}>{wGpa}</div>
+              <div style={{ ...S.gpaNum, ...gradientStyle }}>{animWGpa}</div>
               <div style={S.gpaTag}>Weighted</div>
             </div>
           </div>
@@ -234,24 +295,24 @@ export default function DashboardPage() {
             ))
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Stat row */}
       <div style={S.statsRow}>
-        <div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/grades/schedule')}>
-          <div style={S.statNum}>{displayCourseCount}</div>
+        <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/grades/schedule')} {...staggerItem(1)}>
+          <div style={S.statNum}>{animCourses}</div>
           <div style={S.statLabel}>Courses · {semesterLabel || 'This Semester'}</div>
-        </div>
-        <div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/planner')}>
-          <div style={S.statNum}>{data.stats.assignmentsDueThisWeek}</div>
+        </motion.div>
+        <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/planner')} {...staggerItem(2)}>
+          <div style={S.statNum}>{animDueWeek}</div>
           <div style={S.statLabel}>Due This Week</div>
-        </div>
-        <div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/planner')}>
-          <div style={S.statNum}>{data.stats.pendingAssignments}</div>
+        </motion.div>
+        <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/planner')} {...staggerItem(3)}>
+          <div style={S.statNum}>{animPending}</div>
           <div style={S.statLabel}>Pending</div>
-        </div>
-        <div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)}>
-          <div style={S.statNum}>{dayStreak}</div>
+        </motion.div>
+        <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)} {...staggerItem(4)}>
+          <div style={S.statNum}>{animStreak}</div>
           <div style={S.statLabel}>Day Streak 🔥</div>
           <div style={{ ...S.statSub, color: '#EAB308' }}>🪙 +{streakCoinBonus(dayStreak)} today</div>
           {(() => {
@@ -259,21 +320,21 @@ export default function DashboardPage() {
             if (!next) return <div style={S.statSub} title="All streak rewards earned">👑 GOD</div>
             return <div style={S.statSub}>Next: {next.days}d → {next.tag}</div>
           })()}
-        </div>
+        </motion.div>
       </div>
 
       {/* Quick navigation */}
-      <p style={{ ...S.cardLabel, marginBottom: 14 }}>Quick Access</p>
+      <motion.p style={{ ...S.cardLabel, marginBottom: 14 }} {...staggerItem(5)}>Quick Access</motion.p>
       <div style={S.tilesGrid}>
-        {QUICK_LINKS.map(tile => (
-          <button key={tile.href} onClick={() => router.push(tile.href)} style={S.tile}>
+        {QUICK_LINKS.map((tile, i) => (
+          <motion.button key={tile.href} onClick={() => router.push(tile.href)} style={S.tile} {...staggerItem(6 + i)}>
             <div style={{ ...S.tileIcon, background: tile.iconBg }}>{tile.icon}</div>
             <div>
               <div style={S.tileTitle}>{tile.label}</div>
               <div style={S.tileSub}>{tile.sub}</div>
             </div>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)', marginLeft: 'auto', flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -305,23 +366,38 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
               {STREAK_MILESTONES.map(m => {
                 const earned = dayStreak >= m.days
+                const accentColor = m.tagColor ?? m.perkColor ?? '#6B7280'
                 return (
                   <div key={m.days} style={{
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '9px 12px', borderRadius: 10,
                     background: earned ? 'var(--surface-2)' : 'transparent',
-                    border: `1px solid ${earned ? m.tagColor + '44' : 'var(--border)'}`,
-                    opacity: earned ? 1 : 0.5,
+                    border: `1px solid ${earned ? accentColor + '44' : 'var(--border)'}`,
+                    opacity: earned ? 1 : 0.6,
                   }}>
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{earned ? m.emoji : '🔒'}</span>
                     <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: earned ? m.tagColor : 'var(--text-secondary)' }}>
-                        {m.tag}
+                      {m.tag ? (
+                        <span style={{
+                          fontSize: 13, fontWeight: 700,
+                          color: '#fff',
+                          background: m.tagColor,
+                          borderRadius: 6, padding: '2px 8px',
+                          marginRight: 4,
+                        }}>
+                          {m.tag}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 13, fontWeight: 700, color: accentColor }}>
+                          {m.perk}
+                        </span>
+                      )}
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: m.tag ? 4 : 8 }}>
+                        {m.days}d{!m.perk && ` · 🪙 +${streakCoinBonus(m.days)}/day`}
                       </span>
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>{m.days}d · 🪙 +{streakCoinBonus(m.days)}/day</span>
                     </div>
                     {earned && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: m.tagColor, background: m.tagColor + '22', borderRadius: 6, padding: '2px 7px' }}>Earned</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: accentColor, background: accentColor + '22', borderRadius: 6, padding: '2px 7px' }}>Earned</span>
                     )}
                   </div>
                 )

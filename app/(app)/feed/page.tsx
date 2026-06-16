@@ -12,13 +12,28 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+function parseHacName(raw: string | null | undefined): string {
+  if (!raw) return ''
+  const cap = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ''
+  if (raw.includes(',')) {
+    const [rawLast, rawRest = ''] = raw.split(',')
+    const first = cap(rawRest.trim().split(' ')[0])
+    const last = cap(rawLast.trim())
+    return `${first} ${last}`.trim()
+  }
+  return raw
+}
+
 function displayName(user: { name: string | null; email: string }): string {
-  return user.name || user.email.split('@')[0]
+  return parseHacName(user.name) || user.email.split('@')[0]
 }
 
 function initials(user: { name: string | null; email: string }): string {
-  const n = user.name || user.email
-  return n.slice(0, 2).toUpperCase()
+  const n = parseHacName(user.name) || user.email
+  const parts = n.trim().split(' ')
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : n.slice(0, 2).toUpperCase()
 }
 
 const PFP_BORDER_MAP: Record<string, string> = {
@@ -57,7 +72,7 @@ function nameColorClass(color: string | null | undefined): string {
 // ── Notification row with clickable sender name ───────────────────────────────
 
 function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenProfile: (id: number) => void; onClose: () => void }) {
-  const name = n.sender.name ?? n.sender.email.split('@')[0]
+  const name = parseHacName(n.sender.name) || n.sender.email.split('@')[0]
   const isRainbowName = n.sender.nameColor === 'rainbow'
 
   function handleNameClick(e: React.MouseEvent) {
@@ -213,6 +228,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
               onUpdateBan={banned => setProfile(prev => prev ? { ...prev, chatBanned: banned } : prev)}
               onUpdateMute={mu => setProfile(prev => prev ? { ...prev, chatMutedUntil: mu } : prev)}
               onUpdateRole={role => setProfile(prev => prev ? { ...prev, role } : prev)}
+              onDeleted={onClose}
             />
 
             {/* Tag picker — only shown on own profile */}
@@ -251,7 +267,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
 // ── DEV / Admin control panel ─────────────────────────────────────────────────
 
 function DevAdminPanel({
-  profile, userId, currentUserId, onUpdateTag, onUpdateBan, onUpdateMute, onUpdateRole,
+  profile, userId, currentUserId, onUpdateTag, onUpdateBan, onUpdateMute, onUpdateRole, onDeleted,
 }: {
   profile: FeedUserProfile
   userId: number
@@ -260,6 +276,7 @@ function DevAdminPanel({
   onUpdateBan: (banned: boolean) => void
   onUpdateMute: (mutedUntil: string | null) => void
   onUpdateRole: (role: string) => void
+  onDeleted: () => void
 }) {
   const [localTag, setLocalTag] = useState('')
   const [localColor, setLocalColor] = useState('')
@@ -268,6 +285,7 @@ function DevAdminPanel({
   const [muteMinutes, setMuteMinutes] = useState('60')
   const [muteSaving, setMuteSaving] = useState(false)
   const [roleSaving, setRoleSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [myTag, setMyTag] = useState<string | null>(null)
   const [myRole, setMyRole] = useState<string | null>(null)
 
@@ -317,6 +335,17 @@ function DevAdminPanel({
       onUpdateBan(result.banned)
     } catch { /* ignore */ }
     finally { setSaving(false) }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleting) return
+    if (!confirm(`Permanently delete this account? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      await api.feedDeleteUser(userId)
+      onDeleted()
+    } catch { /* ignore */ }
+    finally { setDeleting(false) }
   }
 
   async function handleMute() {
@@ -500,6 +529,20 @@ function DevAdminPanel({
       </button>
       {profile.chatBanned && (
         <p style={{ fontSize: 11, color: '#EF4444', marginTop: 6 }}>This user is banned from posting.</p>
+      )}
+
+      {/* Delete account — only available when user is already banned */}
+      {profile.chatBanned && (
+        <div style={{ marginTop: 12, borderTop: '1px solid rgba(239,68,68,0.2)', paddingTop: 12 }}>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>DANGER ZONE</p>
+          <button
+            style={{ width: '100%', border: '1px solid #7f1d1d', borderRadius: 6, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: deleting ? 'default' : 'pointer', background: '#450a0a', color: '#fca5a5', opacity: deleting ? 0.6 : 1 }}
+            onClick={() => void handleDeleteAccount()}
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting…' : '🗑 Delete Account Permanently'}
+          </button>
+        </div>
       )}
     </div>
   )

@@ -59,9 +59,25 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+function parseHacName(raw: string | null | undefined): string {
+  if (!raw) return ''
+  const cap = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ''
+  if (raw.includes(',')) {
+    const [rawLast, rawRest = ''] = raw.split(',')
+    const first = cap(rawRest.trim().split(' ')[0])
+    const last = cap(rawLast.trim())
+    return `${first} ${last}`.trim()
+  }
+  return raw
+}
+
 function initials(name: string | null) {
   if (!name) return 'S'
-  return name.trim().split(' ').map(p => p.charAt(0)).join('').slice(0, 2).toUpperCase()
+  const parsed = parseHacName(name)
+  const parts = parsed.trim().split(' ').filter(Boolean)
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : parsed.slice(0, 2).toUpperCase()
 }
 
 type SystemType = 'HAC' | 'PowerSchool'
@@ -69,6 +85,8 @@ interface PortalStatus { connected: boolean; systemType: string | null; district
 
 export default function SettingsPage() {
   const router = useRouter()
+  const [theme, setTheme]                   = useState<'dark' | 'light'>('dark')
+  const [gradeColors, setGradeColors]       = useState(true)
   const [data, setData]                     = useState<StudentData | null>(null)
   const [portalStatus, setPortalStatus]     = useState<PortalStatus | null>(null)
   const [portalLoading, setPortalLoading]   = useState(true)
@@ -104,6 +122,26 @@ export default function SettingsPage() {
       setAvatarSaving(false)
       setTimeout(() => setAvatarMsg(null), 2000)
     }
+  }
+
+  useEffect(() => {
+    setTheme((localStorage.getItem('ns_theme') as 'dark' | 'light') || 'dark')
+    setGradeColors(localStorage.getItem('ns_grade_colors') !== 'false')
+  }, [])
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    localStorage.setItem('ns_theme', next)
+    document.documentElement.setAttribute('data-theme', next)
+  }
+
+  function toggleGradeColors() {
+    const next = !gradeColors
+    setGradeColors(next)
+    localStorage.setItem('ns_grade_colors', String(next))
+    if (next) document.documentElement.removeAttribute('data-grade-colors')
+    else document.documentElement.setAttribute('data-grade-colors', 'off')
   }
 
   useEffect(() => {
@@ -204,7 +242,7 @@ export default function SettingsPage() {
           <div className="ns-card" style={S.profileCard}>
             <div style={S.avatar}>{initials(data?.name ?? null)}</div>
             <div>
-              <div style={S.profileName}>{data?.name ?? 'Student'}</div>
+              <div style={S.profileName}>{parseHacName(data?.name) || 'Student'}</div>
               <div style={S.profileSub}>
                 {[profile?.gradeLevel ? `Grade ${profile.gradeLevel}` : '', profile?.graduationYear ? `Class of ${profile.graduationYear}` : ''].filter(Boolean).join(' · ') || 'Student account'}
               </div>
@@ -393,8 +431,36 @@ export default function SettingsPage() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="ns-card" style={S.card}>
             <p style={S.cardLabel}>Appearance</p>
-            <InfoRow label="Theme" value="Dark" />
-            <InfoRow label="Grade color coding" value="Enabled" />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div>
+                <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Theme</span>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{theme === 'dark' ? 'Dark mode' : 'Light mode'}</div>
+              </div>
+              <button onClick={toggleTheme} style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)',
+                background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}>
+                {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
+              <div>
+                <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Grade color coding</span>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>A = green, B = teal, C = yellow…</div>
+              </div>
+              <button onClick={toggleGradeColors} style={{
+                width: 44, height: 24, borderRadius: 99, border: 'none', cursor: 'pointer',
+                background: gradeColors ? 'var(--primary)' : 'var(--surface-3)',
+                position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+              }}>
+                <span style={{
+                  position: 'absolute', top: 3, left: gradeColors ? 23 : 3,
+                  width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                  transition: 'left 0.2s', display: 'block',
+                }} />
+              </button>
+            </div>
           </div>
 
           <div className="ns-card" style={S.card}>

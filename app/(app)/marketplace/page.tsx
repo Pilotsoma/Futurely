@@ -198,6 +198,7 @@ function ItemIcon({ item }: { item: { type: string; itemValue?: string; value?: 
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function MarketplacePage() {
+  const [streak, setStreak] = useState<number | null>(null)
   const [tab, setTab] = useState<Tab>('boxes')
   const [tradeSubTab, setTradeSubTab] = useState<TradeSubTab>('new')
 
@@ -270,6 +271,8 @@ export default function MarketplacePage() {
   }, [])
 
   useEffect(() => {
+    setStreak(parseInt(localStorage.getItem('ns_streak') ?? '0', 10))
+
     api.marketplaceInventory()
       .then(d => { setInv(d); setLoading(false) })
       .catch(() => setLoading(false))
@@ -732,6 +735,28 @@ export default function MarketplacePage() {
         {items.length > 0 && total > 0 && (
           <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 5 }}>Est. 🪙 {total.toLocaleString()}</div>
         )}
+      </div>
+    )
+  }
+
+  if (streak !== null && streak < 3) {
+    return (
+      <div className="fade-up" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
+        <div style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>Spend your coins</p>
+          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>Marketplace</h1>
+        </div>
+        <div className="ns-card" style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div style={{ fontSize: 52 }}>🔒</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px' }}>Marketplace Locked</div>
+          <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 320 }}>
+            You need a <strong style={{ color: '#EAB308' }}>3-day login streak</strong> to access the Marketplace.
+            Keep logging in every day to unlock it!
+          </div>
+          <div style={{ marginTop: 8, padding: '10px 20px', borderRadius: 99, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', fontSize: 13, fontWeight: 700, color: '#EAB308' }}>
+            🔥 Current streak: {streak} / 3 day{streak === 1 ? '' : 's'}
+          </div>
+        </div>
       </div>
     )
   }

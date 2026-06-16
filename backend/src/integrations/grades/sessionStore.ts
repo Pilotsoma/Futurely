@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto'
 
-const TTL_MS = 24 * 60 * 60 * 1000 // 24 hours (was 30 min)
-const EXTEND_ON_ACCESS_MS = 6 * 60 * 60 * 1000 // extend by 6h on successful access
+// Keep Map TTL just under HAC's real session lifetime (~60 min).
+// This ensures stale sessions are evicted and resolveSession re-logs in automatically.
+const TTL_MS = 50 * 60 * 1000 // 50 minutes
 
 export type SchoolSystemType = 'HAC' | 'PowerSchool'
 
@@ -80,15 +81,13 @@ export function getSessionByUserId(userId: number): { token: string; session: St
 }
 
 /**
- * Extend the session expiry on successful access, so active users
- * don't get kicked out as long as they're using the app.
+ * No-op: HAC's own server-side session expires at ~60 min regardless of our
+ * Map TTL. Extending the Map entry beyond 50 min just makes us think the
+ * session is alive when HAC has already killed it, causing "session expired"
+ * errors. Let the 50-min TTL expire naturally so resolveSession re-logs in.
  */
-export function touchSession(userId: number): void {
-  const entry = getSessionByUserId(userId)
-  if (entry) {
-    entry.session.expiresAt = Date.now() + EXTEND_ON_ACCESS_MS
-  }
-}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function touchSession(_userId: number): void { /* intentionally empty */ }
 
 export function deleteSessionByUserId(userId: number): void {
   for (const [key, val] of store.entries()) {
@@ -129,6 +128,33 @@ export function restoreSessionFromCache(
   try {
     JSON.parse(cachedSessionData)
     return saveSession(userId, systemType, baseUrl, cachedSessionData)
+  } catch {
+    return null
+  }
+}
+
+// ── DB session timestamp helpers ──────────────────────────────────────────────
+// The cachedSession field stores a timestamped wrapper so we know whether the
+// cookies are still fresh enough for HAC to accept them.
+const CACHED_SESSION_MAX_AGE_MS = 50 * 60 * 1000 // must match TTL_MS above
+
+export function wrapCachedSession(sessionData: string): string {
+  return JSON.stringify({ savedAt: Date.now(), data: sessionData })
+}
+
+/**
+ * Returns the raw cookie jar data + savedAt timestamp, or null if the wrapper
+ * is invalid or the cookies are older than 50 minutes (HAC will have expired them).
+ */
+export function unwrapCachedSession(dbValue: string): { data: string; savedAt: number } | null {
+  try {
+    const parsed = JSON.parse(dbValue)
+    if (typeof parsed.savedAt === 'number' && typeof parsed.data === 'string') {
+      if (Date.now() - parsed.savedAt > CACHED_SESSION_MAX_AGE_MS) return null // stale
+      return parsed
+    }
+    // Legacy format (raw cookie jar, no timestamp) — treat as stale
+    return null
   } catch {
     return null
   }

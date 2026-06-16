@@ -9,6 +9,7 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.1",
     "concurrently": "^9.0.0",
+    "framer-motion": "^12.40.0",
     "next": "^16.2.9",
     "prisma": "^5.22.0",
     "react": "^19.2.7",

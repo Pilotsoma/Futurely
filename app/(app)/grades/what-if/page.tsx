@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PageLoader from '../../../../components/ui/PageLoader'
+import { api } from '../../../../lib/api'
 
 // ── Official Katy ISD GPA Scale ───────────────────────────────────────────────
 // Regular:     A=4.0  B=3.0  C=2.0  F=0.0
@@ -61,7 +62,7 @@ interface SimCourse {
 }
 
 const LETTER_COLORS: Record<string, string> = {
-  A: '#22C55E', B: '#10B981', C: '#F59E0B', F: '#EF4444',
+  A: 'var(--gc-a)', B: 'var(--gc-b)', C: 'var(--gc-c)', F: 'var(--gc-f)',
 }
 const letterColor = (avg: number) => LETTER_COLORS[avgToLetter(avg)] ?? 'var(--text-muted)'
 
@@ -84,6 +85,7 @@ export default function WhatIfGpaPage() {
   const [simCourses, setSimCourses]         = useState<SimCourse[]>([])
   const [loading, setLoading]               = useState(true)
   const [error, setError]                   = useState<string | null>(null)
+  const [resyncing, setResyncing]           = useState(false)
   const [gpaType, setGpaType]               = useState<GpaType>('weighted')
   const [simSemesters, setSimSemesters]     = useState(1)
 
@@ -133,6 +135,19 @@ export default function WhatIfGpaPage() {
     }
     fetchAll()
   }, [])
+
+  async function handleResync() {
+    setResyncing(true)
+    setError(null)
+    try {
+      await api.portalSyncProfile()
+      window.location.reload()
+    } catch {
+      setError('Resync failed. Try again.')
+    } finally {
+      setResyncing(false)
+    }
+  }
 
   function generateBlankCourses(count: number): SimCourse[] {
     return Array.from({ length: count }, (_, i) => ({
@@ -217,10 +232,17 @@ export default function WhatIfGpaPage() {
 
       {error && (
         <div style={S.errorBanner}>
-          {error}
-          {error.toLowerCase().includes('session') && (
-            <span> — <a href="/settings" style={{ color: 'var(--warning)', textDecoration: 'underline' }}>reconnect in Settings</a></span>
-          )}
+          {error.toLowerCase().includes('session') ? (
+            <span>
+              Session expired.{' '}
+              <span
+                onClick={handleResync}
+                style={{ textDecoration: 'underline', cursor: resyncing ? 'not-allowed' : 'pointer', opacity: resyncing ? 0.6 : 1 }}
+              >
+                {resyncing ? 'Resyncing…' : 'Click to resync'}
+              </span>
+            </span>
+          ) : error}
         </div>
       )}
 

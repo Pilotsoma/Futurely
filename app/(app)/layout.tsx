@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { motion, AnimatePresence, type Transition } from 'framer-motion'
 import { api } from '../../lib/api'
 
 const NAV = [
@@ -44,12 +45,35 @@ const NAV = [
 const SIDEBAR_EXPANDED = 220
 const SIDEBAR_COLLAPSED = 64
 
+const springTransition: Transition = { type: 'spring', stiffness: 380, damping: 30, mass: 0.8 }
+const fastSpring: Transition       = { type: 'spring', stiffness: 500, damping: 38, mass: 0.6 }
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
   const pathname = usePathname()
-  const [checked, setChecked]     = useState(false)
-  const [userName, setUserName]   = useState<string>('Student')
+  const [checked, setChecked]   = useState(false)
+  const [userName, setUserName] = useState<string>('Student')
   const [collapsed, setCollapsed] = useState(true)
+
+  // Floating active pill
+  const navRef  = useRef<HTMLElement>(null)
+  const linkRefs = useRef<Record<string, HTMLAnchorElement | null>>({})
+  const [pillY, setPillY]         = useState(0)
+  const [pillH, setPillH]         = useState(36)
+  const [pillReady, setPillReady] = useState(false)
+
+  useLayoutEffect(() => {
+    const activeHref = NAV.find(n => pathname === n.href || pathname.startsWith(n.href + '/'))?.href
+    if (!activeHref) return
+    const linkEl = linkRefs.current[activeHref]
+    const navEl  = navRef.current
+    if (!linkEl || !navEl) return
+    const navRect  = navEl.getBoundingClientRect()
+    const linkRect = linkEl.getBoundingClientRect()
+    setPillY(linkRect.top - navRect.top)
+    setPillH(linkRect.height)
+    setPillReady(true)
+  }, [pathname, collapsed])
 
   useEffect(() => {
     const token = localStorage.getItem('ns_token')
@@ -57,8 +81,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!token) {
       router.replace('/login')
     } else {
-      if (user?.name) setUserName(user.name.split(' ')[0])
-      // Refresh HAC/PS session before showing content to avoid "session expired" errors
+      if (user?.name) {
+        const n = user.name
+        if (n.includes(',')) {
+          const rest = n.split(',')[1]?.trim() ?? ''
+          const first = rest.split(' ')[0]
+          setUserName(first.charAt(0).toUpperCase() + first.slice(1).toLowerCase())
+        } else {
+          setUserName(n.split(' ')[0])
+        }
+      }
       api.portalStatus()
         .catch(() => {})
         .finally(() => setChecked(true))
@@ -72,9 +104,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (!checked) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-muted)', fontSize: 13, flexDirection: 'column', gap: 8 }}>
-      <div style={{ width: 24, height: 24, border: '2.5px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <span>Refreshing session… This takes a few seconds.</span>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-muted)', fontSize: 13, flexDirection: 'column', gap: 10 }}>
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+        style={{ width: 22, height: 22, border: '2px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%' }}
+      />
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
+      >
+        Refreshing session…
+      </motion.span>
     </div>
   )
 
@@ -82,89 +124,185 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <aside style={{ ...S.sidebar, width: sideW }}>
-        <button
+      <motion.aside
+        animate={{ width: sideW }}
+        transition={springTransition}
+        style={S.sidebar}
+      >
+        {/* Collapse toggle */}
+        <motion.button
           onClick={() => setCollapsed(c => !c)}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           style={S.toggleBtn}
+          whileHover={{ scale: 1.1, backgroundColor: 'var(--surface-2)' }}
+          whileTap={{ scale: 0.9 }}
+          transition={fastSpring}
         >
-          {collapsed ? (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          ) : (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          )}
-        </button>
+          <motion.span
+            animate={{ rotate: collapsed ? 0 : 180 }}
+            transition={springTransition}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </motion.span>
+        </motion.button>
 
+        {/* Logo */}
         <div style={{ ...S.logoRow, justifyContent: collapsed ? 'center' : 'flex-start' }}>
-          <a href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10 }}>
+          <a href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
             <Image src="/logo.svg" alt="NextStep" width={28} height={28} style={{ flexShrink: 0 }} />
-            {!collapsed && <span style={S.logoText}>NextStep</span>}
+            <AnimatePresence>
+              {!collapsed && (
+                <motion.span
+                  key="logo-text"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={fastSpring}
+                  style={S.logoText}
+                >
+                  NextStep
+                </motion.span>
+              )}
+            </AnimatePresence>
           </a>
         </div>
 
-        <nav style={S.nav}>
+        {/* Nav */}
+        <nav ref={navRef} style={S.nav}>
+          {/* Floating active pill */}
+          {pillReady && (
+            <motion.div
+              animate={{ y: pillY, height: pillH }}
+              transition={springTransition}
+              style={S.navPill}
+            />
+          )}
           {NAV.map(link => {
             const active = pathname === link.href || pathname.startsWith(link.href + '/')
             return (
-              <Link key={link.href} href={link.href} style={{ textDecoration: 'none' }} title={collapsed ? link.label : undefined}>
-                <div
+              <Link
+                key={link.href}
+                href={link.href}
+                ref={el => { linkRefs.current[link.href] = el }}
+                style={{ textDecoration: 'none' }}
+                title={collapsed ? link.label : undefined}
+              >
+                <motion.div
                   className={`ns-nav-link${active ? ' active' : ''}`}
-                  style={{
-                    ...(active ? S.navActive : {}),
-                    justifyContent: collapsed ? 'center' : undefined,
-                    paddingLeft: collapsed ? 0 : undefined,
-                    gap: collapsed ? 0 : undefined,
-                  }}
+                  style={{ justifyContent: collapsed ? 'center' : undefined, gap: collapsed ? 0 : undefined }}
+                  whileHover={{ x: collapsed ? 0 : 2 }}
+                  transition={fastSpring}
                 >
-                  <span style={{ flexShrink: 0, opacity: active ? 1 : 0.7, color: active ? 'var(--primary)' : 'inherit' }}>
+                  <motion.span
+                    style={{ flexShrink: 0 }}
+                    animate={{ opacity: active ? 1 : 0.55, color: active ? 'var(--primary)' : 'currentColor' }}
+                    transition={{ duration: 0.15 }}
+                  >
                     {link.icon}
-                  </span>
-                  {!collapsed && link.label}
-                </div>
+                  </motion.span>
+                  <AnimatePresence>
+                    {!collapsed && (
+                      <motion.span
+                        key={`label-${link.href}`}
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -6 }}
+                        transition={fastSpring}
+                        style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}
+                      >
+                        {link.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
               </Link>
             )
           })}
         </nav>
 
+        {/* Bottom */}
         <div style={S.bottom}>
-          {!collapsed && (
-            <div style={S.userRow}>
-              <div style={S.userAvatar}>{userName.charAt(0).toUpperCase()}</div>
-              <span style={S.userName}>{userName}</span>
-            </div>
-          )}
-          <button
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.div
+                key="user-row"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={fastSpring}
+                style={S.userRow}
+              >
+                <div style={S.userAvatar}>{userName.charAt(0).toUpperCase()}</div>
+                <span style={S.userName}>{userName}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <motion.button
             className="ns-btn-ghost"
             style={{ ...S.logoutBtn, justifyContent: 'center' }}
             onClick={handleLogout}
             title={collapsed ? 'Log out' : undefined}
+            whileTap={{ scale: 0.95 }}
+            transition={fastSpring}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
               <polyline points="16 17 21 12 16 7"/>
               <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
-            {!collapsed && 'Log out'}
-          </button>
+            <AnimatePresence>
+              {!collapsed && (
+                <motion.span
+                  key="logout-label"
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -6 }}
+                  transition={fastSpring}
+                >
+                  Log out
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         </div>
-      </aside>
+      </motion.aside>
 
-      <main style={{ ...S.main, marginLeft: sideW }}>{children}</main>
+      {/* Main content — spring-follows sidebar width */}
+      <motion.main
+        animate={{ marginLeft: sideW }}
+        transition={springTransition}
+        style={S.main}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: -6, filter: 'blur(2px)' }}
+            transition={{ duration: 0.28, ease: [0.19, 1, 0.22, 1] }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </motion.main>
     </div>
   )
 }
 
 const S: Record<string, React.CSSProperties> = {
-  sidebar:    { flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '16px 10px 20px', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50, overflow: 'hidden', transition: 'width 0.2s ease' },
-  toggleBtn:  { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: 'auto', marginBottom: 18, flexShrink: 0, transition: 'background 0.15s' },
+  sidebar:    { flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '16px 10px 20px', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50, overflow: 'hidden', boxShadow: '2px 0 12px rgba(0,0,0,0.08)' },
+  toggleBtn:  { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: 'auto', marginBottom: 18, flexShrink: 0 },
   logoRow:    { paddingLeft: 0, marginBottom: 24, display: 'flex' },
   logoText:   { fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.3px', whiteSpace: 'nowrap' },
-  nav:        { flex: 1, display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden' },
-  navActive:  { borderLeft: '2px solid var(--primary)', paddingLeft: 12, marginLeft: 2 },
+  nav:        { flex: 1, display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden', position: 'relative' },
+  navPill:    { position: 'absolute', left: 0, right: 0, borderRadius: 8, background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.14)', pointerEvents: 'none', zIndex: 0 },
   bottom:     { borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 8 },
   userRow:    { display: 'flex', alignItems: 'center', gap: 9, paddingLeft: 4, overflow: 'hidden' },
-  userAvatar: { width: 26, height: 26, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid var(--primary)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 },
+  userAvatar: { width: 26, height: 26, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid rgba(0,200,150,0.3)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 },
   userName:   { fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   logoutBtn:  { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '8px 12px' },
-  main:       { flex: 1, padding: 'var(--page-px)', minHeight: '100vh', transition: 'margin-left 0.2s ease' },
+  main:       { flex: 1, padding: 'var(--page-px)', minHeight: '100vh' },
 }

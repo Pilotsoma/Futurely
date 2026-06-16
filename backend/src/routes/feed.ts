@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { broadcast, sendToUser } from '../lib/websocket';
-import { filterContent } from '../lib/contentFilter';
+import { filterContent, recordViolation } from '../lib/contentFilter';
 
 const router = Router();
 
@@ -173,7 +173,15 @@ router.post('/posts', async (req: Request, res: Response) => {
       return res.status(403).json({ error: `You are muted until ${poster.chatMutedUntil.toLocaleString()}.` });
 
     const contentCheck = filterContent(body.trim());
-    if (!contentCheck.ok) return res.status(400).json({ error: contentCheck.reason });
+    if (!contentCheck.ok) {
+      const { shouldMute } = recordViolation(userId);
+      if (shouldMute) {
+        const mutedUntil = new Date(Date.now() + 60 * 60 * 1000);
+        await prisma.user.update({ where: { id: userId }, data: { chatMutedUntil: mutedUntil } });
+        return res.status(403).json({ error: 'You\'ve been automatically muted for 1 hour due to repeated policy violations.' });
+      }
+      return res.status(400).json({ error: contentCheck.reason });
+    }
 
     const post = await prisma.post.create({
       data: { body: body.trim(), userId },
@@ -340,7 +348,15 @@ router.post('/posts/:id/comments', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'You are currently muted.' });
 
     const contentCheck = filterContent(body.trim());
-    if (!contentCheck.ok) return res.status(400).json({ error: contentCheck.reason });
+    if (!contentCheck.ok) {
+      const { shouldMute } = recordViolation(userId);
+      if (shouldMute) {
+        const mutedUntil = new Date(Date.now() + 60 * 60 * 1000);
+        await prisma.user.update({ where: { id: userId }, data: { chatMutedUntil: mutedUntil } });
+        return res.status(403).json({ error: 'You\'ve been automatically muted for 1 hour due to repeated policy violations.' });
+      }
+      return res.status(400).json({ error: contentCheck.reason });
+    }
 
     const comment = await prisma.comment.create({
       data: { body: body.trim(), postId: id, userId },
@@ -933,6 +949,24 @@ router.put('/users/:id/mute', async (req: Request, res: Response) => {
     res.json({ data: { mutedUntil: updated.chatMutedUntil?.toISOString() ?? null } });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update mute status' });
+  }
+});
+
+/* ---------- Users: Delete account (DEV only — target must be banned) ---------- */
+router.delete('/users/:id', async (req: Request, res: Response) => {
+  try {
+    const actorId = (req as any).userId as number;
+    const targetId = parseInt(req.params.id);
+    if (actorId === targetId) return res.status(400).json({ error: 'Cannot delete your own account' });
+    const isDev = await hasDevPowers(actorId);
+    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
+    const target = await prisma.user.findUnique({ where: { id: targetId }, select: { chatBanned: true } });
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    if (!target.chatBanned) return res.status(400).json({ error: 'User must be banned before their account can be deleted' });
+    await prisma.user.delete({ where: { id: targetId } });
+    res.json({ data: { deleted: true } });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 });
 

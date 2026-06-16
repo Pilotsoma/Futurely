@@ -19,7 +19,7 @@ import {
   getTranscript as psTranscript,
 } from './powerSchoolClient'
 import { buildSessionWithCLCookie } from './classLinkHelper'
-import { getSessionByUserId, getSessionByToken, deleteSessionByUserId, restoreSessionFromCache, touchSession, type SchoolSystemType } from './sessionStore'
+import { getSessionByUserId, getSessionByToken, deleteSessionByUserId, restoreSessionFromCache, touchSession, wrapCachedSession, unwrapCachedSession, type SchoolSystemType } from './sessionStore'
 import { prisma } from '../../lib/prisma'
 import { APIError, AuthenticationError } from './errors'
 import { normalizeHacGrades, normalizePsGrades } from './normalizeGrades'
@@ -260,7 +260,7 @@ async function autoRelogin(userId: number): Promise<{ token: string; session: Re
     if (stored) {
       await prisma.schoolConnection.update({
         where: { userId },
-        data: { cachedSession: stored.sessionData, lastSynced: new Date() },
+        data: { cachedSession: wrapCachedSession(stored.sessionData), lastSynced: new Date() },
       }).catch(e => console.warn('[GRADES ROUTER] Non-fatal: failed to persist relogin session:', e instanceof Error ? e.message : String(e)))
     }
 
@@ -292,17 +292,24 @@ async function resolveSession(userId: number, res: Response): Promise<ReturnType
     if (entry) return entry
   }
 
-  // 3. Auto-relogin failed → last resort: try restoring from DB-cached cookie
+  // 3. Auto-relogin failed → last resort: restore from DB cache only if fresh
+  // (cookies older than 50 min are dead on HAC's side — restoring them just
+  // puts a stale entry in memory that fails on the very next HAC request)
   const connection = await prisma.schoolConnection.findUnique({ where: { userId } }).catch(() => null)
   if (connection?.cachedSession) {
-    console.log('[GRADES ROUTER] Last resort: restoring session from DB cache for userId:', userId)
-    const restoredToken = restoreSessionFromCache(
-      userId,
-      connection.systemType as SchoolSystemType,
-      toOrigin(connection.districtUrl),
-      connection.cachedSession,
-    )
-    if (restoredToken) entry = getSessionByUserId(userId)
+    const unwrapped = unwrapCachedSession(connection.cachedSession)
+    if (unwrapped) {
+      console.log('[GRADES ROUTER] Last resort: restoring fresh DB-cached session for userId:', userId)
+      const restoredToken = restoreSessionFromCache(
+        userId,
+        connection.systemType as SchoolSystemType,
+        toOrigin(connection.districtUrl),
+        unwrapped.data,
+      )
+      if (restoredToken) entry = getSessionByUserId(userId)
+    } else {
+      console.log('[GRADES ROUTER] DB-cached session is stale — skipping restore for userId:', userId)
+    }
   }
 
   if (!entry) {
@@ -377,7 +384,7 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
     if (stored) {
       await prisma.schoolConnection.update({
         where: { userId },
-        data: { cachedSession: stored.sessionData },
+        data: { cachedSession: wrapCachedSession(stored.sessionData) },
       })
     }
   } catch (e) {
@@ -684,7 +691,7 @@ router.post('/powerschool/login', async (req: AuthRequest, res: Response): Promi
       if (stored) {
         await prisma.schoolConnection.update({
           where: { userId },
-          data: { cachedSession: stored.sessionData },
+          data: { cachedSession: wrapCachedSession(stored.sessionData) },
         })
         console.log('[GRADES ROUTER] PS session cached to DB for userId:', userId)
       }
@@ -924,22 +931,17 @@ router.delete('/session', async (req: AuthRequest, res: Response): Promise<void>
   const userId = req.userId!
   deleteSessionByUserId(userId)
 
-  // Clear cached session from DB so the status route doesn't auto-restore it
+  // Delete the SchoolConnection record entirely — this is a true disconnect.
+  // autoRelogin checks for this record before attempting re-login, so removing it
+  // prevents any silent refresh from re-establishing the HAC session.
   try {
-    await prisma.schoolConnection.updateMany({
-      where: { userId },
-      data: { cachedSession: null },
-    })
+    await prisma.schoolConnection.deleteMany({ where: { userId } })
   } catch (err) {
-    console.warn('[GRADES ROUTER] Non-fatal: failed to clear cached session on disconnect:',
+    console.warn('[GRADES ROUTER] Failed to delete SchoolConnection on disconnect:',
       err instanceof Error ? err.message : String(err))
   }
 
-  res.json({
-    data: {
-      disconnected: true,
-    },
-  })
+  res.json({ data: { disconnected: true } })
 })
 
 router.get('/status', async (req: AuthRequest, res: Response): Promise<void> => {
@@ -947,23 +949,16 @@ router.get('/status', async (req: AuthRequest, res: Response): Promise<void> => 
 
   let entry = getSessionByUserId(userId)
 
-  // If no in-memory session, try to restore from DB cache
+  // If no in-memory session, proactively re-login with stored credentials so
+  // subsequent grade requests don't have to pay the relogin cost themselves.
+  // This is called by the app layout on every page load, so a real fresh
+  // session is ready before the user navigates to any grade page.
+  // We do NOT restore the stale DB-cached cookie here — HAC cookies expire in
+  // ~60 min, so restoring a stale cookie into memory causes resolveSession to
+  // skip auto-relogin and then fail when HAC rejects the dead cookie.
   if (!entry) {
-    const cachedConnection = await prisma.schoolConnection.findUnique({ where: { userId } })
-
-    if (cachedConnection?.cachedSession) {
-      console.log('[GRADES ROUTER] Attempting session restore from DB cache for userId:', userId)
-      const restoredToken = restoreSessionFromCache(
-        userId,
-        cachedConnection.systemType as SchoolSystemType,
-        toOrigin(cachedConnection.districtUrl),
-        cachedConnection.cachedSession
-      )
-      if (restoredToken) {
-        entry = getSessionByUserId(userId)
-        console.log('[GRADES ROUTER] Session restored from cache:', Boolean(entry))
-      }
-    }
+    const reloginResult = await autoRelogin(userId)
+    if (reloginResult?.session) entry = reloginResult.session
   }
 
   const connection = await prisma.schoolConnection.findUnique({
