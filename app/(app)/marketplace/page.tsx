@@ -237,6 +237,7 @@ export default function MarketplacePage() {
     hasRare: boolean
   } | null>(null)
   const [sellingDups, setSellingDups] = useState(false)
+  const [dupExcluded, setDupExcluded] = useState<Set<string>>(new Set())
 
   // DEV panel
   const [isDevUser, setIsDevUser] = useState(false)
@@ -523,15 +524,17 @@ export default function MarketplacePage() {
     if (dups.length === 0) return
     const totalCoins = dups.reduce((s, d) => s + d.count * d.coinsEach, 0)
     const hasRare = dups.some(d => d.rarity === 'Legendary' || d.rarity === 'Mythic')
+    setDupExcluded(new Set())
     setSellDupsConfirm({ items: dups, totalCoins, hasRare })
   }
 
   async function handleSellAllDuplicatesConfirm() {
-    if (sellingDups) return
+    if (sellingDups || !sellDupsConfirm) return
     setSellingDups(true)
     try {
-      await api.marketplaceQuicksellDuplicates()
+      await api.marketplaceQuicksellDuplicates(Array.from(dupExcluded))
       setSellDupsConfirm(null)
+      setDupExcluded(new Set())
       refreshInventory()
     } catch { /* ignore */ }
     finally { setSellingDups(false) }
@@ -1791,51 +1794,73 @@ export default function MarketplacePage() {
           onClick={() => !sellingDups && setSellDupsConfirm(null)}
         >
           <div
-            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 16, padding: 24, width: '90%', maxWidth: 420 }}
+            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 16, padding: 24, width: '90%', maxWidth: 440 }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>Sell All Duplicates</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>Keeps 1 copy of each item, sells the rest.</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>Keeps 1 copy of each item. Toggle any row to keep all copies of it.</div>
 
             {sellDupsConfirm.hasRare && (
               <div style={{ fontSize: 12, color: RARITY_COLOR['Legendary'], fontWeight: 600, background: `${RARITY_COLOR['Legendary']}12`, borderRadius: 8, padding: '8px 12px', marginBottom: 14 }}>
-                ⚠️ Some duplicates are Legendary or Mythic rarity!
+                ⚠️ Some duplicates are Legendary or Mythic — consider opting out below!
               </div>
             )}
 
-            <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-              {sellDupsConfirm.items.map(d => (
-                <div key={`${d.type}:${d.id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <span style={{ fontSize: 11 }}>{d.type === 'tag' ? '🏷️' : d.type === 'name-color' ? '🎨' : '🖼️'}</span>
-                  <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{d.name}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: RARITY_COLOR[d.rarity] ?? '#6B7280', background: `${RARITY_COLOR[d.rarity] ?? '#6B7280'}18`, padding: '2px 6px', borderRadius: 99 }}>{d.rarity}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>×{d.count}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>🪙 {(d.count * d.coinsEach).toLocaleString()}</span>
-                </div>
-              ))}
+            <div style={{ maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+              {sellDupsConfirm.items.map(d => {
+                const key = `${d.type}:${d.id}`
+                const kept = dupExcluded.has(key)
+                return (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: kept ? 'var(--surface)' : 'var(--surface-2)', border: `1px solid ${kept ? 'var(--border)' : 'var(--border)'}`, opacity: kept ? 0.5 : 1, transition: 'opacity 0.15s' }}>
+                    <span style={{ fontSize: 11 }}>{d.type === 'tag' ? '🏷️' : d.type === 'name-color' ? '🎨' : '🖼️'}</span>
+                    <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text)', textDecoration: kept ? 'line-through' : 'none' }}>{d.name}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: RARITY_COLOR[d.rarity] ?? '#6B7280', background: `${RARITY_COLOR[d.rarity] ?? '#6B7280'}18`, padding: '2px 6px', borderRadius: 99 }}>{d.rarity}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>×{d.count}</span>
+                    {!kept && <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>🪙 {(d.count * d.coinsEach).toLocaleString()}</span>}
+                    <button
+                      onClick={() => setDupExcluded(prev => {
+                        const next = new Set(prev)
+                        if (next.has(key)) next.delete(key); else next.add(key)
+                        return next
+                      })}
+                      style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, border: `1px solid ${kept ? 'var(--primary)' : '#6B728055'}`, background: kept ? 'rgba(0,200,150,0.1)' : 'transparent', color: kept ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' as const, flexShrink: 0 }}
+                    >
+                      {kept ? 'Keeping all' : 'Keep all'}
+                    </button>
+                  </div>
+                )
+              })}
             </div>
 
-            <div style={{ padding: '10px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 16, textAlign: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Total: </span>
-              <span style={{ fontSize: 18, fontWeight: 800, color: '#EAB308' }}>🪙 {sellDupsConfirm.totalCoins.toLocaleString()}</span>
-            </div>
-
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => void handleSellAllDuplicatesConfirm()}
-                disabled={sellingDups}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: '#EAB308', color: '#060D10', fontWeight: 700, fontSize: 13, cursor: sellingDups ? 'not-allowed' : 'pointer', opacity: sellingDups ? 0.6 : 1 }}
-              >
-                {sellingDups ? 'Selling…' : `Yes, Sell All — 🪙 ${sellDupsConfirm.totalCoins.toLocaleString()}`}
-              </button>
-              <button
-                onClick={() => setSellDupsConfirm(null)}
-                disabled={sellingDups}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-            </div>
+            {(() => {
+              const activeItems = sellDupsConfirm.items.filter(d => !dupExcluded.has(`${d.type}:${d.id}`))
+              const liveTotal = activeItems.reduce((s, d) => s + d.count * d.coinsEach, 0)
+              const noneSelected = activeItems.length === 0
+              return (
+                <>
+                  <div style={{ padding: '10px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 16, textAlign: 'center' }}>
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Selling {activeItems.length} of {sellDupsConfirm.items.length} item type{sellDupsConfirm.items.length !== 1 ? 's' : ''} — </span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: noneSelected ? 'var(--text-muted)' : '#EAB308' }}>🪙 {liveTotal.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => void handleSellAllDuplicatesConfirm()}
+                      disabled={sellingDups || noneSelected}
+                      style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: noneSelected ? 'var(--surface-2)' : '#EAB308', color: noneSelected ? 'var(--text-muted)' : '#060D10', fontWeight: 700, fontSize: 13, cursor: (sellingDups || noneSelected) ? 'not-allowed' : 'pointer', opacity: sellingDups ? 0.6 : 1 }}
+                    >
+                      {sellingDups ? 'Selling…' : noneSelected ? 'Nothing to sell' : `Sell — 🪙 ${liveTotal.toLocaleString()}`}
+                    </button>
+                    <button
+                      onClick={() => { setSellDupsConfirm(null); setDupExcluded(new Set()) }}
+                      disabled={sellingDups}
+                      style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>,
         document.body

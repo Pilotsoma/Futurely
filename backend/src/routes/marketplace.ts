@@ -526,6 +526,9 @@ const QUICKSELL_PRICES: Record<string, number> = {
 router.post('/quicksell/duplicates', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   try {
+    // exclude = ["tag:someId", "pfp:otherId", ...] — kept entirely (all copies)
+    const exclude = new Set<string>((req.body as { exclude?: string[] }).exclude ?? [])
+
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
       select: { coins: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true },
@@ -538,30 +541,33 @@ router.post('/quicksell/duplicates', requireAuth, async (req: AuthRequest, res: 
 
     let totalPayout = 0
 
-    // Keep first occurrence of each tag; sell remaining duplicates
+    // Keep first occurrence of each tag; sell remaining duplicates (unless excluded)
     const finalTags: typeof rawTags = []
     const tagKept = new Set<string>()
     for (const t of rawTags) {
-      if (!tagKept.has(t.tag)) { finalTags.push(t); tagKept.add(t.tag) }
+      const key = `tag:${t.tag}`
+      if (exclude.has(key) || !tagKept.has(t.tag)) { finalTags.push(t); tagKept.add(t.tag) }
       else {
         const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
         totalPayout += QUICKSELL_PRICES[def?.rarity ?? 'Common'] ?? 5
       }
     }
 
-    // Keep first occurrence of each name-color id
+    // Keep first occurrence of each name-color id (unless excluded)
     const finalColors: typeof rawColors = []
     const colorKept = new Set<string>()
     for (const c of rawColors) {
-      if (!colorKept.has(c.id)) { finalColors.push(c); colorKept.add(c.id) }
+      const key = `name-color:${c.id}`
+      if (exclude.has(key) || !colorKept.has(c.id)) { finalColors.push(c); colorKept.add(c.id) }
       else { totalPayout += QUICKSELL_PRICES[c.rarity ?? 'Common'] ?? 5 }
     }
 
-    // Keep first occurrence of each pfp id
+    // Keep first occurrence of each pfp id (unless excluded)
     const finalPfps: typeof rawPfps = []
     const pfpKept = new Set<string>()
     for (const p of rawPfps) {
-      if (!pfpKept.has(p.id)) { finalPfps.push(p); pfpKept.add(p.id) }
+      const key = `pfp:${p.id}`
+      if (exclude.has(key) || !pfpKept.has(p.id)) { finalPfps.push(p); pfpKept.add(p.id) }
       else { totalPayout += QUICKSELL_PRICES[p.rarity ?? 'Common'] ?? 5 }
     }
 

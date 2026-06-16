@@ -491,8 +491,8 @@ export const api = {
       body: JSON.stringify({ itemType, itemId }),
     }),
 
-  marketplaceQuicksellDuplicates: () =>
-    request<{ coins: number; sold: number; totalPayout: number }>('/api/marketplace/quicksell/duplicates', { method: 'POST' }),
+  marketplaceQuicksellDuplicates: (exclude: string[] = []) =>
+    request<{ coins: number; sold: number; totalPayout: number }>('/api/marketplace/quicksell/duplicates', { method: 'POST', body: JSON.stringify({ exclude }), headers: { 'Content-Type': 'application/json' } }),
 
   marketplaceEquip: (type: 'name-color' | 'pfp', itemId: string | null) =>
     request<{ nameColor?: string | null; pfpEffect?: string | null }>('/api/marketplace/equip', {
