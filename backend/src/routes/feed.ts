@@ -207,25 +207,39 @@ router.post('/posts/giveaway', async (req: Request, res: Response) => {
     const isDev = await hasDevPowers(userId);
     if (!isDev) return res.status(403).json({ error: 'Only DEV/admin can create giveaways' });
 
+    if (isCoinGiveaway) {
+      const creator = await prisma.user.findUnique({ where: { id: userId }, select: { coins: true } });
+      if (!creator || creator.coins < giveawayCoinAmount!) {
+        return res.status(400).json({ error: `Not enough coins (you have ${creator?.coins ?? 0}, need ${giveawayCoinAmount})` });
+      }
+    }
+
     const giveawayEndsAt = new Date(Date.now() + durationMinutes * 60 * 1000);
-    const post = await prisma.post.create({
-      data: {
-        body: body.trim(),
-        userId,
-        type: 'giveaway',
-        ...(isCoinGiveaway
-          ? { giveawayCoinAmount }
-          : { giveawayTag: giveawayTag!.trim(), giveawayTagColor: (giveawayTagColor || 'gold').trim() }),
-        giveawayEndsAt,
-      },
-      include: {
-        user: { select: USER_SELECT },
-        likes: { select: { userId: true } },
-        giveawayEntries: { select: { userId: true } },
-        giveawayWinner: { select: { id: true, name: true, email: true } },
-        _count: { select: { likes: true, comments: true, giveawayEntries: true } },
-      },
-    });
+
+    const [post] = await prisma.$transaction([
+      prisma.post.create({
+        data: {
+          body: body.trim(),
+          userId,
+          type: 'giveaway',
+          ...(isCoinGiveaway
+            ? { giveawayCoinAmount }
+            : { giveawayTag: giveawayTag!.trim(), giveawayTagColor: (giveawayTagColor || 'gold').trim() }),
+          giveawayEndsAt,
+        },
+        include: {
+          user: { select: USER_SELECT },
+          likes: { select: { userId: true } },
+          giveawayEntries: { select: { userId: true } },
+          giveawayWinner: { select: { id: true, name: true, email: true } },
+          _count: { select: { likes: true, comments: true, giveawayEntries: true } },
+        },
+      }),
+      ...(isCoinGiveaway
+        ? [prisma.user.update({ where: { id: userId }, data: { coins: { decrement: giveawayCoinAmount! } } })]
+        : []),
+    ]);
+
     const postOut = { ...post, user: toFeedUser(post.user), likedByMe: false, enteredByMe: false };
     broadcast('NEW_POST', postOut);
     res.json({ data: postOut });
