@@ -473,10 +473,13 @@ export const api = {
       { method: 'POST' }
     ),
 
-  canvasDisconnect: () =>
-    request<{ disconnected: boolean; deletedAssignmentsCount: number }>(
+  canvasDisconnect: (canvasInstanceUrl?: string) =>
+    request<{ disconnected: boolean; deletedAssignmentsCount: number; canvasInstanceUrl?: string }>(
       '/api/integrations/canvas/disconnect',
-      { method: 'DELETE' }
+      {
+        method: 'DELETE',
+        body: canvasInstanceUrl ? JSON.stringify({ canvasInstanceUrl }) : undefined,
+      }
     ),
 
   // ── Colleges ──────────────────────────────────────────────────────────────────
@@ -627,8 +630,18 @@ export interface PlannerItem {
   source?: string
 }
 
+export interface CanvasConnectionInfo {
+  canvasInstanceUrl: string
+  canvasUserName: string | null
+  lastSynced: string | null
+  syncStatus: string | null
+  syncError: string | null
+}
+
 export interface CanvasStatus {
   connected: boolean
+  connections: CanvasConnectionInfo[]
+  // Backwards-compat: first connection
   canvasInstanceUrl: string | null
   canvasUserName: string | null
   lastSynced: string | null

@@ -73,3 +73,15 @@ export const SORTED_ISD_LIST = [...ISD_LIST].sort((a, b) => {
   if (a.state !== b.state) return a.state.localeCompare(b.state)
   return a.name.localeCompare(b.name)
 })
+
+/**
+ * Returns true if the given Canvas instance URL belongs to a college/university
+ * (i.e. it's in our ISD list and has no hacUrl, which distinguishes colleges from K-12).
+ * Returns false for unknown URLs (not in the list).
+ */
+export function isCollegeIsd(canvasUrl: string): boolean {
+  const normalised = canvasUrl.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '')
+  const entry = ISD_LIST.find(d => d.canvasUrl?.toLowerCase() === normalised)
+  if (!entry) return false // unknown — default to not college
+  return !entry.hacUrl // colleges have no hacUrl
+}

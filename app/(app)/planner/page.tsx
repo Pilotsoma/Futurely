@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { api, type PlannerItem, type CanvasStatus } from '../../../lib/api'
-import { SORTED_ISD_LIST } from '../../../lib/isds'
+import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import PageLoader from '../../../components/ui/PageLoader'
 
 type GroupKey = 'Overdue' | 'Today' | 'Tomorrow' | 'This Week' | 'Later' | 'Completed'
@@ -193,14 +193,9 @@ export default function PlannerPage() {
     setCanvasError(null)
     try {
       const result = await api.canvasConnect(canvasUrl.trim(), canvasToken.trim())
-      setCanvasStatus({
-        connected: true,
-        canvasInstanceUrl: result.canvasInstanceUrl,
-        canvasUserName: result.canvasUserName,
-        lastSynced: null,
-        syncStatus: null,
-        syncError: null,
-      })
+      // Refresh full status from server (includes new connections list)
+      const fresh = await api.canvasStatus()
+      setCanvasStatus(fresh)
       setShowCanvasForm(false)
       setCanvasUrl('')
       setCanvasToken('')
@@ -215,19 +210,17 @@ export default function PlannerPage() {
     }
   }
 
-  async function handleCanvasDisconnect() {
+  async function handleCanvasDisconnect(instanceUrl?: string) {
     setCanvasLoading(true)
     try {
-      await api.canvasDisconnect()
-      setCanvasStatus({
-        connected: false,
-        canvasInstanceUrl: null,
-        canvasUserName: null,
-        lastSynced: null,
-        syncStatus: null,
-        syncError: null,
-      })
-      setItems(prev => prev.filter(item => item.source !== 'CANVAS'))
+      await api.canvasDisconnect(instanceUrl)
+      // Refresh status from server
+      const fresh = await api.canvasStatus()
+      setCanvasStatus(fresh)
+      // If all connections gone, remove canvas items
+      if (!fresh.connected) {
+        setItems(prev => prev.filter(item => item.source !== 'CANVAS'))
+      }
     } catch (e) {
       setCanvasError(e instanceof Error ? e.message : 'Failed to disconnect')
     } finally {
@@ -265,58 +258,102 @@ export default function PlannerPage() {
 
       {/* Canvas Panel */}
       {canvasStatus?.connected ? (
-        <div className="ns-card" style={{ padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {canvasStatus.syncError === 'TOKEN_REVOKED' && (
-            <span style={{ fontSize: 12, color: '#F59E0B', fontWeight: 600, marginRight: 4 }}>
-              Token expired — reconnect Canvas
+        <div className="ns-card" style={{ padding: '14px 16px', marginBottom: 16 }}>
+          {/* Header row with sync all */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: canvasStatus.connections.length > 1 ? 10 : 0 }}>
+            <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: '#22C55E', fontWeight: 700 }}>✓</span>
+              Canvas {canvasStatus.connections.length > 1 ? 'connected' : 'connected'}
             </span>
-          )}
-          <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: '#22C55E', fontWeight: 700 }}>✓</span>
-            Canvas connected
-          </span>
-          <span style={{ color: 'var(--border)', fontSize: 13 }}>•</span>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-            Synced {formatRelativeTime(canvasStatus.lastSynced)}
-          </span>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => void handleCanvasSync()}
-              disabled={canvasLoading}
-              style={{
-                background: 'var(--surface-2)',
-                border: '1px solid var(--border)',
-                borderRadius: 7,
-                padding: '6px 12px',
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--text)',
-                cursor: canvasLoading ? 'not-allowed' : 'pointer',
-                opacity: canvasLoading ? 0.6 : 1,
-              }}
-            >
-              {canvasLoading ? 'Syncing…' : 'Sync Now'}
-            </button>
-            <button
-              onClick={() => void handleCanvasDisconnect()}
-              disabled={canvasLoading}
-              style={{
-                background: 'none',
-                border: '1px solid var(--border)',
-                borderRadius: 7,
-                padding: '6px 12px',
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--text-secondary)',
-                cursor: canvasLoading ? 'not-allowed' : 'pointer',
-                opacity: canvasLoading ? 0.6 : 1,
-              }}
-            >
-              Disconnect
-            </button>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => void handleCanvasSync()}
+                disabled={canvasLoading}
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 7,
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--text)',
+                  cursor: canvasLoading ? 'not-allowed' : 'pointer',
+                  opacity: canvasLoading ? 0.6 : 1,
+                }}
+              >
+                {canvasLoading ? 'Syncing…' : 'Sync All'}
+              </button>
+              {canvasStatus.connections.length < 2 && (
+                <button
+                  onClick={() => setShowCanvasForm(true)}
+                  disabled={canvasLoading}
+                  style={{
+                    background: 'none',
+                    border: '1px solid var(--primary)',
+                    borderRadius: 7,
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: 'var(--primary)',
+                    cursor: canvasLoading ? 'not-allowed' : 'pointer',
+                    opacity: canvasLoading ? 0.6 : 1,
+                  }}
+                >
+                  + Add Canvas
+                </button>
+              )}
+            </div>
           </div>
+          {/* Per-connection rows */}
+          {canvasStatus.connections.map(conn => {
+            const isCollege = isCollegeIsd(conn.canvasInstanceUrl)
+            return (
+              <div key={conn.canvasInstanceUrl} style={{
+                display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                padding: '8px 0',
+                borderTop: '1px solid var(--border)',
+              }}>
+                {conn.syncError === 'TOKEN_REVOKED' && (
+                  <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 600 }}>
+                    Token expired
+                  </span>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, borderRadius: 4, padding: '2px 6px',
+                    background: isCollege ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.12)',
+                    color: isCollege ? '#22C55E' : '#3B82F6',
+                    flexShrink: 0,
+                  }}>
+                    {isCollege ? 'College' : 'High School'}
+                  </span>
+                  <span style={{ fontSize: 12.5, color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {conn.canvasUserName ?? conn.canvasInstanceUrl}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
+                    {conn.canvasInstanceUrl}
+                  </span>
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
+                  Synced {formatRelativeTime(conn.lastSynced)}
+                </span>
+                <button
+                  onClick={() => void handleCanvasDisconnect(conn.canvasInstanceUrl)}
+                  disabled={canvasLoading}
+                  style={{
+                    background: 'none', border: '1px solid var(--border)', borderRadius: 6,
+                    padding: '4px 10px', fontSize: 11, fontWeight: 600,
+                    color: 'var(--text-secondary)', cursor: canvasLoading ? 'not-allowed' : 'pointer',
+                    opacity: canvasLoading ? 0.6 : 1, flexShrink: 0,
+                  }}
+                >
+                  Disconnect
+                </button>
+              </div>
+            )
+          })}
           {canvasError && (
-            <div style={{ width: '100%', fontSize: 12, color: '#EF4444', marginTop: 4 }}>{canvasError}</div>
+            <div style={{ fontSize: 12, color: '#EF4444', marginTop: 6 }}>{canvasError}</div>
           )}
         </div>
       ) : showCanvasForm ? (
