@@ -25,6 +25,15 @@ export const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'god',            tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    weight: 0.3  },
 ]
 
+// Special role/staff tags — not in loot boxes, only grantable by DEV/ADMIN
+const SPECIAL_TAGS: { id: string; tag: string; tagColor: string; rarity: string }[] = [
+  { id: 'dev',   tag: 'DEV',   tagColor: '#ff6b6b', rarity: 'Staff'  },
+  { id: 'admin', tag: 'Admin', tagColor: '#EF4444', rarity: 'Staff'  },
+  { id: 'mod',   tag: 'MOD',   tagColor: '#3B82F6', rarity: 'Staff'  },
+  { id: 'vip',   tag: 'VIP',   tagColor: '#A855F7', rarity: 'Staff'  },
+  { id: 'bot',   tag: 'BOT',   tagColor: '#6B7280', rarity: 'Staff'  },
+]
+
 const NAME_COLOR_BOX_ITEMS: ColorItem[] = [
   { id: 'forest-green',  name: 'Forest Green',  value: '#15803D', rarity: 'Common',    weight: 12    },
   { id: 'navy-blue',     name: 'Navy Blue',      value: '#1D4ED8', rarity: 'Common',    weight: 12    },
@@ -751,7 +760,8 @@ router.post('/admin/grant', requireAuth, async (req: AuthRequest, res: Response)
 
     } else if (type === 'tag') {
       if (!itemId?.trim()) { res.status(400).json({ error: 'Provide a tag id' }); return }
-      const tagDef = TAG_BOX_ITEMS.find(t => t.id === itemId.trim())
+      const id = itemId.trim()
+      const tagDef = TAG_BOX_ITEMS.find(t => t.id === id) ?? SPECIAL_TAGS.find(t => t.id === id)
       if (!tagDef) { res.status(400).json({ error: 'Unknown tag id' }); return }
       const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { allTags: true, tag: true } })
       const existing = parseTagArr(user?.allTags)
@@ -761,9 +771,8 @@ router.post('/admin/grant', requireAuth, async (req: AuthRequest, res: Response)
         where: { id: req.userId },
         data: {
           allTags: JSON.stringify(newAllTags),
-          ...(!user?.tag || user.tag === 'Student' || user.tag === 'Parent'
-            ? { tag: tagDef.tag, tagColor: tagDef.tagColor }
-            : {}),
+          tag: tagDef.tag,
+          tagColor: tagDef.tagColor,
         },
         select: { tag: true, tagColor: true },
       })
@@ -783,6 +792,7 @@ router.get('/catalog', (_req, res: Response) => {
   res.json({
     data: {
       tagBox: TAG_BOX_ITEMS,
+      specialTags: SPECIAL_TAGS,
       nameColorBox: NAME_COLOR_BOX_ITEMS,
       pfpBox: PFP_EFFECT_BOX_ITEMS,
       boxCost: 10,

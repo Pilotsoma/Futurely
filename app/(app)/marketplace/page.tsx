@@ -1661,16 +1661,35 @@ export default function MarketplacePage() {
               </button>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
-              <select value={devType} onChange={e => setDevType(e.target.value as 'name-color' | 'pfp' | 'tag')}
+              <select value={devType} onChange={e => { setDevType(e.target.value as 'name-color' | 'pfp' | 'tag'); setDevItemId('') }}
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
                 <option value="name-color">Name Color</option>
                 <option value="pfp">PFP Effect</option>
                 <option value="tag">Tag</option>
               </select>
-              <input value={devItemId} onChange={e => setDevItemId(e.target.value)} placeholder={devType === 'tag' ? 'tag-id  (e.g. genius)' : 'item-id  (e.g. rainbow)'}
-                style={{ flex: 1, minWidth: 140, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }} />
-              <button onClick={() => void handleDevGrant(devType)} disabled={devGranting}
-                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#ff6b6b', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+              {devType === 'tag' ? (
+                <select value={devItemId} onChange={e => setDevItemId(e.target.value)}
+                  style={{ flex: 1, minWidth: 160, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
+                  <option value="">Pick a tag…</option>
+                  <optgroup label="— Staff Tags —">
+                    <option value="dev">DEV (rainbow)</option>
+                    <option value="admin">Admin (red)</option>
+                    <option value="mod">MOD (blue)</option>
+                    <option value="vip">VIP (purple)</option>
+                    <option value="bot">BOT (gray)</option>
+                  </optgroup>
+                  <optgroup label="— Marketplace Tags —">
+                    {SIM_ITEMS.tag.map(t => (
+                      <option key={t.id} value={t.id}>{t.tag} ({t.rarity})</option>
+                    ))}
+                  </optgroup>
+                </select>
+              ) : (
+                <input value={devItemId} onChange={e => setDevItemId(e.target.value)} placeholder="item-id  (e.g. rainbow)"
+                  style={{ flex: 1, minWidth: 140, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }} />
+              )}
+              <button onClick={() => void handleDevGrant(devType)} disabled={devGranting || !devItemId.trim()}
+                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#ff6b6b', color: '#fff', fontWeight: 700, fontSize: 13, cursor: devItemId.trim() ? 'pointer' : 'not-allowed', opacity: devItemId.trim() ? 1 : 0.5 }}>
                 Grant Item
               </button>
             </div>
