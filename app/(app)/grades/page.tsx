@@ -29,7 +29,7 @@ const CARDS = [
     title: 'What-If Calculator',
     desc: 'Simulate GPA changes',
     icon: '🧮',
-    iconBg: 'rgba(0,200,150,0.08)',
+    iconBg: 'var(--primary-dim)',
   },
   {
     href: '/grades/contact',

@@ -466,7 +466,7 @@ export default function SettingsPage() {
                         padding: '0 16px',
                         fontSize: 13,
                         color: 'var(--primary)',
-                        borderColor: 'rgba(75,110,255,0.3)',
+                        borderColor: 'rgba(43,74,142,0.3)',
                         width: '100%',
                         display: 'flex',
                         alignItems: 'center',
@@ -646,7 +646,7 @@ export default function SettingsPage() {
                     {canvasConnections.length < 2 && (
                       <button
                         className="ns-btn-ghost"
-                        style={{ height: 32, padding: '0 12px', fontSize: 12, color: 'var(--primary)', borderColor: 'rgba(75,110,255,0.4)', opacity: canvasLoading ? 0.6 : 1 }}
+                        style={{ height: 32, padding: '0 12px', fontSize: 12, color: 'var(--primary)', borderColor: 'rgba(43,74,142,0.4)', opacity: canvasLoading ? 0.6 : 1 }}
                         onClick={() => setShowCanvasForm(true)}
                         disabled={canvasLoading}
                       >
@@ -781,7 +781,7 @@ export default function SettingsPage() {
 
           {/* DEV-only: profile picture URL */}
           {data?.role === 'ADMIN' && (
-            <div className="ns-card" style={{ ...S.card, border: '1px solid rgba(75,110,255,0.25)' }}>
+            <div className="ns-card" style={{ ...S.card, border: '1px solid rgba(43,74,142,0.25)' }}>
               <p style={{ ...S.cardLabel, color: 'var(--primary)' }}>DEV — Avatar URL</p>
               <div style={S.fieldRow}>
                 <label style={S.fieldRowLabel}>Image URL</label>
@@ -844,7 +844,7 @@ export default function SettingsPage() {
               {CHANGELOG.map((entry, ei) => (
                 <div key={entry.version}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'rgba(0,200,150,0.12)', border: '1px solid rgba(0,200,150,0.3)', borderRadius: 99, padding: '2px 10px' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 99, padding: '2px 10px' }}>
                       v{entry.version}
                     </span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.title}</span>
@@ -892,7 +892,7 @@ const S: Record<string, React.CSSProperties> = {
   title:        { fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 24 },
   layout:       { display: 'flex', gap: 20, alignItems: 'flex-start' },
   profileCard:  { display: 'flex', alignItems: 'center', gap: 16, padding: 20, marginBottom: 16 },
-  avatar:       { width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#4B6EFF,#00C896)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, flexShrink: 0 },
+  avatar:       { width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#2B4A8E,#2D6A4F)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, flexShrink: 0 },
   profileName:  { fontSize: 17, fontWeight: 700 },
   profileSub:   { fontSize: 13, color: 'var(--text-secondary)', marginTop: 3 },
   card:         { padding: 20, marginBottom: 16 },

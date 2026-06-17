@@ -156,7 +156,7 @@ export default function ParentStudentDetailPage() {
             <span style={S.gpaNum}>{uGpa}</span>
             <span style={S.gpaLbl}>UW GPA</span>
           </div>
-          <div style={{ ...S.gpaChip, borderColor: 'rgba(0,200,150,0.3)', background: 'rgba(0,200,150,0.06)' }}>
+          <div style={{ ...S.gpaChip, borderColor: 'var(--primary-glow)', background: 'var(--primary-dim)' }}>
             <span style={{ ...S.gpaNum, ...gradientStyle }}>{wGpa}</span>
             <span style={S.gpaLbl}>W GPA</span>
           </div>
@@ -288,7 +288,7 @@ export default function ParentStudentDetailPage() {
 
             {periodLoading && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 16 }}>
-                {[1, 2, 3, 4, 5].map(i => <div key={i} style={{ height: 52, background: 'rgba(255,255,255,0.04)', borderRadius: 8 }} />)}
+                {[1, 2, 3, 4, 5].map(i => <div key={i} style={{ height: 52, background: 'var(--surface-2)', borderRadius: 8 }} />)}
               </div>
             )}
 
@@ -451,7 +451,7 @@ export default function ParentStudentDetailPage() {
 }
 
 const gradientStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg,#00C896,#4DC8E0)',
+  background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)',
   WebkitBackgroundClip: 'text',
   WebkitTextFillColor: 'transparent',
   backgroundClip: 'text',
@@ -460,7 +460,7 @@ const gradientStyle: React.CSSProperties = {
 const S: Record<string, React.CSSProperties> = {
   backBtn:      { background: 'none', border: 'none', color: 'var(--primary)', fontSize: 13.5, cursor: 'pointer', marginBottom: 20, padding: 0, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 },
   studentHeader:{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 },
-  avatar:       { width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#00A3CC,#4DC8E0)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, flexShrink: 0 },
+  avatar:       { width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, flexShrink: 0 },
   studentName:  { fontSize: 24, fontWeight: 800, letterSpacing: '-0.3px', marginBottom: 2 },
   studentSub:   { fontSize: 13, color: 'var(--text-secondary)' },
   gpaChips:     { marginLeft: 'auto', display: 'flex', gap: 10 },
@@ -475,9 +475,9 @@ const S: Record<string, React.CSSProperties> = {
   bigNum:       { fontSize: 30, fontWeight: 800, letterSpacing: '-1px', lineHeight: 1, marginBottom: 6 },
   th:           { textAlign: 'left' as const, padding: '14px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
   td:           { padding: '12px 14px', fontSize: 13.5 },
-  chatBanner:   { display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.15)', borderRadius: 8, padding: '8px 14px', fontSize: 12, color: 'var(--primary)', marginBottom: 14 },
+  chatBanner:   { display: 'flex', alignItems: 'center', gap: 8, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 8, padding: '8px 14px', fontSize: 12, color: 'var(--primary)', marginBottom: 14 },
   messages:     { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 },
-  bubbleUser:   { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 14, lineHeight: 1.55, background: 'var(--primary)', color: '#060D10', alignSelf: 'flex-end', fontWeight: 500 },
+  bubbleUser:   { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 14, lineHeight: 1.55, background: 'var(--primary)', color: '#FFFFFF', alignSelf: 'flex-end', fontWeight: 500 },
   bubbleAi:     { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 16px 4px', fontSize: 14, lineHeight: 1.55, background: 'var(--surface-2)', border: '1px solid var(--border)', alignSelf: 'flex-start', whiteSpace: 'pre-wrap' as const },
-  chatLogo:     { width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg,#00A3CC,#4DC8E0)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  chatLogo:     { width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' },
 }

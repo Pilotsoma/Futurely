@@ -152,7 +152,7 @@ export default function ClassworkPage() {
 
       {periodLoading && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {[1, 2, 3, 4, 5].map(i => <div key={i} style={{ height: 56, background: 'rgba(255,255,255,0.04)', borderRadius: 10 }} />)}
+          {[1, 2, 3, 4, 5].map(i => <div key={i} style={{ height: 56, background: 'var(--surface-2)', borderRadius: 10 }} />)}
         </div>
       )}
 

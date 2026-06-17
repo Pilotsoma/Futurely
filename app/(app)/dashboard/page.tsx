@@ -121,12 +121,12 @@ function getTimeOfDay() {
 }
 
 const QUICK_LINKS = [
-  { href: '/grades',  label: 'Grade Portal',   sub: 'Grades & GPA',        icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B6EFF" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>, iconBg: 'rgba(75,110,255,0.12)' },
-  { href: '/ai',      label: 'AI Chat',         sub: 'College guidance',     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00C896" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>, iconBg: 'rgba(0,200,150,0.1)' },
-  { href: '/planner', label: 'Planner',         sub: 'Assignments & tasks',  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, iconBg: 'rgba(245,158,11,0.1)' },
-  { href: '/feed',    label: 'Study Feed',      sub: 'Connect with peers',   icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>, iconBg: 'rgba(167,139,250,0.1)' },
-  { href: '/colleges',label: 'Colleges',        sub: 'Track your college list', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EC4899" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, iconBg: 'rgba(236,72,153,0.1)' },
-  { href: '/marketplace',label: 'Marketplace',   sub: 'Buy, sell & trade items', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>, iconBg: 'rgba(249,115,22,0.1)' },
+  { href: '/grades',  label: 'Grade Portal',   sub: 'Grades & GPA',        icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B4A8E" strokeWidth="1.8" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>, iconBg: 'rgba(43,74,142,0.09)' },
+  { href: '/ai',      label: 'AI Chat',         sub: 'College guidance',     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>, iconBg: 'rgba(45,106,79,0.08)' },
+  { href: '/planner', label: 'Planner',         sub: 'Assignments & tasks',  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A6E2D" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, iconBg: 'rgba(138,110,45,0.09)' },
+  { href: '/feed',    label: 'Study Feed',      sub: 'Connect with peers',   icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6A5A8A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>, iconBg: 'rgba(106,90,138,0.09)' },
+  { href: '/colleges',label: 'Colleges',        sub: 'Track your college list', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C45A1A" strokeWidth="1.8" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, iconBg: 'rgba(196,90,26,0.09)' },
+  { href: '/marketplace',label: 'Marketplace',   sub: 'Buy, sell & trade items', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A5A2D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>, iconBg: 'rgba(138,90,45,0.09)' },
 ]
 
 export default function DashboardPage() {
@@ -467,10 +467,10 @@ export default function DashboardPage() {
 
             {/* GPA Rank Section */}
             {gpaPercentile !== null ? (
-              <div style={{ background: 'rgba(75,110,255,0.08)', border: '1px solid rgba(75,110,255,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
+              <div style={{ background: 'rgba(43,74,142,0.08)', border: '1px solid rgba(43,74,142,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 5 }}>GPA Rank</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: '#4B6EFF' }}>{percentileStr(gpaPercentile)} Percentile</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>{percentileStr(gpaPercentile)} Percentile</span>
                   <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
                     +{streakIncrement}/day{streakIncrement > 5 ? ` (+${streakIncrement - 5} bonus)` : ''}
                   </span>
@@ -552,17 +552,17 @@ export default function DashboardPage() {
             </h3>
             {gpaPercentile !== null ? (
               <>
-                <p style={{ fontSize: 15, fontWeight: 700, color: '#4B6EFF', marginBottom: 10 }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent-blue)', marginBottom: 10 }}>
                   {percentileStr(gpaPercentile)} Percentile
                 </p>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
                   Based on your {effectiveUGpa !== null ? `${effectiveUGpa.toFixed(2)} unweighted GPA` : 'GPA'}, you rank above the vast majority of Futurely students.
                 </p>
-                <div style={{ background: 'rgba(75,110,255,0.1)', border: '1px solid rgba(75,110,255,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
+                <div style={{ background: 'rgba(43,74,142,0.1)', border: '1px solid rgba(43,74,142,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', marginBottom: 6 }}>
                     Your Daily Streak Bonus
                   </p>
-                  <p style={{ fontSize: 18, fontWeight: 800, color: '#4B6EFF', marginBottom: 4 }}>
+                  <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-blue)', marginBottom: 4 }}>
                     +{streakIncrement} coins per streak day
                   </p>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -642,17 +642,14 @@ export default function DashboardPage() {
 }
 
 const gradientStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg,#4B6EFF,#00C896)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
+  color: 'var(--primary)',
 }
 
 const S: Record<string, React.CSSProperties> = {
   pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 },
   greeting:   { fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 },
   name:       { fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' },
-  dateChip:   { fontSize: 12, color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 20, padding: '5px 12px', marginTop: 4 },
+  dateChip:   { fontSize: 12, color: 'var(--primary)', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 20, padding: '5px 12px', marginTop: 4 },
   topRow:     { display: 'flex', gap: 16, marginBottom: 16 },
   card:       { padding: 20, marginBottom: 16 },
   cardLabel:  { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)' },
@@ -683,6 +680,6 @@ const S: Record<string, React.CSSProperties> = {
   popupCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, maxWidth: 380, width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
   popupClose: { position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', padding: 4, lineHeight: 1 },
   popupBenefit: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 10 },
-  popupButton: { width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 16 },
-  resyncBanner: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.1)', color: '#F59E0B', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.1px' },
+  popupButton: { width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 16 },
+  resyncBanner: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(154,124,48,0.3)', background: 'rgba(154,124,48,0.08)', color: 'var(--warning)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.1px' },
 }

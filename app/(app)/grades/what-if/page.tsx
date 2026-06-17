@@ -70,7 +70,7 @@ const LEVEL_COLORS: Record<CourseLevel, { bg: string; color: string; border: str
   'AP':          { bg: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: 'rgba(167,139,250,0.3)' },
   'KAP':         { bg: 'rgba(96,165,250,0.15)',  color: '#60A5FA', border: 'rgba(96,165,250,0.3)'  },
   'Dual Credit': { bg: 'rgba(52,211,153,0.15)',  color: '#34D399', border: 'rgba(52,211,153,0.3)'  },
-  'Regular':     { bg: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', border: 'var(--border)' },
+  'Regular':     { bg: 'var(--surface-2)', color: 'var(--text-muted)', border: 'var(--border)' },
 }
 
 async function apiFetch<T>(path: string): Promise<T> {
@@ -224,9 +224,9 @@ export default function WhatIfGpaPage() {
         <button onClick={() => setGpaType('unweighted')}
           style={{
             ...S.toggleBtn,
-            background: gpaType === 'unweighted' ? '#00C896' : 'var(--surface)',
+            background: gpaType === 'unweighted' ? 'var(--primary)' : 'var(--surface)',
             color: gpaType === 'unweighted' ? '#fff' : 'var(--text-secondary)',
-            borderColor: gpaType === 'unweighted' ? '#00C896' : 'var(--border)',
+            borderColor: gpaType === 'unweighted' ? 'var(--primary)' : 'var(--border)',
           }}>Unweighted</button>
       </div>
 
@@ -255,7 +255,7 @@ export default function WhatIfGpaPage() {
             {courseCount} courses from transcript
           </div>
         </div>
-        <div className="ns-card" style={{ flex: 1, padding: 20, borderColor: hasSimCourses ? 'rgba(0,200,150,0.3)' : 'var(--border)', background: hasSimCourses ? 'rgba(0,200,150,0.04)' : undefined }}>
+        <div className="ns-card" style={{ flex: 1, padding: 20, borderColor: hasSimCourses ? 'var(--primary-glow)' : 'var(--border)', background: hasSimCourses ? 'var(--primary-dim)' : undefined }}>
           <div style={S.gpaLabel}>Simulated {gpaType === 'weighted' ? 'Weighted' : 'Unweighted'} GPA</div>
           <div style={{ ...S.gpaNum, marginTop: 8, color: hasSimCourses ? 'var(--primary)' : 'var(--text-muted)' }}>{simGPA.toFixed(3)}</div>
           {hasSimCourses && (
@@ -309,7 +309,7 @@ export default function WhatIfGpaPage() {
             return (
               <div key={c.id} className="ns-card"
                 style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: 10,
-                  borderColor: isFilled ? 'rgba(0,200,150,0.3)' : 'var(--border)' }}>
+                  borderColor: isFilled ? 'var(--primary-glow)' : 'var(--border)' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                     {c.name}

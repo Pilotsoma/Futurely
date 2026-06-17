@@ -89,7 +89,7 @@ const S: Record<string, React.CSSProperties> = {
   title:        { fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 24 },
   layout:       { display: 'flex', gap: 20, alignItems: 'flex-start' },
   profileCard:  { display: 'flex', alignItems: 'center', gap: 16, padding: 20, marginBottom: 16 },
-  avatar:       { width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#00A3CC,#4DC8E0)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, flexShrink: 0 },
+  avatar:       { width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, flexShrink: 0 },
   profileName:  { fontSize: 17, fontWeight: 700 },
   profileSub:   { fontSize: 13, color: 'var(--text-secondary)', marginTop: 3 },
   card:         { padding: 20, marginBottom: 16 },

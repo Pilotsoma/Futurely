@@ -156,7 +156,7 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
   if (!content) return null
 
   return (
-    <div style={{ ...N.item, background: n.read ? 'transparent' : 'rgba(75,110,255,0.07)' }}>
+    <div style={{ ...N.item, background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)' }}>
       <span style={{ fontSize: 15, flexShrink: 0 }}>
         {icon}
       </span>
@@ -483,14 +483,14 @@ function DevAdminPanel({
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</p>
       ) : devStats ? (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 12 }}>
-          <div style={{ flex: 1, minWidth: 120, background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: 6, padding: '8px 12px' }}>
+          <div style={{ flex: 1, minWidth: 120, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 6, padding: '8px 12px' }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>TOTAL COINS IN CIRCULATION</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#00C896' }}>{devStats.totalCoins.toLocaleString()} 🪙</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>{devStats.totalCoins.toLocaleString()} 🪙</div>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{devStats.userCount} active users</div>
           </div>
-          <div style={{ flex: 1, minWidth: 120, background: 'rgba(75,110,255,0.08)', border: '1px solid rgba(75,110,255,0.2)', borderRadius: 6, padding: '8px 12px' }}>
+          <div style={{ flex: 1, minWidth: 120, background: 'rgba(43,74,142,0.08)', border: '1px solid rgba(43,74,142,0.2)', borderRadius: 6, padding: '8px 12px' }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>TOTAL INVENTORY VALUE</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#4B6EFF' }}>{devStats.totalInventoryValue.toLocaleString()} 🪙</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-blue)' }}>{devStats.totalInventoryValue.toLocaleString()} 🪙</div>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>combined across all users</div>
           </div>
         </div>
@@ -772,7 +772,7 @@ function OwnTagPicker({ profile, onUpdateTag }: {
   }
 
   return (
-    <div style={{ background: 'rgba(0,200,150,0.05)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+    <div style={{ background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>YOUR DISPLAY TAG</p>
       {isBannedOrMuted ? (
         <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Tag selection is disabled while banned or muted.</p>
@@ -874,7 +874,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
         : giveawayTagColor
 
   return (
-    <div className="ns-card" style={{ padding: 16, marginBottom: 12, ...(isGiveaway ? { border: `1px solid ${giveawayAccent}55`, background: `${giveawayAccent}08` } : {}), ...(isPinned && !isGiveaway ? { border: '1px solid rgba(75,110,255,0.3)' } : {}) }}>
+    <div className="ns-card" style={{ padding: 16, marginBottom: 12, ...(isGiveaway ? { border: `1px solid ${giveawayAccent}55`, background: `${giveawayAccent}08` } : {}), ...(isPinned && !isGiveaway ? { border: '1px solid rgba(43,74,142,0.3)' } : {}) }}>
       {/* Pinned banner */}
       {isPinned && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
@@ -896,7 +896,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             )}
             {post.userId !== currentUserId && (
               <button
-                style={{ ...P.followBtn, ...(isFollowing ? { background: 'var(--primary)', color: '#060D10', border: '1px solid var(--primary)' } : {}) }}
+                style={{ ...P.followBtn, ...(isFollowing ? { background: 'var(--primary)', color: '#FFFFFF', border: '1px solid var(--primary)' } : {}) }}
                 onClick={e => { e.stopPropagation(); onFollow(post.userId) }}
               >{isFollowing ? 'Following' : 'Follow'}</button>
             )}
@@ -932,9 +932,9 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)' }}>
             {/* Avatar: pfp type uses won effect, others use default */}
             {post.unboxItemType === 'pfp' ? (
-              <div className={pfpClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemValue) }}>D</div>
+              <div className={pfpClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemValue) }}>D</div>
             ) : (
-              <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>D</div>
+              <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>D</div>
             )}
             {/* Name + tag row */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
@@ -1001,9 +1001,9 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           {isItemGiveaway && post.giveawayTag && (
             <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
               {isPfpGiveaway ? (
-                <div className={pfpClass(post.giveawayTagColor)} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, ...pfpStyle(post.giveawayTagColor) }}>D</div>
+                <div className={pfpClass(post.giveawayTagColor)} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, ...pfpStyle(post.giveawayTagColor) }}>D</div>
               ) : (
-                <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>D</div>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>D</div>
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
@@ -1092,7 +1092,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                       You must like this post before you can enter the giveaway.
                     </div>
                     <button
-                      style={{ width: '100%', padding: '10px 0', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#060D10', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                      style={{ width: '100%', padding: '10px 0', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
                       onClick={() => setShowLikeRequired(false)}
                     >
                       Got it
@@ -1209,7 +1209,7 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
             <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
               <div
                 className={pfpClass(post.user.pfpEffect)}
-                style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, cursor: 'pointer', ...pfpStyle(post.user.pfpEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, cursor: 'pointer', ...pfpStyle(post.user.pfpEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                 onClick={() => { onClose(); onOpenProfile(post.user.id) }}
               >
                 {avatarContent(post.user)}
@@ -1241,7 +1241,7 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <div
                       className={pfpClass(c.user.pfpEffect)}
-                      style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                      style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                       onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                     >{avatarContent(c.user)}</div>
                     <button
@@ -1367,7 +1367,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                   <div
                     className={pfpClass(c.user.pfpEffect)}
-                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                     onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                   >
                     {avatarContent(c.user)}
@@ -1911,9 +1911,9 @@ export default function StudyFeedPage() {
                     return (
                       <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
                         {gwType === 'pfp' ? (
-                          <div className={pfpClass(item.value)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, ...pfpStyle(item.value) }}>D</div>
+                          <div className={pfpClass(item.value)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, ...pfpStyle(item.value) }}>D</div>
                         ) : (
-                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0 }}>D</div>
+                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0 }}>D</div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <span className={gwType === 'name-color' && isRainbow ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(gwType === 'name-color' && !isRainbow ? { color: item.value } : {}) }}>
@@ -2054,7 +2054,7 @@ export default function StudyFeedPage() {
 // ── Style objects ──────────────────────────────────────────────────────────────
 
 const P: Record<string, React.CSSProperties> = {
-  avatar:     { width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 },
+  avatar:     { width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 },
   authorName: { fontSize: 14, fontWeight: 700, color: 'var(--text)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 },
   tag:        { fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4 },
   tagDev:     { fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' },
@@ -2081,9 +2081,9 @@ const O: Record<string, React.CSSProperties> = {
   overlay:    { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   panel:      { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, width: '90%', maxWidth: 480, maxHeight: '85vh', overflow: 'auto', padding: 24, display: 'flex', flexDirection: 'column' as const },
   header:     { display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid var(--border)' },
-  avatar:     { width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0 },
+  avatar:     { width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0 },
   name:       { fontSize: 19, fontWeight: 800, color: 'var(--text)', marginBottom: 3 },
-  tag:        { fontSize: 12, fontWeight: 700, color: 'var(--primary)', background: 'rgba(0,200,150,0.1)', padding: '2px 8px', borderRadius: 4, display: 'inline-block' },
+  tag:        { fontSize: 12, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-dim)', padding: '2px 8px', borderRadius: 4, display: 'inline-block' },
   tagDev:     { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)', display: 'inline-block' },
   tagGod:     { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)', display: 'inline-block' },
   email:      { fontSize: 12, color: 'var(--text-muted)', marginTop: 3 },

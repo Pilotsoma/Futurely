@@ -45,5 +45,5 @@ export default function AiBar({ placeholder = 'Ask Futurely AI…' }: AiBarProps
 const S: Record<string, React.CSSProperties> = {
   wrap:  { display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 100, padding: '10px 10px 10px 20px' },
   input: { flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontSize: 14, lineHeight: 1 },
-  btn:   { width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', border: 'none', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'opacity 0.15s' },
+  btn:   { width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', border: 'none', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'opacity 0.15s' },
 }

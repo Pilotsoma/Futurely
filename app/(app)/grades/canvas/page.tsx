@@ -276,7 +276,7 @@ function AssignmentPanel({
             href={`https://${instanceBaseUrl}${detail.html_url.startsWith('/') ? detail.html_url : `/${detail.html_url}`}`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#060D10', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}
           >
             Open in Canvas
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -643,7 +643,7 @@ function DashboardView({
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--primary)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface)' }}
             >
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, var(--primary), #4B6EFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, var(--primary), var(--accent-blue))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
                 🎓
               </div>
               <div>

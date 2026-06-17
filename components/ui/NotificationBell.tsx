@@ -198,7 +198,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 else if (n.type === 'ASSIGNMENT_CREATED') body = n.preview ?? 'New assignment added'
                 else body = n.preview ?? 'New notification'
                 return (
-                  <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(75,110,255,0.07)' }}>
+                  <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)' }}>
                     <span style={{ fontSize: 15, flexShrink: 0 }}>{icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.4 }}>{body}</div>
@@ -221,7 +221,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
               switch (t.notif.type) {
                 case 'LIKE':             return { emoji: '❤️', accent: '#EF4444', text: `${name} liked your post` }
                 case 'COMMENT':          return { emoji: '💬', accent: '#3B82F6', text: `${name} commented on your post` }
-                case 'FOLLOW':           return { emoji: '👤', accent: '#00C896', text: `${name} started following you` }
+                case 'FOLLOW':           return { emoji: '👤', accent: '#2D6A4F', text: `${name} started following you` }
                 case 'GIVEAWAY_WIN':     return { emoji: '🎉', accent: '#EAB308', text: t.notif.preview ?? 'You won a giveaway!' }
                 case 'TRADE_OFFER':      return { emoji: '🔄', accent: '#8B5CF6', text: `${name} sent you a trade offer` }
                 case 'TRADE_ACCEPTED':   return { emoji: '✅', accent: '#22C55E', text: `${name} accepted your trade` }
