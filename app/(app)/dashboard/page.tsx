@@ -56,7 +56,7 @@ const STREAK_MILESTONES: Array<{ days: number; emoji: string; tag?: string; tagC
 ]
 
 function streakCoinBonus(streak: number, perDay = 5) {
-  return 30 + Math.max(0, streak - 1) * perDay
+  return Math.min(275, 30 + Math.max(0, streak - 1) * perDay)
 }
 
 function getNextMilestone(streak: number) {
