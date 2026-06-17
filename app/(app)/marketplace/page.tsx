@@ -739,7 +739,10 @@ export default function MarketplacePage() {
           <div className={pfpClass(item.value)} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...pfpStyle(item.value) }} />
         )}
         {type === 'tag' && (
-          <span style={{ fontSize: 14, fontWeight: 700, color: item.tagColor ?? '#6B7280' }}>{item.tag}</span>
+          <span
+            className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : ''}
+            style={{ fontSize: 14, fontWeight: 700, color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+          >{item.tag}</span>
         )}
         {type !== 'tag' && (
           <span className={item.value === 'rainbow' ? 'name-rainbow' : ''} style={{ flex: 1, fontSize: 13, fontWeight: 600, ...(type === 'name-color' && item.value !== 'rainbow' ? { color: item.value } : { color: 'var(--text)' }) }}>
