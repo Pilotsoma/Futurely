@@ -9,6 +9,7 @@ import { api } from '../../lib/api'
 import NotificationBell from '../../components/ui/NotificationBell'
 import UpdatePopup from '../../components/ui/UpdatePopup'
 import ForcedLogoutWatcher from '../../components/ui/ForcedLogoutWatcher'
+import InactivityWatcher from '../../components/ui/InactivityWatcher'
 
 const NAV = [
   {
@@ -298,6 +299,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <UpdatePopup />
       <ForcedLogoutWatcher />
+      <InactivityWatcher />
 
       {/* Main content — spring-follows sidebar width */}
       <motion.main
