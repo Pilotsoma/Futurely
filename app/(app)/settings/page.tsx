@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, type StudentData } from '../../../lib/api'
+import { api, type StudentData, type CanvasStatus } from '../../../lib/api'
+import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 
 function DeleteAccountModal({ onClose }: { onClose: () => void }) {
   const router = useRouter()
@@ -83,10 +84,13 @@ function initials(name: string | null) {
 type SystemType = 'HAC' | 'PowerSchool'
 interface PortalStatus { connected: boolean; systemType: string | null; districtUrl: string | null; sessionExpiresIn: number; lastSynced: string | null }
 
+const DEFAULT_GRADE_COLORS = { A: '#22C55E', B: '#10B981', C: '#F59E0B', D: '#F97316', F: '#EF4444' }
+
 export default function SettingsPage() {
   const router = useRouter()
   const [theme, setTheme]                   = useState<'dark' | 'light'>('dark')
-  const [gradeColors, setGradeColors]       = useState(true)
+
+  const [gradeColors, setGradeColors]       = useState<Record<string, string>>(DEFAULT_GRADE_COLORS)
   const [data, setData]                     = useState<StudentData | null>(null)
   const [portalStatus, setPortalStatus]     = useState<PortalStatus | null>(null)
   const [portalLoading, setPortalLoading]   = useState(true)
@@ -108,6 +112,18 @@ export default function SettingsPage() {
   const [dirty, setDirty]               = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [avatarUrl, setAvatarUrl]             = useState('')
+
+  // Canvas state
+  const [canvasStatus, setCanvasStatus]       = useState<CanvasStatus | null>(null)
+  const [canvasLoading, setCanvasLoading]     = useState(false)
+  const [showCanvasForm, setShowCanvasForm]   = useState(false)
+  const [canvasUrl, setCanvasUrl]             = useState('')
+  const [canvasToken, setCanvasToken]         = useState('')
+  const [canvasError, setCanvasError]         = useState<string | null>(null)
+  const [districtSearch, setDistrictSearch]   = useState('')
+  const [districtOpen, setDistrictOpen]       = useState(false)
+  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
+  const districtRef = useRef<HTMLDivElement>(null)
   const [avatarSaving, setAvatarSaving]       = useState(false)
   const [avatarMsg, setAvatarMsg]             = useState<string | null>(null)
 
@@ -126,8 +142,37 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setTheme((localStorage.getItem('ns_theme') as 'dark' | 'light') || 'dark')
-    setGradeColors(localStorage.getItem('ns_grade_colors') !== 'false')
-  }, [])
+    try {
+      const saved = localStorage.getItem('ns_grade_colors_v2')
+      if (saved) {
+        const colors = JSON.parse(saved) as Record<string, string>
+        setGradeColors(colors)
+        applyGradeColors(colors)
+      }
+    } catch {}
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function applyGradeColors(colors: Record<string, string>) {
+    const root = document.documentElement
+    root.style.setProperty('--gc-a', colors.A)
+    root.style.setProperty('--gc-b', colors.B)
+    root.style.setProperty('--gc-c', colors.C)
+    root.style.setProperty('--gc-d', colors.D)
+    root.style.setProperty('--gc-f', colors.F)
+  }
+
+  function handleGradeColorChange(grade: string, color: string) {
+    const next = { ...gradeColors, [grade]: color }
+    setGradeColors(next)
+    localStorage.setItem('ns_grade_colors_v2', JSON.stringify(next))
+    applyGradeColors(next)
+  }
+
+  function handleResetGradeColors() {
+    setGradeColors(DEFAULT_GRADE_COLORS)
+    localStorage.removeItem('ns_grade_colors_v2')
+    applyGradeColors(DEFAULT_GRADE_COLORS)
+  }
 
   function toggleTheme() {
     const next = theme === 'dark' ? 'light' : 'dark'
@@ -136,13 +181,9 @@ export default function SettingsPage() {
     document.documentElement.setAttribute('data-theme', next)
   }
 
-  function toggleGradeColors() {
-    const next = !gradeColors
-    setGradeColors(next)
-    localStorage.setItem('ns_grade_colors', String(next))
-    if (next) document.documentElement.removeAttribute('data-grade-colors')
-    else document.documentElement.setAttribute('data-grade-colors', 'off')
-  }
+  const isDefaultGradeColors = Object.entries(gradeColors).every(
+    ([g, c]) => c === DEFAULT_GRADE_COLORS[g as keyof typeof DEFAULT_GRADE_COLORS]
+  )
 
   useEffect(() => {
     api.me().then(d => {
@@ -159,7 +200,71 @@ export default function SettingsPage() {
       }
       setPortalLoading(false)
     }).catch(() => setPortalLoading(false))
+    api.canvasStatus().then(setCanvasStatus).catch(() => null)
   }, [])
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (districtRef.current && !districtRef.current.contains(e.target as Node)) {
+        setDistrictOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  function formatRelativeTime(isoString: string | null): string {
+    if (!isoString) return 'Never'
+    const diffMs = Date.now() - new Date(isoString).getTime()
+    const diffMin = Math.floor(diffMs / 60000)
+    if (diffMin < 1) return 'just now'
+    if (diffMin < 60) return `${diffMin}m ago`
+    const diffHr = Math.floor(diffMin / 60)
+    if (diffHr < 24) return `${diffHr}h ago`
+    return `${Math.floor(diffHr / 24)}d ago`
+  }
+
+  function closeCanvasForm() {
+    setShowCanvasForm(false); setCanvasUrl(''); setCanvasToken('')
+    setCanvasError(null); setSelectedDistrict(null)
+    setDistrictSearch(''); setDistrictOpen(false)
+  }
+
+  async function handleCanvasConnect(e: React.FormEvent) {
+    e.preventDefault()
+    setCanvasLoading(true); setCanvasError(null)
+    try {
+      await api.canvasConnect(canvasUrl.trim(), canvasToken.trim())
+      await api.canvasSync()
+      const fresh = await api.canvasStatus()
+      setCanvasStatus(fresh)
+      closeCanvasForm()
+    } catch (err) {
+      setCanvasError(err instanceof Error ? err.message : 'Failed to connect Canvas')
+    } finally { setCanvasLoading(false) }
+  }
+
+  async function handleCanvasSync() {
+    setCanvasLoading(true); setCanvasError(null)
+    try {
+      await api.canvasSync()
+      const fresh = await api.canvasStatus()
+      setCanvasStatus(fresh)
+    } catch (err) {
+      setCanvasError(err instanceof Error ? err.message : 'Sync failed')
+    } finally { setCanvasLoading(false) }
+  }
+
+  async function handleCanvasDisconnect(instanceUrl?: string) {
+    setCanvasLoading(true); setCanvasError(null)
+    try {
+      await api.canvasDisconnect(instanceUrl)
+      const fresh = await api.canvasStatus()
+      setCanvasStatus(fresh)
+    } catch (err) {
+      setCanvasError(err instanceof Error ? err.message : 'Failed to disconnect')
+    } finally { setCanvasLoading(false) }
+  }
 
   function handleLogout() {
     localStorage.removeItem('ns_token')
@@ -230,6 +335,17 @@ export default function SettingsPage() {
   }
 
   const profile = data?.profile ?? null
+
+  const canvasDistricts = SORTED_ISD_LIST.filter(d => d.canvasUrl)
+  const filteredDistricts = canvasDistricts.filter(d =>
+    d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
+    d.state.toLowerCase().includes(districtSearch.toLowerCase())
+  )
+  const canvasConnections = canvasStatus?.connections?.length
+    ? canvasStatus.connections
+    : canvasStatus?.canvasInstanceUrl
+      ? [{ canvasInstanceUrl: canvasStatus.canvasInstanceUrl, canvasUserName: canvasStatus.canvasUserName, lastSynced: canvasStatus.lastSynced, syncStatus: canvasStatus.syncStatus, syncError: canvasStatus.syncError }]
+      : []
 
   return (
     <div className="fade-up">
@@ -425,6 +541,170 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
+          {/* Canvas Integration */}
+          <div className="ns-card" style={S.card}>
+            <p style={S.cardLabel}>Canvas Integration</p>
+
+            {/* Connect form */}
+            {showCanvasForm && (
+              <form onSubmit={e => void handleCanvasConnect(e)} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  Get your token: Canvas → Profile → Settings → Approved Integrations → New Access Token
+                </p>
+                <div ref={districtRef} style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    placeholder="Search your school district…"
+                    value={districtOpen ? districtSearch : (selectedDistrict ?? districtSearch)}
+                    onChange={e => { setDistrictSearch(e.target.value); setDistrictOpen(true); setSelectedDistrict(null) }}
+                    onFocus={() => { setDistrictOpen(true); setDistrictSearch('') }}
+                    className="ns-input"
+                    autoComplete="off"
+                  />
+                  {districtOpen && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                      background: 'var(--surface)', border: '1px solid var(--border)',
+                      borderRadius: 8, marginTop: 4, maxHeight: 200, overflowY: 'auto',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                    }}>
+                      {filteredDistricts.length === 0 ? (
+                        <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>
+                          No districts found — enter your Canvas URL below
+                        </div>
+                      ) : filteredDistricts.map(d => (
+                        <div
+                          key={d.canvasUrl}
+                          onClick={() => { setSelectedDistrict(`${d.name} (${d.state})`); setCanvasUrl(d.canvasUrl!); setDistrictOpen(false); setDistrictSearch('') }}
+                          style={{ padding: '9px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)', color: 'var(--text)' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)' }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                        >
+                          <span style={{ fontWeight: 500 }}>{d.name}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 6 }}>{d.state}</span>
+                        </div>
+                      ))}
+                      <div
+                        onClick={() => { setSelectedDistrict('Other'); setCanvasUrl(''); setDistrictOpen(false) }}
+                        style={{ padding: '9px 12px', fontSize: 13, cursor: 'pointer', color: 'var(--text-secondary)' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                      >
+                        Other — enter URL manually
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  className="ns-input"
+                  placeholder="katyisd.instructure.com"
+                  value={canvasUrl}
+                  onChange={e => setCanvasUrl(e.target.value)}
+                  required
+                />
+                <input
+                  type="password"
+                  className="ns-input"
+                  placeholder="Canvas Personal Access Token"
+                  value={canvasToken}
+                  onChange={e => setCanvasToken(e.target.value)}
+                  required
+                />
+                {canvasError && <p style={{ color: 'var(--error)', fontSize: 12 }}>{canvasError}</p>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="submit"
+                    className="ns-btn-primary"
+                    style={{ height: 40, flex: 1, opacity: canvasLoading || !canvasUrl.trim() || !canvasToken.trim() ? 0.5 : 1 }}
+                    disabled={canvasLoading || !canvasUrl.trim() || !canvasToken.trim()}
+                  >
+                    {canvasLoading ? 'Connecting…' : 'Connect Canvas'}
+                  </button>
+                  <button type="button" className="ns-btn-ghost" style={{ height: 40, padding: '0 16px' }} onClick={closeCanvasForm}>Cancel</button>
+                </div>
+              </form>
+            )}
+
+            {/* Connected state */}
+            {canvasStatus?.connected && !showCanvasForm && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#22C55E', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    ✓ Canvas connected
+                  </span>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                    <button
+                      className="ns-btn-ghost"
+                      style={{ height: 32, padding: '0 12px', fontSize: 12, opacity: canvasLoading ? 0.6 : 1 }}
+                      onClick={() => void handleCanvasSync()}
+                      disabled={canvasLoading}
+                    >
+                      {canvasLoading ? 'Syncing…' : 'Sync All'}
+                    </button>
+                    {canvasConnections.length < 2 && (
+                      <button
+                        className="ns-btn-ghost"
+                        style={{ height: 32, padding: '0 12px', fontSize: 12, color: 'var(--primary)', borderColor: 'rgba(75,110,255,0.4)', opacity: canvasLoading ? 0.6 : 1 }}
+                        onClick={() => setShowCanvasForm(true)}
+                        disabled={canvasLoading}
+                      >
+                        + Add Canvas
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {canvasConnections.map(conn => {
+                  const isCollege = isCollegeIsd(conn.canvasInstanceUrl)
+                  return (
+                    <div key={conn.canvasInstanceUrl} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 0', borderTop: '1px solid var(--border)' }}>
+                      {conn.syncError === 'TOKEN_REVOKED' && (
+                        <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 600 }}>Token expired</span>
+                      )}
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, borderRadius: 4, padding: '2px 6px',
+                        background: isCollege ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.12)',
+                        color: isCollege ? '#22C55E' : '#3B82F6', flexShrink: 0,
+                      }}>
+                        {isCollege ? 'College' : 'High School'}
+                      </span>
+                      <span style={{ fontSize: 12.5, color: 'var(--text)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {conn.canvasUserName ?? conn.canvasInstanceUrl}
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
+                        {formatRelativeTime(conn.lastSynced)}
+                      </span>
+                      <button
+                        className="ns-btn-ghost"
+                        style={{ height: 28, padding: '0 10px', fontSize: 11, color: 'var(--error)', borderColor: 'rgba(239,68,68,0.3)', flexShrink: 0, opacity: canvasLoading ? 0.6 : 1 }}
+                        onClick={() => void handleCanvasDisconnect(conn.canvasInstanceUrl)}
+                        disabled={canvasLoading}
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  )
+                })}
+                {canvasError && <p style={{ fontSize: 12, color: 'var(--error)', marginTop: 6 }}>{canvasError}</p>}
+              </div>
+            )}
+
+            {/* Disconnected state */}
+            {!canvasStatus?.connected && !showCanvasForm && (
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>
+                  Link your Canvas account to sync assignments into the planner automatically.
+                </p>
+                <button
+                  className="ns-btn-primary"
+                  style={{ height: 40, width: '100%' }}
+                  onClick={() => setShowCanvasForm(true)}
+                >
+                  Connect Canvas
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right column */}
@@ -444,22 +724,42 @@ export default function SettingsPage() {
                 {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
               </button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
-              <div>
-                <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Grade color coding</span>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>A = green, B = teal, C = yellow…</div>
+            <div style={{ padding: '10px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div>
+                  <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Grade color coding</span>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Pick a color for each letter grade</div>
+                </div>
+                {!isDefaultGradeColors && (
+                  <button
+                    onClick={handleResetGradeColors}
+                    style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 7, padding: '5px 12px', cursor: 'pointer' }}
+                  >
+                    Reset to defaults
+                  </button>
+                )}
               </div>
-              <button onClick={toggleGradeColors} style={{
-                width: 44, height: 24, borderRadius: 99, border: 'none', cursor: 'pointer',
-                background: gradeColors ? 'var(--primary)' : 'var(--surface-3)',
-                position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-              }}>
-                <span style={{
-                  position: 'absolute', top: 3, left: gradeColors ? 23 : 3,
-                  width: 18, height: 18, borderRadius: '50%', background: '#fff',
-                  transition: 'left 0.2s', display: 'block',
-                }} />
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['A', 'B', 'C', 'D', 'F'] as const).map(grade => (
+                  <label key={grade} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: 8,
+                      background: gradeColors[grade],
+                      border: '2px solid rgba(255,255,255,0.12)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      position: 'relative', overflow: 'hidden', cursor: 'pointer',
+                    }}>
+                      <input
+                        type="color"
+                        value={gradeColors[grade]}
+                        onChange={e => handleGradeColorChange(grade, e.target.value)}
+                        style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                      />
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: gradeColors[grade] }}>{grade}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification } from '@/lib/api'
+import CoinIcon from '@/components/ui/CoinIcon'
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -209,7 +210,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId }: { userId: number
   }
 
   const isDevTag = profile?.tag === 'DEV'
-  const isGodTag = profile?.tag === 'GOD'
+  const isGodTag = profile?.tag === 'GOAT'
 
   return (
     <div style={O.overlay} onClick={onClose}>
@@ -690,7 +691,7 @@ function OwnTagPicker({ profile, onUpdateTag }: {
           {allTags.map(t => {
             const isActive = profile.tag === t.tag
             const isDev = t.tag === 'DEV'
-            const isGod = t.tag === 'GOD'
+            const isGod = t.tag === 'GOAT'
             return (
               <button
                 key={t.tag}
@@ -761,7 +762,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
   const tagColor = (post.user as { tagColor?: string }).tagColor || 'grey'
   const isDevTag = post.user.tag === 'DEV'
-  const isGodTag = post.user.tag === 'GOD'
+  const isGodTag = post.user.tag === 'GOAT'
   const isFollowing = followedUsers.has(post.userId)
   const canDelete = post.userId === currentUserId || isDevUser || isModUser
   const isPinned = !!post.pinnedUntil && new Date(post.pinnedUntil) > new Date()
@@ -837,32 +838,34 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             </span>
           </div>
 
-          {/* Item preview card */}
+          {/* Item preview card - profile-like preview of the won item */}
           <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)' }}>
-            {/* DUMMY avatar preview */}
+            {/* Avatar: pfp type uses won effect, others use default */}
             {post.unboxItemType === 'pfp' ? (
-              <div className={pfpClass(post.unboxItemTagColor)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemTagColor) }}>D</div>
-            ) : post.unboxItemType === 'name-color' && post.unboxItemTagColor ? (
-              <div className={post.unboxItemTagColor === 'rainbow' ? 'name-rainbow' : ''} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...(post.unboxItemTagColor !== 'rainbow' ? { color: post.unboxItemTagColor } : {}) }}>D</div>
+              <div className={pfpClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemValue) }}>D</div>
             ) : (
               <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#00C896,#00A3CC)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>D</div>
             )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>
+            {/* Name + tag row */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
+              {post.unboxItemType === 'pfp' && (
+                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)' }}>
+                  {post.unboxItemValue === 'rainbow' ? 'RGB' : post.unboxItemName}
+                </span>
+              )}
+              <span
+                className={post.unboxItemType === 'name-color' ? nameColorClass(post.unboxItemValue) : ''}
+                style={{ fontSize: 13, fontWeight: 800, ...(post.unboxItemType === 'name-color' ? nameColorStyle(post.unboxItemValue) : { color: 'var(--text)' }) }}
+              >DUMMY</span>
+              {post.unboxItemType === 'tag' ? (
+                <span style={{ ...P.tag, color: post.unboxItemTagColor || '#6B7280', border: `1px solid ${post.unboxItemTagColor || '#6B7280'}`, background: post.unboxItemTagColor ? `${post.unboxItemTagColor}22` : 'rgba(107,114,128,0.12)' }}>
                   {post.unboxItemName}
                 </span>
-                {/* Show item value (tag color name or name color hex) */}
-                {post.unboxItemValue && (
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: `${post.unboxItemTagColor || '#6B7280'}22`, color: post.unboxItemTagColor || '#6B7280', border: `1px solid ${post.unboxItemTagColor || '#6B7280'}` }}>
-                    {post.unboxItemValue}
-                  </span>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>DUMMY</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>[Student]</span>
-              </div>
+              ) : (
+                <span style={{ ...P.tag, color: '#6B7280', border: '1px solid rgba(107,114,128,0.4)', background: 'rgba(107,114,128,0.12)' }}>
+                  DUMMY
+                </span>
+              )}
             </div>
           </div>
 
@@ -870,7 +873,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           {post.unboxItemEstValue != null && post.unboxItemEstValue > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
               <span style={{ fontSize: 13 }}>💰</span>
-              <span>Est. value: <strong style={{ color: '#EAB308' }}>🪙 {post.unboxItemEstValue?.toLocaleString()}</strong></span>
+              <span>Est. value: <strong style={{ color: '#EAB308' }}><CoinIcon size={13} style={{ marginRight: 2 }} />{post.unboxItemEstValue?.toLocaleString()}</strong></span>
             </div>
           )}
         </div>
@@ -887,7 +890,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             </span>
             {isCoinGiveaway ? (
               <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(234,179,8,0.15)', color: '#EAB308', border: '1px solid rgba(234,179,8,0.5)' }}>
-                🪙 {post.giveawayCoinAmount?.toLocaleString()} coins
+                <CoinIcon size={12} style={{ marginRight: 3 }} />{post.giveawayCoinAmount?.toLocaleString()} coins
               </span>
             ) : isNameColorGiveaway && post.giveawayTag ? (
               <span className={giveawayRainbow ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 800, padding: '2px 8px', borderRadius: 4, background: 'var(--surface-2)', border: '1px solid var(--border)', ...(giveawayRainbow ? {} : { color: post.giveawayTagColor ?? '#6B7280' }) }}>
@@ -940,7 +943,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                 <div style={{ fontSize: 13, color: 'var(--text)' }}>
                   {post.giveawayWinner ? displayName(post.giveawayWinner) : 'Someone'} won{' '}
                   {isCoinGiveaway
-                    ? <strong style={{ color: '#EAB308' }}>🪙 {post.giveawayCoinAmount?.toLocaleString()} coins</strong>
+                    ? <strong style={{ color: '#EAB308' }}><CoinIcon size={13} style={{ marginRight: 3 }} />{post.giveawayCoinAmount?.toLocaleString()} coins</strong>
                     : isNameColorGiveaway
                       ? <><strong className={giveawayRainbow ? 'name-rainbow' : ''} style={giveawayRainbow ? {} : { color: post.giveawayTagColor ?? 'var(--text)' }}>{post.giveawayTag}</strong> name color</>
                       : isPfpGiveaway
@@ -1113,7 +1116,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No comments yet. Be the first!</div>
           ) : sorted.map(c => {
             const isDevTag = c.user.tag === 'DEV'
-            const isGodTag = c.user.tag === 'GOD'
+            const isGodTag = c.user.tag === 'GOAT'
             const tagColor = c.user.tagColor || 'grey'
             return (
               <div key={c.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
@@ -1229,8 +1232,8 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
               <span style={{ fontSize: 14, fontWeight: 600 }}>{displayName(u)}</span>
               {u.tag && (
                 <span
-                  className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'GOD' ? 'tag-god' : ''}
-                  style={u.tag === 'DEV' ? P.tagDev : u.tag === 'GOD' ? P.tagGod : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
+                  className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'GOAT' ? 'tag-god' : ''}
+                  style={u.tag === 'DEV' ? P.tagDev : u.tag === 'GOAT' ? P.tagGod : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
                 >{u.tag}</span>
               )}
             </div>
@@ -1693,9 +1696,9 @@ export default function StudyFeedPage() {
                   </div>
                   {/* Type toggle */}
                   <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const }}>
-                    {([['tag', '🏷️ Tag'], ['coin', '🪙 Coins'], ['name-color', '🎨 Name Color'], ['pfp', '🖼️ PFP Effect']] as const).map(([t, label]) => (
-                      <button key={t} onClick={() => { setGwType(t); setGwItemId('') }} style={{ flex: 1, minWidth: 80, height: 34, borderRadius: 8, border: `1px solid ${gwType === t ? 'gold' : 'var(--border)'}`, background: gwType === t ? 'rgba(255,215,0,0.12)' : 'transparent', color: gwType === t ? 'gold' : 'var(--text-secondary)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                        {label}
+                    {([['tag', '🏷️ Tag'], ['coin', null], ['name-color', '🎨 Name Color'], ['pfp', '🖼️ PFP Effect']] as const).map(([t, label]) => (
+                      <button key={t} onClick={() => { setGwType(t); setGwItemId('') }} style={{ flex: 1, minWidth: 80, height: 34, borderRadius: 8, border: `1px solid ${gwType === t ? 'gold' : 'var(--border)'}`, background: gwType === t ? 'rgba(255,215,0,0.12)' : 'transparent', color: gwType === t ? 'gold' : 'var(--text-secondary)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                        {t === 'coin' ? <><CoinIcon size={13} /> Coins</> : label}
                       </button>
                     ))}
                   </div>
@@ -1824,33 +1827,47 @@ export default function StudyFeedPage() {
                 )}
               </>
             )
-          ) : followingLoading && followingPosts.length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading…</div>
-          ) : followingPosts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-              </div>
-              <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Nothing here yet</p>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Follow people in <strong>Find People</strong> to see their posts here.</p>
-            </div>
-          ) : (
-            <>
-              {followingPosts.map(post => (
-                <PostCard key={post.id} post={post} onLike={handleLike} onDelete={handleDelete}
-                  onOpenComments={id => setCommentPostId(id)} onOpenProfile={id => setProfileUserId(id)}
-                  onFollow={handleFollow} onEnterGiveaway={handleEnterGiveaway}
-                  onDrawGiveaway={handleDrawGiveaway} onPin={handlePin}
-                  currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} isModUser={isModUser} />
-              ))}
-              {followingHasMore && (
-                <button className="ns-btn-ghost" style={{ width: '100%', height: 42, marginTop: 8 }}
-                  onClick={() => { setFollowingPage(p => p + 1); void loadFollowingPosts(followingPage + 1) }}>
-                  Load more
-                </button>
-              )}
-            </>
-          )}
+          ) : (() => {
+            // Following tab — only show posts from the last 24 hours
+            const cutoff = Date.now() - 86400000
+            const recentFollowingPosts = followingPosts.filter(p => new Date(p.createdAt).getTime() >= cutoff)
+            const isFollowingAnyone = followedUsers.size > 0
+
+            if (followingLoading && followingPosts.length === 0) {
+              return <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading…</div>
+            }
+            if (recentFollowingPosts.length === 0) {
+              return (
+                <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                  </div>
+                  {isFollowingAnyone ? (
+                    <>
+                      <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No new posts</p>
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No one you follow has posted in the last 24 hours.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Nothing here yet</p>
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Follow people in <strong>Find People</strong> to see their posts here.</p>
+                    </>
+                  )}
+                </div>
+              )
+            }
+            return (
+              <>
+                {recentFollowingPosts.map(post => (
+                  <PostCard key={post.id} post={post} onLike={handleLike} onDelete={handleDelete}
+                    onOpenComments={id => setCommentPostId(id)} onOpenProfile={id => setProfileUserId(id)}
+                    onFollow={handleFollow} onEnterGiveaway={handleEnterGiveaway}
+                    onDrawGiveaway={handleDrawGiveaway} onPin={handlePin}
+                    currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} isModUser={isModUser} />
+                ))}
+              </>
+            )
+          })()}
         </>
       ) : (
         <UserSearch currentUserId={currentUserId} onOpenProfile={id => setProfileUserId(id)}

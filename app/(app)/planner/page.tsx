@@ -5,6 +5,22 @@ import { api, type PlannerItem, type CanvasStatus } from '../../../lib/api'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import PageLoader from '../../../components/ui/PageLoader'
 
+type StudyPlan = {
+  overview: string
+  days: Array<{
+    label: string
+    date: string
+    sessions: Array<{
+      assignmentId: number
+      title: string
+      subject: string
+      dueDate: string
+      minutesToSpend: number
+      notes: string
+    }>
+  }>
+}
+
 type GroupKey = 'Overdue' | 'Today' | 'Tomorrow' | 'This Week' | 'Later' | 'Completed'
 interface Group { key: GroupKey; items: PlannerItem[] }
 
@@ -74,6 +90,14 @@ export default function PlannerPage() {
   const [districtOpen, setDistrictOpen] = useState(false)
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
   const districtRef = useRef<HTMLDivElement>(null)
+
+  // AI Study Plan state
+  const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null)
+  const [studyPlanLoading, setStudyPlanLoading] = useState(false)
+  const [studyPlanError, setStudyPlanError] = useState<string | null>(null)
+  const [showStudyPlan, setShowStudyPlan] = useState(false)
+
+  const [showCompleted, setShowCompleted] = useState(false)
 
   // Form state
   const [showForm, setShowForm] = useState(false)
@@ -217,6 +241,20 @@ export default function PlannerPage() {
       setCanvasError(e instanceof Error ? e.message : 'Failed to disconnect')
     } finally {
       setCanvasLoading(false)
+    }
+  }
+
+  async function handleGenerateStudyPlan() {
+    setStudyPlanLoading(true)
+    setStudyPlanError(null)
+    setShowStudyPlan(true)
+    try {
+      const plan = await api.studyPlan()
+      setStudyPlan(plan)
+    } catch (e) {
+      setStudyPlanError(e instanceof Error ? e.message : 'Failed to generate study plan')
+    } finally {
+      setStudyPlanLoading(false)
     }
   }
 
@@ -475,78 +513,214 @@ export default function PlannerPage() {
         </form>
       )}
 
-      {/* Assignment Groups */}
-      {groups.length === 0 ? (
-        <div style={S.empty}>
-          <div style={S.emptyIcon}>✓</div>
-          <p style={{ fontSize: 17, fontWeight: 700, marginBottom: 5 }}>No tasks yet</p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Click "+ New Task" to add your first assignment.</p>
+      {/* AI Study Plan */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showStudyPlan ? 12 : 0 }}>
+          <button
+            onClick={() => {
+              if (!showStudyPlan) { void handleGenerateStudyPlan() }
+              else setShowStudyPlan(false)
+            }}
+            disabled={studyPlanLoading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: showStudyPlan ? 'var(--surface-2)' : 'none',
+              border: '1px solid var(--border)',
+              borderRadius: 8, padding: '8px 14px',
+              fontSize: 13, fontWeight: 600, color: 'var(--text)',
+              cursor: studyPlanLoading ? 'not-allowed' : 'pointer',
+              opacity: studyPlanLoading ? 0.7 : 1,
+            }}
+          >
+            <span style={{ fontSize: 15 }}>✨</span>
+            {studyPlanLoading ? 'Generating plan…' : showStudyPlan ? 'Hide Study Plan' : 'AI Study Plan'}
+          </button>
+          {showStudyPlan && studyPlan && !studyPlanLoading && (
+            <button
+              onClick={() => void handleGenerateStudyPlan()}
+              style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Regenerate
+            </button>
+          )}
         </div>
-      ) : groups.map(group => {
-        const meta = GROUP_META[group.key]
-        return (
-          <div key={group.key} style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{ color: meta?.color ?? 'var(--text-secondary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px' }}>
-                {group.key}
-              </span>
-              <span style={{ borderRadius: 100, padding: '2px 8px', fontSize: 11, fontWeight: 700, background: meta?.bg ?? 'var(--surface-2)', color: meta?.color ?? 'var(--text-secondary)' }}>
-                {group.items.length}
-              </span>
-            </div>
-            {group.items.map(item => (
-              <div key={item.id} className="ns-card" style={{ padding: '13px 14px', marginBottom: 8, opacity: item.completed ? 0.6 : 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      width: 18, height: 18, borderRadius: 5,
-                      border: `1.5px solid ${item.completed ? 'var(--primary)' : 'var(--border)'}`,
-                      background: item.completed ? 'var(--primary)' : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                      transition: 'background 0.15s, border-color 0.15s',
-                    }}>
-                      {item.completed && (
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                          <path d="M1 4L3.5 6.5L9 1" stroke="#060D10" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </div>
-                    <input type="checkbox" checked={item.completed} disabled={toggling.has(item.id)}
-                      onChange={() => void handleToggle(item.id, !item.completed)} style={{ display: 'none' }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: 13.5, fontWeight: 500,
-                        textDecoration: item.completed ? 'line-through' : 'none',
-                        color: item.completed ? 'var(--text-muted)' : 'var(--text)',
-                      }}>
-                        {item.title}
-                      </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                        {item.subject && <span>{item.subject}</span>}
-                        {item.source === 'CANVAS' && (
-                          <span style={{ background: 'rgba(229,57,53,0.12)', color: '#E53935', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
-                            Canvas
-                          </span>
-                        )}
-                        <span>Due {formatDueDate(item)}</span>
-                      </div>
-                    </div>
-                  </label>
-                  <button onClick={() => void handleDelete(item.id)} title="Delete task" style={{
-                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
-                    fontSize: 16, padding: 4, opacity: 0.5, transition: 'opacity 0.15s', flexShrink: 0,
-                  }}
-                    onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '1' }}
-                    onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '0.5' }}
-                  >
-                    ×
-                  </button>
-                </div>
+
+        {showStudyPlan && (
+          <div className="ns-card" style={{ padding: 18, marginTop: 10 }}>
+            {studyPlanLoading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: 13 }}>
+                <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--primary)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+                Building your personalized study plan…
               </div>
-            ))}
+            )}
+            {studyPlanError && (
+              <div style={{ color: '#EF4444', fontSize: 13 }}>{studyPlanError}</div>
+            )}
+            {!studyPlanLoading && studyPlan && (
+              <>
+                <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
+                  {studyPlan.overview}
+                </p>
+                {studyPlan.days.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No sessions needed — you&apos;re all caught up!</p>
+                ) : studyPlan.days.map(day => (
+                  <div key={day.date} style={{ marginBottom: 18 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+                      {day.label}
+                    </div>
+                    {day.sessions.map((session, i) => (
+                      <div key={i} style={{
+                        display: 'flex', gap: 12, padding: '10px 12px', marginBottom: 6,
+                        background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)',
+                      }}>
+                        <div style={{
+                          flexShrink: 0, width: 42, height: 42, borderRadius: 8,
+                          background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.25)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 12, fontWeight: 800, color: 'var(--primary)',
+                        }}>
+                          {session.minutesToSpend}m
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
+                            {session.title}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 4 }}>
+                            {session.subject && <span>{session.subject}</span>}
+                            <span>Due {session.dueDate}</span>
+                          </div>
+                          {session.notes && (
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              {session.notes}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </>
+            )}
           </div>
+        )}
+      </div>
+
+      {/* Assignment Groups */}
+      {(() => {
+        const activeGroups = groups.filter(g => g.key !== 'Completed')
+        const completedGroup = groups.find(g => g.key === 'Completed')
+
+        function AssignmentCard({ item }: { item: PlannerItem }) {
+          return (
+            <div key={item.id} className="ns-card" style={{ padding: '13px 14px', marginBottom: 8, opacity: item.completed ? 0.6 : 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 5,
+                    border: `1.5px solid ${item.completed ? 'var(--primary)' : 'var(--border)'}`,
+                    background: item.completed ? 'var(--primary)' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    transition: 'background 0.15s, border-color 0.15s',
+                  }}>
+                    {item.completed && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4L3.5 6.5L9 1" stroke="#060D10" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <input type="checkbox" checked={item.completed} disabled={toggling.has(item.id)}
+                    onChange={() => void handleToggle(item.id, !item.completed)} style={{ display: 'none' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 13.5, fontWeight: 500,
+                      textDecoration: item.completed ? 'line-through' : 'none',
+                      color: item.completed ? 'var(--text-muted)' : 'var(--text)',
+                    }}>
+                      {item.title}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {item.subject && <span>{item.subject}</span>}
+                      {item.source === 'CANVAS' && (
+                        <span style={{ background: 'rgba(229,57,53,0.12)', color: '#E53935', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
+                          Canvas
+                        </span>
+                      )}
+                      <span>Due {formatDueDate(item)}</span>
+                    </div>
+                  </div>
+                </label>
+                <button onClick={() => void handleDelete(item.id)} title="Delete task" style={{
+                  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+                  fontSize: 16, padding: 4, opacity: 0.5, transition: 'opacity 0.15s', flexShrink: 0,
+                }}
+                  onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '1' }}
+                  onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '0.5' }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )
+        }
+
+        return (
+          <>
+            {activeGroups.length === 0 && !completedGroup && (
+              <div style={S.empty}>
+                <div style={S.emptyIcon}>✓</div>
+                <p style={{ fontSize: 17, fontWeight: 700, marginBottom: 5 }}>No tasks yet</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Click &quot;+ New Task&quot; to add your first assignment.</p>
+              </div>
+            )}
+
+            {activeGroups.length === 0 && completedGroup && (
+              <div style={{ textAlign: 'center', padding: '40px 20px 24px' }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, margin: '0 auto 12px' }}>✓</div>
+                <p style={{ fontSize: 17, fontWeight: 700, marginBottom: 5 }}>All caught up!</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Every assignment is completed.</p>
+              </div>
+            )}
+
+            {activeGroups.map(group => {
+              const meta = GROUP_META[group.key]
+              return (
+                <div key={group.key} style={{ marginBottom: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ color: meta?.color ?? 'var(--text-secondary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px' }}>
+                      {group.key}
+                    </span>
+                    <span style={{ borderRadius: 100, padding: '2px 8px', fontSize: 11, fontWeight: 700, background: meta?.bg ?? 'var(--surface-2)', color: meta?.color ?? 'var(--text-secondary)' }}>
+                      {group.items.length}
+                    </span>
+                  </div>
+                  {group.items.map(item => <AssignmentCard key={item.id} item={item} />)}
+                </div>
+              )
+            })}
+
+            {completedGroup && (
+              <div style={{ marginTop: 8 }}>
+                <button
+                  onClick={() => setShowCompleted(v => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    background: 'none', border: '1px solid var(--border)', borderRadius: 8,
+                    padding: '8px 14px', fontSize: 13, fontWeight: 600,
+                    color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: showCompleted ? 12 : 0,
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ transition: 'transform 0.2s', transform: showCompleted ? 'rotate(90deg)' : 'none' }}>
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                  {showCompleted ? 'Hide completed assignments' : `Show completed assignments (${completedGroup.items.length})`}
+                </button>
+                {showCompleted && completedGroup.items.map(item => <AssignmentCard key={item.id} item={item} />)}
+              </div>
+            )}
+          </>
         )
-      })}
+      })()}
     </div>
   )
 }

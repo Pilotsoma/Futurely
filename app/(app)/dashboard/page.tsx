@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { api, type StudentData } from '../../../lib/api'
 import AiBar from '../../../components/ui/AiBar'
 import PageLoader from '../../../components/ui/PageLoader'
+import CoinIcon from '../../../components/ui/CoinIcon'
 
 function useCountUp(target: number | null, duration = 700): number {
   const [val, setVal] = useState(0)
@@ -50,15 +51,61 @@ const STREAK_MILESTONES: Array<{ days: number; emoji: string; tag?: string; tagC
   { days: 14,  tag: 'Pro',     tagColor: '#3B82F6', emoji: '⚡' },
   { days: 30,  tag: 'Veteran', tagColor: '#F97316', emoji: '🏅' },
   { days: 50,  tag: 'Legend',  tagColor: '#EC4899', emoji: '💎' },
-  { days: 100, tag: 'GOD',     tagColor: '#EAB308', emoji: '👑' },
+  { days: 100, tag: 'GOAT',    tagColor: '#EAB308', emoji: '👑' },
 ]
 
-function streakCoinBonus(streak: number) {
-  return Math.min(275, 30 + Math.max(0, streak - 1) * 5)
+function streakCoinBonus(streak: number, perDay = 5) {
+  return 30 + Math.max(0, streak - 1) * perDay
 }
 
 function getNextMilestone(streak: number) {
   return STREAK_MILESTONES.find(m => m.days > streak) ?? null
+}
+
+// Normal CDF via Abramowitz & Stegun approximation
+function normalCdf(z: number): number {
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741
+  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911
+  const sign = z >= 0 ? 1 : -1
+  const x = Math.abs(z) / Math.SQRT2
+  const t = 1 / (1 + p * x)
+  const y = 1 - (((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t) * Math.exp(-x * x)
+  return 0.5 * (1 + sign * y)
+}
+
+// Returns GPA percentile (0–100) based on US national unweighted GPA distribution.
+// Returns null if GPA is unavailable or either GPA < 3.0 (not qualified for bonus).
+function computeGpaPercentile(ugpa: number | null, wgpa: number | null): number | null {
+  if (ugpa === null && wgpa === null) return null
+  if (ugpa !== null && ugpa < 3.0) return null
+  if (wgpa !== null && wgpa < 3.0) return null
+  const gpa = ugpa ?? wgpa!
+  // US national unweighted GPA distribution: mean ≈ 2.96, sd ≈ 0.52
+  const z = (gpa - 2.96) / 0.52
+  return Math.min(99.99, Math.max(50.01, normalCdf(z) * 100))
+}
+
+// Extra coins earned per additional streak day based on GPA percentile
+function gpaStreakIncrement(percentile: number | null): number {
+  if (percentile === null) return 5
+  if (percentile >= 99.99) return 15   // top 0.01%: 200% more than baseline
+  if (percentile >= 99.9)  return 12
+  if (percentile >= 99.0)  return 10
+  if (percentile >= 97.0)  return 9
+  if (percentile >= 95.0)  return 8
+  if (percentile >= 90.0)  return 7
+  if (percentile >= 75.0)  return 6
+  return 5
+}
+
+function percentileStr(p: number): string {
+  const s = p.toFixed(2)
+  const int = Math.floor(p)
+  const suffix = (int % 100 >= 11 && int % 100 <= 13) ? 'th'
+    : int % 10 === 1 ? 'st'
+    : int % 10 === 2 ? 'nd'
+    : int % 10 === 3 ? 'rd' : 'th'
+  return `${s}${suffix}`
 }
 
 const GRADE_COLOR: Record<string, string> = { A: 'var(--gc-a)', B: 'var(--gc-b)', C: 'var(--gc-c)', D: 'var(--gc-d)', F: 'var(--gc-f)' }
@@ -74,9 +121,9 @@ function getTimeOfDay() {
 
 const QUICK_LINKS = [
   { href: '/grades',  label: 'Grade Portal',   sub: 'Grades & GPA',        icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B6EFF" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>, iconBg: 'rgba(75,110,255,0.12)' },
-  { href: '/ai',      label: 'AI Chat',         sub: 'College guidance',     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00C896" strokeWidth="2" strokeLinecap="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>, iconBg: 'rgba(0,200,150,0.1)' },
+  { href: '/ai',      label: 'AI Chat',         sub: 'College guidance',     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00C896" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>, iconBg: 'rgba(0,200,150,0.1)' },
   { href: '/planner', label: 'Planner',         sub: 'Assignments & tasks',  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, iconBg: 'rgba(245,158,11,0.1)' },
-  { href: '/feed',    label: 'Study Feed',      sub: 'Connect with peers',   icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>, iconBg: 'rgba(167,139,250,0.1)' },
+  { href: '/feed',    label: 'Study Feed',      sub: 'Connect with peers',   icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>, iconBg: 'rgba(167,139,250,0.1)' },
   { href: '/colleges',label: 'Colleges',        sub: 'Track your college list', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EC4899" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, iconBg: 'rgba(236,72,153,0.1)' },
   { href: '/marketplace',label: 'Marketplace',   sub: 'Buy, sell & trade items', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>, iconBg: 'rgba(249,115,22,0.1)' },
 ]
@@ -93,10 +140,12 @@ export default function DashboardPage() {
   const [coins, setCoins] = useState<number | null>(null)
   const [newlyAwardedTags, setNewlyAwardedTags] = useState<Array<{ tag: string; tagColor: string }>>([])
   const [showStreakPopup, setShowStreakPopup] = useState(false)
+  const [streakMilestone, setStreakMilestone] = useState<typeof STREAK_MILESTONES[0] | null>(null)
   const [showResyncPopup, setShowResyncPopup] = useState(false)
   const [resyncing, setResyncing] = useState(false)
   const [resyncError, setResyncError] = useState<string | null>(null)
   const [needsReconnect, setNeedsReconnect] = useState(false)
+  const [showGpaWelcome, setShowGpaWelcome] = useState(false)
   const gpaNeedsResync = useRef(false)
 
   useEffect(() => {
@@ -127,6 +176,18 @@ export default function DashboardPage() {
       setDayStreak(1)
     }
     localStorage.setItem('ns_lastVisit', today)
+
+    // Show milestone celebration popup once per milestone
+    if (lastVisit !== today) {
+      const milestone = STREAK_MILESTONES.find(m => m.days === currentStreak)
+      if (milestone) {
+        const seenKey = `ns_milestone_seen_${milestone.days}`
+        if (!localStorage.getItem(seenKey)) {
+          localStorage.setItem(seenKey, '1')
+          setStreakMilestone(milestone)
+        }
+      }
+    }
 
     // Claim daily coins + award any streak milestone tags
     if (currentStreak > 0) {
@@ -183,6 +244,16 @@ export default function DashboardPage() {
     }
   }
 
+  // Show one-time GPA percentile popup when GPA first loads
+  useEffect(() => {
+    const ugpa = portalUGpa ?? data?.profile?.unweightedGpa ?? null
+    const wgpa = portalWGpa ?? data?.profile?.weightedGpa ?? null
+    if (ugpa === null && wgpa === null) return
+    if (localStorage.getItem('ns_gpa_welcome_v1')) return
+    localStorage.setItem('ns_gpa_welcome_v1', '1')
+    setShowGpaWelcome(true)
+  }, [portalUGpa, portalWGpa, data])
+
   // ── Derived values (computed before hooks so they can be passed as targets) ──
   const dbCourseCount = (() => {
     if (!data) return 0
@@ -227,6 +298,11 @@ export default function DashboardPage() {
     transition: { duration: 0.28, ease: [0.19, 1, 0.22, 1] as [number, number, number, number], delay: i * 0.05 },
   })
 
+  const effectiveUGpa = portalUGpa ?? data.profile?.unweightedGpa ?? null
+  const effectiveWGpa = portalWGpa ?? data.profile?.weightedGpa ?? null
+  const gpaPercentile = computeGpaPercentile(effectiveUGpa, effectiveWGpa)
+  const streakIncrement = gpaStreakIncrement(gpaPercentile)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
       {/* Header */}
@@ -237,12 +313,7 @@ export default function DashboardPage() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
           <span style={S.dateChip}>{formatDate()}</span>
-          {coins !== null && (
-            <span style={{ fontSize: 12, color: '#EAB308', background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 20, padding: '4px 10px', fontWeight: 700 }}>
-              🪙 {coins.toLocaleString()} coins
-            </span>
-          )}
-        </div>
+          </div>
       </div>
 
       {/* GPA + Due Today */}
@@ -310,10 +381,10 @@ export default function DashboardPage() {
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)} {...staggerItem(4)}>
           <div style={S.statNum}>{animStreak}</div>
           <div style={S.statLabel}>Day Streak 🔥</div>
-          <div style={{ ...S.statSub, color: '#EAB308' }}>🪙 +{streakCoinBonus(dayStreak)} today</div>
+          <div style={{ ...S.statSub, color: '#EAB308' }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{streakCoinBonus(dayStreak, streakIncrement)} today{streakIncrement > 5 ? ` ✦` : ''}</div>
           {(() => {
             const next = getNextMilestone(dayStreak)
-            if (!next) return <div style={S.statSub} title="All streak rewards earned">👑 GOD</div>
+            if (!next) return <div style={S.statSub} title="All streak rewards earned">👑 GOAT</div>
             return <div style={S.statSub}>Next: {next.days}d → {next.tag}</div>
           })()}
         </motion.div>
@@ -336,6 +407,49 @@ export default function DashboardPage() {
 
       <div style={{ flex: 1 }} />
 
+      {/* Streak Milestone Celebration Popup */}
+      {streakMilestone && (
+        <div style={S.popupOverlay} onClick={() => setStreakMilestone(null)}>
+          <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setStreakMilestone(null)} style={S.popupClose}>×</button>
+            <div style={{ fontSize: 52, marginBottom: 14 }}>{streakMilestone.emoji}</div>
+            <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6, color: 'var(--text)', letterSpacing: '-0.5px' }}>
+              {streakMilestone.days}-Day Streak!
+            </h3>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 18 }}>
+              You&apos;ve logged in {streakMilestone.days} days in a row. That&apos;s dedication — keep it going!
+            </p>
+            <div style={{
+              background: (streakMilestone.tagColor ?? streakMilestone.perkColor ?? '#22C55E') + '18',
+              border: `1px solid ${(streakMilestone.tagColor ?? streakMilestone.perkColor ?? '#22C55E')}44`,
+              borderRadius: 12, padding: '14px 18px', marginBottom: 20,
+            }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', marginBottom: 8 }}>
+                You just unlocked
+              </p>
+              {streakMilestone.tag ? (
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: 16, fontWeight: 800,
+                  color: '#fff',
+                  background: streakMilestone.tagColor,
+                  borderRadius: 8, padding: '4px 14px',
+                }}>
+                  {streakMilestone.tag}
+                </span>
+              ) : (
+                <span style={{ fontSize: 16, fontWeight: 800, color: streakMilestone.perkColor }}>
+                  {streakMilestone.perk}
+                </span>
+              )}
+            </div>
+            <button onClick={() => setStreakMilestone(null)} style={S.popupButton}>
+              Let&apos;s go! 🚀
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Streak Popup */}
       {showStreakPopup && (
         <div style={S.popupOverlay} onClick={() => setShowStreakPopup(false)}>
@@ -345,11 +459,29 @@ export default function DashboardPage() {
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>
               {dayStreak} Day Streak!
             </h3>
-            <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#EAB308', fontWeight: 600, textAlign: 'center' as const }}>
-              🪙 +{streakCoinBonus(dayStreak)} coins today · +5 more each extra day
+            <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#EAB308', fontWeight: 600, textAlign: 'center' as const }}>
+              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{streakCoinBonus(dayStreak, streakIncrement)} coins today · +{streakIncrement} more each extra day
             </div>
+
+            {/* GPA Rank Section */}
+            {gpaPercentile !== null ? (
+              <div style={{ background: 'rgba(75,110,255,0.08)', border: '1px solid rgba(75,110,255,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 5 }}>GPA Rank</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: '#4B6EFF' }}>{percentileStr(gpaPercentile)} Percentile</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                    +{streakIncrement}/day{streakIncrement > 5 ? ` (+${streakIncrement - 5} bonus)` : ''}
+                  </span>
+                </div>
+              </div>
+            ) : effectiveUGpa !== null ? (
+              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '9px 14px', marginBottom: 10, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' as const }}>
+                📚 GPA below 3.0 · Reach 3.0+ to unlock streak bonuses
+              </div>
+            ) : null}
+
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Start at +30 coins on day 1, and earn +5 more for every consecutive day. Log in every day to unlock exclusive tags too!
+              Start at +30 coins on day 1, and earn +{streakIncrement} more for every consecutive day. Log in every day to unlock exclusive tags too!
             </p>
 
             {newlyAwardedTags.length > 0 && (
@@ -374,10 +506,10 @@ export default function DashboardPage() {
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{earned ? m.emoji : '🔒'}</span>
                     <div style={{ flex: 1 }}>
                       {m.tag ? (
-                        <span className={m.tag === 'GOD' ? 'tag-god' : ''} style={{
+                        <span className={m.tag === 'GOAT' ? 'tag-god' : ''} style={{
                           fontSize: 13, fontWeight: 700,
-                          color: m.tag === 'GOD' ? undefined : '#fff',
-                          background: m.tag === 'GOD' ? undefined : m.tagColor,
+                          color: m.tag === 'GOAT' ? undefined : '#fff',
+                          background: m.tag === 'GOAT' ? undefined : m.tagColor,
                           borderRadius: 6, padding: '2px 8px',
                           marginRight: 4,
                         }}>
@@ -389,7 +521,7 @@ export default function DashboardPage() {
                         </span>
                       )}
                       <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: m.tag ? 4 : 8 }}>
-                        {m.days}d{!m.perk && ` · 🪙 +${streakCoinBonus(m.days)}/day`}
+                        {m.days}d{!m.perk && <> · <CoinIcon size={11} style={{ margin: '0 2px' }} /> +{streakCoinBonus(m.days)}/day</>}
                       </span>
                     </div>
                     {earned && (
@@ -402,6 +534,54 @@ export default function DashboardPage() {
 
             <button onClick={() => setShowStreakPopup(false)} style={S.popupButton}>
               Got it!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* GPA Percentile Welcome Popup (one-time) */}
+      {showGpaWelcome && (
+        <div style={S.popupOverlay} onClick={() => setShowGpaWelcome(false)}>
+          <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowGpaWelcome(false)} style={S.popupClose}>×</button>
+            <div style={{ fontSize: 48, marginBottom: 14 }}>🎓</div>
+            <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6, color: 'var(--text)', letterSpacing: '-0.5px' }}>
+              Your GPA Rank
+            </h3>
+            {gpaPercentile !== null ? (
+              <>
+                <p style={{ fontSize: 15, fontWeight: 700, color: '#4B6EFF', marginBottom: 10 }}>
+                  {percentileStr(gpaPercentile)} Percentile
+                </p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+                  Based on your {effectiveUGpa !== null ? `${effectiveUGpa.toFixed(2)} unweighted GPA` : 'GPA'}, you rank above the vast majority of Futurely students.
+                </p>
+                <div style={{ background: 'rgba(75,110,255,0.1)', border: '1px solid rgba(75,110,255,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', marginBottom: 6 }}>
+                    Your Daily Streak Bonus
+                  </p>
+                  <p style={{ fontSize: 18, fontWeight: 800, color: '#4B6EFF', marginBottom: 4 }}>
+                    +{streakIncrement} coins per streak day
+                  </p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    Average students earn +5/day{streakIncrement > 5 ? ` · You earn +${streakIncrement - 5} extra` : ''}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+                  Maintain a 3.0+ GPA in both unweighted and weighted to unlock enhanced daily streak bonuses.
+                </p>
+                <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#EAB308', lineHeight: 1.5 }}>
+                    Top 0.01% of students earn +15 coins/day<br />vs +5 for the average student
+                  </p>
+                </div>
+              </>
+            )}
+            <button onClick={() => setShowGpaWelcome(false)} style={S.popupButton}>
+              Got it! 🚀
             </button>
           </div>
         </div>

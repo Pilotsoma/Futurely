@@ -9,6 +9,7 @@ import {
   verifyCanvasToken,
   fetchCanvasCourses,
   fetchCanvasUpcomingAssignments,
+  fetchCanvasOverdueAssignments,
   CanvasTokenError,
   CanvasNetworkError,
 } from './canvasClient'
@@ -256,11 +257,16 @@ router.post(
       logger.info('Canvas sync starting', { userId, canvasInstanceUrl })
 
       let courses: Awaited<ReturnType<typeof fetchCanvasCourses>>
-      let assignments: Awaited<ReturnType<typeof fetchCanvasUpcomingAssignments>>
+      let upcomingAssignments: Awaited<ReturnType<typeof fetchCanvasUpcomingAssignments>>
+      let overdueAssignments: Awaited<ReturnType<typeof fetchCanvasOverdueAssignments>>
 
       try {
         courses = await fetchCanvasCourses(canvasInstanceUrl, token)
-        assignments = await fetchCanvasUpcomingAssignments(canvasInstanceUrl, token, courses.map(c => c.id))
+        const courseIds = courses.map(c => c.id)
+        ;[upcomingAssignments, overdueAssignments] = await Promise.all([
+          fetchCanvasUpcomingAssignments(canvasInstanceUrl, token, courseIds),
+          fetchCanvasOverdueAssignments(canvasInstanceUrl, token, courseIds),
+        ])
       } catch (err) {
         if (err instanceof CanvasTokenError) {
           await prisma.canvasConnection.update({
@@ -286,9 +292,18 @@ router.post(
         courseMap.set(course.id, course.name)
       }
 
+      // Merge upcoming + overdue, dedup by name+course
+      const seen = new Set<string>()
+      const allAssignments = [...upcomingAssignments, ...overdueAssignments].filter(a => {
+        const key = `${a.course_id}:${a.name}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+
       const SEVEN_DAYS_MS = 7 * 86400000
 
-      const upsertPayloads = assignments.map(assignment => ({
+      const upsertPayloads = allAssignments.map(assignment => ({
         userId,
         title: assignment.name.slice(0, 500),
         subject: courseMap.get(assignment.course_id) ?? `Canvas Course ${assignment.course_id}`,

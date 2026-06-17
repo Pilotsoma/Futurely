@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import CoinIcon from '../../../components/ui/CoinIcon'
 import {
   api, ApiError, InventoryData, BoxResult, MarketplaceItem, TagInventoryItem,
   MarketplaceListing, TradeOffer, TradeItem, UserPublicInventory, FeedUserProfile,
@@ -167,7 +168,7 @@ function PriceTooltip({ children, price }: { children: React.ReactNode; price?: 
           fontSize: 11, color: '#EAB308', fontWeight: 700, zIndex: 1000,
           pointerEvents: 'none', boxShadow: '0 2px 10px rgba(0,0,0,0.6)',
         }}>
-          Est. 🪙 {price.toLocaleString()}
+          <CoinIcon size={11} style={{ marginRight: 3 }} />Est. {price.toLocaleString()}
         </div>
       )}
     </div>
@@ -746,7 +747,7 @@ export default function MarketplacePage() {
 
         {isListed ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>🪙 {listing?.price}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 }}><CoinIcon size={11} />{listing?.price}</span>
             {/* If user has extra copies, let them equip the unlisted one */}
             {type !== 'tag' && count > 1 && (
               <button
@@ -792,7 +793,7 @@ export default function MarketplacePage() {
               disabled={isQS}
               style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #EAB30855', background: 'transparent', color: '#EAB308', fontSize: 11, fontWeight: 700, cursor: isQS ? 'not-allowed' : 'pointer', opacity: isQS ? 0.6 : 1 }}
             >
-              {isQS ? '…' : `Sell 🪙${sellPrice}`}
+              {isQS ? '…' : <><CoinIcon size={11} style={{ marginRight: 2 }} />{sellPrice}</>}
             </button>
           </div>
         )}
@@ -804,7 +805,7 @@ export default function MarketplacePage() {
               onChange={e => setListingPrice(e.target.value)}
               style={{ width: 72, padding: '4px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12 }}
             />
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>fee: 🪙 {Math.floor((parseInt(listingPrice) || 0) * 0.1)}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 2 }}>fee: <CoinIcon size={11} />{Math.floor((parseInt(listingPrice) || 0) * 0.1)}</span>
             <button onClick={() => void handleCreateListing()} disabled={listingBusy}
               style={{ padding: '4px 10px', borderRadius: 7, border: 'none', background: 'var(--primary)', color: '#060D10', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
               {listingBusy ? '…' : 'Confirm'}
@@ -838,7 +839,7 @@ export default function MarketplacePage() {
                   {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
                 </span>
                 {item.type === 'tag' ? (
-                  <span className={item.tag === 'GOD' ? 'tag-god' : ''} style={{ fontSize: 12, fontWeight: 800, color: item.tag === 'GOD' ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
+                  <span className={item.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 12, fontWeight: 800, color: item.tag === 'GOAT' ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
                 ) : item.type === 'name-color' ? (
                   <span className={item.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 12, fontWeight: 800, color: item.value === 'rainbow' ? undefined : item.value }}>DUMMY</span>
                 ) : (
@@ -854,7 +855,7 @@ export default function MarketplacePage() {
           {items.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Nothing</span>}
         </div>
         {items.length > 0 && total > 0 && (
-          <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 5 }}>Est. 🪙 {total.toLocaleString()}</div>
+          <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 5, display: 'flex', alignItems: 'center', gap: 3 }}><CoinIcon size={11} />Est. {total.toLocaleString()}</div>
         )}
       </div>
     )
@@ -900,12 +901,12 @@ export default function MarketplacePage() {
       <div className="ns-card" style={{ padding: 18, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 4 }}>Your Balance</p>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#EAB308', letterSpacing: '-0.5px' }}>🪙 {inv?.coins?.toLocaleString() ?? 0}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#EAB308', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: 8 }}><CoinIcon size={24} />{inv?.coins?.toLocaleString() ?? 0}</div>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>+30 coins every day you log in</p>
         </div>
         {inv?.canClaimToday ? (
           <button onClick={handleDailyClaim} style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: '#EAB308', color: '#000', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-            Claim Daily 🪙
+            Claim Daily <CoinIcon size={14} style={{ marginLeft: 4 }} />
           </button>
         ) : (
           <div style={{ textAlign: 'right' as const }}>
@@ -950,7 +951,7 @@ export default function MarketplacePage() {
             const borderColor = isRainbow ? '#ff6b6b' : (RARITY_COLOR[result.won.rarity] ?? 'var(--border)')
 
             const itemPreview = result.won.type === 'tag' ? (
-              <div className={result.won.tag === 'GOD' ? 'tag-god' : ''} style={{ fontSize: 22, fontWeight: 800, color: result.won.tag === 'GOD' ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
+              <div className={result.won.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 22, fontWeight: 800, color: result.won.tag === 'GOAT' ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
                 [{result.won.tag}]
               </div>
             ) : result.won.type === 'name-color' ? (
@@ -1000,7 +1001,7 @@ export default function MarketplacePage() {
                     >
                       DUMMY
                     </span>
-                    <span className={result.won.type === 'tag' && result.won.tag === 'GOD' ? 'tag-god' : ''} style={{ fontSize: 12, fontWeight: 700, color: result.won.type === 'tag' && result.won.tag !== 'GOD' ? (result.won.tagColor ?? '#6B7280') : '#6B7280' }}>
+                    <span className={result.won.type === 'tag' && result.won.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 12, fontWeight: 700, color: result.won.type === 'tag' && result.won.tag !== 'GOAT' ? (result.won.tagColor ?? '#6B7280') : '#6B7280' }}>
                       [{result.won.type === 'tag' ? result.won.tag : 'DUMMY'}]
                     </span>
                   </div>
@@ -1022,7 +1023,7 @@ export default function MarketplacePage() {
               </div>
               {wonPrice && (
                 <div style={{ fontSize: 12, color: '#EAB308', fontWeight: 700, marginBottom: 16 }}>
-                  Est. 🪙 {wonPrice.toLocaleString()}
+                  <CoinIcon size={12} style={{ marginRight: 3 }} />Est. {wonPrice.toLocaleString()}
                 </div>
               )}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
@@ -1062,7 +1063,7 @@ export default function MarketplacePage() {
                   <button onClick={() => void handleOpenBox(box.type)}
                     disabled={!inv || inv.coins < box.cost || !!opening}
                     style={{ width: '100%', padding: '10px 0', borderRadius: 9, border: 'none', background: opening === box.type ? 'var(--surface-2)' : 'var(--primary)', color: opening === box.type ? 'var(--text-muted)' : '#060D10', fontWeight: 700, fontSize: 13, marginTop: 4, cursor: inv && inv.coins >= box.cost && !opening ? 'pointer' : 'not-allowed', opacity: !inv || inv.coins < box.cost ? 0.45 : 1 }}>
-                    {opening === box.type ? 'Opening…' : `🎁 Open — 🪙 ${box.cost}`}
+                    {opening === box.type ? 'Opening…' : <>🎁 Open — <CoinIcon size={13} style={{ margin: '0 3px' }} />{box.cost}</>}
                   </button>
                   {isHovered && (
                     <div style={{ width: '100%', borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 2, display: 'flex', flexDirection: 'column', gap: 5, textAlign: 'left' }}>
@@ -1130,12 +1131,12 @@ export default function MarketplacePage() {
                           {listing.seller.name ?? 'Unknown'}
                         </button>
                         {listing.seller.tag && (
-                          <span className={listing.seller.tag === 'DEV' ? 'tag-rainbow' : listing.seller.tag === 'GOD' ? 'tag-god' : ''} style={{ marginLeft: 6, fontWeight: 700, color: (listing.seller.tag === 'DEV' || listing.seller.tag === 'GOD') ? undefined : listing.seller.tagColor ?? '#6B7280' }}>[{listing.seller.tag}]</span>
+                          <span className={listing.seller.tag === 'DEV' ? 'tag-rainbow' : listing.seller.tag === 'GOAT' ? 'tag-god' : ''} style={{ marginLeft: 6, fontWeight: 700, color: (listing.seller.tag === 'DEV' || listing.seller.tag === 'GOAT') ? undefined : listing.seller.tagColor ?? '#6B7280' }}>[{listing.seller.tag}]</span>
                         )}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: '#EAB308', marginBottom: 4 }}>🪙 {listing.price.toLocaleString()}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: '#EAB308', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}><CoinIcon size={16} />{listing.price.toLocaleString()}</div>
                       {msg ? (
                         <div style={{ fontSize: 11, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600 }}>{msg}</div>
                       ) : isMine ? (
@@ -1180,7 +1181,7 @@ export default function MarketplacePage() {
           {tradeSubTab === 'new' && (
             <>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
-                Sending a trade costs <strong style={{ color: '#EAB308' }}>🪙 5</strong>. Your offered items are locked until the trade is resolved.
+                Sending a trade costs <strong style={{ color: '#EAB308', display: 'inline-flex', alignItems: 'center', gap: 3 }}><CoinIcon size={12} />5</strong>. Your offered items are locked until the trade is resolved.
               </div>
 
               {!tradeTarget ? (
@@ -1215,7 +1216,7 @@ export default function MarketplacePage() {
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)' }} />
                     <div style={{ flex: 1 }}>
                       <div className={tradeTarget.user.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(tradeTarget.user.nameColor && tradeTarget.user.nameColor !== 'rainbow' ? { color: tradeTarget.user.nameColor } : {}) }}>{tradeTarget.user.name ?? 'User'}</div>
-                      {tradeTarget.user.tag && <div className={tradeTarget.user.tag === 'DEV' ? 'tag-rainbow' : tradeTarget.user.tag === 'GOD' ? 'tag-god' : ''} style={{ fontSize: 11, color: (tradeTarget.user.tag === 'DEV' || tradeTarget.user.tag === 'GOD') ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
+                      {tradeTarget.user.tag && <div className={tradeTarget.user.tag === 'DEV' ? 'tag-rainbow' : tradeTarget.user.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (tradeTarget.user.tag === 'DEV' || tradeTarget.user.tag === 'GOAT') ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
                     </div>
                     <button onClick={() => { setTradeTarget(null); setSelectedOffer([]); setSelectedRequest([]) }}
                       style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
@@ -1241,7 +1242,7 @@ export default function MarketplacePage() {
                               <PriceTooltip key={t.id} price={prices[`tag:${t.id}`]}>
                               <div onClick={() => toggleRequest(item)}
                                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)', cursor: 'pointer' }}>
-                                <span className={t.tag === 'GOD' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: t.tag === 'GOD' ? undefined : t.tagColor }}>[{t.tag}]</span>
+                                <span className={t.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: t.tag === 'GOAT' ? undefined : t.tagColor }}>[{t.tag}]</span>
                                 <RarityBadge rarity={t.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
                               </div>
@@ -1287,7 +1288,7 @@ export default function MarketplacePage() {
                             const t = selectedRequest.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
                             return t > 0 ? (
                               <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
-                                Selected: 🪙 {t.toLocaleString()}
+                                <CoinIcon size={11} style={{ marginRight: 3 }} />Selected: {t.toLocaleString()}
                               </div>
                             ) : null
                           })()}
@@ -1312,7 +1313,7 @@ export default function MarketplacePage() {
                               <PriceTooltip key={t.id} price={prices[`tag:${t.id}`]}>
                               <div onClick={() => toggleOffer(item)}
                                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)', cursor: 'pointer' }}>
-                                <span className={t.tag === 'GOD' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: t.tag === 'GOD' ? undefined : t.tagColor }}>[{t.tag}]</span>
+                                <span className={t.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: t.tag === 'GOAT' ? undefined : t.tagColor }}>[{t.tag}]</span>
                                 <RarityBadge rarity={t.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
                               </div>
@@ -1358,7 +1359,7 @@ export default function MarketplacePage() {
                             const t = selectedOffer.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
                             return t > 0 ? (
                               <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
-                                Selected: 🪙 {t.toLocaleString()}
+                                <CoinIcon size={11} style={{ marginRight: 3 }} />Selected: {t.toLocaleString()}
                               </div>
                             ) : null
                           })()}
@@ -1386,7 +1387,7 @@ export default function MarketplacePage() {
                   <button onClick={() => void handleSendTrade()}
                     disabled={sendingTrade || selectedOffer.length === 0 || selectedRequest.length === 0 || !inv || inv.coins < 5}
                     style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#060D10', fontWeight: 700, fontSize: 14, cursor: selectedOffer.length > 0 && selectedRequest.length > 0 ? 'pointer' : 'not-allowed', opacity: selectedOffer.length === 0 || selectedRequest.length === 0 ? 0.4 : 1 }}>
-                    {sendingTrade ? 'Sending…' : 'Send Trade — 🪙 5'}
+                    {sendingTrade ? 'Sending…' : <>Send Trade — <CoinIcon size={13} style={{ margin: '0 3px' }} />5</>}
                   </button>
                 </>
               )}
@@ -1410,7 +1411,7 @@ export default function MarketplacePage() {
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)' }} />
                           <div>
                             <span className={trade.sender.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.sender.nameColor && trade.sender.nameColor !== 'rainbow' ? { color: trade.sender.nameColor } : {}) }}>{trade.sender.name ?? 'User'}</span>
-                            {trade.sender.tag && <span className={trade.sender.tag === 'DEV' ? 'tag-rainbow' : trade.sender.tag === 'GOD' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.sender.tag === 'DEV' || trade.sender.tag === 'GOD') ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
+                            {trade.sender.tag && <span className={trade.sender.tag === 'DEV' ? 'tag-rainbow' : trade.sender.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.sender.tag === 'DEV' || trade.sender.tag === 'GOAT') ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>{new Date(trade.createdAt).toLocaleDateString()}</span>
                         </div>
@@ -1465,7 +1466,7 @@ export default function MarketplacePage() {
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)' }} />
                           <div>
                             <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.receiver.nameColor && trade.receiver.nameColor !== 'rainbow' ? { color: trade.receiver.nameColor } : {}) }}>{trade.receiver.name ?? 'User'}</span>
-                            {trade.receiver.tag && <span className={trade.receiver.tag === 'DEV' ? 'tag-rainbow' : trade.receiver.tag === 'GOD' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.receiver.tag === 'DEV' || trade.receiver.tag === 'GOD') ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
+                            {trade.receiver.tag && <span className={trade.receiver.tag === 'DEV' ? 'tag-rainbow' : trade.receiver.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.receiver.tag === 'DEV' || trade.receiver.tag === 'GOAT') ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: statusColor[trade.status] ?? '#6B7280', background: `${statusColor[trade.status] ?? '#6B7280'}18`, padding: '2px 8px', borderRadius: 99 }}>
                             {trade.status}
@@ -1522,7 +1523,7 @@ export default function MarketplacePage() {
                   <div className="ns-card" style={{ padding: 16, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 4 }}>Est. Inventory Worth</div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: '#EAB308', letterSpacing: '-0.5px' }}>🪙 {worth.toLocaleString()}</div>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: '#EAB308', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: 8 }}><CoinIcon size={20} />{worth.toLocaleString()}</div>
                     </div>
                     <div style={{ fontSize: 28 }}>💰</div>
                   </div>
@@ -1539,7 +1540,7 @@ export default function MarketplacePage() {
                       onClick={handleSellAllDuplicatesClick}
                       style={{ width: '100%', padding: '11px 0', borderRadius: 9, border: '1px solid #EAB30866', background: '#EAB30810', color: '#EAB308', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
                     >
-                      Sell All Duplicates — 🪙 {total.toLocaleString()}
+                      Sell All Duplicates — <CoinIcon size={13} style={{ margin: '0 3px' }} />{total.toLocaleString()}
                     </button>
                   </div>
                 )
@@ -1613,8 +1614,8 @@ export default function MarketplacePage() {
                     </div>
                     {profilePanel.tag && (
                       <span
-                        className={profilePanel.tag === 'DEV' ? 'tag-rainbow' : profilePanel.tag === 'GOD' ? 'tag-god' : ''}
-                        style={profilePanel.tag === 'DEV' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' } : profilePanel.tag === 'GOD' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'rgba(0,200,150,0.1)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
+                        className={profilePanel.tag === 'DEV' ? 'tag-rainbow' : profilePanel.tag === 'GOAT' ? 'tag-god' : ''}
+                        style={profilePanel.tag === 'DEV' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' } : profilePanel.tag === 'GOAT' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'rgba(0,200,150,0.1)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
                       >
                         {profilePanel.tag}
                       </span>
@@ -1761,7 +1762,7 @@ export default function MarketplacePage() {
                 </div>
               )}
               <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
-                You will receive <strong style={{ color: '#EAB308' }}>🪙 {quicksellConfirm.coins}</strong> for selling it.
+                You will receive <strong style={{ color: '#EAB308', display: 'inline-flex', alignItems: 'center', gap: 3 }}><CoinIcon size={12} />{quicksellConfirm.coins}</strong> for selling it.
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -1816,7 +1817,7 @@ export default function MarketplacePage() {
                     <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text)', textDecoration: kept ? 'line-through' : 'none' }}>{d.name}</span>
                     <span style={{ fontSize: 10, fontWeight: 700, color: RARITY_COLOR[d.rarity] ?? '#6B7280', background: `${RARITY_COLOR[d.rarity] ?? '#6B7280'}18`, padding: '2px 6px', borderRadius: 99 }}>{d.rarity}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>×{d.count}</span>
-                    {!kept && <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>🪙 {(d.count * d.coinsEach).toLocaleString()}</span>}
+                    {!kept && <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308', display: 'inline-flex', alignItems: 'center', gap: 2 }}><CoinIcon size={11} />{(d.count * d.coinsEach).toLocaleString()}</span>}
                     <button
                       onClick={() => setDupExcluded(prev => {
                         const next = new Set(prev)
@@ -1840,7 +1841,7 @@ export default function MarketplacePage() {
                 <>
                   <div style={{ padding: '10px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 16, textAlign: 'center' }}>
                     <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Selling {activeItems.length} of {sellDupsConfirm.items.length} item type{sellDupsConfirm.items.length !== 1 ? 's' : ''} — </span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: noneSelected ? 'var(--text-muted)' : '#EAB308' }}>🪙 {liveTotal.toLocaleString()}</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: noneSelected ? 'var(--text-muted)' : '#EAB308', display: 'inline-flex', alignItems: 'center', gap: 6 }}><CoinIcon size={16} />{liveTotal.toLocaleString()}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
@@ -1848,7 +1849,7 @@ export default function MarketplacePage() {
                       disabled={sellingDups || noneSelected}
                       style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: noneSelected ? 'var(--surface-2)' : '#EAB308', color: noneSelected ? 'var(--text-muted)' : '#060D10', fontWeight: 700, fontSize: 13, cursor: (sellingDups || noneSelected) ? 'not-allowed' : 'pointer', opacity: sellingDups ? 0.6 : 1 }}
                     >
-                      {sellingDups ? 'Selling…' : noneSelected ? 'Nothing to sell' : `Sell — 🪙 ${liveTotal.toLocaleString()}`}
+                      {sellingDups ? 'Selling…' : noneSelected ? 'Nothing to sell' : <>Sell — <CoinIcon size={13} style={{ margin: '0 3px' }} />{liveTotal.toLocaleString()}</>}
                     </button>
                     <button
                       onClick={() => { setSellDupsConfirm(null); setDupExcluded(new Set()) }}

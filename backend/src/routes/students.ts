@@ -70,7 +70,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
           orderBy: { period: 'asc' },
         },
         assignments: {
-          where: { source: ASSIGNMENT_SOURCE.MANUAL },
+          where: { source: { notIn: [ASSIGNMENT_SOURCE.SEED, ASSIGNMENT_SOURCE.HAC] } },
           orderBy: { dueDate: 'asc' },
         },
       },
