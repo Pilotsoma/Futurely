@@ -431,11 +431,16 @@ router.post('/posts/:id/comments', async (req: Request, res: Response) => {
 
     const post = await prisma.post.findUnique({ where: { id }, select: { userId: true } });
     if (post && post.userId !== userId) {
-      const notif = await prisma.notification.create({
-        data: { userId: post.userId, fromUserId: userId, type: 'COMMENT', postId: id, preview: body.trim().slice(0, 80) },
-        include: { sender: { select: USER_SELECT } },
+      const alreadyNotified = await prisma.notification.findFirst({
+        where: { userId: post.userId, fromUserId: userId, type: 'COMMENT', postId: id },
       });
-      sendToUser(post.userId, 'NOTIFICATION', { ...notif, sender: toFeedUser(notif.sender) });
+      if (!alreadyNotified) {
+        const notif = await prisma.notification.create({
+          data: { userId: post.userId, fromUserId: userId, type: 'COMMENT', postId: id, preview: body.trim().slice(0, 80) },
+          include: { sender: { select: USER_SELECT } },
+        });
+        sendToUser(post.userId, 'NOTIFICATION', { ...notif, sender: toFeedUser(notif.sender) });
+      }
     }
 
     res.json({ data: commentOut });
@@ -463,11 +468,16 @@ router.post('/posts/:id/like', async (req: Request, res: Response) => {
     broadcast('LIKE_UPDATE', { postId: id, liked, count: likedPost?._count.likes || 0 });
 
     if (liked && likedPost && likedPost.userId !== userId) {
-      const notif = await prisma.notification.create({
-        data: { userId: likedPost.userId, fromUserId: userId, type: 'LIKE', postId: id },
-        include: { sender: { select: USER_SELECT } },
+      const alreadyNotified = await prisma.notification.findFirst({
+        where: { userId: likedPost.userId, fromUserId: userId, type: 'LIKE', postId: id },
       });
-      sendToUser(likedPost.userId, 'NOTIFICATION', { ...notif, sender: toFeedUser(notif.sender) });
+      if (!alreadyNotified) {
+        const notif = await prisma.notification.create({
+          data: { userId: likedPost.userId, fromUserId: userId, type: 'LIKE', postId: id },
+          include: { sender: { select: USER_SELECT } },
+        });
+        sendToUser(likedPost.userId, 'NOTIFICATION', { ...notif, sender: toFeedUser(notif.sender) });
+      }
     }
 
     res.json({ data: { liked, count: likedPost?._count.likes || 0 } });
@@ -896,11 +906,16 @@ router.post('/users/:id/follow', async (req: Request, res: Response) => {
       following = true;
     }
     if (following) {
-      const notif = await prisma.notification.create({
-        data: { userId: targetId, fromUserId: userId, type: 'FOLLOW' },
-        include: { sender: { select: USER_SELECT } },
+      const alreadyNotified = await prisma.notification.findFirst({
+        where: { userId: targetId, fromUserId: userId, type: 'FOLLOW' },
       });
-      sendToUser(targetId, 'NOTIFICATION', { ...notif, sender: toFeedUser(notif.sender) });
+      if (!alreadyNotified) {
+        const notif = await prisma.notification.create({
+          data: { userId: targetId, fromUserId: userId, type: 'FOLLOW' },
+          include: { sender: { select: USER_SELECT } },
+        });
+        sendToUser(targetId, 'NOTIFICATION', { ...notif, sender: toFeedUser(notif.sender) });
+      }
     }
     res.json({ data: { following } });
   } catch (err) {

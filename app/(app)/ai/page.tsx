@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -60,21 +61,14 @@ export default function AIChatPage() {
   const [input, setInput]         = useState('')
   const [sending, setSending]     = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const searchParams = useSearchParams()
+  const handledQ = useRef<string | null>(null)
 
   useEffect(() => {
     const loaded = loadSessions()
     setSessions(loaded)
-    saveSessions(loaded) // write back to prune expired entries
-  }, [])
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const q = params.get('q')
-    if (q) {
-      window.history.replaceState({}, '', '/ai')
-      void handleSend(q)
-      return
-    }
+    saveSessions(loaded)
+    // one-time localStorage prefill (legacy path)
     const prefill = localStorage.getItem('ns_ai_prefill')
     if (prefill) {
       localStorage.removeItem('ns_ai_prefill')
@@ -82,6 +76,16 @@ export default function AIChatPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Fires on mount AND whenever the URL changes (e.g. navigating from dashboard while page is already mounted)
+  useEffect(() => {
+    const q = searchParams.get('q')
+    if (!q || q === handledQ.current) return
+    handledQ.current = q
+    window.history.replaceState({}, '', '/ai')
+    void handleSend(q)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   function startNewChat() {
     setActiveId(null)
@@ -155,7 +159,7 @@ export default function AIChatPage() {
         <div style={S.historyList}>
           {sessions.length === 0 ? (
             <p style={S.historyEmpty}>No conversations yet.</p>
-          ) : sessions.map(s => (
+          ) : [...sessions].sort((a, b) => b.updatedAt - a.updatedAt).map(s => (
             <button
               key={s.id}
               onClick={() => openSession(s)}

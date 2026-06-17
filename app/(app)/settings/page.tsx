@@ -542,7 +542,7 @@ export default function SettingsPage() {
             )}
           </div>
           {/* Canvas Integration */}
-          <div className="ns-card" style={S.card}>
+          <div id="canvas" className="ns-card" style={S.card}>
             <p style={S.cardLabel}>Canvas Integration</p>
 
             {/* Connect form */}

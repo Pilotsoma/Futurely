@@ -20,7 +20,7 @@ const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'top-performer',  tag: 'Top Performer',   tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
   { id: 'ace',            tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      weight: 1.85 },
   { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#EC4899', rarity: 'Epic',      weight: 1.85 },
-  { id: 'mastermind',     tag: 'Mastermind',      tagColor: '#EAB308', rarity: 'Legendary', weight: 0.5  },
+  { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#EAB308', rarity: 'Legendary', weight: 0.5  },
   { id: 'genius',         tag: 'Genius',          tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
   { id: 'god',            tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    weight: 0.3  },
 ]
@@ -837,7 +837,8 @@ router.post('/listings', requireAuth, async (req: AuthRequest, res: Response): P
       const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
       const ownedTags = parseTagArr(user.allTags)
       if (def) {
-        if (!ownedTags.some(t => t.tag === def.tag)) {
+        // also match old tag name in case item was renamed after user acquired it
+        if (!ownedTags.some(t => t.tag === def.tag || t.tag === def.id)) {
           res.status(403).json({ error: 'You do not own this tag' }); return
         }
         itemName = def.tag; itemValue = def.tagColor; itemRarity = def.rarity

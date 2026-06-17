@@ -10,9 +10,12 @@ import {
   fetchCanvasCourses,
   fetchCanvasUpcomingAssignments,
   fetchCanvasOverdueAssignments,
+  fetchCanvasCoursesWithGrades,
+  fetchCanvasAssignmentsWithSubmissions,
   CanvasTokenError,
   CanvasNetworkError,
 } from './canvasClient'
+import { sendToUser } from '../../lib/websocket'
 
 const router = Router()
 
@@ -313,6 +316,14 @@ router.post(
         source: ASSIGNMENT_SOURCE.CANVAS,
       }))
 
+      // Track which assignments are genuinely new (not just updates)
+      const existingKeys = new Set(
+        (await prisma.assignment.findMany({
+          where: { userId, source: ASSIGNMENT_SOURCE.CANVAS },
+          select: { title: true, subject: true },
+        })).map(a => `${a.title}::${a.subject}`)
+      )
+
       for (const payload of upsertPayloads) {
         await prisma.assignment.upsert({
           where: {
@@ -330,6 +341,21 @@ router.post(
             completed: false,
           },
         })
+      }
+
+      // Send one summary notification for newly added Canvas assignments
+      const newPayloads = upsertPayloads.filter(p => !existingKeys.has(`${p.title}::${p.subject}`))
+      if (newPayloads.length > 0) {
+        try {
+          const preview = newPayloads.length === 1
+            ? `New Canvas assignment: ${newPayloads[0].title}`
+            : `${newPayloads.length} new Canvas assignments added`
+          const notif = await prisma.notification.create({
+            data: { userId, fromUserId: userId, type: 'ASSIGNMENT_CREATED', preview },
+            include: { sender: { select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+          })
+          sendToUser(userId, 'NOTIFICATION', notif)
+        } catch { /* non-critical */ }
       }
 
       await prisma.canvasConnection.update({
@@ -377,6 +403,47 @@ router.post(
         assignments: [],
       },
     })
+  })
+)
+
+// ── GET /grades ──────────────────────────────────────────────────────────────
+// Returns courses + assignments with submission/score data for all connections.
+
+router.get(
+  '/grades',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+
+    const connections = await prisma.canvasConnection.findMany({ where: { userId } })
+
+    if (connections.length === 0) {
+      res.status(404).json({
+        data: null,
+        error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' },
+      })
+      return
+    }
+
+    const result = await Promise.all(connections.map(async connection => {
+      const token = decryptPassword(connection.encryptedToken)
+      const { canvasInstanceUrl, canvasUserName } = connection
+
+      try {
+        const courses = await fetchCanvasCoursesWithGrades(canvasInstanceUrl, token)
+        const coursesWithAssignments = await Promise.all(
+          courses.map(async course => ({
+            ...course,
+            assignments: await fetchCanvasAssignmentsWithSubmissions(canvasInstanceUrl, token, course.id),
+          }))
+        )
+        return { canvasInstanceUrl, canvasUserName, courses: coursesWithAssignments }
+      } catch (err) {
+        const code = err instanceof CanvasTokenError ? 'TOKEN_EXPIRED' : 'FETCH_FAILED'
+        return { canvasInstanceUrl, canvasUserName, error: code, courses: [] }
+      }
+    }))
+
+    res.status(200).json({ data: result })
   })
 )
 

@@ -478,6 +478,9 @@ export const api = {
       { method: 'POST' }
     ),
 
+  canvasGrades: () =>
+    request<CanvasGradesConnection[]>('/api/integrations/canvas/grades'),
+
   canvasDisconnect: (canvasInstanceUrl?: string) =>
     request<{ disconnected: boolean; deletedAssignmentsCount: number; canvasInstanceUrl?: string }>(
       '/api/integrations/canvas/disconnect',
@@ -652,6 +655,41 @@ export interface CanvasStatus {
   lastSynced: string | null
   syncStatus: string | null
   syncError: string | null
+}
+
+// ── Canvas Grades types ────────────────────────────────────────────────────
+
+export interface CanvasGradesSubmission {
+  score: number | null
+  grade: string | null
+  submitted_at: string | null
+  workflow_state: string
+  late: boolean
+  missing: boolean
+}
+
+export interface CanvasGradesAssignment {
+  id: number
+  name: string
+  due_at: string | null
+  points_possible: number | null
+  html_url: string
+  submission: CanvasGradesSubmission | null
+}
+
+export interface CanvasGradesCourse {
+  id: number
+  name: string
+  currentScore: number | null
+  currentGrade: string | null
+  assignments: CanvasGradesAssignment[]
+}
+
+export interface CanvasGradesConnection {
+  canvasInstanceUrl: string
+  canvasUserName: string | null
+  error?: string
+  courses: CanvasGradesCourse[]
 }
 
 // ── Study Feed types ───────────────────────────────────────────────────────
@@ -859,7 +897,7 @@ export interface AppNotification {
   id: number
   userId: number
   fromUserId: number
-  type: 'FOLLOW' | 'LIKE' | 'COMMENT' | 'GIVEAWAY_WIN' | 'TRADE_OFFER' | 'TRADE_ACCEPTED' | 'TRADE_DECLINED' | 'LISTING_SOLD'
+  type: 'FOLLOW' | 'LIKE' | 'COMMENT' | 'GIVEAWAY_WIN' | 'TRADE_OFFER' | 'TRADE_ACCEPTED' | 'TRADE_DECLINED' | 'LISTING_SOLD' | 'ASSIGNMENT_CREATED'
   postId: number | null
   preview: string | null
   read: boolean
