@@ -50,14 +50,17 @@ const PFP_GLOW_MAP: Record<string, [string, string]> = {
 function pfpStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
-  if (effect === 'glow-gold')   return { background: 'linear-gradient(135deg, #EAB308, #FDE047)', color: '#000', border: '2px solid #EAB308', boxShadow: '0 0 10px #EAB30866' }
-  if (effect === 'frame-black') return { background: '#0d0d0d', color: '#4B5563', border: '2px solid #1F2937' }
+  if (effect === 'glow-gold')   return {}
+  if (effect === 'frame-black') return {}
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
   return {}
 }
 function pfpClass(effect: string | null | undefined): string {
-  return effect === 'rainbow' ? 'pfp-rainbow' : ''
+  if (effect === 'rainbow')      return 'pfp-rainbow'
+  if (effect === 'glow-gold')    return 'pfp-gold-fill'
+  if (effect === 'frame-black')  return 'pfp-void-fill'
+  return ''
 }
 
 const GW_NAME_COLOR_ITEMS = [

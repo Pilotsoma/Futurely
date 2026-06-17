@@ -321,6 +321,30 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 }
 .pfp-rainbow { animation: pfpRainbow 3s linear infinite; }
 
+@keyframes pfpGoldShimmer {
+  0%   { background-position: 0% 50%;   box-shadow: 0 0 10px #EAB30866; border-color: #EAB308; }
+  50%  { background-position: 100% 50%; box-shadow: 0 0 24px #EAB308cc, 0 0 40px #FDE04755; border-color: #FDE068; }
+  100% { background-position: 0% 50%;   box-shadow: 0 0 10px #EAB30866; border-color: #EAB308; }
+}
+.pfp-gold-fill {
+  background: linear-gradient(135deg, #EAB308, #FDE047, #B45309, #FDE047, #EAB308) !important;
+  background-size: 300% 300% !important;
+  border: 2px solid #EAB308 !important;
+  color: #000 !important;
+  animation: pfpGoldShimmer 3s ease-in-out infinite;
+}
+
+@keyframes pfpVoidPulse {
+  0%, 100% { box-shadow: 0 0 6px #1F2937, 0 0 0px #7C3AED00; border-color: #1F2937; }
+  50%       { box-shadow: 0 0 16px #374151, 0 0 28px #7C3AED33;  border-color: #374151; }
+}
+.pfp-void-fill {
+  background: #0d0d0d !important;
+  border: 2px solid #1F2937 !important;
+  color: #4B5563 !important;
+  animation: pfpVoidPulse 3s ease-in-out infinite;
+}
+
 @keyframes boxPop {
   0%   { transform: scale(0.7); opacity: 0; }
   70%  { transform: scale(1.08); opacity: 1; }
