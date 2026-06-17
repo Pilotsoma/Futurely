@@ -71,8 +71,9 @@ export default function AIChatPage() {
     // Check for a message passed from the dashboard AiBar via sessionStorage
     const pending = sessionStorage.getItem('ns_ai_pending')
     if (pending) {
-      sessionStorage.removeItem('ns_ai_pending')
       pendingAutoSend.current = pending
+      // Delay removal so React Strict Mode's double-invoke (dev only) can read it on remount
+      setTimeout(() => sessionStorage.removeItem('ns_ai_pending'), 100)
     }
   }, [])
 

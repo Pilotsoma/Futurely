@@ -540,7 +540,7 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
 // ── Quicksell ─────────────────────────────────────────────────────────────────
 
 const QUICKSELL_PRICES: Record<string, number> = {
-  Common: 2, Uncommon: 5, Rare: 10, Epic: 20, Legendary: 75, Mythic: 500,
+  Common: 4, Uncommon: 10, Rare: 20, Epic: 40, Legendary: 150, Mythic: 1000,
 }
 
 router.post('/quicksell/duplicates', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
