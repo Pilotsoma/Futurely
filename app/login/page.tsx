@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { api } from '../../lib/api'
+import { api, ApiError } from '../../lib/api'
 import { SORTED_ISD_LIST, type ISDEntry } from '../../lib/isds'
 
 type Mode = 'login' | 'register-student' | 'register-parent'
@@ -106,7 +106,17 @@ export default function LoginPage() {
       }
       router.push(result.user.role === 'PARENT' ? '/parent/dashboard' : '/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : mode === 'login' ? 'Login failed' : 'Registration failed')
+      if (err instanceof ApiError && err.code === 'ACCOUNT_LOCKED' && err.secondsRemaining) {
+        const totalMins = Math.ceil(err.secondsRemaining / 60)
+        const hours = Math.floor(totalMins / 60)
+        const mins = totalMins % 60
+        const timeStr = hours > 0
+          ? `${hours}h${mins > 0 ? ` ${mins}m` : ''}`
+          : `${mins}m`
+        setError(`Account locked. Too many failed attempts — try again in ${timeStr}.`)
+      } else {
+        setError(err instanceof Error ? err.message : mode === 'login' ? 'Login failed' : 'Registration failed')
+      }
     } finally { setIsLoading(false); setStep('auth') }
   }
 

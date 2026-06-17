@@ -10,7 +10,7 @@ const router = Router()
 interface TagItem  { id: string; tag: string; tagColor: string; rarity: string; weight: number }
 interface ColorItem { id: string; name: string; value: string; rarity: string; weight: number }
 
-const TAG_BOX_ITEMS: TagItem[] = [
+export const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'grinder',        tag: 'Grinder',        tagColor: '#6B7280', rarity: 'Common',    weight: 20   },
   { id: 'focused',        tag: 'Focused',         tagColor: '#6B7280', rarity: 'Common',    weight: 20   },
   { id: 'scholar',        tag: 'Scholar',         tagColor: '#6B7280', rarity: 'Common',    weight: 20   },
@@ -70,7 +70,7 @@ const RARITY_RANK: Record<string, number> = {
 
 // ── Estimated item prices (seed; updated dynamically on each sale) ─────────────
 
-const SEED_PRICES: Record<string, number> = {
+export const SEED_PRICES: Record<string, number> = {
   // Tags (Common 10, Uncommon 20, Rare 50, Epic 250, Legendary 1k, Mythic GOD 50k)
   'tag:grinder': 10,         'tag:focused': 10,         'tag:scholar': 10,
   'tag:honors-student': 20,  'tag:ap-student': 20,

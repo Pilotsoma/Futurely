@@ -636,6 +636,7 @@ export default function DashboardPage() {
         <p style={{ ...S.cardLabel, marginBottom: 10 }}>Ask Futurely AI</p>
         <AiBar />
       </div>
+
     </div>
   )
 }

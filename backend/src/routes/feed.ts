@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { broadcast, sendToUser } from '../lib/websocket';
 import { filterContent, recordViolation } from '../lib/contentFilter';
+import { SEED_PRICES, TAG_BOX_ITEMS } from './marketplace';
 
 const router = Router();
 
@@ -41,7 +42,7 @@ function recordModDelete(userId: number) {
 }
 
 const USER_SELECT = {
-  id: true, name: true, email: true,
+  id: true, name: true,
   tag: true, tagColor: true,
   nameColor: true, pfpEffect: true, avatarUrl: true,
   chatBanned: true, chatMutedUntil: true,
@@ -49,7 +50,7 @@ const USER_SELECT = {
 } as const;
 
 type RawUser = {
-  id: number; name: string | null; email: string;
+  id: number; name: string | null;
   tag: string | null; tagColor: string | null;
   nameColor: string | null; pfpEffect: string | null; avatarUrl: string | null;
   chatBanned: boolean; chatMutedUntil: Date | null;
@@ -57,11 +58,11 @@ type RawUser = {
 };
 
 function toFeedUser(u: RawUser) {
-  if (u.deletedAt) return { id: u.id, name: u.name, email: u.email, tag: 'DELETED', tagColor: '#6B7280', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  if (u.chatBanned) return { id: u.id, name: u.name, email: u.email, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, email: u.email, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  if (u.role === 'ADMIN') return { id: u.id, name: u.name, email: u.email, tag: 'DEV', tagColor: 'lightblue', nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
-  return { id: u.id, name: u.name, email: u.email, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
+  if (u.deletedAt) return { id: u.id, name: u.name, tag: 'DELETED', tagColor: '#6B7280', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
+  if (u.chatBanned) return { id: u.id, name: u.name, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
+  if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
+  if (u.role === 'ADMIN') return { id: u.id, name: u.name, tag: 'DEV', tagColor: 'lightblue', nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
+  return { id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
 }
 
 function parseAllTags(raw: unknown): Array<{ tag: string; tagColor: string }> {
@@ -752,9 +753,9 @@ router.get('/search', async (req: Request, res: Response) => {
     if (!q) return res.json({ data: [] });
     const isDev = await hasDevPowers(userId);
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { email: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
+      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
-      select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
+      select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -803,9 +804,9 @@ router.get('/users/search', async (req: Request, res: Response) => {
     if (!q) return res.json({ data: [] });
     const isDev = await hasDevPowers(userId);
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { email: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
+      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
-      select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
+      select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -818,14 +819,16 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
   try {
     const targetId = parseInt(req.params.id);
     const userId = (req as any).userId as number;
-    const profile = await prisma.user.findUnique({
-      where: { id: targetId },
-      include: { _count: { select: { followers: true, following: true, posts: true } } },
-    });
+    const [profile, requesterIsDev] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: targetId },
+        include: { _count: { select: { followers: true, following: true, posts: true } } },
+      }),
+      hasDevPowers(userId),
+    ]);
     if (!profile) return res.status(404).json({ error: 'User not found' });
-    if (profile.deletedAt) {
-      const isDev = await hasDevPowers(userId);
-      if (!isDev && userId !== targetId) return res.status(404).json({ error: 'User not found' });
+    if (profile.deletedAt && !requesterIsDev && userId !== targetId) {
+      return res.status(404).json({ error: 'User not found' });
     }
 
     const [totalLikes, isFollowingRow] = await Promise.all([
@@ -841,7 +844,7 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
     else if (profile.chatMutedUntil && profile.chatMutedUntil > new Date()) { effectiveTag = 'MUTED'; effectiveTagColor = '#f97316'; }
     else if (profile.role === 'ADMIN') { effectiveTag = 'DEV'; effectiveTagColor = 'lightblue'; }
 
-    const { passwordHash, allTags: rawAllTags, ...rest } = profile as typeof profile & { passwordHash: string; allTags: string };
+    const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, allTags: rawAllTags, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; allTags: string };
     res.json({
       data: {
         ...rest,
@@ -850,6 +853,7 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
         allTags: parseAllTags(rawAllTags || '[]'),
         totalLikes,
         isFollowing: !!isFollowingRow,
+        ...(requesterIsDev ? { coins: (profile as any).coins ?? 0 } : {}),
       },
     });
   } catch (err) {
@@ -1094,6 +1098,78 @@ router.put('/users/:id/role', async (req: Request, res: Response) => {
     res.json({ data: { role: updated.role } });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update role' });
+  }
+});
+
+/* ---------- DEV: Platform Stats (total coins + inventory value) ---------- */
+router.get('/dev-stats', async (req: Request, res: Response) => {
+  try {
+    const actorId = (req as any).userId as number;
+    const isDev = await hasDevPowers(actorId);
+    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
+
+    const [coinsAgg, allUsers] = await Promise.all([
+      prisma.user.aggregate({ _sum: { coins: true }, where: { deletedAt: null } }),
+      prisma.user.findMany({
+        where: { deletedAt: null },
+        select: { allTags: true, ownedNameColors: true, ownedPfpEffects: true },
+      }),
+    ]);
+
+    const totalCoins = coinsAgg._sum.coins ?? 0;
+
+    let totalInventoryValue = 0;
+    for (const user of allUsers) {
+      try {
+        const tags = JSON.parse((user.allTags as string) || '[]') as Array<{ tag: string }>;
+        const colors = JSON.parse((user.ownedNameColors as string) || '[]') as Array<{ id: string }>;
+        const pfps = JSON.parse((user.ownedPfpEffects as string) || '[]') as Array<{ id: string }>;
+        for (const t of tags) {
+          const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag);
+          const itemId = def?.id ?? t.tag.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+          totalInventoryValue += SEED_PRICES[`tag:${itemId}`] ?? 0;
+        }
+        for (const c of colors) totalInventoryValue += SEED_PRICES[`name-color:${c.id}`] ?? 0;
+        for (const p of pfps) totalInventoryValue += SEED_PRICES[`pfp:${p.id}`] ?? 0;
+      } catch { /* malformed JSON — skip */ }
+    }
+
+    res.json({ data: { totalCoins, totalInventoryValue, userCount: allUsers.length } });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch dev stats' });
+  }
+});
+
+/* ---------- DEV: Adjust user coins ---------- */
+router.put('/users/:id/coins', async (req: Request, res: Response) => {
+  try {
+    const actorId = (req as any).userId as number;
+    const targetId = parseInt(req.params.id);
+    const isDev = await hasDevPowers(actorId);
+    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
+
+    const { action, amount } = req.body as { action: 'add' | 'remove' | 'zero'; amount?: number };
+    if (!['add', 'remove', 'zero'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
+    if (action !== 'zero' && (typeof amount !== 'number' || amount < 0)) {
+      return res.status(400).json({ error: 'amount must be a non-negative number' });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: targetId }, select: { coins: true } });
+    if (!target) return res.status(404).json({ error: 'User not found' });
+
+    let newCoins: number;
+    if (action === 'zero') {
+      newCoins = 0;
+    } else if (action === 'add') {
+      newCoins = target.coins + (amount ?? 0);
+    } else {
+      newCoins = Math.max(0, target.coins - (amount ?? 0));
+    }
+
+    const updated = await prisma.user.update({ where: { id: targetId }, data: { coins: newCoins } });
+    res.json({ data: { coins: updated.coins } });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to adjust coins' });
   }
 });
 

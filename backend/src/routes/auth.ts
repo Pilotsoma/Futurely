@@ -7,6 +7,9 @@ import { filterUsername } from '../lib/contentFilter'
 
 const router = Router()
 
+const MAX_FAILED_ATTEMPTS = 5
+const LOCKOUT_DURATION_MS = 2 * 60 * 60 * 1000 // 2 hours
+
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   const { email, password, name, role: roleInput } = req.body as { email?: string; password?: string; name?: string; role?: string }
 
@@ -90,13 +93,15 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
   try {
     const user = await prisma.user.findUnique({ where: { email } })
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+
+    if (!user) {
       res.status(401).json({
         data: null,
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' },
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
       })
       return
     }
+
     if (user.deletedAt) {
       res.status(401).json({
         data: null,
@@ -104,6 +109,55 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       })
       return
     }
+
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const secondsRemaining = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 1000)
+      res.status(429).json({
+        data: null,
+        error: { code: 'ACCOUNT_LOCKED', message: 'Account temporarily locked due to too many failed login attempts' },
+        secondsRemaining,
+      })
+      return
+    }
+
+    const passwordValid = await bcrypt.compare(password, user.passwordHash)
+
+    if (!passwordValid) {
+      const newAttempts = user.failedLoginAttempts + 1
+      const shouldLock = newAttempts >= MAX_FAILED_ATTEMPTS
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: newAttempts,
+          ...(shouldLock ? { lockedUntil: new Date(Date.now() + LOCKOUT_DURATION_MS) } : {}),
+        },
+      })
+
+      if (shouldLock) {
+        res.status(429).json({
+          data: null,
+          error: { code: 'ACCOUNT_LOCKED', message: 'Too many failed login attempts. Account locked for 2 hours.' },
+          secondsRemaining: LOCKOUT_DURATION_MS / 1000,
+        })
+        return
+      }
+
+      const attemptsLeft = MAX_FAILED_ATTEMPTS - newAttempts
+      res.status(401).json({
+        data: null,
+        error: {
+          code: 'INVALID_CREDENTIALS',
+          message: `Invalid email or password. ${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining before lockout.`,
+        },
+      })
+      return
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    })
 
     const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' })
 

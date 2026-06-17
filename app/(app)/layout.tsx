@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { motion, AnimatePresence, type Transition } from 'framer-motion'
 import { api } from '../../lib/api'
 import NotificationBell from '../../components/ui/NotificationBell'
+import UpdatePopup from '../../components/ui/UpdatePopup'
 
 const NAV = [
   {
@@ -292,6 +293,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </motion.button>
         </div>
       </motion.aside>
+
+      <UpdatePopup />
 
       {/* Main content — spring-follows sidebar width */}
       <motion.main

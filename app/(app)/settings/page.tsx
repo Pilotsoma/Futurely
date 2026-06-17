@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, type StudentData, type CanvasStatus } from '../../../lib/api'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
+import { CHANGELOG } from '../../../lib/changelog'
 
 function DeleteAccountModal({ onClose }: { onClose: () => void }) {
   const router = useRouter()
@@ -831,6 +832,41 @@ export default function SettingsPage() {
             >
               Delete Account
             </button>
+          </div>
+
+          {/* Changelog */}
+          <div className="ns-card" style={{ ...S.card, marginTop: 16 }}>
+            <p style={S.cardLabel}>Changelog</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
+              Every update to Futurely, explained in plain English.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 24 }}>
+              {CHANGELOG.map((entry, ei) => (
+                <div key={entry.version}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'rgba(0,200,150,0.12)', border: '1px solid rgba(0,200,150,0.3)', borderRadius: 99, padding: '2px 10px' }}>
+                      v{entry.version}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.title}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{entry.date}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                    {entry.changes.map((c, ci) => (
+                      <div key={ci} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0, width: 24, textAlign: 'center' as const, marginTop: 1 }}>{c.emoji}</span>
+                        <div>
+                          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{c.headline}</div>
+                          <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>{c.detail}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {ei < CHANGELOG.length - 1 && (
+                    <div style={{ borderBottom: '1px solid var(--border)', marginTop: 20 }} />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

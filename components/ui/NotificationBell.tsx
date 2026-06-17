@@ -20,7 +20,7 @@ function timeAgo(iso: string): string {
 
 function senderFirst(notif: AppNotification): string {
   const raw = notif.sender.name
-  if (!raw) return notif.sender.email.split('@')[0]
+  if (!raw) return 'User'
   if (raw.includes(',')) {
     const parts = raw.split(',')
     const given = parts[1]?.trim().split(' ')[0] ?? ''
@@ -32,9 +32,10 @@ function senderFirst(notif: AppNotification): string {
 interface Props {
   showToasts?: boolean
   collapsed?: boolean
+  onOpenProfile?: (userId: number) => void
 }
 
-export default function NotificationBell({ showToasts = false, collapsed = false }: Props) {
+export default function NotificationBell({ showToasts = false, collapsed = false, onOpenProfile }: Props) {
   const router = useRouter()
   const [notifs, setNotifs]       = useState<AppNotification[]>([])
   const [unread, setUnread]       = useState(0)
@@ -183,7 +184,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 const name = senderFirst(n)
                 const icon = n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : n.type === 'LISTING_SOLD' ? '🏷️' : n.type.startsWith('TRADE') ? '🔄' : n.type === 'ASSIGNMENT_CREATED' ? '📚' : '💬'
                 const link = (label: React.ReactNode) => (
-                  <b onClick={() => { setShowPanel(false); router.push('/feed') }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
+                  <b onClick={() => { setShowPanel(false); onOpenProfile ? onOpenProfile(n.fromUserId) : router.push(`/feed?profile=${n.fromUserId}`) }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
                 )
                 let body: React.ReactNode
                 if (n.type === 'FOLLOW')           body = <>{link(name)} started following you</>

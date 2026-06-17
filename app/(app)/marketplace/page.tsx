@@ -270,7 +270,7 @@ export default function MarketplacePage() {
 
   // Trade — new
   const [tradeSearch, setTradeSearch] = useState('')
-  const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string | null; email: string; tag: string | null; tagColor: string | null }>>([])
+  const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string | null; tag: string | null; tagColor: string | null }>>([])
   const [tradeTarget, setTradeTarget] = useState<UserPublicInventory | null>(null)
   const [targetLoading, setTargetLoading] = useState(false)
   const [selectedOffer, setSelectedOffer] = useState<TradeItem[]>([])
@@ -1198,7 +1198,7 @@ export default function MarketplacePage() {
                           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--text)', cursor: 'pointer', textAlign: 'left' as const }}>
                           <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#00C896,#00A3CC)', flexShrink: 0 }} />
                           <div>
-                            <div style={{ fontSize: 13, fontWeight: 600 }}>{u.name ?? u.email}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{u.name ?? 'User'}</div>
                             {u.tag && <div style={{ fontSize: 11, color: u.tagColor ?? '#6B7280', fontWeight: 700 }}>[{u.tag}]</div>}
                           </div>
                         </button>
@@ -1597,11 +1597,11 @@ export default function MarketplacePage() {
                   >
                     {profilePanel.avatarUrl
                       ? <img src={profilePanel.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                      : (profilePanel.name ?? profilePanel.email).slice(0, 2).toUpperCase()}
+                      : (profilePanel.name ?? 'Us').slice(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <div className={profilePanel.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 19, fontWeight: 800, marginBottom: 3, ...(profilePanel.nameColor && profilePanel.nameColor !== 'rainbow' ? { color: profilePanel.nameColor } : { color: 'var(--text)' }) }}>
-                      {profilePanel.name ?? profilePanel.email}
+                      {profilePanel.name ?? 'User'}
                     </div>
                     {profilePanel.tag && (
                       <span
@@ -1611,7 +1611,7 @@ export default function MarketplacePage() {
                         {profilePanel.tag}
                       </span>
                     )}
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{profilePanel.email}</div>
+
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 20, padding: '14px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 0 }}>

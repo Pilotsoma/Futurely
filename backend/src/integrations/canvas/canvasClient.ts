@@ -34,6 +34,85 @@ export interface CanvasSelf {
   name: string
 }
 
+export interface CanvasTodoItem {
+  type: string
+  assignment: {
+    id: number
+    name: string
+    due_at: string | null
+    points_possible: number | null
+    course_id: number
+    html_url: string
+  }
+  context_name: string
+  html_url: string
+  ignore: string
+}
+
+export interface CanvasModuleItem {
+  id: number
+  title: string
+  type: string
+  content_id: number | null
+  html_url: string
+  url: string | null
+  published: boolean
+  completion_requirement: {
+    type: string
+    min_score?: number
+    completed: boolean
+  } | null
+}
+
+export interface CanvasModule {
+  id: number
+  name: string
+  position: number
+  unlock_at: string | null
+  items_count: number
+  items: CanvasModuleItem[]
+}
+
+export interface CanvasAnnouncement {
+  id: number
+  title: string
+  message: string
+  posted_at: string
+  author: { display_name: string; avatar_image_url: string | null }
+  read_state: string
+  html_url: string
+}
+
+export interface CanvasAssignmentDetail {
+  id: number
+  name: string
+  description: string | null
+  due_at: string | null
+  points_possible: number | null
+  submission_types: string[]
+  html_url: string
+  course_id: number
+  submission: CanvasSubmission | null
+  rubric?: Array<{
+    id: string
+    description: string
+    long_description: string
+    points: number
+  }>
+}
+
+export interface CanvasCourseFile {
+  id: number
+  display_name: string
+  filename: string
+  'content-type': string
+  url: string
+  size: number
+  updated_at: string
+  folder_id: number
+  locked: boolean
+}
+
 export interface CanvasCourse {
   id: number
   name: string
@@ -280,6 +359,95 @@ export async function fetchCanvasAssignmentsWithSubmissions(
   } catch {
     logger.warn('Failed to fetch Canvas assignments for course', { instanceUrl, courseId })
     return []
+  }
+}
+
+/**
+ * Fetch the user's Canvas to-do list (assignments due soon).
+ */
+export async function fetchCanvasTodo(instanceUrl: string, token: string): Promise<CanvasTodoItem[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/users/self/todo?per_page=20`
+  try {
+    const response = await axios.get<CanvasTodoItem[]>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) return []
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch modules (with items) for a course.
+ */
+export async function fetchCanvasModules(instanceUrl: string, token: string, courseId: number): Promise<CanvasModule[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/modules?include[]=items&include[]=content_details&per_page=50`
+  try {
+    const response = await axios.get<CanvasModule[]>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    if (err instanceof AxiosError && (err.response?.status === 404 || err.response?.status === 403)) return []
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch announcements for a course.
+ */
+export async function fetchCanvasAnnouncements(instanceUrl: string, token: string, courseId: number): Promise<CanvasAnnouncement[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/discussion_topics?only_announcements=true&per_page=20&order_by=posted_at`
+  try {
+    const response = await axios.get<CanvasAnnouncement[]>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    if (err instanceof AxiosError && (err.response?.status === 404 || err.response?.status === 403)) return []
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch a single assignment's full detail including description and submission.
+ */
+export async function fetchCanvasAssignmentDetail(
+  instanceUrl: string,
+  token: string,
+  courseId: number,
+  assignmentId: number,
+): Promise<CanvasAssignmentDetail> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/assignments/${assignmentId}?include[]=submission`
+  try {
+    const response = await axios.get<CanvasAssignmentDetail>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch files for a course (flat list, most recently updated first).
+ */
+export async function fetchCanvasCourseFiles(instanceUrl: string, token: string, courseId: number): Promise<CanvasCourseFile[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/files?per_page=50&sort=updated_at&order=desc`
+  try {
+    const response = await axios.get<CanvasCourseFile[]>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    if (err instanceof AxiosError && (err.response?.status === 404 || err.response?.status === 403)) return []
+    handleAxiosError(err, instanceUrl)
   }
 }
 

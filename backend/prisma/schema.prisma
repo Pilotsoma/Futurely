@@ -27,6 +27,8 @@ model User {
   role                     String                   @default("STUDENT")
   chatBanned               Boolean                  @default(false)
   chatMutedUntil           DateTime?
+  failedLoginAttempts      Int                      @default(0)
+  lockedUntil              DateTime?
   deletedAt                DateTime?
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt

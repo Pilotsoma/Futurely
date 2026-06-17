@@ -12,6 +12,11 @@ import {
   fetchCanvasOverdueAssignments,
   fetchCanvasCoursesWithGrades,
   fetchCanvasAssignmentsWithSubmissions,
+  fetchCanvasTodo,
+  fetchCanvasModules,
+  fetchCanvasAnnouncements,
+  fetchCanvasAssignmentDetail,
+  fetchCanvasCourseFiles,
   CanvasTokenError,
   CanvasNetworkError,
 } from './canvasClient'
@@ -571,6 +576,170 @@ router.delete(
       })
     }
   })
+)
+
+// ── Shared helper: resolve a connection by optional instance URL ─────────────
+
+async function resolveConnection(
+  userId: number,
+  instanceUrl?: string,
+): Promise<{ canvasInstanceUrl: string; token: string } | null> {
+  const connection = instanceUrl
+    ? await prisma.canvasConnection.findFirst({ where: { userId, canvasInstanceUrl: instanceUrl } })
+    : await prisma.canvasConnection.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } })
+  if (!connection) return null
+  return { canvasInstanceUrl: connection.canvasInstanceUrl, token: decryptPassword(connection.encryptedToken) }
+}
+
+// ── GET /dashboard ───────────────────────────────────────────────────────────
+// Returns to-do items + courses with grades for a specific Canvas instance.
+
+router.get(
+  '/dashboard',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const { canvasInstanceUrl, token } = conn
+
+    const [todo, courses] = await Promise.all([
+      fetchCanvasTodo(canvasInstanceUrl, token).catch(() => []),
+      fetchCanvasCoursesWithGrades(canvasInstanceUrl, token).catch(() => []),
+    ])
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_DASHBOARD', action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: { canvasInstanceUrl, todo, courses } })
+  }),
+)
+
+// ── GET /courses/:courseId/modules ───────────────────────────────────────────
+
+router.get(
+  '/courses/:courseId/modules',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    if (isNaN(courseId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId' } })
+      return
+    }
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const modules = await fetchCanvasModules(conn.canvasInstanceUrl, conn.token, courseId)
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_MODULES', resourceId: String(courseId), action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: modules })
+  }),
+)
+
+// ── GET /courses/:courseId/announcements ─────────────────────────────────────
+
+router.get(
+  '/courses/:courseId/announcements',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    if (isNaN(courseId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId' } })
+      return
+    }
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const announcements = await fetchCanvasAnnouncements(conn.canvasInstanceUrl, conn.token, courseId)
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_ANNOUNCEMENTS', resourceId: String(courseId), action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: announcements })
+  }),
+)
+
+// ── GET /courses/:courseId/assignments/:assignmentId ─────────────────────────
+
+router.get(
+  '/courses/:courseId/assignments/:assignmentId',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const assignmentId = parseInt(req.params.assignmentId)
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    if (isNaN(courseId) || isNaN(assignmentId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId or assignmentId' } })
+      return
+    }
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const assignment = await fetchCanvasAssignmentDetail(conn.canvasInstanceUrl, conn.token, courseId, assignmentId)
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_ASSIGNMENT', resourceId: String(assignmentId), action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: assignment })
+  }),
+)
+
+// ── GET /courses/:courseId/files ─────────────────────────────────────────────
+
+router.get(
+  '/courses/:courseId/files',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    if (isNaN(courseId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId' } })
+      return
+    }
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const files = await fetchCanvasCourseFiles(conn.canvasInstanceUrl, conn.token, courseId)
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_FILES', resourceId: String(courseId), action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: files })
+  }),
 )
 
 export default router

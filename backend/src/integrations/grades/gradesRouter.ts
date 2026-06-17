@@ -1,5 +1,4 @@
 import { Router, Response, NextFunction, Request } from 'express'
-import { ASSIGNMENT_SOURCE } from '../../constants/assignmentSource'
 import { z } from 'zod'
 import { AuthRequest } from '../../middleware/auth'
 import {
@@ -429,33 +428,8 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
           infoErr instanceof Error ? infoErr.message : String(infoErr))
       }
 
-      // Sync upcoming assignments from HAC grades (capture all fields to also seed classwork cache)
+      // Fetch HAC grades to seed the classwork cache (no assignment sync — HAC assignments are not used)
       const { classes: rawHacGrades, availablePeriods: hacAvailablePeriods, currentPeriod: hacCurrentPeriod } = await hacGrades(entry.token)
-      const normalizedGrades = normalizeHacGrades(rawHacGrades)
-      const upcomingToSync = normalizedGrades.flatMap(course =>
-        (course.upcomingAssignments ?? []).map(a => ({
-          userId,
-          title: a.name,
-          subject: course.name,
-          source: ASSIGNMENT_SOURCE.HAC,
-          dueDate: a.dateDue
-            ? (() => { const p = new Date(a.dateDue); return isNaN(p.getTime()) ? new Date(Date.now() + 7 * 86400000) : p })()
-            : new Date(Date.now() + 7 * 86400000),
-        }))
-      )
-      for (const assignment of upcomingToSync) {
-        await prisma.assignment.upsert({
-          where: { userId_title_subject: { userId: assignment.userId, title: assignment.title, subject: assignment.subject } },
-          update: { dueDate: assignment.dueDate },
-          create: { ...assignment, completed: false },
-        }).catch(async () => {
-          const existing = await prisma.assignment.findFirst({
-            where: { userId: assignment.userId, title: assignment.title, subject: assignment.subject },
-          })
-          if (!existing) await prisma.assignment.create({ data: { ...assignment, completed: false } })
-        })
-      }
-      console.log(`[GRADES ROUTER] Background sync: synced ${upcomingToSync.length} assignments for userId:`, userId)
 
       // Seed classwork cache with the grades data already fetched above (free — no extra HAC request)
       void writeHacCache(userId, 'classwork:__default__', { classes: rawHacGrades, availablePeriods: hacAvailablePeriods, currentPeriod: hacCurrentPeriod })
@@ -726,58 +700,10 @@ router.get('/current', async (req: AuthRequest, res: Response): Promise<void> =>
       const { classes: rawHacGrades } = await hacGrades(entry.token)
       const normalizedGrades = normalizeHacGrades(rawHacGrades)
 
-      // Sync upcoming assignments from HAC into the planner.
-      // Collect all upcoming assignments across all courses.
-      const upcomingToSync = normalizedGrades.flatMap(course =>
-        (course.upcomingAssignments ?? []).map(a => ({
-          userId,
-          title: a.name,
-          subject: course.name,
-          dueDate: a.dateDue
-            ? (() => {
-                const parsed = new Date(a.dateDue)
-                return isNaN(parsed.getTime()) ? new Date(Date.now() + 7 * 86400000) : parsed
-              })()
-            : new Date(Date.now() + 7 * 86400000), // default 1 week out if no date
-        }))
-      )
-
-      // Upsert upcoming assignments — avoid duplicates by userId + title + subject
-      if (upcomingToSync.length > 0) {
-        for (const assignment of upcomingToSync) {
-          await prisma.assignment.upsert({
-            where: {
-              userId_title_subject: {
-                userId: assignment.userId,
-                title: assignment.title,
-                subject: assignment.subject,
-              },
-            },
-            update: {
-              dueDate: assignment.dueDate,
-            },
-            create: {
-              ...assignment,
-              completed: false,
-            },
-          }).catch(async () => {
-            // Fallback if unique constraint doesn't exist: findFirst + create
-            const existing = await prisma.assignment.findFirst({
-              where: { userId: assignment.userId, title: assignment.title, subject: assignment.subject },
-            })
-            if (!existing) {
-              await prisma.assignment.create({ data: { ...assignment, completed: false } })
-            }
-          })
-        }
-        console.log(`[GRADES ROUTER] Synced ${upcomingToSync.length} upcoming assignments from HAC`)
-      }
-
       res.json({
         data: {
           systemType: entry.session.systemType,
           grades: normalizedGrades,
-          upcomingAssignmentsSynced: upcomingToSync.length,
         },
       })
     } else {
