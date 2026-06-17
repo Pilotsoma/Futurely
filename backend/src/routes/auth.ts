@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { filterUsername } from '../lib/contentFilter'
+import { sendToUser } from '../lib/websocket'
 
 const router = Router()
 
@@ -174,6 +175,11 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
     })
   }
+})
+
+router.post('/logout', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  sendToUser(req.userId!, 'FORCE_LOGOUT', {})
+  res.json({ data: { ok: true } })
 })
 
 router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {

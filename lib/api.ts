@@ -102,6 +102,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+  logout: () =>
+    request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
   me: () => request<StudentData>('/api/students/me'),
   updateProfile: (fields: { satScore?: number | null; actScore?: number | null; futureDecision?: string | null }) =>
     request<{ id: number }>('/api/students/me/profile', {

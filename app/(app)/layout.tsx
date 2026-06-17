@@ -8,6 +8,7 @@ import { motion, AnimatePresence, type Transition } from 'framer-motion'
 import { api } from '../../lib/api'
 import NotificationBell from '../../components/ui/NotificationBell'
 import UpdatePopup from '../../components/ui/UpdatePopup'
+import ForcedLogoutWatcher from '../../components/ui/ForcedLogoutWatcher'
 
 const NAV = [
   {
@@ -110,6 +111,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [router])
 
   function handleLogout() {
+    api.logout().catch(() => null)
     localStorage.removeItem('ns_token')
     localStorage.removeItem('ns_user')
     router.push('/login')
@@ -295,6 +297,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </motion.aside>
 
       <UpdatePopup />
+      <ForcedLogoutWatcher />
 
       {/* Main content — spring-follows sidebar width */}
       <motion.main
