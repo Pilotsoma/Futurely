@@ -1,7 +1,7 @@
 export interface ISDEntry {
   name: string
   state: string
-  hacUrl: string
+  hacUrl?: string     // K-12 HAC portal URL (not set for colleges)
   canvasUrl?: string  // hostname only, e.g. "katyisd.instructure.com"
 }
 
@@ -58,6 +58,15 @@ export const ISD_LIST: ISDEntry[] = [
 
   // Delaware
   { name: 'Delaware Public Schools (statewide)', state: 'DE', hacUrl: 'https://hacdoe.doe.k12.de.us' },
+
+  // Colleges & Universities (Canvas only — dual enrollment / concurrent)
+  { name: 'Houston Community College (HCC)',     state: 'TX', canvasUrl: 'hccs.instructure.com' },
+  { name: 'San Jacinto College',                 state: 'TX', canvasUrl: 'sanjacinto.instructure.com' },
+  { name: 'Lone Star College',                   state: 'TX', canvasUrl: 'lonestar.instructure.com' },
+  { name: 'Austin Community College (ACC)',      state: 'TX', canvasUrl: 'austincc.instructure.com' },
+  { name: 'Collin College',                      state: 'TX', canvasUrl: 'collin.instructure.com' },
+  { name: 'Dallas College',                      state: 'TX', canvasUrl: 'dcccd.instructure.com' },
+  { name: 'Tarrant County College (TCC)',        state: 'TX', canvasUrl: 'tarrantcounty.instructure.com' },
 ]
 
 export const SORTED_ISD_LIST = [...ISD_LIST].sort((a, b) => {

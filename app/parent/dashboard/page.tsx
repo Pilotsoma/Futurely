@@ -63,7 +63,7 @@ export default function ParentDashboard() {
   )
 
   function selectIsd(isd: ISDEntry) {
-    setSelectedIsd(isd); setDistrictUrl(isd.hacUrl); setUseCustomUrl(false); setIsdSearch(''); setIsdOpen(false)
+    setSelectedIsd(isd); setDistrictUrl(isd.hacUrl ?? ''); setUseCustomUrl(false); setIsdSearch(''); setIsdOpen(false)
   }
   function selectOther() {
     setSelectedIsd(null); setDistrictUrl(''); setUseCustomUrl(true); setIsdSearch(''); setIsdOpen(false)

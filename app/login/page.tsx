@@ -44,12 +44,14 @@ export default function LoginPage() {
   }, [])
 
   const filteredIsds = SORTED_ISD_LIST.filter(isd =>
-    isd.name.toLowerCase().includes(isdSearch.toLowerCase()) ||
-    isd.state.toLowerCase().includes(isdSearch.toLowerCase())
+    isd.hacUrl && (
+      isd.name.toLowerCase().includes(isdSearch.toLowerCase()) ||
+      isd.state.toLowerCase().includes(isdSearch.toLowerCase())
+    )
   )
 
   function selectIsd(isd: ISDEntry) {
-    setSelectedIsd(isd); setHacUrl(isd.hacUrl); setUseCustomUrl(false); setIsdSearch(''); setIsdOpen(false)
+    setSelectedIsd(isd); setHacUrl(isd.hacUrl ?? ''); setUseCustomUrl(false); setIsdSearch(''); setIsdOpen(false)
   }
   function selectOther() {
     setSelectedIsd(null); setHacUrl(''); setUseCustomUrl(true); setIsdSearch(''); setIsdOpen(false)
@@ -203,7 +205,7 @@ export default function LoginPage() {
                           {filteredIsds.length === 0 ? (
                             <div style={styles.dropdownEmpty}>No districts found</div>
                           ) : filteredIsds.map(isd => (
-                            <button key={isd.hacUrl} type="button"
+                            <button key={isd.hacUrl ?? isd.name} type="button"
                               style={{ ...styles.dropdownItem, background: selectedIsd?.hacUrl === isd.hacUrl ? 'rgba(0,200,150,0.12)' : 'transparent', color: selectedIsd?.hacUrl === isd.hacUrl ? 'var(--primary)' : 'var(--text)' }}
                               onClick={() => selectIsd(isd)}>
                               <span style={{ fontWeight: 500 }}>{isd.name}</span>
