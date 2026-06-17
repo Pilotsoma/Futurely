@@ -49,10 +49,10 @@ app.use(cors({
 app.use(express.json({ limit: '50kb' }))
 app.use(express.urlencoded({ extended: true, limit: '50kb' }))
 
-// ── Global rate limiter — 300 req / 15 min per IP ────────────────────────────
+// ── Global rate limiter — 1000 req / 15 min per IP ───────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many requests, please slow down.' } },
@@ -62,7 +62,7 @@ app.use(globalLimiter)
 // ── Strict limiters for expensive / sensitive endpoints ──────────────────────
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many auth attempts, try again later.' } },
@@ -70,7 +70,7 @@ const authLimiter = rateLimit({
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 20,
+  max: 40,
   standardHeaders: true,
   legacyHeaders: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'AI rate limit reached, wait a moment.' } },

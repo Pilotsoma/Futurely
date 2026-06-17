@@ -127,6 +127,7 @@ export default function SettingsPage() {
   const districtRef = useRef<HTMLDivElement>(null)
   const [avatarSaving, setAvatarSaving]       = useState(false)
   const [avatarMsg, setAvatarMsg]             = useState<string | null>(null)
+  const [showChangelog, setShowChangelog]     = useState(false)
 
   async function handleSaveAvatar() {
     setAvatarSaving(true); setAvatarMsg(null)
@@ -836,37 +837,50 @@ export default function SettingsPage() {
 
           {/* Changelog */}
           <div className="ns-card" style={{ ...S.card, marginTop: 16 }}>
-            <p style={S.cardLabel}>Changelog</p>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
-              Every update to Futurely, explained in plain English.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 24 }}>
-              {CHANGELOG.map((entry, ei) => (
-                <div key={entry.version}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 99, padding: '2px 10px' }}>
-                      v{entry.version}
-                    </span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.title}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{entry.date}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
-                    {entry.changes.map((c, ci) => (
-                      <div key={ci} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                        <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0, width: 24, textAlign: 'center' as const, marginTop: 1 }}>{c.emoji}</span>
-                        <div>
-                          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{c.headline}</div>
-                          <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>{c.detail}</div>
+            <button
+              onClick={() => setShowChangelog(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' as const }}
+            >
+              <div>
+                <p style={{ ...S.cardLabel, marginBottom: 4 }}>Changelog</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  Every update to Futurely, explained in plain English.
+                </p>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: 16, transform: showChangelog ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {showChangelog && (
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 24, marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                {CHANGELOG.map((entry, ei) => (
+                  <div key={entry.version}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 99, padding: '2px 10px' }}>
+                        v{entry.version}
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.title}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{entry.date}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                      {entry.changes.map((c, ci) => (
+                        <div key={ci} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0, width: 24, textAlign: 'center' as const, marginTop: 1 }}>{c.emoji}</span>
+                          <div>
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{c.headline}</div>
+                            <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>{c.detail}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    {ei < CHANGELOG.length - 1 && (
+                      <div style={{ borderBottom: '1px solid var(--border)', marginTop: 20 }} />
+                    )}
                   </div>
-                  {ei < CHANGELOG.length - 1 && (
-                    <div style={{ borderBottom: '1px solid var(--border)', marginTop: 20 }} />
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
