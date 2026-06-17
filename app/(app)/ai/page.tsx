@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -60,29 +60,31 @@ export default function AIChatPage() {
   const [input, setInput]         = useState('')
   const [sending, setSending]     = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  // Holds a message that should be auto-sent once the component is ready
+  const pendingAutoSend = useRef<string | null>(null)
 
   useEffect(() => {
     const loaded = loadSessions()
     setSessions(loaded)
     saveSessions(loaded)
 
-    // Handle ?q= passed from dashboard AiBar — read directly from URL to avoid Suspense requirement
-    const params = new URLSearchParams(window.location.search)
-    const q = params.get('q')
-    if (q) {
-      window.history.replaceState({}, '', '/ai')
-      void handleSend(q)
-      return
+    // Check for a message passed from the dashboard AiBar via sessionStorage
+    const pending = sessionStorage.getItem('ns_ai_pending')
+    if (pending) {
+      sessionStorage.removeItem('ns_ai_pending')
+      pendingAutoSend.current = pending
     }
+  }, [])
 
-    // legacy localStorage prefill
-    const prefill = localStorage.getItem('ns_ai_prefill')
-    if (prefill) {
-      localStorage.removeItem('ns_ai_prefill')
-      void handleSend(prefill)
+  // Separate effect: fires after the initial state is set, then auto-sends
+  useEffect(() => {
+    if (pendingAutoSend.current && !sending) {
+      const msg = pendingAutoSend.current
+      pendingAutoSend.current = null
+      void handleSend(msg)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [sessions])
 
   function startNewChat() {
     setActiveId(null)
@@ -107,7 +109,7 @@ export default function AIChatPage() {
     })
   }
 
-  async function handleSend(text?: string) {
+  const handleSend = useCallback(async function handleSend(text?: string) {
     const msg = (text ?? input).trim()
     if (!msg || sending) return
     setInput('')
@@ -143,7 +145,8 @@ export default function AIChatPage() {
       setSending(false)
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
     }
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, sending, messages, sessions, activeId])
 
   return (
     <div className="fade-up" style={S.shell}>
