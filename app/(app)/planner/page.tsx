@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { api, type PlannerItem, type CanvasStatus } from '../../../lib/api'
+import { SORTED_ISD_LIST } from '../../../lib/isds'
 import PageLoader from '../../../components/ui/PageLoader'
 
 type GroupKey = 'Overdue' | 'Today' | 'Tomorrow' | 'This Week' | 'Later' | 'Completed'
@@ -69,6 +70,10 @@ export default function PlannerPage() {
   const [canvasUrl, setCanvasUrl] = useState('')
   const [canvasToken, setCanvasToken] = useState('')
   const [canvasError, setCanvasError] = useState<string | null>(null)
+  const [districtSearch, setDistrictSearch] = useState('')
+  const [districtOpen, setDistrictOpen] = useState(false)
+  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
+  const districtRef = useRef<HTMLDivElement>(null)
 
   // Form state
   const [showForm, setShowForm] = useState(false)
@@ -95,6 +100,22 @@ export default function PlannerPage() {
   }, [])
 
   useEffect(() => { void fetchData() }, [fetchData])
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (districtRef.current && !districtRef.current.contains(e.target as Node)) {
+        setDistrictOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  const canvasDistricts = SORTED_ISD_LIST.filter(d => d.canvasUrl)
+  const filteredDistricts = canvasDistricts.filter(d =>
+    d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
+    d.state.toLowerCase().includes(districtSearch.toLowerCase())
+  )
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -183,6 +204,8 @@ export default function PlannerPage() {
       setShowCanvasForm(false)
       setCanvasUrl('')
       setCanvasToken('')
+      setSelectedDistrict(null)
+      setDistrictSearch('')
       // Auto-sync after connecting
       await handleCanvasSync()
     } catch (e) {
@@ -306,13 +329,68 @@ export default function PlannerPage() {
           </p>
           <form onSubmit={e => void handleCanvasConnect(e)}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+              {/* District dropdown */}
+              <div ref={districtRef} style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Search your school district…"
+                  value={districtOpen ? districtSearch : (selectedDistrict ?? districtSearch)}
+                  onChange={e => { setDistrictSearch(e.target.value); setDistrictOpen(true); setSelectedDistrict(null) }}
+                  onFocus={() => { setDistrictOpen(true); setDistrictSearch('') }}
+                  style={{ ...S.input, width: '100%', boxSizing: 'border-box' }}
+                  autoComplete="off"
+                />
+                {districtOpen && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                    background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: 8, marginTop: 4, maxHeight: 200, overflowY: 'auto',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                  }}>
+                    {filteredDistricts.length === 0 ? (
+                      <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>
+                        No districts found — enter your Canvas URL below
+                      </div>
+                    ) : filteredDistricts.map(d => (
+                      <div
+                        key={d.canvasUrl}
+                        onClick={() => {
+                          setSelectedDistrict(`${d.name} (${d.state})`)
+                          setCanvasUrl(d.canvasUrl!)
+                          setDistrictOpen(false)
+                          setDistrictSearch('')
+                        }}
+                        style={{
+                          padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+                          borderBottom: '1px solid var(--border)',
+                          color: 'var(--text)',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                      >
+                        <span style={{ fontWeight: 500 }}>{d.name}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 6 }}>{d.state}</span>
+                      </div>
+                    ))}
+                    <div
+                      onClick={() => { setSelectedDistrict('Other'); setCanvasUrl(''); setDistrictOpen(false) }}
+                      style={{ padding: '9px 12px', fontSize: 13, cursor: 'pointer', color: 'var(--text-secondary)' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                    >
+                      Other — enter URL manually
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Canvas URL — shown pre-filled or for manual entry */}
               <input
                 type="text"
                 placeholder="katyisd.instructure.com"
                 value={canvasUrl}
                 onChange={e => setCanvasUrl(e.target.value)}
                 required
-                style={S.input}
+                style={{ ...S.input, fontSize: 12, color: canvasUrl ? 'var(--text)' : 'var(--text-secondary)' }}
               />
               <input
                 type="password"
@@ -344,6 +422,8 @@ export default function PlannerPage() {
                   setCanvasUrl('')
                   setCanvasToken('')
                   setCanvasError(null)
+                  setSelectedDistrict(null)
+                  setDistrictSearch('')
                 }}
                 style={{
                   padding: '10px 16px',
