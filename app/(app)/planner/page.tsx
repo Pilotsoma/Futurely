@@ -145,14 +145,12 @@ export default function PlannerPage() {
 
   async function handleToggle(id: number, completed: boolean) {
     setToggling(prev => new Set([...prev, id]))
-    // Optimistic update
     setItems(prev => prev.map(item =>
       item.id === id ? { ...item, completed, completedAt: completed ? new Date().toISOString() : null } : item
     ))
     try {
       await api.plannerToggle(id, completed)
     } catch {
-      // Revert on failure
       setItems(prev => prev.map(item =>
         item.id === id ? { ...item, completed: !completed, completedAt: !completed ? new Date().toISOString() : null } : item
       ))
@@ -162,12 +160,10 @@ export default function PlannerPage() {
   }
 
   async function handleDelete(id: number) {
-    // Optimistic remove
     setItems(prev => prev.filter(item => item.id !== id))
     try {
       await api.plannerDelete(id)
     } catch {
-      // Refetch on failure
       void fetchData()
     }
   }
@@ -192,8 +188,7 @@ export default function PlannerPage() {
     setCanvasLoading(true)
     setCanvasError(null)
     try {
-      const result = await api.canvasConnect(canvasUrl.trim(), canvasToken.trim())
-      // Refresh full status from server (includes new connections list)
+      await api.canvasConnect(canvasUrl.trim(), canvasToken.trim())
       const fresh = await api.canvasStatus()
       setCanvasStatus(fresh)
       setShowCanvasForm(false)
@@ -201,7 +196,6 @@ export default function PlannerPage() {
       setCanvasToken('')
       setSelectedDistrict(null)
       setDistrictSearch('')
-      // Auto-sync after connecting
       await handleCanvasSync()
     } catch (e) {
       setCanvasError(e instanceof Error ? e.message : 'Failed to connect Canvas')
@@ -214,10 +208,8 @@ export default function PlannerPage() {
     setCanvasLoading(true)
     try {
       await api.canvasDisconnect(instanceUrl)
-      // Refresh status from server
       const fresh = await api.canvasStatus()
       setCanvasStatus(fresh)
-      // If all connections gone, remove canvas items
       if (!fresh.connected) {
         setItems(prev => prev.filter(item => item.source !== 'CANVAS'))
       }
@@ -239,6 +231,16 @@ export default function PlannerPage() {
     : canvasStatus?.canvasInstanceUrl
       ? [{ canvasInstanceUrl: canvasStatus.canvasInstanceUrl, canvasUserName: canvasStatus.canvasUserName, lastSynced: canvasStatus.lastSynced, syncStatus: canvasStatus.syncStatus, syncError: canvasStatus.syncError }]
       : []
+
+  function closeCanvasForm() {
+    setShowCanvasForm(false)
+    setCanvasUrl('')
+    setCanvasToken('')
+    setCanvasError(null)
+    setSelectedDistrict(null)
+    setDistrictSearch('')
+    setDistrictOpen(false)
+  }
 
   return (
     <div className="fade-up" style={{ maxWidth: 680, margin: '0 auto' }}>
@@ -263,116 +265,17 @@ export default function PlannerPage() {
         </button>
       </div>
 
-      {/* Canvas Panel */}
-      {canvasStatus?.connected ? (
-        <div className="ns-card" style={{ padding: '14px 16px', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: canvasConnections.length > 1 ? 10 : 0 }}>
-            <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: '#22C55E', fontWeight: 700 }}>✓</span>
-              Canvas connected
-            </span>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => void handleCanvasSync()}
-                disabled={canvasLoading}
-                style={{
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 7,
-                  padding: '6px 12px',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--text)',
-                  cursor: canvasLoading ? 'not-allowed' : 'pointer',
-                  opacity: canvasLoading ? 0.6 : 1,
-                }}
-              >
-                {canvasLoading ? 'Syncing…' : 'Sync All'}
-              </button>
-              {canvasConnections.length < 2 && (
-                <button
-                  onClick={() => setShowCanvasForm(true)}
-                  disabled={canvasLoading}
-                  style={{
-                    background: 'none',
-                    border: '1px solid var(--primary)',
-                    borderRadius: 7,
-                    padding: '6px 12px',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: 'var(--primary)',
-                    cursor: canvasLoading ? 'not-allowed' : 'pointer',
-                    opacity: canvasLoading ? 0.6 : 1,
-                  }}
-                >
-                  + Add Canvas
-                </button>
-              )}
-            </div>
-          </div>
-          {/* Per-connection rows */}
-          {canvasConnections.map(conn => {
-            const isCollege = isCollegeIsd(conn.canvasInstanceUrl)
-            return (
-              <div key={conn.canvasInstanceUrl} style={{
-                display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-                padding: '8px 0',
-                borderTop: '1px solid var(--border)',
-              }}>
-                {conn.syncError === 'TOKEN_REVOKED' && (
-                  <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 600 }}>
-                    Token expired
-                  </span>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, borderRadius: 4, padding: '2px 6px',
-                    background: isCollege ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.12)',
-                    color: isCollege ? '#22C55E' : '#3B82F6',
-                    flexShrink: 0,
-                  }}>
-                    {isCollege ? 'College' : 'High School'}
-                  </span>
-                  <span style={{ fontSize: 12.5, color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {conn.canvasUserName ?? conn.canvasInstanceUrl}
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
-                    {conn.canvasInstanceUrl}
-                  </span>
-                </div>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
-                  Synced {formatRelativeTime(conn.lastSynced)}
-                </span>
-                <button
-                  onClick={() => void handleCanvasDisconnect(conn.canvasInstanceUrl)}
-                  disabled={canvasLoading}
-                  style={{
-                    background: 'none', border: '1px solid var(--border)', borderRadius: 6,
-                    padding: '4px 10px', fontSize: 11, fontWeight: 600,
-                    color: 'var(--text-secondary)', cursor: canvasLoading ? 'not-allowed' : 'pointer',
-                    opacity: canvasLoading ? 0.6 : 1, flexShrink: 0,
-                  }}
-                >
-                  Disconnect
-                </button>
-              </div>
-            )
-          })}
-          {canvasError && (
-            <div style={{ fontSize: 12, color: '#EF4444', marginTop: 6 }}>{canvasError}</div>
-          )}
-        </div>
-      ) : showCanvasForm ? (
+      {/* ── Canvas: Connect form (shown when adding first OR second connection) ── */}
+      {showCanvasForm && (
         <div className="ns-card" style={{ padding: '16px 18px', marginBottom: 16 }}>
           <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>
-            Link your Canvas account
+            {canvasStatus?.connected ? 'Add another Canvas account' : 'Link your Canvas account'}
           </p>
           <p style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
             Get your token: Canvas → Profile → Settings → Approved Integrations → New Access Token
           </p>
           <form onSubmit={e => void handleCanvasConnect(e)}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
-              {/* District dropdown */}
               <div ref={districtRef} style={{ position: 'relative' }}>
                 <input
                   type="text"
@@ -426,7 +329,6 @@ export default function PlannerPage() {
                   </div>
                 )}
               </div>
-              {/* Canvas URL — shown pre-filled or for manual entry */}
               <input
                 type="text"
                 placeholder="katyisd.instructure.com"
@@ -458,47 +360,93 @@ export default function PlannerPage() {
               >
                 {canvasLoading ? 'Connecting…' : 'Connect Canvas'}
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCanvasForm(false)
-                  setCanvasUrl('')
-                  setCanvasToken('')
-                  setCanvasError(null)
-                  setSelectedDistrict(null)
-                  setDistrictSearch('')
-                }}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: 8,
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface-2)',
-                  color: 'var(--text)',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
+              <button type="button" onClick={closeCanvasForm} style={{
+                padding: '10px 16px', borderRadius: 8, border: '1px solid var(--border)',
+                background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}>
                 Cancel
               </button>
             </div>
           </form>
         </div>
-      ) : (
+      )}
+
+      {/* ── Canvas: Connected state (shown when NOT editing) ── */}
+      {canvasStatus?.connected && !showCanvasForm && (
+        <div className="ns-card" style={{ padding: '14px 16px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: canvasConnections.length > 1 ? 10 : 0 }}>
+            <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: '#22C55E', fontWeight: 700 }}>✓</span>
+              Canvas connected
+            </span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button onClick={() => void handleCanvasSync()} disabled={canvasLoading} style={{
+                background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 7,
+                padding: '6px 12px', fontSize: 12, fontWeight: 600, color: 'var(--text)',
+                cursor: canvasLoading ? 'not-allowed' : 'pointer', opacity: canvasLoading ? 0.6 : 1,
+              }}>
+                {canvasLoading ? 'Syncing…' : 'Sync All'}
+              </button>
+              {canvasConnections.length < 2 && (
+                <button onClick={() => setShowCanvasForm(true)} disabled={canvasLoading} style={{
+                  background: 'none', border: '1px solid var(--primary)', borderRadius: 7,
+                  padding: '6px 12px', fontSize: 12, fontWeight: 600, color: 'var(--primary)',
+                  cursor: canvasLoading ? 'not-allowed' : 'pointer', opacity: canvasLoading ? 0.6 : 1,
+                }}>
+                  + Add Canvas
+                </button>
+              )}
+            </div>
+          </div>
+          {canvasConnections.map(conn => {
+            const isCollege = isCollegeIsd(conn.canvasInstanceUrl)
+            return (
+              <div key={conn.canvasInstanceUrl} style={{
+                display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                padding: '8px 0', borderTop: '1px solid var(--border)',
+              }}>
+                {conn.syncError === 'TOKEN_REVOKED' && (
+                  <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 600 }}>Token expired</span>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, borderRadius: 4, padding: '2px 6px',
+                    background: isCollege ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.12)',
+                    color: isCollege ? '#22C55E' : '#3B82F6', flexShrink: 0,
+                  }}>
+                    {isCollege ? 'College' : 'High School'}
+                  </span>
+                  <span style={{ fontSize: 12.5, color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {conn.canvasUserName ?? conn.canvasInstanceUrl}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{conn.canvasInstanceUrl}</span>
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
+                  Synced {formatRelativeTime(conn.lastSynced)}
+                </span>
+                <button onClick={() => void handleCanvasDisconnect(conn.canvasInstanceUrl)} disabled={canvasLoading} style={{
+                  background: 'none', border: '1px solid var(--border)', borderRadius: 6,
+                  padding: '4px 10px', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)',
+                  cursor: canvasLoading ? 'not-allowed' : 'pointer', opacity: canvasLoading ? 0.6 : 1, flexShrink: 0,
+                }}>
+                  Disconnect
+                </button>
+              </div>
+            )
+          })}
+          {canvasError && (
+            <div style={{ fontSize: 12, color: '#EF4444', marginTop: 6 }}>{canvasError}</div>
+          )}
+        </div>
+      )}
+
+      {/* ── Canvas: Disconnected state ── */}
+      {!canvasStatus?.connected && !showCanvasForm && (
         <div style={{ marginBottom: 16 }}>
-          <button
-            onClick={() => setShowCanvasForm(true)}
-            style={{
-              background: 'none',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              padding: '7px 14px',
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-            }}
-          >
+          <button onClick={() => setShowCanvasForm(true)} style={{
+            background: 'none', border: '1px solid var(--border)', borderRadius: 8,
+            padding: '7px 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer',
+          }}>
             Link Canvas
           </button>
         </div>
@@ -508,48 +456,20 @@ export default function PlannerPage() {
       {showForm && (
         <form onSubmit={e => void handleCreate(e)} style={S.form}>
           <div style={S.formRow}>
-            <input
-              type="text"
-              placeholder="Task name (e.g. Math Homework)"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              required
-              style={{ ...S.input, flex: 2 }}
-            />
+            <input type="text" placeholder="Task name (e.g. Math Homework)" value={title}
+              onChange={e => setTitle(e.target.value)} required style={{ ...S.input, flex: 2 }} />
           </div>
           <div style={S.formRow}>
-            <input
-              type="text"
-              placeholder="Class (e.g. AP Calculus, English)"
-              value={subject}
-              onChange={e => setSubject(e.target.value)}
-              style={{ ...S.input, flex: 1 }}
-            />
+            <input type="text" placeholder="Class (e.g. AP Calculus, English)" value={subject}
+              onChange={e => setSubject(e.target.value)} style={{ ...S.input, flex: 1 }} />
           </div>
           <div style={S.formRow}>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={e => setDueDate(e.target.value)}
-              required
-              style={{ ...S.input, flex: 1 }}
-            />
-            <input
-              type="time"
-              value={dueTime}
-              onChange={e => setDueTime(e.target.value)}
-              style={{ ...S.input, flex: 1 }}
-            />
+            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required style={{ ...S.input, flex: 1 }} />
+            <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} style={{ ...S.input, flex: 1 }} />
           </div>
           {formError && <div style={{ color: '#EF4444', fontSize: 12, marginBottom: 8 }}>{formError}</div>}
-          <button
-            type="submit"
-            disabled={submitting || !title.trim() || !dueDate}
-            style={{
-              ...S.button,
-              opacity: submitting || !title.trim() || !dueDate ? 0.5 : 1,
-            }}
-          >
+          <button type="submit" disabled={submitting || !title.trim() || !dueDate}
+            style={{ ...S.button, opacity: submitting || !title.trim() || !dueDate ? 0.5 : 1 }}>
             {submitting ? 'Adding…' : 'Add Task'}
           </button>
         </form>
@@ -560,7 +480,7 @@ export default function PlannerPage() {
         <div style={S.empty}>
           <div style={S.emptyIcon}>✓</div>
           <p style={{ fontSize: 17, fontWeight: 700, marginBottom: 5 }}>No tasks yet</p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Click &quot;+ New Task&quot; to add your first assignment.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Click "+ New Task" to add your first assignment.</p>
         </div>
       ) : groups.map(group => {
         const meta = GROUP_META[group.key]
@@ -575,24 +495,15 @@ export default function PlannerPage() {
               </span>
             </div>
             {group.items.map(item => (
-              <div
-                key={item.id}
-                className="ns-card"
-                style={{
-                  padding: '13px 14px',
-                  marginBottom: 8,
-                  opacity: item.completed ? 0.6 : 1,
-                }}
-              >
+              <div key={item.id} className="ns-card" style={{ padding: '13px 14px', marginBottom: 8, opacity: item.completed ? 0.6 : 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  {/* Checkbox */}
                   <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1, minWidth: 0 }}>
                     <div style={{
                       width: 18, height: 18, borderRadius: 5,
                       border: `1.5px solid ${item.completed ? 'var(--primary)' : 'var(--border)'}`,
                       background: item.completed ? 'var(--primary)' : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, transition: 'background 0.15s, border-color 0.15s',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      transition: 'background 0.15s, border-color 0.15s',
                     }}>
                       {item.completed && (
                         <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
@@ -600,13 +511,8 @@ export default function PlannerPage() {
                         </svg>
                       )}
                     </div>
-                    <input
-                      type="checkbox"
-                      checked={item.completed}
-                      disabled={toggling.has(item.id)}
-                      onChange={() => void handleToggle(item.id, !item.completed)}
-                      style={{ display: 'none' }}
-                    />
+                    <input type="checkbox" checked={item.completed} disabled={toggling.has(item.id)}
+                      onChange={() => void handleToggle(item.id, !item.completed)} style={{ display: 'none' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         fontSize: 13.5, fontWeight: 500,
@@ -618,15 +524,7 @@ export default function PlannerPage() {
                       <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                         {item.subject && <span>{item.subject}</span>}
                         {item.source === 'CANVAS' && (
-                          <span style={{
-                            background: 'rgba(229, 57, 53, 0.12)',
-                            color: '#E53935',
-                            borderRadius: 4,
-                            padding: '1px 5px',
-                            fontSize: 10,
-                            fontWeight: 700,
-                            letterSpacing: '0.3px',
-                          }}>
+                          <span style={{ background: 'rgba(229,57,53,0.12)', color: '#E53935', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
                             Canvas
                           </span>
                         )}
@@ -634,17 +532,10 @@ export default function PlannerPage() {
                       </div>
                     </div>
                   </label>
-
-                  {/* Delete button */}
-                  <button
-                    onClick={() => void handleDelete(item.id)}
-                    title="Delete task"
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: 'var(--text-muted)', fontSize: 16, padding: 4,
-                      opacity: 0.5, transition: 'opacity 0.15s',
-                      flexShrink: 0,
-                    }}
+                  <button onClick={() => void handleDelete(item.id)} title="Delete task" style={{
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+                    fontSize: 16, padding: 4, opacity: 0.5, transition: 'opacity 0.15s', flexShrink: 0,
+                  }}
                     onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '1' }}
                     onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '0.5' }}
                   >
@@ -661,46 +552,10 @@ export default function PlannerPage() {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  form: {
-    background: 'var(--surface)',
-    border: '1px solid var(--border)',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 28,
-  },
-  formRow: {
-    display: 'flex',
-    gap: 10,
-    marginBottom: 10,
-  },
-  input: {
-    padding: '10px 12px',
-    borderRadius: 8,
-    border: '1px solid var(--border)',
-    background: 'var(--surface-2)',
-    color: 'var(--text)',
-    fontSize: 13,
-    outline: 'none',
-  },
-  button: {
-    padding: '10px 20px',
-    borderRadius: 8,
-    border: 'none',
-    background: 'var(--primary)',
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  empty: {
-    textAlign: 'center' as const,
-    padding: '60px 20px',
-  },
-  emptyIcon: {
-    width: 48, height: 48, borderRadius: '50%',
-    background: 'var(--surface-2)', border: '1px solid var(--border)',
-    color: 'var(--success)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 20, fontWeight: 700, margin: '0 auto 14px',
-  },
+  form: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 28 },
+  formRow: { display: 'flex', gap: 10, marginBottom: 10 },
+  input: { padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, outline: 'none' },
+  button: { padding: '10px 20px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+  empty: { textAlign: 'center' as const, padding: '60px 20px' },
+  emptyIcon: { width: 48, height: 48, borderRadius: '50%', background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, margin: '0 auto 14px' },
 }
