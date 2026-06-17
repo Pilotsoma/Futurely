@@ -248,12 +248,17 @@ export default function PlannerPage() {
     setStudyPlanLoading(true)
     setStudyPlanError(null)
     setShowStudyPlan(true)
+    const timeout = setTimeout(() => {
+      setStudyPlanLoading(false)
+      setStudyPlanError('Request timed out — the AI took too long. Try again.')
+    }, 30000)
     try {
       const plan = await api.studyPlan()
       setStudyPlan(plan)
     } catch (e) {
       setStudyPlanError(e instanceof Error ? e.message : 'Failed to generate study plan')
     } finally {
+      clearTimeout(timeout)
       setStudyPlanLoading(false)
     }
   }

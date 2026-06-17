@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { logger } from '../common/logger'
 import { ASSIGNMENT_SOURCE } from '../constants/assignmentSource'
+import { sendToUser } from '../lib/websocket'
 
 const router = Router()
 
@@ -121,6 +122,21 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
         source: ASSIGNMENT_SOURCE.MANUAL,
       },
     })
+
+    // Notify the user of their new assignment
+    try {
+      const due = parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      const notif = await prisma.notification.create({
+        data: {
+          userId: req.userId,
+          fromUserId: req.userId,
+          type: 'ASSIGNMENT_CREATED',
+          preview: `${title.trim()} — due ${due}`,
+        },
+        include: { sender: { select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+      })
+      sendToUser(req.userId, 'NOTIFICATION', notif)
+    } catch { /* non-critical */ }
 
     res.status(201).json({ data: assignment })
   } catch (err) {

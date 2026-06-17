@@ -50,7 +50,7 @@ const PFP_GLOW_MAP: Record<string, [string, string]> = {
 function pfpStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
-  if (effect === 'glow-gold')   return { background: 'linear-gradient(135deg, #D97706, #F59E0B)', color: '#000', border: '2px solid #D97706' }
+  if (effect === 'glow-gold')   return { background: 'linear-gradient(135deg, #EAB308, #FDE047)', color: '#000', border: '2px solid #EAB308', boxShadow: '0 0 10px #EAB30866' }
   if (effect === 'frame-black') return { background: '#0d0d0d', color: '#4B5563', border: '2px solid #1F2937' }
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
@@ -138,7 +138,8 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
   else if (n.type === 'LISTING_SOLD') content = n.preview ? <>{nameEl} bought your {n.preview}</> : <>{nameEl} bought your listing</>
   else if (n.type === 'TRADE_OFFER') content = <>{nameEl} sent you a trade offer</>
   else if (n.type === 'TRADE_ACCEPTED') content = <>{nameEl} accepted your trade</>
-  else if (n.type === 'TRADE_DECLINED') content = <>{nameEl} declined your trade</>
+  else if (n.type === 'TRADE_DECLINED')    content = <>{nameEl} declined your trade</>
+  else if (n.type === 'ASSIGNMENT_CREATED') content = <>{n.preview ?? 'New assignment added'}</>
   else content = null
 
   const icon = n.type === 'FOLLOW' ? '👤'
@@ -146,6 +147,7 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
     : n.type === 'GIVEAWAY_WIN' ? '🎉'
     : n.type === 'LISTING_SOLD' ? '🏷️'
     : n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED' ? '🔄'
+    : n.type === 'ASSIGNMENT_CREATED' ? '📚'
     : '💬'
 
   if (!content) return null
@@ -1286,14 +1288,6 @@ export default function StudyFeedPage() {
   const [creatingGw, setCreatingGw] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
 
-  // Notifications
-  const [notifs, setNotifs]       = useState<AppNotification[]>([])
-  const [unread, setUnread]       = useState(0)
-  const [showPanel, setShowPanel] = useState(false)
-  const [toasts, setToasts]       = useState<Toast[]>([])
-  const panelRef                  = useRef<HTMLDivElement>(null)
-  const bellRef                   = useRef<HTMLButtonElement>(null)
-
   const loadPosts = useCallback(async (p: number) => {
     try {
       const data = await api.feedPosts(p, 20)
@@ -1343,42 +1337,22 @@ export default function StudyFeedPage() {
     loadPosts(1)
   }, [loadPosts])
 
-  // (notifications fetched by polling effect below)
-
-  // Real-time notifications via WebSocket + polling fallback
-  const seenNotifIds = useRef<Set<number>>(new Set())
-
-  const pushToast = useCallback((notif: AppNotification) => {
-    if (seenNotifIds.current.has(notif.id)) return
-    seenNotifIds.current.add(notif.id)
-    const id = `${Date.now()}-${notif.id}`
-    setToasts(prev => [...prev, { id, notif }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 6000)
-  }, [])
-
-  // WebSocket — derive URL from API URL so it works in production
+  // WebSocket — NEW_POST events only (notifications handled globally by NotificationBell in layout)
   useEffect(() => {
     const token = localStorage.getItem('ns_token')
     if (!token) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws')
-    let ws: WebSocket
-    let dead = false
+    let ws: WebSocket, dead = false
     function connect() {
       if (dead) return
       ws = new WebSocket(wsBase)
       ws.onopen = () => ws.send(JSON.stringify({ type: 'AUTH', token }))
-          ws.onmessage = (e) => {
+      ws.onmessage = (e) => {
         try {
-          const msg = JSON.parse(e.data as string) as { event: string; data: any }
+          const msg = JSON.parse(e.data as string) as { event: string; data: FeedPost }
           if (msg.event === 'NEW_POST') {
-            // New post (unbox, etc.) — prepend to feed
             setPosts(prev => [{ ...msg.data, likedByMe: false, enteredByMe: false }, ...prev])
-          }
-          if (msg.event === 'NOTIFICATION') {
-            setNotifs(prev => [msg.data, ...prev])
-            setUnread(c => c + 1)
-            pushToast(msg.data)
           }
         } catch { /* ignore */ }
       }
@@ -1386,50 +1360,7 @@ export default function StudyFeedPage() {
     }
     connect()
     return () => { dead = true; ws?.close() }
-  }, [pushToast])
-
-  // Polling fallback — catches notifications when WebSocket misses them
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const d = await api.getNotifications()
-        setUnread(d.unreadCount)
-        const fresh = d.notifications.filter(n => !seenNotifIds.current.has(n.id))
-        // Only toast the newest one to avoid a burst on first load
-        const unseen = fresh.filter(n => !n.read)
-        setNotifs(d.notifications)
-        unseen.slice(0, 3).forEach(n => {
-          setUnread(c => c)   // keep count in sync (already set above)
-          pushToast(n)
-        })
-        d.notifications.forEach(n => seenNotifIds.current.add(n.id))
-      } catch { /* ignore */ }
-    }
-    poll()
-    const t = setInterval(poll, 30_000)
-    return () => clearInterval(t)
-  }, [pushToast])
-
-  // Close panel on outside click
-  useEffect(() => {
-    function onOutside(e: MouseEvent) {
-      if (
-        panelRef.current && !panelRef.current.contains(e.target as Node) &&
-        bellRef.current  && !bellRef.current.contains(e.target as Node)
-      ) setShowPanel(false)
-    }
-    document.addEventListener('mousedown', onOutside)
-    return () => document.removeEventListener('mousedown', onOutside)
   }, [])
-
-  async function handleOpenBell() {
-    setShowPanel(v => !v)
-    if (!showPanel && unread > 0) {
-      setUnread(0)
-      setNotifs(prev => prev.map(n => ({ ...n, read: true })))
-      await api.markAllNotificationsRead().catch(() => null)
-    }
-  }
 
   async function handleCreatePost() {
     if (!newPostBody.trim() || posting) return
@@ -1544,7 +1475,6 @@ export default function StudyFeedPage() {
 
   function handleOpenProfile(uid: number) {
     setProfileUserId(uid)
-    setShowPanel(false)
   }
 
   if (statusLoaded && isBanned) {
@@ -1577,54 +1507,6 @@ export default function StudyFeedPage() {
           </button>
         ))}
         <div style={{ flex: 1 }} />
-
-        {/* Bell button */}
-        <div style={{ position: 'relative' }}>
-          <button
-            ref={bellRef}
-            onClick={handleOpenBell}
-            title="Notifications"
-            style={{ background: 'none', border: 'none', padding: '10px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', borderRadius: 8, color: 'var(--text-secondary)', position: 'relative' }}
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 01-3.46 0"/>
-            </svg>
-            {unread > 0 && (
-              <span style={{ position: 'absolute', top: 6, right: 6, background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 700, borderRadius: 99, minWidth: 15, height: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', lineHeight: 1 }}>
-                {unread > 9 ? '9+' : unread}
-              </span>
-            )}
-          </button>
-
-          {/* Notification panel */}
-          {showPanel && (
-            <div ref={panelRef} style={N.panel}>
-              <div style={N.header}>
-                <span style={N.title}>Notifications</span>
-                {notifs.some(n => !n.read) && (
-                  <button style={N.markAll} onClick={async () => {
-                    setUnread(0)
-                    setNotifs(prev => prev.map(n => ({ ...n, read: true })))
-                    await api.markAllNotificationsRead().catch(() => null)
-                  }}>Mark all read</button>
-                )}
-              </div>
-              <div style={N.list}>
-                {notifs.length === 0 ? (
-                  <div style={N.empty}>No notifications yet</div>
-                ) : notifs.map(n => (
-                  <NotifRow
-                    key={n.id}
-                    n={n}
-                    onOpenProfile={handleOpenProfile}
-                    onClose={() => setShowPanel(false)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
 
         <button
           onClick={() => currentUserId ? setProfileUserId(currentUserId) : null}
@@ -1874,39 +1756,6 @@ export default function StudyFeedPage() {
           followedUsers={followedUsers} onFollow={handleFollow} />
       )}
 
-    </div>
-
-    {/* Toast stack — rendered outside fade-up container so position:fixed works */}
-    <div style={{ position: 'fixed', bottom: 24, right: 16, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, pointerEvents: 'none', maxWidth: 360, width: 'calc(100vw - 32px)' }}>
-      {toasts.map(t => {
-        const { emoji, accent, text } = (() => {
-          const sender = t.notif.sender.name ?? t.notif.sender.email.split('@')[0]
-          switch (t.notif.type) {
-            case 'LIKE':             return { emoji: '❤️', accent: '#EF4444', text: `${sender} liked your post` }
-            case 'COMMENT':          return { emoji: '💬', accent: '#3B82F6', text: `${sender} commented on your post` }
-            case 'FOLLOW':           return { emoji: '👤', accent: '#00C896', text: `${sender} started following you` }
-            case 'GIVEAWAY_WIN':     return { emoji: '🎉', accent: '#EAB308', text: t.notif.preview ?? 'You won a giveaway!' }
-            case 'TRADE_OFFER':      return { emoji: '🔄', accent: '#8B5CF6', text: `${sender} sent you a trade offer` }
-            case 'TRADE_ACCEPTED':   return { emoji: '✅', accent: '#22C55E', text: `${sender} accepted your trade` }
-            case 'TRADE_DECLINED':   return { emoji: '❌', accent: '#EF4444', text: `${sender} declined your trade` }
-            case 'LISTING_SOLD':     return { emoji: '💰', accent: '#EAB308', text: `Your listing sold — ${t.notif.preview ?? ''}` }
-            default:                 return { emoji: '🔔', accent: 'var(--primary)', text: t.notif.preview ?? 'New notification' }
-          }
-        })()
-        return (
-          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `4px solid ${accent}`, borderRadius: 12, padding: '13px 14px', boxShadow: '0 6px 24px rgba(0,0,0,0.4)', pointerEvents: 'auto', animation: 'fadeUp 0.2s ease' }}>
-            <span style={{ fontSize: 20, flexShrink: 0, lineHeight: 1 }}>{emoji}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{text}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{timeAgo(t.notif.createdAt)}</div>
-            </div>
-            <button
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1, flexShrink: 0, padding: '0 0 0 4px', pointerEvents: 'auto' }}
-              onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
-            >×</button>
-          </div>
-        )
-      })}
     </div>
 
     {commentPostId !== null && (

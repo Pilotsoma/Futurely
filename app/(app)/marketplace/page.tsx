@@ -30,7 +30,7 @@ const PFP_GLOW_MAP: Record<string, [string, string]> = {
 function pfpStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
-  if (effect === 'glow-gold')   return { background: 'linear-gradient(135deg, #D97706, #F59E0B)', color: '#000', border: '2px solid #D97706' }
+  if (effect === 'glow-gold')   return { background: 'linear-gradient(135deg, #EAB308, #FDE047)', color: '#000', border: '2px solid #EAB308', boxShadow: '0 0 10px #EAB30866' }
   if (effect === 'frame-black') return { background: '#0d0d0d', color: '#4B5563', border: '2px solid #1F2937' }
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
@@ -50,7 +50,7 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
       { rarity: 'Uncommon',  pct: '25%',   items: ['Honors Student', 'AP Student'] },
       { rarity: 'Rare',      pct: '10%',   items: ["Dean's List", 'Top Performer'] },
       { rarity: 'Epic',      pct: '3.7%',  items: ['Ace', 'Prodigy'] },
-      { rarity: 'Legendary', pct: '1%',    items: ['Mastermind', 'Genius'] },
+      { rarity: 'Legendary', pct: '1%',    items: ['Valedictorian', 'Genius'] },
       { rarity: 'Mythic',    pct: '0.3%',  items: ['GOD'] },
     ],
   },
@@ -90,7 +90,7 @@ const SIM_ITEMS: Record<'tag' | 'name-color' | 'pfp', SimItem[]> = {
     { id: 'top-performer',  label: 'Top Performer (Rare)',      rarity: 'Rare',      type: 'tag', tag: 'Top Performer',   tagColor: '#8B5CF6' },
     { id: 'ace',            label: 'Ace (Epic)',                rarity: 'Epic',      type: 'tag', tag: 'Ace',             tagColor: '#F97316' },
     { id: 'prodigy',        label: 'Prodigy (Epic)',            rarity: 'Epic',      type: 'tag', tag: 'Prodigy',         tagColor: '#EC4899' },
-    { id: 'mastermind',     label: 'Mastermind (Legendary)',    rarity: 'Legendary', type: 'tag', tag: 'Mastermind',      tagColor: '#EAB308' },
+    { id: 'mastermind',     label: 'Valedictorian (Legendary)', rarity: 'Legendary', type: 'tag', tag: 'Valedictorian',   tagColor: '#EAB308' },
     { id: 'genius',         label: 'Genius (Legendary)',        rarity: 'Legendary', type: 'tag', tag: 'Genius',          tagColor: '#F8FAFC' },
     { id: 'god',            label: 'GOD (Mythic)',              rarity: 'Mythic',    type: 'tag', tag: 'GOD',             tagColor: '#111111' },
   ],

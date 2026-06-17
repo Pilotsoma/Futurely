@@ -13,6 +13,7 @@ import {
   CanvasTokenError,
   CanvasNetworkError,
 } from './canvasClient'
+import { sendToUser } from '../../lib/websocket'
 
 const router = Router()
 
@@ -313,6 +314,14 @@ router.post(
         source: ASSIGNMENT_SOURCE.CANVAS,
       }))
 
+      // Track which assignments are genuinely new (not just updates)
+      const existingKeys = new Set(
+        (await prisma.assignment.findMany({
+          where: { userId, source: ASSIGNMENT_SOURCE.CANVAS },
+          select: { title: true, subject: true },
+        })).map(a => `${a.title}::${a.subject}`)
+      )
+
       for (const payload of upsertPayloads) {
         await prisma.assignment.upsert({
           where: {
@@ -330,6 +339,21 @@ router.post(
             completed: false,
           },
         })
+      }
+
+      // Send one summary notification for newly added Canvas assignments
+      const newPayloads = upsertPayloads.filter(p => !existingKeys.has(`${p.title}::${p.subject}`))
+      if (newPayloads.length > 0) {
+        try {
+          const preview = newPayloads.length === 1
+            ? `New Canvas assignment: ${newPayloads[0].title}`
+            : `${newPayloads.length} new Canvas assignments added`
+          const notif = await prisma.notification.create({
+            data: { userId, fromUserId: userId, type: 'ASSIGNMENT_CREATED', preview },
+            include: { sender: { select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+          })
+          sendToUser(userId, 'NOTIFICATION', notif)
+        } catch { /* non-critical */ }
       }
 
       await prisma.canvasConnection.update({

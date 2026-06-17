@@ -5,7 +5,13 @@ import { requireAuth, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
-const FREE_MODEL = 'openrouter/free'
+const FREE_MODEL = 'mistralai/mistral-7b-instruct:free'
+
+// Strip markdown code fences and extract raw JSON
+function extractJson(raw: string): string {
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
+  return fenced ? fenced[1].trim() : raw.trim()
+}
 
 const openrouter = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY ?? '',
@@ -98,7 +104,17 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
       getPortalData(req.userId),
     ])
 
-    const firstName = user?.name?.split(' ')[0] ?? 'Student'
+    const rawName = user?.name ?? null
+    let firstName = 'Student'
+    if (rawName) {
+      if (rawName.includes(',')) {
+        const rest = rawName.split(',')[1]?.trim() ?? ''
+        const first = rest.split(' ')[0]
+        firstName = first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : 'Student'
+      } else {
+        firstName = rawName.split(' ')[0]
+      }
+    }
 
     const wGpa = (portalData?.weightedGpa ?? profile?.weightedGpa)?.toFixed(3) ?? 'unknown'
     const uGpa = (portalData?.unweightedGpa ?? profile?.unweightedGpa)?.toFixed(3) ?? 'unknown'
@@ -196,11 +212,10 @@ Respond with ONLY a JSON object in exactly this shape (no markdown, no extra tex
       model: FREE_MODEL,
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 2048,
-      response_format: { type: 'json_object' },
     })
 
     const raw = response.choices[0]?.message?.content ?? '{}'
-    const data = JSON.parse(raw)
+    const data = JSON.parse(extractJson(raw))
     res.json({ data })
   } catch (err) {
     console.error('[AI STUDY PLAN]', err)
