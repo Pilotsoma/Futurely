@@ -161,6 +161,38 @@ async function fetchAssignmentsFromCourses(
 }
 
 /**
+ * Fetch overdue Canvas assignments per-course (past due, within the last 3 months).
+ * Canvas has no user-level overdue endpoint, so we must query each course.
+ */
+export async function fetchCanvasOverdueAssignments(
+  instanceUrl: string,
+  token: string,
+  courseIds: number[],
+): Promise<CanvasAssignment[]> {
+  const assignments: CanvasAssignment[] = []
+  const base = buildBaseUrl(instanceUrl)
+  const headers = buildAuthHeaders(token)
+  const threeMonthsAgo = new Date(Date.now() - 90 * 86400000)
+
+  for (const courseId of courseIds) {
+    try {
+      const url = `${base}/api/v1/courses/${courseId}/assignments?bucket=past&per_page=50&order_by=due_at`
+      const res = await axios.get<CanvasAssignment[]>(url, { headers, timeout: 15_000 })
+      for (const a of res.data) {
+        if (a.due_at && new Date(a.due_at) >= threeMonthsAgo) {
+          assignments.push(a)
+        }
+      }
+    } catch {
+      logger.warn('Skipping overdue course assignments — fetch failed', { instanceUrl, courseId })
+    }
+  }
+
+  logger.info('Canvas overdue assignments fetched', { instanceUrl, assignmentCount: assignments.length })
+  return assignments
+}
+
+/**
  * Fetch upcoming Canvas assignments for the authenticated user.
  * Tries /users/self/upcoming_assignments first; falls back to per-course
  * fetching if that endpoint returns 404 (not enabled on all Canvas instances).

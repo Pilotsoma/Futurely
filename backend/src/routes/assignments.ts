@@ -48,7 +48,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<vo
   try {
     const where = {
       userId: req.userId,
-      source: { not: ASSIGNMENT_SOURCE.SEED },
+      source: { notIn: [ASSIGNMENT_SOURCE.SEED, ASSIGNMENT_SOURCE.HAC] },
       ...(status === 'incomplete' && { completed: false }),
       ...(status === 'complete' && { completed: true }),
     }

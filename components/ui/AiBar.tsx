@@ -7,15 +7,14 @@ interface AiBarProps {
   placeholder?: string
 }
 
-export default function AiBar({ placeholder = 'Ask NextStep AI…' }: AiBarProps) {
+export default function AiBar({ placeholder = 'Ask Futurely AI…' }: AiBarProps) {
   const [query, setQuery] = useState('')
   const router = useRouter()
 
   function handleSubmit() {
     const trimmed = query.trim()
     if (!trimmed) return
-    localStorage.setItem('ns_ai_prefill', trimmed)
-    router.push('/ai')
+    router.push('/ai?q=' + encodeURIComponent(trimmed))
   }
 
   return (

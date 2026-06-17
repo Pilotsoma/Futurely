@@ -266,7 +266,6 @@ export default function LoginPage() {
               Parent or guardian?{' '}
               <button type="button" onClick={() => { setMode('register-parent'); reset() }} style={styles.switchLink}>Create a parent account</button>
             </p>
-            <p style={styles.testHint}>Test: <code>test@nextstep.com</code> / <code>nextstep123</code></p>
           </>
         )}
 

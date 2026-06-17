@@ -135,23 +135,6 @@ export default function LandingPage() {
 
         <motion.div style={{ y: heroY, opacity: heroOpacity, position: 'relative', textAlign: 'center', padding: '0 24px', maxWidth: 860, margin: '0 auto', width: '100%' }}>
 
-          {/* Eyebrow pill */}
-          <motion.div initial={{ opacity: 0, y: 16, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.55, ease: [0.19, 1, 0.22, 1] }} style={{ marginBottom: 32 }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.18)',
-              color: '#00C896', borderRadius: 100, padding: '6px 18px',
-              fontSize: 12.5, fontWeight: 600, letterSpacing: '0.4px',
-            }}>
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%', background: '#00C896', display: 'inline-block',
-                boxShadow: '0 0 8px rgba(0,200,150,0.8)',
-                animation: 'futurePulse 2s ease-in-out infinite',
-              }} />
-              The academic platform built for your generation
-            </span>
-          </motion.div>
-
           {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 24 }}

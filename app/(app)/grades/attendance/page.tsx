@@ -131,6 +131,14 @@ export default function AttendancePage() {
     !/^present/i.test(d.description)
   ) ?? []
 
+  const otherCount = data?.days.filter(d => {
+    if (!d.description || d.isSchoolClosed || /^present/i.test(d.description)) return false
+    if (/absent.*unexcused|unexcused.*absent/i.test(d.description)) return false
+    if (/tardy|late.?arrival|early.?depart/i.test(d.description)) return false
+    if (/excused|approved.?absence|doctor|note|kisd|religious|illness|healthcare|homebound|court|college.?visit|military/i.test(d.description)) return false
+    return true
+  }).length ?? 0
+
   if (loading && !data) return <PageLoader message="Opening attendance…" />
 
   return (
@@ -154,7 +162,7 @@ export default function AttendancePage() {
             { count: data.summary.absences, label: 'Unexcused',  color: '#F87171', border: 'rgba(239,68,68,0.35)' },
             { count: data.summary.tardies,  label: 'Tardy/Late',  color: '#FBBF24', border: 'rgba(245,158,11,0.35)' },
             { count: data.summary.excused,  label: 'Excused',     color: '#4ADE80', border: 'rgba(34,197,94,0.35)' },
-            { count: data.summary.multiple, label: 'Multiple',    color: '#FB923C', border: 'rgba(251,146,60,0.35)' },
+            { count: otherCount,            label: 'Other',       color: '#FB923C', border: 'rgba(251,146,60,0.35)' },
           ].map(({ count, label, color, border }) => (
             <div key={label} className="ns-card" style={{ padding: '12px 8px', textAlign: 'center', border: `1px solid ${border}` }}>
               <div style={{ fontSize: 22, fontWeight: 800, color }}>{count}</div>

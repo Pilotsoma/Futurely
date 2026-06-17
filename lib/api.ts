@@ -133,13 +133,18 @@ export const api = {
       body: JSON.stringify({ message }),
     }),
   studyPlan: () => request<{
-    plan: Array<{
-      id: number
-      title: string
-      subject: string
-      dueDate: string
-      estimatedMinutes: number
-      priority: string
+    overview: string
+    days: Array<{
+      label: string
+      date: string
+      sessions: Array<{
+        assignmentId: number
+        title: string
+        subject: string
+        dueDate: string
+        minutesToSpend: number
+        notes: string
+      }>
     }>
   }>('/api/ai/study-plan'),
 
