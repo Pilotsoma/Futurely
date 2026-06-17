@@ -6,6 +6,11 @@ import jwt from 'jsonwebtoken'
 import { clients, userClients } from './lib/websocket'
 
 const PORT = Number(process.env.PORT ?? '3001')
+
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('FATAL: JWT_SECRET env var is not set. Refusing to start in production.')
+  process.exit(1)
+}
 const JWT_SECRET = process.env.JWT_SECRET ?? 'nextstep-dev-secret-change-in-production'
 
 const server = http.createServer(app)

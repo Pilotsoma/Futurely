@@ -28,7 +28,8 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     return
   }
   try {
-    const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET!) as unknown as AccessTokenPayload
+    const secret = process.env.JWT_SECRET ?? 'nextstep-dev-secret-change-in-production'
+    const payload = jwt.verify(header.slice(7), secret) as unknown as AccessTokenPayload
     req.userId = payload.sub
     next()
   } catch {
