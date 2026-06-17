@@ -134,9 +134,42 @@ export async function fetchCanvasCourses(instanceUrl: string, token: string): Pr
 }
 
 /**
- * Fetch upcoming Canvas assignments for the authenticated user.
+ * Fetch upcoming assignments per-course as a fallback.
+ * Used when the /users/self/upcoming_assignments endpoint returns 404.
  */
-export async function fetchCanvasUpcomingAssignments(instanceUrl: string, token: string): Promise<CanvasAssignment[]> {
+async function fetchAssignmentsFromCourses(
+  instanceUrl: string,
+  token: string,
+  courseIds: number[],
+): Promise<CanvasAssignment[]> {
+  const assignments: CanvasAssignment[] = []
+  const base = buildBaseUrl(instanceUrl)
+  const headers = buildAuthHeaders(token)
+
+  for (const courseId of courseIds) {
+    try {
+      const url = `${base}/api/v1/courses/${courseId}/assignments?bucket=upcoming&per_page=50&order_by=due_at`
+      const res = await axios.get<CanvasAssignment[]>(url, { headers, timeout: 15_000 })
+      assignments.push(...res.data)
+    } catch {
+      logger.warn('Skipping course assignments — fetch failed', { instanceUrl, courseId })
+    }
+  }
+
+  logger.info('Canvas assignments fetched via per-course fallback', { instanceUrl, assignmentCount: assignments.length })
+  return assignments
+}
+
+/**
+ * Fetch upcoming Canvas assignments for the authenticated user.
+ * Tries /users/self/upcoming_assignments first; falls back to per-course
+ * fetching if that endpoint returns 404 (not enabled on all Canvas instances).
+ */
+export async function fetchCanvasUpcomingAssignments(
+  instanceUrl: string,
+  token: string,
+  courseIds: number[],
+): Promise<CanvasAssignment[]> {
   const url = `${buildBaseUrl(instanceUrl)}/api/v1/users/self/upcoming_assignments`
 
   logger.info('Fetching Canvas upcoming assignments', { instanceUrl })
@@ -146,10 +179,13 @@ export async function fetchCanvasUpcomingAssignments(instanceUrl: string, token:
       headers: buildAuthHeaders(token),
       timeout: 15_000,
     })
-
     logger.info('Canvas assignments fetched', { instanceUrl, assignmentCount: response.data.length })
     return response.data
   } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      logger.warn('upcoming_assignments endpoint returned 404 — falling back to per-course fetch', { instanceUrl })
+      return fetchAssignmentsFromCourses(instanceUrl, token, courseIds)
+    }
     handleAxiosError(err, instanceUrl)
   }
 }

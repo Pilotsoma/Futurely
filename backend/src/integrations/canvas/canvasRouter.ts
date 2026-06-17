@@ -175,7 +175,7 @@ router.post(
 
     try {
       courses = await fetchCanvasCourses(canvasInstanceUrl, token)
-      assignments = await fetchCanvasUpcomingAssignments(canvasInstanceUrl, token)
+      assignments = await fetchCanvasUpcomingAssignments(canvasInstanceUrl, token, courses.map(c => c.id))
     } catch (err) {
       if (err instanceof CanvasTokenError) {
         await prisma.canvasConnection.update({
