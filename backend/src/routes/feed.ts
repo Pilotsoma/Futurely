@@ -61,7 +61,6 @@ function toFeedUser(u: RawUser) {
   if (u.deletedAt) return { id: u.id, name: u.name, tag: 'DELETED', tagColor: '#6B7280', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
   if (u.chatBanned) return { id: u.id, name: u.name, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
   if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  if (u.role === 'ADMIN') return { id: u.id, name: u.name, tag: 'DEV', tagColor: 'lightblue', nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
   return { id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
 }
 
@@ -842,7 +841,6 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
     if (profile.deletedAt) { effectiveTag = 'DELETED'; effectiveTagColor = '#6B7280'; }
     else if (profile.chatBanned) { effectiveTag = 'BANNED'; effectiveTagColor = '#EF4444'; }
     else if (profile.chatMutedUntil && profile.chatMutedUntil > new Date()) { effectiveTag = 'MUTED'; effectiveTagColor = '#f97316'; }
-    else if (profile.role === 'ADMIN') { effectiveTag = 'DEV'; effectiveTagColor = 'lightblue'; }
 
     const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, allTags: rawAllTags, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; allTags: string };
     res.json({

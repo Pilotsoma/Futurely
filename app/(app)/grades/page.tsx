@@ -61,8 +61,8 @@ const CARDS = [
   },
   {
     href: '/grades/canvas',
-    title: 'Canvas Grades',
-    desc: 'Live scores & submissions',
+    title: 'Canvas',
+    desc: 'Visit Canvas in Futurely',
     icon: '🎓',
     iconBg: 'rgba(234,179,8,0.1)',
   },

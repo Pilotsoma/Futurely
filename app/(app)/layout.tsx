@@ -10,6 +10,8 @@ import NotificationBell from '../../components/ui/NotificationBell'
 import UpdatePopup from '../../components/ui/UpdatePopup'
 import ForcedLogoutWatcher from '../../components/ui/ForcedLogoutWatcher'
 import InactivityWatcher from '../../components/ui/InactivityWatcher'
+import ExternalLinkGuard from '../../components/ui/ExternalLinkGuard'
+import CanvasTokenExpiredBanner from '../../components/ui/CanvasTokenExpiredBanner'
 
 const NAV = [
   {
@@ -300,6 +302,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <UpdatePopup />
       <ForcedLogoutWatcher />
       <InactivityWatcher />
+      <ExternalLinkGuard />
+      <CanvasTokenExpiredBanner />
 
       {/* Main content — spring-follows sidebar width */}
       <motion.main

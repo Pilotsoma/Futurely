@@ -168,19 +168,32 @@ function removeItem(user: UserSnap, item: TradeItem): Record<string, string | nu
   const updates: Record<string, string | null> = {}
   if (item.type === 'tag') {
     const tagName = resolveTagName(item)
-    const tags = parseTagArr(user.allTags).filter(t => t.tag !== tagName)
+    const tags = parseTagArr(user.allTags)
+    const idx = tags.findIndex(t => t.tag === tagName)
+    if (idx !== -1) tags.splice(idx, 1)
     updates.allTags = JSON.stringify(tags)
-    if (user.tag === tagName) { updates.tag = 'Student'; updates.tagColor = null }
+    // Only unequip if no copies remain
+    if (user.tag === tagName && !tags.some(t => t.tag === tagName)) {
+      updates.tag = 'Student'; updates.tagColor = null
+    }
   } else if (item.type === 'name-color') {
-    const owned = parseJsonArr(user.ownedNameColors).filter(i => i.id !== item.id)
+    const owned = parseJsonArr(user.ownedNameColors)
+    const idx = owned.findIndex((i: { id: string }) => i.id === item.id)
+    if (idx !== -1) owned.splice(idx, 1)
     updates.ownedNameColors = JSON.stringify(owned)
     const def = NAME_COLOR_BOX_ITEMS.find(c => c.id === item.id)
-    if (def && user.nameColor === def.value) updates.nameColor = null
+    if (def && user.nameColor === def.value && !owned.some((i: { id: string }) => i.id === item.id)) {
+      updates.nameColor = null
+    }
   } else if (item.type === 'pfp') {
-    const owned = parseJsonArr(user.ownedPfpEffects).filter(i => i.id !== item.id)
+    const owned = parseJsonArr(user.ownedPfpEffects)
+    const idx = owned.findIndex((i: { id: string }) => i.id === item.id)
+    if (idx !== -1) owned.splice(idx, 1)
     updates.ownedPfpEffects = JSON.stringify(owned)
     const def = PFP_EFFECT_BOX_ITEMS.find(c => c.id === item.id)
-    if (def && user.pfpEffect === def.value) updates.pfpEffect = null
+    if (def && user.pfpEffect === def.value && !owned.some((i: { id: string }) => i.id === item.id)) {
+      updates.pfpEffect = null
+    }
   }
   return updates
 }
@@ -192,19 +205,15 @@ function addItem(user: UserSnap, item: TradeItem): Record<string, string> {
     const tagName = tagDef ? tagDef.tag : (item.tag ?? item.id)
     const tagColor = tagDef ? tagDef.tagColor : (item.tagColor ?? '#6B7280')
     const tags = parseTagArr(user.allTags)
-    if (!tags.some(t => t.tag === tagName)) tags.push({ tag: tagName, tagColor })
+    tags.push({ tag: tagName, tagColor })
     updates.allTags = JSON.stringify(tags)
   } else if (item.type === 'name-color') {
     const owned = parseJsonArr(user.ownedNameColors)
-    if (!owned.some(i => i.id === item.id)) {
-      owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
-    }
+    owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
     updates.ownedNameColors = JSON.stringify(owned)
   } else if (item.type === 'pfp') {
     const owned = parseJsonArr(user.ownedPfpEffects)
-    if (!owned.some(i => i.id === item.id)) {
-      owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
-    }
+    owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
     updates.ownedPfpEffects = JSON.stringify(owned)
   }
   return updates
@@ -1011,9 +1020,7 @@ router.post('/listings/:id/buy', requireAuth, async (req: AuthRequest, res: Resp
       },
     })
     const sender = notif.sender
-    const senderOut = sender.role === 'ADMIN'
-      ? { id: sender.id, name: sender.name, email: sender.email, tag: 'DEV', tagColor: 'lightblue', nameColor: sender.nameColor, pfpEffect: sender.pfpEffect }
-      : { id: sender.id, name: sender.name, email: sender.email, tag: sender.tag, tagColor: sender.tagColor, nameColor: sender.nameColor, pfpEffect: sender.pfpEffect }
+    const senderOut = { id: sender.id, name: sender.name, email: sender.email, tag: sender.tag, tagColor: sender.tagColor, nameColor: sender.nameColor, pfpEffect: sender.pfpEffect }
     sendToUser(listing.sellerId, 'NOTIFICATION', { ...notif, sender: senderOut })
 
     res.json({ data: { ok: true, coins: updatedBuyer.coins } })

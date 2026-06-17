@@ -121,6 +121,7 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
 
   const isDevTag = profile?.tag === 'DEV'
   const isGodTag = profile?.tag === 'GOAT'
+  const isMythicTag = profile?.tag === 'GOD'
 
   return (
     <div style={S.overlay} onClick={onClose}>
@@ -144,8 +145,8 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
                 </div>
                 {profile.tag && !profile.chatBanned && (
                   <span
-                    className={isDevTag ? 'tag-rainbow' : isGodTag ? 'tag-god' : ''}
-                    style={isDevTag ? S.tagDev : isGodTag ? S.tagGod : {
+                    className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
+                    style={isDevTag ? S.tagDev : isMythicTag ? { ...S.tagGod, color: undefined, background: undefined, border: undefined } : isGodTag ? S.tagGod : {
                       ...S.tag,
                       color: profile.tagColor || 'var(--text-secondary)',
                       background: profile.tagColor ? `${profile.tagColor}22` : 'rgba(128,128,128,0.12)',

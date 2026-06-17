@@ -514,8 +514,41 @@ export const api = {
       `/api/integrations/canvas/courses/${courseId}/files${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
     ),
 
+  canvasCoursePage: (courseId: number, pageSlug: string, canvasInstanceUrl?: string) =>
+    request<CanvasPage>(
+      `/api/integrations/canvas/courses/${courseId}/pages/${encodeURIComponent(pageSlug)}${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasDiscussion: (courseId: number, topicId: number, canvasInstanceUrl?: string) =>
+    request<{ topic: CanvasDiscussionTopic; view: CanvasDiscussionView }>(
+      `/api/integrations/canvas/courses/${courseId}/discussions/${topicId}${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasDiscussionPost: (courseId: number, topicId: number, body: { message: string; parentEntryId?: number; canvasInstanceUrl?: string }) =>
+    request<{ id: number }>(
+      `/api/integrations/canvas/courses/${courseId}/discussions/${topicId}/entries`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+
+  canvasQuiz: (courseId: number, quizId: number, canvasInstanceUrl?: string) =>
+    request<{ quiz: CanvasQuizDetail; questions: CanvasQuizQuestion[]; submissions: CanvasQuizSubmission[] }>(
+      `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasSubmitAssignment: (courseId: number, assignmentId: number, submission: { submissionType: 'online_text_entry' | 'online_url'; body?: string; url?: string; canvasInstanceUrl?: string }) =>
+    request<{ ok: boolean }>(
+      `/api/integrations/canvas/courses/${courseId}/assignments/${assignmentId}/submit`,
+      { method: 'POST', body: JSON.stringify(submission) },
+    ),
+
   canvasGrades: () =>
     request<CanvasGradesConnection[]>('/api/integrations/canvas/grades'),
+
+  canvasRefreshToken: (canvasInstanceUrl: string, newToken: string) =>
+    request<{ success: boolean }>(
+      '/api/integrations/canvas/refresh-token',
+      { method: 'POST', body: JSON.stringify({ canvasInstanceUrl, newToken }) },
+    ),
 
   canvasDisconnect: (canvasInstanceUrl?: string) =>
     request<{ disconnected: boolean; deletedAssignmentsCount: number; canvasInstanceUrl?: string }>(
@@ -680,6 +713,7 @@ export interface CanvasConnectionInfo {
   lastSynced: string | null
   syncStatus: string | null
   syncError: string | null
+  tokenInvalid: boolean
 }
 
 export interface CanvasStatus {
@@ -691,6 +725,7 @@ export interface CanvasStatus {
   lastSynced: string | null
   syncStatus: string | null
   syncError: string | null
+  tokenInvalid?: boolean
 }
 
 // ── Canvas Dashboard types ─────────────────────────────────────────────────
@@ -767,6 +802,94 @@ export interface CanvasAssignmentDetail {
     long_description: string
     points: number
   }>
+}
+
+export interface CanvasPage {
+  url: string
+  title: string
+  body: string | null
+  updated_at: string
+}
+
+export interface CanvasDiscussionParticipant {
+  id: number
+  display_name: string
+  avatar_image_url: string | null
+}
+
+export interface CanvasDiscussionEntry {
+  id: number
+  user_id: number
+  message: string
+  created_at: string
+  replies?: CanvasDiscussionEntry[]
+  read_state?: string
+}
+
+export interface CanvasDiscussionTopic {
+  id: number
+  title: string
+  message: string | null
+  posted_at: string
+  author: { display_name: string; avatar_image_url: string | null }
+  html_url: string
+}
+
+export interface CanvasDiscussionView {
+  participants: CanvasDiscussionParticipant[]
+  unread_entries: number[]
+  view: CanvasDiscussionEntry[]
+}
+
+export interface CanvasQuizAnswer {
+  id: number
+  text: string
+  html?: string
+  weight: number
+}
+
+export interface CanvasQuizQuestion {
+  id: number
+  question_name: string
+  question_text: string
+  question_type: string
+  points_possible: number
+  answers?: CanvasQuizAnswer[]
+}
+
+export interface CanvasQuizDetail {
+  id: number
+  title: string
+  description: string | null
+  time_limit: number | null
+  question_count: number
+  quiz_type: string
+  allowed_attempts: number
+  points_possible: number
+  due_at: string | null
+  show_correct_answers: boolean
+  html_url: string
+}
+
+export interface CanvasQuizSubmissionData {
+  question_id: number
+  correct: boolean | null
+  points: number
+  answer_id?: number
+  text?: string
+  answer_for_text_entry?: string
+}
+
+export interface CanvasQuizSubmission {
+  id: number
+  quiz_id: number
+  score: number | null
+  kept_score: number | null
+  workflow_state: string
+  finished_at: string | null
+  attempt: number
+  quiz_points_possible: number
+  submission_data?: CanvasQuizSubmissionData[]
 }
 
 export interface CanvasCourseFile {

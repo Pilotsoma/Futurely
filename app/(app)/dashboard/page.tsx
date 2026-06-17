@@ -508,10 +508,10 @@ export default function DashboardPage() {
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{earned ? m.emoji : '🔒'}</span>
                     <div style={{ flex: 1 }}>
                       {m.tag ? (
-                        <span className={m.tag === 'GOAT' ? 'tag-god' : ''} style={{
+                        <span className={m.tag === 'GOD' ? 'tag-mythic' : m.tag === 'GOAT' ? 'tag-god' : ''} style={{
                           fontSize: 13, fontWeight: 700,
-                          color: m.tag === 'GOAT' ? undefined : '#fff',
-                          background: m.tag === 'GOAT' ? undefined : m.tagColor,
+                          color: (m.tag === 'GOAT' || m.tag === 'GOD') ? undefined : '#fff',
+                          background: (m.tag === 'GOAT' || m.tag === 'GOD') ? undefined : m.tagColor,
                           borderRadius: 6, padding: '2px 8px',
                           marginRight: 4,
                         }}>

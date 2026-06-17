@@ -11,6 +11,14 @@ import {
   CanvasAnnouncement,
   CanvasAssignmentDetail,
   CanvasCourseFile,
+  type CanvasPage,
+  type CanvasDiscussionEntry,
+  type CanvasDiscussionParticipant,
+  type CanvasDiscussionTopic,
+  type CanvasDiscussionView,
+  type CanvasQuizDetail,
+  type CanvasQuizQuestion,
+  type CanvasQuizSubmission,
   CanvasGradesConnection,
   CanvasGradesCourse,
   CanvasGradesAssignment,
@@ -126,6 +134,474 @@ function ContentSkeleton() {
   )
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function prepareCanvasHtml(html: string, canvasBaseUrl?: string): string {
+  let out = html
+  // strip scripts and dangerous attrs
+  out = out.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+  out = out.replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
+  out = out.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
+  if (canvasBaseUrl) {
+    const base = `https://${canvasBaseUrl.replace(/^https?:\/\//, '')}`
+    // protocol-relative → https
+    out = out.replace(/(src|href)=(["'])\/\//gi, `$1=$2https://`)
+    // root-relative → absolute canvas URL
+    out = out.replace(/(src|href)=(["'])\//gi, `$1=$2${base}/`)
+  }
+  return out
+}
+
+// ── Page Detail Panel ─────────────────────────────────────────────────────────
+
+function PagePanel({
+  courseId, pageSlug, pageTitle, canvasInstanceUrl,
+  onClose,
+}: {
+  courseId: number
+  pageSlug: string
+  pageTitle: string
+  canvasInstanceUrl: string
+  onClose: () => void
+}) {
+  const [page, setPage] = useState<CanvasPage | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoading(true); setErr(null); setPage(null)
+    api.canvasCoursePage(courseId, pageSlug, canvasInstanceUrl)
+      .then(setPage)
+      .catch(() => setErr('Could not load page content.'))
+      .finally(() => setLoading(false))
+  }, [courseId, pageSlug, canvasInstanceUrl])
+
+  const canvasUrl = page?.url
+    ? (page.url.startsWith('http') ? page.url : `https://${canvasInstanceUrl}/courses/${courseId}/pages/${page.url}`)
+    : undefined
+
+  return (
+    <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', maxWidth: 560, height: '100%', background: 'var(--background)', borderLeft: '1px solid var(--border)', zIndex: 100, display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 24px rgba(0,0,0,0.18)' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)', borderRadius: 6, display: 'flex' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', marginBottom: 2 }}>Page</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pageTitle}</div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        {loading && <ContentSkeleton />}
+        {err && <div style={{ color: '#EF4444', fontSize: 13, textAlign: 'center', marginTop: 40 }}>{err}</div>}
+        {page && !loading && (
+          page.body ? (
+            <div
+              className="canvas-page-body"
+              dangerouslySetInnerHTML={{ __html: prepareCanvasHtml(page.body, canvasInstanceUrl) }}
+              style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text)' }}
+            />
+          ) : (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', marginTop: 40 }}>This page has no content.</div>
+          )
+        )}
+      </div>
+
+      {/* Footer */}
+      {canvasUrl && (
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+          <a href={canvasUrl} target="_blank" rel="noopener noreferrer" data-no-intercept="true"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
+            Open in Canvas
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Discussion Panel ──────────────────────────────────────────────────────────
+
+function DiscussionEntryRow({
+  entry, participants, depth, canvasBaseUrl, courseId, topicId, canvasInstanceUrl, onReplyPosted,
+}: {
+  entry: CanvasDiscussionEntry
+  participants: CanvasDiscussionParticipant[]
+  depth: number
+  canvasBaseUrl: string
+  courseId: number
+  topicId: number
+  canvasInstanceUrl: string
+  onReplyPosted: () => void
+}) {
+  const [showReply, setShowReply] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [posting, setPosting] = useState(false)
+  const author = participants.find(p => p.id === entry.user_id)
+
+  async function handleReply() {
+    if (!replyText.trim() || posting) return
+    setPosting(true)
+    try {
+      await api.canvasDiscussionPost(courseId, topicId, { message: replyText.trim(), parentEntryId: entry.id, canvasInstanceUrl })
+      setReplyText('')
+      setShowReply(false)
+      onReplyPosted()
+    } catch { /* swallow */ } finally { setPosting(false) }
+  }
+
+  return (
+    <div style={{ marginLeft: depth * 16, borderLeft: depth > 0 ? '2px solid var(--border)' : 'none', paddingLeft: depth > 0 ? 12 : 0, marginTop: 12 }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--surface-2)', border: '1px solid var(--border)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>
+          {author?.avatar_image_url
+            ? <img src={author.avatar_image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+            : (author?.display_name?.[0] ?? '?')}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 5 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{author?.display_name ?? 'Unknown'}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{fmtDate(entry.created_at)}</span>
+          </div>
+          <div
+            className="canvas-html"
+            style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.65 }}
+            dangerouslySetInnerHTML={{ __html: prepareCanvasHtml(entry.message, canvasBaseUrl) }}
+          />
+          <button
+            onClick={() => setShowReply(r => !r)}
+            style={{ marginTop: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--primary)', fontWeight: 600, padding: 0 }}
+          >
+            {showReply ? 'Cancel' : '↩ Reply'}
+          </button>
+          {showReply && (
+            <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+              <textarea
+                value={replyText}
+                onChange={e => setReplyText(e.target.value)}
+                placeholder="Write a reply…"
+                rows={3}
+                style={{ flex: 1, padding: '8px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, resize: 'vertical', fontFamily: 'inherit' }}
+              />
+              <button
+                onClick={handleReply}
+                disabled={posting || !replyText.trim()}
+                style={{ alignSelf: 'flex-end', padding: '8px 14px', borderRadius: 7, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: posting || !replyText.trim() ? 0.6 : 1, flexShrink: 0 }}
+              >
+                {posting ? '…' : 'Post'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      {entry.replies?.map(r => (
+        <DiscussionEntryRow key={r.id} entry={r} participants={participants} depth={depth + 1}
+          canvasBaseUrl={canvasBaseUrl} courseId={courseId} topicId={topicId}
+          canvasInstanceUrl={canvasInstanceUrl} onReplyPosted={onReplyPosted} />
+      ))}
+    </div>
+  )
+}
+
+function DiscussionPanel({
+  courseId, topicId, topicTitle, canvasInstanceUrl, onClose,
+}: {
+  courseId: number
+  topicId: number
+  topicTitle: string
+  canvasInstanceUrl: string
+  onClose: () => void
+}) {
+  const [data, setData] = useState<{ topic: CanvasDiscussionTopic; view: CanvasDiscussionView } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState<string | null>(null)
+  const [newPost, setNewPost] = useState('')
+  const [posting, setPosting] = useState(false)
+
+  const load = useCallback(() => {
+    setLoading(true); setErr(null)
+    api.canvasDiscussion(courseId, topicId, canvasInstanceUrl)
+      .then(setData)
+      .catch(() => setErr('Could not load discussion.'))
+      .finally(() => setLoading(false))
+  }, [courseId, topicId, canvasInstanceUrl])
+
+  useEffect(() => { load() }, [load])
+
+  async function handlePost() {
+    if (!newPost.trim() || posting) return
+    setPosting(true)
+    try {
+      await api.canvasDiscussionPost(courseId, topicId, { message: newPost.trim(), canvasInstanceUrl })
+      setNewPost('')
+      load()
+    } catch { /* swallow */ } finally { setPosting(false) }
+  }
+
+  const canvasUrl = data?.topic.html_url ?? ''
+
+  return (
+    <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', maxWidth: 580, height: '100%', background: 'var(--background)', borderLeft: '1px solid var(--border)', zIndex: 100, display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 24px rgba(0,0,0,0.18)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)', borderRadius: 6, display: 'flex' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', marginBottom: 2 }}>Discussion</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{data?.topic.title ?? topicTitle}</div>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
+        {loading && <ContentSkeleton />}
+        {err && <div style={{ color: '#EF4444', fontSize: 13, textAlign: 'center', marginTop: 40 }}>{err}</div>}
+        {data && !loading && (
+          <>
+            {data.topic.message && (
+              <div style={{ padding: '14px 16px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', marginBottom: 20 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', marginBottom: 8 }}>Prompt</div>
+                <div className="canvas-html" style={{ fontSize: 13.5, lineHeight: 1.65, color: 'var(--text-secondary)' }}
+                  dangerouslySetInnerHTML={{ __html: prepareCanvasHtml(data.topic.message, canvasInstanceUrl) }} />
+              </div>
+            )}
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', marginBottom: 12 }}>
+              {data.view.view.length} {data.view.view.length === 1 ? 'reply' : 'replies'}
+            </div>
+            {data.view.view.length === 0 && (
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center', marginTop: 20 }}>No replies yet. Be the first!</div>
+            )}
+            {data.view.view.map(entry => (
+              <DiscussionEntryRow key={entry.id} entry={entry} participants={data.view.participants}
+                depth={0} canvasBaseUrl={canvasInstanceUrl} courseId={courseId} topicId={topicId}
+                canvasInstanceUrl={canvasInstanceUrl} onReplyPosted={load} />
+            ))}
+          </>
+        )}
+      </div>
+
+      <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <textarea
+          value={newPost}
+          onChange={e => setNewPost(e.target.value)}
+          placeholder="Write a new post…"
+          rows={3}
+          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={handlePost}
+            disabled={posting || !newPost.trim()}
+            style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: posting || !newPost.trim() ? 0.6 : 1 }}
+          >
+            {posting ? 'Posting…' : '✏️ Post Reply'}
+          </button>
+          {canvasUrl && (
+            <a href={canvasUrl} target="_blank" rel="noopener noreferrer" data-no-intercept="true"
+              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
+              Open in Canvas
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Quiz Panel ────────────────────────────────────────────────────────────────
+
+function QuizQuestionRow({ question, submissionData, showCorrect }: {
+  question: CanvasQuizQuestion
+  submissionData?: { answer_id?: number; text?: string; answer_for_text_entry?: string; correct: boolean | null; points: number }
+  showCorrect: boolean
+}) {
+  const isAnswered = submissionData !== undefined
+  const isCorrect = submissionData?.correct
+  const selectedAnswerId = submissionData?.answer_id
+  const selectedText = submissionData?.text ?? submissionData?.answer_for_text_entry
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 12, background: 'var(--surface)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+        <div className="canvas-html" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', lineHeight: 1.5, flex: 1 }}
+          dangerouslySetInnerHTML={{ __html: question.question_text }} />
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{question.points_possible} pt{question.points_possible !== 1 ? 's' : ''}</span>
+          {isAnswered && showCorrect && (
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+              background: isCorrect ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+              color: isCorrect ? '#22C55E' : '#EF4444' }}>
+              {isCorrect ? `✓ +${submissionData.points}` : '✗ 0'}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {(question.question_type === 'multiple_choice_question' || question.question_type === 'true_false_question') && question.answers && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {question.answers.map(ans => {
+            const isSelected = selectedAnswerId === ans.id
+            const isCorrectAnswer = showCorrect && ans.weight > 0
+            return (
+              <div key={ans.id} style={{
+                padding: '8px 12px', borderRadius: 7, fontSize: 13,
+                border: `1px solid ${isSelected ? (isCorrect === false ? '#EF4444' : 'var(--primary)') : isCorrectAnswer ? 'rgba(34,197,94,0.5)' : 'var(--border)'}`,
+                background: isSelected ? (isCorrect === false ? 'rgba(239,68,68,0.08)' : 'rgba(var(--primary-rgb),0.08)') : isCorrectAnswer ? 'rgba(34,197,94,0.06)' : 'transparent',
+                color: isSelected ? 'var(--text)' : 'var(--text-secondary)',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`, background: isSelected ? 'var(--primary)' : 'transparent', flexShrink: 0 }} />
+                {ans.text || ans.html?.replace(/<[^>]*>/g, '') || '(no text)'}
+                {isSelected && !isCorrect && showCorrect && <span style={{ marginLeft: 'auto', fontSize: 11, color: '#EF4444' }}>Your answer</span>}
+                {isCorrectAnswer && showCorrect && <span style={{ marginLeft: 'auto', fontSize: 11, color: '#22C55E' }}>Correct</span>}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {(question.question_type === 'short_answer_question' || question.question_type === 'fill_in_blank_question' || question.question_type === 'essay_question' || question.question_type === 'numerical_question') && (
+        <div style={{ padding: '8px 12px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: 13, color: 'var(--text-secondary)', minHeight: 36 }}>
+          {selectedText ?? <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No answer recorded</span>}
+        </div>
+      )}
+
+      {question.question_type === 'text_only_question' && (
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>Informational — no answer required</div>
+      )}
+    </div>
+  )
+}
+
+function QuizPanel({
+  courseId, quizId, quizTitle, canvasInstanceUrl, canvasItemUrl, onClose,
+}: {
+  courseId: number
+  quizId: number
+  quizTitle: string
+  canvasInstanceUrl: string
+  canvasItemUrl?: string
+  onClose: () => void
+}) {
+  const [data, setData] = useState<{ quiz: CanvasQuizDetail; questions: CanvasQuizQuestion[]; submissions: CanvasQuizSubmission[] } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState<string | null>(null)
+  const [selectedAttempt, setSelectedAttempt] = useState(0)
+
+  useEffect(() => {
+    setLoading(true); setErr(null)
+    api.canvasQuiz(courseId, quizId, canvasInstanceUrl)
+      .then(d => { setData(d); setSelectedAttempt(d.submissions.length - 1) })
+      .catch(() => setErr('new-quiz'))
+      .finally(() => setLoading(false))
+  }, [courseId, quizId, canvasInstanceUrl])
+
+  const sub = data?.submissions[selectedAttempt]
+  const subMap = new Map((sub?.submission_data ?? []).map(s => [s.question_id, s]))
+  const canvasUrl = data?.quiz.html_url || canvasItemUrl || ''
+
+  return (
+    <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', maxWidth: 580, height: '100%', background: 'var(--background)', borderLeft: '1px solid var(--border)', zIndex: 100, display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 24px rgba(0,0,0,0.18)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)', borderRadius: 6, display: 'flex' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', marginBottom: 2 }}>Quiz</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{data?.quiz.title ?? quizTitle}</div>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
+        {loading && <ContentSkeleton />}
+        {err && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginTop: 40, padding: '0 8px', textAlign: 'center' }}>
+            <div style={{ fontSize: 32 }}>🔒</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Quiz data not available</div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 340 }}>
+              This appears to be a <strong>New Quiz (LTI)</strong> — your school&apos;s quiz engine doesn&apos;t expose results or questions through the Canvas API. You&apos;ll need to open it in Canvas to take it or see your results.
+            </div>
+            {canvasUrl && (
+              <a href={canvasUrl} target="_blank" rel="noopener noreferrer" data-no-intercept="true"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 9, background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
+                Open Quiz in Canvas
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            )}
+          </div>
+        )}
+        {data && !loading && (
+          <>
+            {/* Meta */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+              {[
+                ['Points', `${data.quiz.points_possible}`],
+                ['Questions', `${data.quiz.question_count}`],
+                ['Time Limit', data.quiz.time_limit ? `${data.quiz.time_limit} min` : 'None'],
+                ['Attempts', data.quiz.allowed_attempts === -1 ? 'Unlimited' : `${data.quiz.allowed_attempts}`],
+              ].map(([label, value]) => (
+                <div key={label} style={{ padding: '10px 14px', borderRadius: 9, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', marginBottom: 3 }}>{label}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Submissions */}
+            {data.submissions.length > 0 ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)' }}>Your Attempts</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {data.submissions.map((s, i) => (
+                      <button key={s.id} onClick={() => setSelectedAttempt(i)}
+                        style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${selectedAttempt === i ? 'var(--primary)' : 'var(--border)'}`, background: selectedAttempt === i ? 'var(--primary-dim)' : 'transparent', color: selectedAttempt === i ? 'var(--primary)' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        #{s.attempt} {s.score !== null ? `— ${s.score}/${s.quiz_points_possible}` : `(${s.workflow_state})`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {sub && sub.submission_data && data.questions.length > 0 ? (
+                  <>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', marginBottom: 12 }}>
+                      Question Review {!data.quiz.show_correct_answers && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>· correct answers hidden by instructor</span>}
+                    </div>
+                    {data.questions.map(q => (
+                      <QuizQuestionRow key={q.id} question={q} submissionData={subMap.get(q.id) as Parameters<typeof QuizQuestionRow>[0]['submissionData']} showCorrect={data.quiz.show_correct_answers} />
+                    ))}
+                  </>
+                ) : sub ? (
+                  <div style={{ padding: '16px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{sub.kept_score ?? sub.score ?? '—'} / {sub.quiz_points_possible}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Detailed answer review not available for this quiz type.</div>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div style={{ padding: '20px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>You haven't taken this quiz yet. Open it in Canvas to begin.</div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+        <a href={canvasUrl} target="_blank" rel="noopener noreferrer" data-no-intercept="true"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>
+          {data?.submissions.length ? 'Review / Retake in Canvas' : 'Take Quiz in Canvas'}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      </div>
+    </div>
+  )
+}
+
 // ── Assignment Detail Panel ────────────────────────────────────────────────────
 
 function AssignmentPanel({
@@ -142,13 +618,41 @@ function AssignmentPanel({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
+  // Submission state
+  const [submitMode, setSubmitMode] = useState(false)
+  const [submitText, setSubmitText] = useState('')
+  const [submitUrl, setSubmitUrl] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitMsg, setSubmitMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
   useEffect(() => {
-    setLoading(true); setError(false); setDetail(null)
+    setLoading(true); setError(false); setDetail(null); setSubmitMode(false); setSubmitMsg(null)
     api.canvasAssignmentDetail(courseId, assignmentId, canvasInstanceUrl)
       .then(setDetail)
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [courseId, assignmentId, canvasInstanceUrl])
+
+  async function handleSubmit(type: 'online_text_entry' | 'online_url') {
+    if (submitting) return
+    setSubmitting(true); setSubmitMsg(null)
+    try {
+      await api.canvasSubmitAssignment(courseId, assignmentId, {
+        submissionType: type,
+        body: type === 'online_text_entry' ? submitText : undefined,
+        url: type === 'online_url' ? submitUrl : undefined,
+        canvasInstanceUrl,
+      })
+      setSubmitMsg({ ok: true, text: '✓ Submitted successfully!' })
+      setSubmitMode(false)
+      // Refresh detail to get updated submission state
+      api.canvasAssignmentDetail(courseId, assignmentId, canvasInstanceUrl).then(setDetail).catch(() => {})
+    } catch (e) {
+      setSubmitMsg({ ok: false, text: e instanceof Error ? e.message : 'Submission failed' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const sub = detail?.submission
   const subState = sub?.workflow_state ?? 'unsubmitted'
@@ -239,7 +743,7 @@ function AssignmentPanel({
                 <div
                   className="canvas-html"
                   style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text-secondary)' }}
-                  dangerouslySetInnerHTML={{ __html: detail.description }}
+                  dangerouslySetInnerHTML={{ __html: prepareCanvasHtml(detail.description, instanceBaseUrl) }}
                 />
               </div>
             ) : (
@@ -270,19 +774,87 @@ function AssignmentPanel({
       </div>
 
       {/* Footer */}
-      {detail && (
-        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-          <a
-            href={`https://${instanceBaseUrl}${detail.html_url.startsWith('/') ? detail.html_url : `/${detail.html_url}`}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}
-          >
-            Open in Canvas
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          </a>
-        </div>
-      )}
+      {detail && (() => {
+        const canSubmitText = detail.submission_types.includes('online_text_entry')
+        const canSubmitUrl = detail.submission_types.includes('online_url')
+        const canSubmitFile = detail.submission_types.includes('online_upload')
+        const canSubmitAny = canSubmitText || canSubmitUrl || canSubmitFile
+        const alreadySubmitted = sub && sub.workflow_state !== 'unsubmitted'
+        const canvasUrl = detail.html_url.startsWith('http')
+          ? detail.html_url
+          : `https://${instanceBaseUrl}${detail.html_url.startsWith('/') ? detail.html_url : `/${detail.html_url}`}`
+
+        return (
+          <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {submitMsg && (
+              <div style={{ fontSize: 12, fontWeight: 600, color: submitMsg.ok ? '#22C55E' : '#EF4444', textAlign: 'center' }}>{submitMsg.text}</div>
+            )}
+
+            {submitMode && canSubmitText && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <textarea
+                  value={submitText}
+                  onChange={e => setSubmitText(e.target.value)}
+                  placeholder="Write your submission here…"
+                  rows={5}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => handleSubmit('online_text_entry')} disabled={submitting || !submitText.trim()}
+                    style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: submitting || !submitText.trim() ? 0.6 : 1 }}>
+                    {submitting ? 'Submitting…' : 'Submit Text'}
+                  </button>
+                  <button onClick={() => setSubmitMode(false)} style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {submitMode && canSubmitUrl && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <input
+                  type="url"
+                  value={submitUrl}
+                  onChange={e => setSubmitUrl(e.target.value)}
+                  placeholder="https://…"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' }}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => handleSubmit('online_url')} disabled={submitting || !submitUrl.trim()}
+                    style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: submitting || !submitUrl.trim() ? 0.6 : 1 }}>
+                    {submitting ? 'Submitting…' : 'Submit URL'}
+                  </button>
+                  <button onClick={() => setSubmitMode(false)} style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {!submitMode && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {canSubmitAny && !alreadySubmitted && (canSubmitText || canSubmitUrl) && (
+                  <button
+                    onClick={() => setSubmitMode(true)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}
+                  >
+                    ✏️ Submit Assignment
+                  </button>
+                )}
+                {canSubmitFile && !alreadySubmitted && (
+                  <a href={canvasUrl} target="_blank" rel="noopener noreferrer" data-no-intercept="true"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>
+                    📎 Upload File in Canvas
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  </a>
+                )}
+                <a href={canvasUrl} target="_blank" rel="noopener noreferrer" data-no-intercept="true"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
+                  Open in Canvas
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+              </div>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
@@ -291,17 +863,34 @@ function AssignmentPanel({
 
 type CourseTab = 'modules' | 'assignments' | 'announcements' | 'files' | 'grades'
 
+type PendingCanvasItem = { title: string; type: string; href: string }
+
+function canvasRedirectMessage(type: string, href: string): string {
+  if (type === 'Quiz') return "Classic quizzes must be taken on Canvas. Once completed, click to view your attempt scores and question review inside Futurely."
+  if (type === 'Discussion') return "This discussion will open in Futurely once loaded."
+  if (type === 'ExternalTool' && href.includes('/quizzes/')) return "Your school uses New Quizzes (LTI). These can't be accessed via the Canvas API and must be taken directly in Canvas."
+  if (type === 'ExternalTool') return "This external tool must be launched from Canvas."
+  if (type === 'ExternalUrl') return "This is an external link that will open in your browser."
+  if (/\/modules/.test(href)) return "This links to a Canvas modules section."
+  return "This content isn't available inside Futurely and will open in Canvas."
+}
+
 function ModulesTab({
-  courseId, canvasInstanceUrl,
-  onSelectAssignment,
+  courseId, canvasInstanceUrl, instanceBaseUrl,
+  onSelectAssignment, onSelectPage, onSelectDiscussion, onSelectQuiz,
 }: {
   courseId: number
   canvasInstanceUrl: string
+  instanceBaseUrl: string
   onSelectAssignment: (assignmentId: number) => void
+  onSelectPage: (pageSlug: string, title: string) => void
+  onSelectDiscussion: (topicId: number, title: string) => void
+  onSelectQuiz: (quizId: number, title: string, itemUrl?: string) => void
 }) {
   const [modules, setModules] = useState<CanvasModule[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
+  const [pending, setPending] = useState<PendingCanvasItem | null>(null)
 
   useEffect(() => {
     setLoading(true); setModules(null)
@@ -313,73 +902,144 @@ function ModulesTab({
 
   const toggle = (id: number) => setCollapsed(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
 
+  const handleOpenInCanvas = (title: string, type: string, href: string) => {
+    // If the link targets a specific module anchor, expand it in-app instead
+    const moduleMatch = href.match(/#module_(\d+)/)
+    if (moduleMatch) {
+      const moduleId = parseInt(moduleMatch[1])
+      setCollapsed(s => { const n = new Set(s); n.delete(moduleId); return n })
+      setTimeout(() => {
+        document.getElementById(`futurely-module-${moduleId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 80)
+      return
+    }
+    setPending({ title, type, href })
+  }
+
   if (loading) return <ContentSkeleton />
   if (!modules || modules.length === 0) return <Empty text="No modules found for this course." />
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {modules.map(mod => {
-        const isOpen = !collapsed.has(mod.id)
-        return (
-          <div key={mod.id} style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', background: 'var(--surface)' }}>
-            <button
-              onClick={() => toggle(mod.id)}
-              style={{ width: '100%', padding: '13px 18px', background: 'var(--surface-2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, textAlign: 'left' }}
-            >
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{mod.name}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{mod.items_count} item{mod.items_count !== 1 ? 's' : ''}</span>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ color: 'var(--text-muted)', transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'none' }}>
-                  <polyline points="9 18 15 12 9 6"/>
-                </svg>
-              </div>
-            </button>
-            {isOpen && mod.items.length > 0 && (
-              <div>
-                {mod.items.map((item, idx) => (
-                  item.type === 'SubHeader' ? (
-                    <div key={item.id} style={{ padding: '8px 18px', fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--text-muted)', borderTop: idx > 0 ? '1px solid var(--border)' : 'none', background: 'rgba(0,0,0,0.15)' }}>
-                      {item.title}
-                    </div>
-                  ) : (
-                    <ModuleItemRow
-                      key={item.id}
-                      item={item}
-                      isLast={idx === mod.items.length - 1}
-                      onSelectAssignment={item.type === 'Assignment' && item.content_id ? () => onSelectAssignment(item.content_id!) : undefined}
-                    />
-                  )
-                ))}
-              </div>
-            )}
-            {isOpen && mod.items.length === 0 && (
-              <div style={{ padding: '12px 18px', fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>This module is empty.</div>
-            )}
+    <>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {modules.map(mod => {
+          const isOpen = !collapsed.has(mod.id)
+          return (
+            <div key={mod.id} id={`futurely-module-${mod.id}`} style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', background: 'var(--surface)' }}>
+              <button
+                onClick={() => toggle(mod.id)}
+                style={{ width: '100%', padding: '13px 18px', background: 'var(--surface-2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, textAlign: 'left' }}
+              >
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{mod.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{mod.items_count} item{mod.items_count !== 1 ? 's' : ''}</span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ color: 'var(--text-muted)', transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'none' }}>
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </div>
+              </button>
+              {isOpen && mod.items.length > 0 && (
+                <div>
+                  {mod.items.map((item, idx) => (
+                    item.type === 'SubHeader' ? (
+                      <div key={item.id} style={{ padding: '8px 18px', fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--text-muted)', borderTop: idx > 0 ? '1px solid var(--border)' : 'none', background: 'rgba(0,0,0,0.15)' }}>
+                        {item.title}
+                      </div>
+                    ) : (
+                      <ModuleItemRow
+                        key={item.id}
+                        item={item}
+                        isLast={idx === mod.items.length - 1}
+                        instanceBaseUrl={instanceBaseUrl}
+                        onSelectAssignment={
+                          (item.type === 'Assignment' || (item.type !== 'Quiz' && item.type !== 'Discussion' && item.html_url?.includes('/assignments/')))
+                            ? (() => {
+                                const id = item.content_id ?? parseInt(item.html_url?.split('/assignments/')[1]?.split('?')[0] ?? '')
+                                if (id) onSelectAssignment(id)
+                              })
+                            : undefined
+                        }
+                        onSelectPage={
+                          (item.type === 'Page' || (item.type !== 'Quiz' && item.type !== 'Discussion' && item.html_url?.includes('/pages/')))
+                            ? (() => {
+                                const slug = item.url?.split('/pages/')[1] ?? item.html_url?.split('/pages/')[1]?.split('?')[0]
+                                if (slug) onSelectPage(slug, item.title)
+                              })
+                            : undefined
+                        }
+                        onSelectDiscussion={
+                          item.type === 'Discussion'
+                            ? (() => {
+                                const id = item.content_id ?? parseInt(item.html_url?.split('/discussion_topics/')[1]?.split('?')[0] ?? '')
+                                if (id) onSelectDiscussion(id, item.title)
+                              })
+                            : undefined
+                        }
+                        onSelectQuiz={
+                          (item.type === 'Quiz' || (item.type === 'ExternalTool' && item.html_url?.includes('/quizzes/')))
+                            ? (() => {
+                                const id = item.content_id ?? parseInt(item.html_url?.split('/quizzes/')[1]?.split('?')[0] ?? '')
+                                if (id) onSelectQuiz(id, item.title, item.html_url)
+                              })
+                            : undefined
+                        }
+                        onOpenInCanvas={handleOpenInCanvas}
+                      />
+                    )
+                  ))}
+                </div>
+              )}
+              {isOpen && mod.items.length === 0 && (
+                <div style={{ padding: '12px 18px', fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>This module is empty.</div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Canvas redirect confirmation modal */}
+      {pending && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          onClick={() => setPending(null)}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, padding: '28px 28px 24px', maxWidth: 400, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 28, marginBottom: 12, textAlign: 'center' }}>{moduleItemIcon(pending.type)}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 10, textAlign: 'center' }}>{pending.title}</div>
+            <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, textAlign: 'center', marginBottom: 24 }}>
+              {canvasRedirectMessage(pending.type, pending.href)}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setPending(null)}
+                style={{ flex: 1, padding: '11px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <a href={pending.href} target="_blank" rel="noopener noreferrer" data-no-intercept="true" onClick={() => setPending(null)}
+                style={{ flex: 1, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                Open in Canvas
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              </a>
+            </div>
           </div>
-        )
-      })}
-    </div>
+        </div>
+      )}
+    </>
   )
 }
 
-function ModuleItemRow({ item, isLast, onSelectAssignment }: { item: CanvasModuleItem; isLast: boolean; onSelectAssignment?: () => void }) {
-  const isClickable = !!onSelectAssignment
+function ModuleItemRow({ item, isLast, onSelectAssignment, onSelectPage, onSelectDiscussion, onSelectQuiz, onOpenInCanvas, instanceBaseUrl }: { item: CanvasModuleItem; isLast: boolean; onSelectAssignment?: () => void; onSelectPage?: () => void; onSelectDiscussion?: () => void; onSelectQuiz?: () => void; onOpenInCanvas?: (title: string, type: string, href: string) => void; instanceBaseUrl?: string }) {
   const complete = item.completion_requirement?.completed ?? false
+  const hasInAppHandler = !!onSelectAssignment || !!onSelectPage || !!onSelectDiscussion || !!onSelectQuiz
+  const rawHref = item.html_url ?? ''
+  const canvasHref = !hasInAppHandler && rawHref
+    ? (rawHref.startsWith('http') ? rawHref : `https://${instanceBaseUrl ?? ''}${rawHref.startsWith('/') ? rawHref : `/${rawHref}`}`)
+    : undefined
+  const opensInCanvas = !hasInAppHandler && !!canvasHref
+  const handleClick = onSelectAssignment ?? onSelectPage ?? onSelectDiscussion ?? onSelectQuiz ?? (opensInCanvas && canvasHref && onOpenInCanvas ? () => onOpenInCanvas(item.title, item.type, canvasHref) : undefined)
+  const isClickable = !!handleClick
 
-  return (
-    <div
-      onClick={onSelectAssignment}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px',
-        borderTop: '1px solid var(--border)',
-        cursor: isClickable ? 'pointer' : 'default',
-        background: isClickable ? undefined : 'transparent',
-        transition: 'background 0.12s',
-      }}
-      onMouseEnter={e => { if (isClickable) (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-2)' }}
-      onMouseLeave={e => { if (isClickable) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
-    >
+  const inner = (
+    <>
       <span style={{ fontSize: 14, flexShrink: 0, width: 20, textAlign: 'center' }}>{moduleItemIcon(item.type)}</span>
       <span style={{ flex: 1, fontSize: 13.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -389,11 +1049,28 @@ function ModuleItemRow({ item, isLast, onSelectAssignment }: { item: CanvasModul
           </div>
         )}
         {isClickable && (
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}>
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
+          opensInCanvas
+            ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)' }}><polyline points="9 18 15 12 9 6"/></svg>
         )}
       </div>
+    </>
+  )
+
+  const sharedStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px',
+    borderTop: '1px solid var(--border)',
+    cursor: isClickable ? 'pointer' : 'default',
+    background: 'transparent',
+    transition: 'background 0.12s',
+    width: '100%', textAlign: 'left',
+  }
+
+  return (
+    <div onClick={handleClick} style={sharedStyle}
+      onMouseEnter={e => { if (isClickable) (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-2)' }}
+      onMouseLeave={e => { if (isClickable) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}>
+      {inner}
     </div>
   )
 }
@@ -472,7 +1149,7 @@ function AnnouncementsTab({ courseId, canvasInstanceUrl }: { courseId: number; c
             <div
               className="canvas-html"
               style={{ padding: '14px 18px', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.65 }}
-              dangerouslySetInnerHTML={{ __html: a.message }}
+              dangerouslySetInnerHTML={{ __html: prepareCanvasHtml(a.message, canvasInstanceUrl) }}
             />
           )}
         </div>
@@ -695,6 +1372,22 @@ export default function CanvasPage() {
   const [detailCourseId, setDetailCourseId] = useState<number | null>(null)
   const [detailAssignmentId, setDetailAssignmentId] = useState<number | null>(null)
 
+  // Page detail panel
+  const [detailPageCourseId, setDetailPageCourseId] = useState<number | null>(null)
+  const [detailPageSlug, setDetailPageSlug] = useState<string | null>(null)
+  const [detailPageTitle, setDetailPageTitle] = useState<string>('')
+
+  // Discussion panel
+  const [detailDiscussionCourseId, setDetailDiscussionCourseId] = useState<number | null>(null)
+  const [detailDiscussionTopicId, setDetailDiscussionTopicId] = useState<number | null>(null)
+  const [detailDiscussionTitle, setDetailDiscussionTitle] = useState<string>('')
+
+  // Quiz panel
+  const [detailQuizCourseId, setDetailQuizCourseId] = useState<number | null>(null)
+  const [detailQuizId, setDetailQuizId] = useState<number | null>(null)
+  const [detailQuizTitle, setDetailQuizTitle] = useState<string>('')
+  const [detailQuizItemUrl, setDetailQuizItemUrl] = useState<string>('')
+
   // Load connections on mount
   useEffect(() => {
     api.canvasStatus()
@@ -747,9 +1440,34 @@ export default function CanvasPage() {
   const openAssignment = (courseId: number, assignmentId: number) => {
     setDetailCourseId(courseId)
     setDetailAssignmentId(assignmentId)
+    setDetailPageSlug(null)
   }
 
-  const closeDetail = () => { setDetailCourseId(null); setDetailAssignmentId(null) }
+  const openPage = (courseId: number, pageSlug: string, title: string) => {
+    setDetailPageCourseId(courseId); setDetailPageSlug(pageSlug); setDetailPageTitle(title)
+    setDetailCourseId(null); setDetailAssignmentId(null)
+    setDetailDiscussionTopicId(null); setDetailQuizId(null)
+  }
+
+  const openDiscussion = (courseId: number, topicId: number, title: string) => {
+    setDetailDiscussionCourseId(courseId); setDetailDiscussionTopicId(topicId); setDetailDiscussionTitle(title)
+    setDetailCourseId(null); setDetailAssignmentId(null); setDetailPageSlug(null)
+    setDetailQuizId(null)
+  }
+
+  const openQuiz = (courseId: number, quizId: number, title: string, itemUrl?: string) => {
+    setDetailQuizCourseId(courseId); setDetailQuizId(quizId); setDetailQuizTitle(title)
+    setDetailQuizItemUrl(itemUrl ?? '')
+    setDetailCourseId(null); setDetailAssignmentId(null); setDetailPageSlug(null)
+    setDetailDiscussionTopicId(null)
+  }
+
+  const closeDetail = () => {
+    setDetailCourseId(null); setDetailAssignmentId(null)
+    setDetailPageSlug(null); setDetailPageCourseId(null)
+    setDetailDiscussionTopicId(null); setDetailDiscussionCourseId(null)
+    setDetailQuizId(null); setDetailQuizCourseId(null); setDetailQuizItemUrl('')
+  }
 
   // Derived
   const dash = activeInstance ? dashData[activeInstance] : undefined
@@ -935,7 +1653,11 @@ export default function CanvasPage() {
                 <ModulesTab
                   courseId={activeCourseId}
                   canvasInstanceUrl={activeInstance}
+                  instanceBaseUrl={activeInstance}
                   onSelectAssignment={id => openAssignment(activeCourseId, id)}
+                  onSelectPage={(slug, title) => openPage(activeCourseId, slug, title)}
+                  onSelectDiscussion={(id, title) => openDiscussion(activeCourseId, id, title)}
+                  onSelectQuiz={(id, title, url) => openQuiz(activeCourseId, id, title, url)}
                 />
               )}
               {courseTab === 'assignments' && (
@@ -967,6 +1689,40 @@ export default function CanvasPage() {
           assignmentId={detailAssignmentId}
           canvasInstanceUrl={activeInstance}
           instanceBaseUrl={activeInstance}
+          onClose={closeDetail}
+        />
+      )}
+
+      {/* Page detail slide-in */}
+      {activeInstance && detailPageCourseId !== null && detailPageSlug !== null && (
+        <PagePanel
+          courseId={detailPageCourseId}
+          pageSlug={detailPageSlug}
+          pageTitle={detailPageTitle}
+          canvasInstanceUrl={activeInstance}
+          onClose={closeDetail}
+        />
+      )}
+
+      {/* Discussion slide-in */}
+      {activeInstance && detailDiscussionCourseId !== null && detailDiscussionTopicId !== null && (
+        <DiscussionPanel
+          courseId={detailDiscussionCourseId}
+          topicId={detailDiscussionTopicId}
+          topicTitle={detailDiscussionTitle}
+          canvasInstanceUrl={activeInstance}
+          onClose={closeDetail}
+        />
+      )}
+
+      {/* Quiz slide-in */}
+      {activeInstance && detailQuizCourseId !== null && detailQuizId !== null && (
+        <QuizPanel
+          courseId={detailQuizCourseId}
+          quizId={detailQuizId}
+          quizTitle={detailQuizTitle}
+          canvasInstanceUrl={activeInstance}
+          canvasItemUrl={detailQuizItemUrl || undefined}
           onClose={closeDetail}
         />
       )}

@@ -553,6 +553,9 @@ export default function SettingsPage() {
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
                   Get your token: Canvas → Profile → Settings → Approved Integrations → New Access Token
                 </p>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, padding: '6px 10px', background: 'var(--surface-2)', borderRadius: 6, border: '1px solid var(--border)' }}>
+                  When creating the token, set the expiry to <strong>120 days</strong> (the maximum recommended). Futurely will alert you when your token expires so you can renew it.
+                </p>
                 <div ref={districtRef} style={{ position: 'relative' }}>
                   <input
                     type="text"
