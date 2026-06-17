@@ -59,6 +59,13 @@ const CARDS = [
     icon: '📅',
     iconBg: 'rgba(239,68,68,0.1)',
   },
+  {
+    href: '/grades/canvas',
+    title: 'Canvas Grades',
+    desc: 'Live scores & submissions',
+    icon: '🎓',
+    iconBg: 'rgba(234,179,8,0.1)',
+  },
 ]
 
 export default function GradesHubPage() {

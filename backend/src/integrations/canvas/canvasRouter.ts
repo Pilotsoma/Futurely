@@ -10,6 +10,8 @@ import {
   fetchCanvasCourses,
   fetchCanvasUpcomingAssignments,
   fetchCanvasOverdueAssignments,
+  fetchCanvasCoursesWithGrades,
+  fetchCanvasAssignmentsWithSubmissions,
   CanvasTokenError,
   CanvasNetworkError,
 } from './canvasClient'
@@ -401,6 +403,47 @@ router.post(
         assignments: [],
       },
     })
+  })
+)
+
+// ── GET /grades ──────────────────────────────────────────────────────────────
+// Returns courses + assignments with submission/score data for all connections.
+
+router.get(
+  '/grades',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+
+    const connections = await prisma.canvasConnection.findMany({ where: { userId } })
+
+    if (connections.length === 0) {
+      res.status(404).json({
+        data: null,
+        error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' },
+      })
+      return
+    }
+
+    const result = await Promise.all(connections.map(async connection => {
+      const token = decryptPassword(connection.encryptedToken)
+      const { canvasInstanceUrl, canvasUserName } = connection
+
+      try {
+        const courses = await fetchCanvasCoursesWithGrades(canvasInstanceUrl, token)
+        const coursesWithAssignments = await Promise.all(
+          courses.map(async course => ({
+            ...course,
+            assignments: await fetchCanvasAssignmentsWithSubmissions(canvasInstanceUrl, token, course.id),
+          }))
+        )
+        return { canvasInstanceUrl, canvasUserName, courses: coursesWithAssignments }
+      } catch (err) {
+        const code = err instanceof CanvasTokenError ? 'TOKEN_EXPIRED' : 'FETCH_FAILED'
+        return { canvasInstanceUrl, canvasUserName, error: code, courses: [] }
+      }
+    }))
+
+    res.status(200).json({ data: result })
   })
 )
 

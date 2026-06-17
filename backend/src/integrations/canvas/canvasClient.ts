@@ -47,6 +47,32 @@ export interface CanvasAssignment {
   html_url: string
 }
 
+export interface CanvasCourseWithGrade {
+  id: number
+  name: string
+  currentScore: number | null
+  currentGrade: string | null
+}
+
+export interface CanvasSubmission {
+  score: number | null
+  grade: string | null
+  submitted_at: string | null
+  workflow_state: string
+  late: boolean
+  missing: boolean
+}
+
+export interface CanvasAssignmentWithSubmission {
+  id: number
+  name: string
+  due_at: string | null
+  points_possible: number | null
+  html_url: string
+  course_id: number
+  submission: CanvasSubmission | null
+}
+
 // ── Network error codes ──────────────────────────────────────────────────────
 
 const NETWORK_ERROR_CODES = new Set(['ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'ECONNRESET'])
@@ -190,6 +216,71 @@ export async function fetchCanvasOverdueAssignments(
 
   logger.info('Canvas overdue assignments fetched', { instanceUrl, assignmentCount: assignments.length })
   return assignments
+}
+
+/**
+ * Fetch active Canvas courses including current score/grade from enrollment data.
+ */
+export async function fetchCanvasCoursesWithGrades(instanceUrl: string, token: string): Promise<CanvasCourseWithGrade[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses?enrollment_state=active&include[]=total_scores&per_page=50`
+  try {
+    const response = await axios.get<Array<{
+      id: number
+      name: string
+      enrollments?: Array<{
+        type: string
+        computed_current_score?: number | null
+        computed_current_grade?: string | null
+      }>
+    }>>(url, { headers: buildAuthHeaders(token), timeout: 15_000 })
+
+    return response.data.map(c => {
+      const enroll = c.enrollments?.find(e => e.type === 'student')
+      return {
+        id: c.id,
+        name: c.name,
+        currentScore: enroll?.computed_current_score ?? null,
+        currentGrade: enroll?.computed_current_grade ?? null,
+      }
+    })
+  } catch (err) {
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch all assignments for a course including the student's submission data.
+ */
+export async function fetchCanvasAssignmentsWithSubmissions(
+  instanceUrl: string,
+  token: string,
+  courseId: number,
+): Promise<CanvasAssignmentWithSubmission[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/assignments?include[]=submission&per_page=100&order_by=due_at`
+  try {
+    const response = await axios.get<Array<{
+      id: number
+      name: string
+      due_at: string | null
+      points_possible: number | null
+      html_url: string
+      course_id: number
+      submission?: CanvasSubmission
+    }>>(url, { headers: buildAuthHeaders(token), timeout: 15_000 })
+
+    return response.data.map(a => ({
+      id: a.id,
+      name: a.name,
+      due_at: a.due_at,
+      points_possible: a.points_possible,
+      html_url: a.html_url,
+      course_id: a.course_id,
+      submission: a.submission ?? null,
+    }))
+  } catch {
+    logger.warn('Failed to fetch Canvas assignments for course', { instanceUrl, courseId })
+    return []
+  }
 }
 
 /**
