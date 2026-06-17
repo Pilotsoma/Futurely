@@ -5,7 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
-const FREE_MODEL = 'mistralai/mistral-7b-instruct:free'
+const FREE_MODEL = 'openrouter/free'
 
 // Strip markdown code fences and extract raw JSON
 function extractJson(raw: string): string {
