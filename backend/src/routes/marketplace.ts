@@ -376,7 +376,7 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { coins: true, nameColor: true, pfpEffect: true, ownedNameColors: true, ownedPfpEffects: true, lastCoinClaim: true, allTags: true },
+      select: { coins: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, ownedNameColors: true, ownedPfpEffects: true, lastCoinClaim: true, allTags: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
@@ -393,6 +393,8 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
       data: {
         coins: user.coins,
         canClaimToday,
+        tag: user.tag,
+        tagColor: user.tagColor,
         nameColor: user.nameColor,
         pfpEffect: user.pfpEffect,
         ownedTags,
@@ -677,16 +679,38 @@ router.post('/quicksell', requireAuth, async (req: AuthRequest, res: Response): 
 router.put('/equip', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const { type, itemId } = req.body as { type?: string; itemId?: string | null }
-  if (!type || !['name-color', 'pfp'].includes(type)) {
-    res.status(400).json({ error: 'type must be name-color or pfp' }); return
+  if (!type || !['name-color', 'pfp', 'tag'].includes(type)) {
+    res.status(400).json({ error: 'type must be name-color, pfp, or tag' }); return
   }
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { ownedNameColors: true, ownedPfpEffects: true },
+      select: { ownedNameColors: true, ownedPfpEffects: true, allTags: true, tag: true, tagColor: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
+    if (type === 'tag') {
+      if (itemId) {
+        const owned = parseTagArr(user.allTags)
+        const tagDef = TAG_BOX_ITEMS.find(d => d.id === itemId)
+        const ownedMatch = owned.find(t => (TAG_BOX_ITEMS.find(d => d.tag === t.tag)?.id ?? t.tag) === itemId)
+        if (!ownedMatch) { res.status(403).json({ error: 'You do not own this tag' }); return }
+        const updated = await prisma.user.update({
+          where: { id: req.userId },
+          data: { tag: ownedMatch.tag, tagColor: tagDef?.tagColor ?? ownedMatch.tagColor },
+          select: { tag: true, tagColor: true },
+        })
+        res.json({ data: { tag: updated.tag, tagColor: updated.tagColor } })
+      } else {
+        const updated = await prisma.user.update({
+          where: { id: req.userId },
+          data: { tag: 'Student', tagColor: 'grey' },
+          select: { tag: true, tagColor: true },
+        })
+        res.json({ data: { tag: updated.tag, tagColor: updated.tagColor } })
+      }
+      return
+    }
     if (type === 'name-color') {
       if (itemId !== null && itemId !== undefined) {
         const owned = parseJsonArr(user.ownedNameColors)
@@ -1311,6 +1335,27 @@ router.post('/trades/:id/cancel', requireAuth, async (req: AuthRequest, res: Res
     res.json({ data: { ok: true } })
   } catch {
     res.status(500).json({ error: 'Failed to cancel trade' })
+  }
+})
+
+router.get('/admin/stats', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  try {
+    const me = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, tag: true } })
+    if (me?.role !== 'DEV' && me?.role !== 'ADMIN' && me?.tag !== 'DEV') {
+      res.status(403).json({ error: 'DEV access required' }); return
+    }
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000)
+    const [totalUsers, activeUsers, liveUsers] = await Promise.all([
+      prisma.user.count({ where: { deletedAt: null } }),
+      prisma.user.count({ where: { deletedAt: null, lastSeenAt: { gte: threeDaysAgo } } }),
+      prisma.user.count({ where: { deletedAt: null, lastSeenAt: { gte: tenMinAgo } } }),
+    ])
+    res.json({ data: { totalUsers, activeUsers, liveUsers } })
+  } catch (err) {
+    console.error('[ADMIN STATS]', err)
+    res.status(500).json({ error: 'Internal server error' })
   }
 })
 

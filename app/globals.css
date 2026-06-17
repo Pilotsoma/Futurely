@@ -316,32 +316,37 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
 /* ── Rainbow animations (gamification) ──────────────────────────────────── */
 @keyframes rainbow {
-  0%   { color: #ff6b6b; border-color: #ff6b6b; background: rgba(255,107,107,0.12); }
-  16%  { color: #ffa94d; border-color: #ffa94d; background: rgba(255,169,77,0.12); }
-  32%  { color: #ffd43b; border-color: #ffd43b; background: rgba(255,212,59,0.12); }
-  48%  { color: #69db7c; border-color: #69db7c; background: rgba(105,219,124,0.12); }
-  64%  { color: #38d9a9; border-color: #38d9a9; background: rgba(56,217,169,0.12); }
-  80%  { color: #4dabf7; border-color: #4dabf7; background: rgba(77,171,247,0.12); }
-  100% { color: #ff6b6b; border-color: #ff6b6b; background: rgba(255,107,107,0.12); }
+  0%   { color: #ff4d4d; border-color: #ff4d4d; background: rgba(255,77,77,0.13); }
+  12%  { color: #ff8c00; border-color: #ff8c00; background: rgba(255,140,0,0.13); }
+  24%  { color: #ffd700; border-color: #ffd700; background: rgba(255,215,0,0.13); }
+  36%  { color: #4cd964; border-color: #4cd964; background: rgba(76,217,100,0.13); }
+  48%  { color: #00c9a7; border-color: #00c9a7; background: rgba(0,201,167,0.13); }
+  60%  { color: #1e90ff; border-color: #1e90ff; background: rgba(30,144,255,0.13); }
+  72%  { color: #7b5ea7; border-color: #7b5ea7; background: rgba(123,94,167,0.13); }
+  84%  { color: #ff69b4; border-color: #ff69b4; background: rgba(255,105,180,0.13); }
+  100% { color: #ff4d4d; border-color: #ff4d4d; background: rgba(255,77,77,0.13); }
 }
-.tag-rainbow { animation: rainbow 3s linear infinite; font-weight: 700 !important; }
+.tag-rainbow { animation: rainbow 2.3s linear infinite; font-weight: 700 !important; }
 
 @keyframes nameRainbow {
-  0%   { color: #ff6b6b; }
-  16%  { color: #ffa94d; }
-  32%  { color: #ffd43b; }
-  48%  { color: #69db7c; }
-  64%  { color: #38d9a9; }
-  80%  { color: #4dabf7; }
-  100% { color: #ff6b6b; }
+  0%   { color: #ff4d4d; }
+  12%  { color: #ff8c00; }
+  24%  { color: #ffd700; }
+  36%  { color: #4cd964; }
+  48%  { color: #00c9a7; }
+  60%  { color: #1e90ff; }
+  72%  { color: #7b5ea7; }
+  84%  { color: #ff69b4; }
+  100% { color: #ff4d4d; }
 }
-.name-rainbow { animation: nameRainbow 3s linear infinite; }
+.name-rainbow { animation: nameRainbow 2.3s linear infinite; }
 
 @keyframes pfpRainbow {
-  from { filter: hue-rotate(0deg); }
-  to   { filter: hue-rotate(360deg); }
+  0%   { filter: hue-rotate(0deg) saturate(1.4) brightness(1.05); }
+  50%  { filter: hue-rotate(180deg) saturate(1.4) brightness(1.05); }
+  100% { filter: hue-rotate(360deg) saturate(1.4) brightness(1.05); }
 }
-.pfp-rainbow { animation: pfpRainbow 3s linear infinite; }
+.pfp-rainbow { animation: pfpRainbow 2.3s linear infinite; }
 
 @keyframes pfpGoldShimmer {
   0%   { background-position: 0% 50%;   box-shadow: 0 0 10px #EAB30866; border-color: #EAB308; }
@@ -383,7 +388,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   80%  { border-color: #4dabf7; box-shadow: 0 0 22px #4dabf755; }
   100% { border-color: #ff6b6b; box-shadow: 0 0 22px #ff6b6b55; }
 }
-.box-rainbow { animation: boxRainbow 3s linear infinite; }
+.box-rainbow { animation: boxRainbow 2.3s linear infinite; }
 
 @keyframes goatPrestige {
   0%   {

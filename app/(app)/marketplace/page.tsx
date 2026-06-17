@@ -424,7 +424,7 @@ export default function MarketplacePage() {
     finally { setOpening(null) }
   }
 
-  async function handleEquip(type: 'name-color' | 'pfp', itemId: string | null) {
+  async function handleEquip(type: 'name-color' | 'pfp' | 'tag', itemId: string | null) {
     if (equipping || !inv) return
     setEquipping(type + (itemId ?? 'null'))
     try {
@@ -433,6 +433,10 @@ export default function MarketplacePage() {
         if (!prev) return prev
         if (type === 'name-color') {
           return { ...prev, nameColor: itemId ? prev.ownedNameColors.find(i => i.id === itemId)?.value ?? null : null }
+        }
+        if (type === 'tag') {
+          const owned = prev.ownedTags.find(t => t.id === itemId)
+          return { ...prev, tag: owned?.tag ?? 'Student', tagColor: owned?.tagColor ?? 'grey' }
         }
         return { ...prev, pfpEffect: itemId ? prev.ownedPfpEffects.find(i => i.id === itemId)?.value ?? null : null }
       })
@@ -752,9 +756,9 @@ export default function MarketplacePage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 }}><CoinIcon size={11} />{listing?.price}</span>
             {/* If user still has an unlisted copy, let them equip it */}
-            {type !== 'tag' && count >= 1 && (
+            {count >= 1 && (
               <button
-                onClick={() => void handleEquip(type as 'name-color' | 'pfp', isEquipped ? null : item.id)}
+                onClick={() => void handleEquip(type, isEquipped ? null : item.id)}
                 disabled={!!equipping}
                 style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${isEquipped ? 'var(--border)' : 'var(--primary)'}`, background: isEquipped ? 'var(--surface-2)' : 'transparent', color: isEquipped ? 'var(--text-muted)' : 'var(--primary)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
               >
@@ -771,15 +775,13 @@ export default function MarketplacePage() {
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 6 }}>
-            {type !== 'tag' && (
-              <button
-                onClick={() => void handleEquip(type as 'name-color' | 'pfp', isEquipped ? null : item.id)}
-                disabled={!!equipping}
-                style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${isEquipped ? 'var(--border)' : 'var(--primary)'}`, background: isEquipped ? 'var(--surface-2)' : 'transparent', color: isEquipped ? 'var(--text-muted)' : 'var(--primary)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-              >
-                {isEquipped ? 'Unequip' : 'Equip'}
-              </button>
-            )}
+            <button
+              onClick={() => void handleEquip(type, isEquipped ? null : item.id)}
+              disabled={!!equipping}
+              style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${isEquipped ? 'var(--border)' : 'var(--primary)'}`, background: isEquipped ? 'var(--surface-2)' : 'transparent', color: isEquipped ? 'var(--text-muted)' : 'var(--primary)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+            >
+              {isEquipped ? 'Unequip' : 'Equip'}
+            </button>
             {!isNonTradeable && (
               <button
                 onClick={() => {
@@ -1539,10 +1541,9 @@ export default function MarketplacePage() {
 
               {((inv?.ownedTags ?? []).length > 0 || myActiveListings.some(l => l.itemType === 'tag')) && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>🏷️ Tags</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 14 }}>Equip tags from Settings → Profile</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🏷️ Tags</div>
                   {groupById(byRarity(inv?.ownedTags ?? [])).map(t =>
-                    renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag', false, t.count)
+                    renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag', inv?.tag === t.tag, t.count)
                   )}
                   {myActiveListings
                     .filter(l => l.itemType === 'tag' && !(inv?.ownedTags ?? []).some(t => t.id === l.itemId))

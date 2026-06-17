@@ -128,6 +128,9 @@ export default function SettingsPage() {
   const [avatarSaving, setAvatarSaving]       = useState(false)
   const [avatarMsg, setAvatarMsg]             = useState<string | null>(null)
   const [showChangelog, setShowChangelog]     = useState(false)
+  const [hideGpa, setHideGpa]                 = useState(false)
+  const [devStats, setDevStats]               = useState<{ totalUsers: number; activeUsers: number; liveUsers: number } | null>(null)
+  const [devStatsLoading, setDevStatsLoading] = useState(false)
 
   async function handleSaveAvatar() {
     setAvatarSaving(true); setAvatarMsg(null)
@@ -144,6 +147,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setTheme((localStorage.getItem('ns_theme') as 'dark' | 'light') || 'dark')
+    setHideGpa(localStorage.getItem('ns_hide_gpa') === '1')
     try {
       const saved = localStorage.getItem('ns_grade_colors_v2')
       if (saved) {
@@ -193,6 +197,10 @@ export default function SettingsPage() {
       setSatScore(d.profile?.satScore?.toString() ?? '')
       setActScore(d.profile?.actScore?.toString() ?? '')
       setFuturePlan(d.profile?.futureDecision ?? '')
+      if (d.role === 'DEV' || d.role === 'ADMIN') {
+        setDevStatsLoading(true)
+        api.adminStats().then(setDevStats).catch(() => null).finally(() => setDevStatsLoading(false))
+      }
     }).catch(() => null)
     api.portalStatus().then(status => {
       setPortalStatus(status)
@@ -729,6 +737,24 @@ export default function SettingsPage() {
                 {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
               </button>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div>
+                <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Hide GPA on dashboard</span>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Blur your GPA so others can&apos;t see it over your shoulder</div>
+              </div>
+              <button
+                onClick={() => { const next = !hideGpa; setHideGpa(next); localStorage.setItem('ns_hide_gpa', next ? '1' : '0') }}
+                style={{
+                  width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                  background: hideGpa ? 'var(--primary)' : 'var(--border)', transition: 'background 0.2s',
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 3, left: hideGpa ? 23 : 3, width: 18, height: 18,
+                  borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
             <div style={{ padding: '10px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div>
@@ -782,6 +808,44 @@ export default function SettingsPage() {
             </svg>
             Sign Out
           </button>
+
+          {/* DEV-only: platform stats */}
+          {(data?.role === 'DEV' || data?.role === 'ADMIN') && (
+            <div className="ns-card" style={{ ...S.card, border: '1px solid rgba(43,74,142,0.25)', marginTop: 16 }}>
+              <p style={{ ...S.cardLabel, color: 'var(--primary)', marginBottom: 14 }}>DEV — Platform Stats</p>
+              {devStatsLoading ? (
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Loading…</p>
+              ) : devStats ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {([
+                    { label: 'Total Users', value: devStats.totalUsers.toLocaleString(), desc: 'All accounts created' },
+                    { label: 'Active Users', value: devStats.activeUsers.toLocaleString(), desc: 'Active in the last 3 days' },
+                    { label: 'Live Users', value: devStats.liveUsers.toLocaleString(), desc: 'Active in the last 10 minutes' },
+                  ] as { label: string; value: string; desc: string }[]).map(row => (
+                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{row.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{row.desc}</div>
+                      </div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>{row.value}</div>
+                    </div>
+                  ))}
+                  <button
+                    className="ns-btn-ghost"
+                    style={{ alignSelf: 'flex-end', height: 32, padding: '0 14px', fontSize: 12, marginTop: 4 }}
+                    onClick={() => {
+                      setDevStatsLoading(true)
+                      api.adminStats().then(setDevStats).catch(() => null).finally(() => setDevStatsLoading(false))
+                    }}
+                  >
+                    Refresh
+                  </button>
+                </div>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--error)' }}>Failed to load stats</p>
+              )}
+            </div>
+          )}
 
           {/* DEV-only: profile picture URL */}
           {data?.role === 'ADMIN' && (

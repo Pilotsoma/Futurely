@@ -610,7 +610,7 @@ export const api = {
   marketplaceQuicksellDuplicates: (exclude: string[] = []) =>
     request<{ coins: number; sold: number; totalPayout: number }>('/api/marketplace/quicksell/duplicates', { method: 'POST', body: JSON.stringify({ exclude }), headers: { 'Content-Type': 'application/json' } }),
 
-  marketplaceEquip: (type: 'name-color' | 'pfp', itemId: string | null) =>
+  marketplaceEquip: (type: 'name-color' | 'pfp' | 'tag', itemId: string | null) =>
     request<{ nameColor?: string | null; pfpEffect?: string | null }>('/api/marketplace/equip', {
       method: 'PUT',
       body: JSON.stringify({ type, itemId }),
@@ -691,6 +691,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ message }),
     }),
+
+  adminStats: () =>
+    request<{ totalUsers: number; activeUsers: number; liveUsers: number }>('/api/marketplace/admin/stats'),
 }
 
 // ── Planner types ─────────────────────────────────────────────────────────
@@ -1029,6 +1032,8 @@ export interface TagInventoryItem {
 export interface InventoryData {
   coins: number
   canClaimToday: boolean
+  tag: string | null
+  tagColor: string | null
   nameColor: string | null
   pfpEffect: string | null
   ownedTags: TagInventoryItem[]

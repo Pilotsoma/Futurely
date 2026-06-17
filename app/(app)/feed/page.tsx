@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { useSearchParams } from 'next/navigation'
 import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification } from '@/lib/api'
 import CoinIcon from '@/components/ui/CoinIcon'
 
@@ -1502,6 +1503,7 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
 interface Toast { id: string; notif: AppNotification }
 
 export default function StudyFeedPage() {
+  const searchParams = useSearchParams()
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(true)
   const [newPostBody, setNewPostBody] = useState('')
@@ -1537,21 +1539,41 @@ export default function StudyFeedPage() {
 
   const [viewPostId, setViewPostId] = useState<number | null>(null)
 
-  // Open profile overlay or post detail if navigated here via URL params
+  // sessionStorage relay — runs once on mount (from notification bell on another page)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const profileId = params.get('profile')
-    const postId = params.get('post')
+    const pending = sessionStorage.getItem('ns_open_profile')
+    if (pending) {
+      const id = parseInt(pending, 10)
+      if (!isNaN(id)) {
+        setProfileUserId(id)
+        // Delay removal so React Strict Mode's double-invoke (dev only) can also read it on remount
+        setTimeout(() => sessionStorage.removeItem('ns_open_profile'), 100)
+      }
+    }
+    // Custom event relay — when already on feed page and notification bell fires
+    function handleOpenProfile(e: Event) {
+      const id = (e as CustomEvent<number>).detail
+      if (!isNaN(id)) setProfileUserId(id)
+    }
+    window.addEventListener('ns:open-profile', handleOpenProfile)
+    return () => window.removeEventListener('ns:open-profile', handleOpenProfile)
+  }, [])
+
+  // URL params — handles direct links like /feed?profile=123
+  useEffect(() => {
+    const profileId = searchParams.get('profile')
+    const postId = searchParams.get('post')
     if (profileId) {
       const id = parseInt(profileId, 10)
       if (!isNaN(id)) setProfileUserId(id)
+      window.history.replaceState({}, '', '/feed')
     }
     if (postId) {
       const id = parseInt(postId, 10)
       if (!isNaN(id)) setViewPostId(id)
+      window.history.replaceState({}, '', '/feed')
     }
-    if (profileId || postId) window.history.replaceState({}, '', '/feed')
-  }, [])
+  }, [searchParams])
 
   const loadPosts = useCallback(async (p: number) => {
     try {

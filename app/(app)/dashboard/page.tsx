@@ -147,7 +147,12 @@ export default function DashboardPage() {
   const [resyncError, setResyncError] = useState<string | null>(null)
   const [needsReconnect, setNeedsReconnect] = useState(false)
   const [showGpaWelcome, setShowGpaWelcome] = useState(false)
+  const [hideGpa, setHideGpa] = useState(false)
   const gpaNeedsResync = useRef(false)
+
+  useEffect(() => {
+    setHideGpa(localStorage.getItem('ns_hide_gpa') === '1')
+  }, [])
 
   useEffect(() => {
     // Track day streak using localStorage
@@ -321,15 +326,27 @@ export default function DashboardPage() {
       {/* GPA + Due Today */}
       <motion.div style={S.topRow} {...staggerItem(0)}>
         <div className="ns-card" style={{ ...S.card, flex: 1, cursor: 'pointer' }} onClick={() => router.push('/grades/what-if')}>
-          <p style={S.cardLabel}>GPA</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p style={{ ...S.cardLabel, marginBottom: 0 }}>GPA</p>
+            <button
+              onClick={e => { e.stopPropagation(); const next = !hideGpa; setHideGpa(next); localStorage.setItem('ns_hide_gpa', next ? '1' : '0') }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--text-muted)', lineHeight: 1 }}
+              title={hideGpa ? 'Show GPA' : 'Hide GPA'}
+            >
+              {hideGpa
+                ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              }
+            </button>
+          </div>
           <div style={S.gpaRow}>
             <div style={S.gpaBlock}>
-              <div style={S.gpaNum}>{animUGpa}</div>
+              <div style={{ ...S.gpaNum, ...(hideGpa ? { filter: 'blur(8px)', userSelect: 'none' } : {}) }}>{animUGpa}</div>
               <div style={S.gpaTag}>Unweighted</div>
             </div>
             <div style={S.gpaDivider} />
             <div style={S.gpaBlock}>
-              <div style={{ ...S.gpaNum, ...gradientStyle }}>{animWGpa}</div>
+              <div style={{ ...S.gpaNum, ...gradientStyle, ...(hideGpa ? { filter: 'blur(8px)', userSelect: 'none' } : {}) }}>{animWGpa}</div>
               <div style={S.gpaTag}>Weighted</div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { api, AppNotification } from '../../lib/api'
 
 // Module-level dedup set — shared across all instances so toasts fire only once
@@ -37,6 +37,7 @@ interface Props {
 
 export default function NotificationBell({ showToasts = false, collapsed = false, onOpenProfile }: Props) {
   const router = useRouter()
+  const pathname = usePathname()
   const [notifs, setNotifs]       = useState<AppNotification[]>([])
   const [unread, setUnread]       = useState(0)
   const [showPanel, setShowPanel] = useState(false)
@@ -184,7 +185,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 const name = senderFirst(n)
                 const icon = n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : n.type === 'LISTING_SOLD' ? '🏷️' : n.type.startsWith('TRADE') ? '🔄' : n.type === 'ASSIGNMENT_CREATED' ? '📚' : '💬'
                 const link = (label: React.ReactNode) => (
-                  <b onClick={() => { setShowPanel(false); onOpenProfile ? onOpenProfile(n.fromUserId) : router.push(`/feed?profile=${n.fromUserId}`) }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
+                  <b onClick={() => { setShowPanel(false); if (onOpenProfile) { onOpenProfile(n.fromUserId) } else if (pathname === '/feed') { window.dispatchEvent(new CustomEvent('ns:open-profile', { detail: n.fromUserId })) } else { sessionStorage.setItem('ns_open_profile', String(n.fromUserId)); router.push('/feed') } }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
                 )
                 let body: React.ReactNode
                 if (n.type === 'FOLLOW')           body = <>{link(name)} started following you</>
