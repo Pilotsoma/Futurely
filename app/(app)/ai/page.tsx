@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -61,14 +60,22 @@ export default function AIChatPage() {
   const [input, setInput]         = useState('')
   const [sending, setSending]     = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const searchParams = useSearchParams()
-  const handledQ = useRef<string | null>(null)
 
   useEffect(() => {
     const loaded = loadSessions()
     setSessions(loaded)
     saveSessions(loaded)
-    // one-time localStorage prefill (legacy path)
+
+    // Handle ?q= passed from dashboard AiBar — read directly from URL to avoid Suspense requirement
+    const params = new URLSearchParams(window.location.search)
+    const q = params.get('q')
+    if (q) {
+      window.history.replaceState({}, '', '/ai')
+      void handleSend(q)
+      return
+    }
+
+    // legacy localStorage prefill
     const prefill = localStorage.getItem('ns_ai_prefill')
     if (prefill) {
       localStorage.removeItem('ns_ai_prefill')
@@ -76,16 +83,6 @@ export default function AIChatPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // Fires on mount AND whenever the URL changes (e.g. navigating from dashboard while page is already mounted)
-  useEffect(() => {
-    const q = searchParams.get('q')
-    if (!q || q === handledQ.current) return
-    handledQ.current = q
-    window.history.replaceState({}, '', '/ai')
-    void handleSend(q)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
 
   function startNewChat() {
     setActiveId(null)
@@ -216,8 +213,8 @@ export default function AIChatPage() {
             </div>
           ))}
           {sending && (
-            <div style={{ ...S.bubbleAi, color: 'var(--text-muted)', display: 'flex', gap: 4, alignItems: 'center' }}>
-              <span style={S.dot}/><span style={S.dot}/><span style={S.dot}/>
+            <div style={{ ...S.bubbleAi, display: 'flex', gap: 6, alignItems: 'center', padding: '14px 18px' }}>
+              <span className="ai-dot"/><span className="ai-dot"/><span className="ai-dot"/>
             </div>
           )}
           <div ref={bottomRef} />
@@ -282,6 +279,5 @@ const S: Record<string, React.CSSProperties> = {
   emptySub:         { fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 },
   bubbleUser:       { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 14, lineHeight: 1.55, background: 'var(--primary)', color: '#060D10', alignSelf: 'flex-end', fontWeight: 500 },
   bubbleAi:         { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 16px 4px', fontSize: 14, lineHeight: 1.55, background: 'var(--surface-2)', border: '1px solid var(--border)', alignSelf: 'flex-start', color: 'var(--text)', whiteSpace: 'pre-wrap' as const },
-  dot:              { width: 6, height: 6, borderRadius: '50%', background: 'var(--text-muted)' },
   inputBar:         { display: 'flex', gap: 10 },
 }
