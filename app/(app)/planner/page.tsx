@@ -233,6 +233,13 @@ export default function PlannerPage() {
 
   const groups = groupAssignments(items)
 
+  // Normalised list of Canvas connections — works with old (single) and new (multi) backend
+  const canvasConnections = canvasStatus?.connections?.length
+    ? canvasStatus.connections
+    : canvasStatus?.canvasInstanceUrl
+      ? [{ canvasInstanceUrl: canvasStatus.canvasInstanceUrl, canvasUserName: canvasStatus.canvasUserName, lastSynced: canvasStatus.lastSynced, syncStatus: canvasStatus.syncStatus, syncError: canvasStatus.syncError }]
+      : []
+
   return (
     <div className="fade-up" style={{ maxWidth: 680, margin: '0 auto' }}>
       {/* Header */}
@@ -259,11 +266,10 @@ export default function PlannerPage() {
       {/* Canvas Panel */}
       {canvasStatus?.connected ? (
         <div className="ns-card" style={{ padding: '14px 16px', marginBottom: 16 }}>
-          {/* Header row with sync all */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: canvasStatus.connections.length > 1 ? 10 : 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: canvasConnections.length > 1 ? 10 : 0 }}>
             <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ color: '#22C55E', fontWeight: 700 }}>✓</span>
-              Canvas {canvasStatus.connections.length > 1 ? 'connected' : 'connected'}
+              Canvas connected
             </span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <button
@@ -283,7 +289,7 @@ export default function PlannerPage() {
               >
                 {canvasLoading ? 'Syncing…' : 'Sync All'}
               </button>
-              {canvasStatus.connections.length < 2 && (
+              {canvasConnections.length < 2 && (
                 <button
                   onClick={() => setShowCanvasForm(true)}
                   disabled={canvasLoading}
@@ -305,7 +311,7 @@ export default function PlannerPage() {
             </div>
           </div>
           {/* Per-connection rows */}
-          {canvasStatus.connections.map(conn => {
+          {canvasConnections.map(conn => {
             const isCollege = isCollegeIsd(conn.canvasInstanceUrl)
             return (
               <div key={conn.canvasInstanceUrl} style={{
