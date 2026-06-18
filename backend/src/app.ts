@@ -57,25 +57,6 @@ app.use(cors({
   credentials: true,
 }))
 
-// ── Body size limit — prevent large-payload DoS ──────────────────────────────
-app.use(express.json({ limit: '50kb' }))
-app.use(express.urlencoded({ extended: true, limit: '50kb' }))
-
-<<<<<<< HEAD
-const SENSITIVE_FIELDS = new Set(['password', 'token', 'refreshToken', 'newPassword', 'currentPassword'])
-
-app.use((req, _res, next) => {
-  console.log(`[REQ] ${req.method} ${req.originalUrl}`)
-  console.log('[REQ] content-type:', req.headers['content-type'])
-  console.log('[REQ] auth header exists:', Boolean(req.headers.authorization))
-
-  if (req.method !== 'GET' && req.body) {
-    const sanitized: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(req.body as Record<string, unknown>)) {
-      sanitized[k] = SENSITIVE_FIELDS.has(k) && v ? '[hidden]' : v
-    }
-    console.log('[REQ] body:', sanitized)
-=======
 // ── Global rate limiter — 1000 req / 15 min per IP ───────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -125,7 +106,6 @@ app.use((req, _res, next) => {
         password: req.body?.password ? '[hidden]' : undefined,
       })
     }
->>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
   }
   next()
 })
@@ -219,11 +199,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/assignments', requireAuth, assignmentsRouter)
   app.use('/students', requireAuth, studentsRouter)
   app.use('/roadmap', requireAuth, roadmapRouter)
-<<<<<<< HEAD
-  app.use('/ai', requireAuth, aiRouter)
-=======
   app.use('/ai', aiLimiter, requireAuth, aiRouter)
->>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
   app.use('/feed', requireAuth, feedRouter)
   app.use('/notifications', requireAuth, notificationsRouter)
   app.use('/integrations/grades', requireAuth, gradesIntegrationRouter)
