@@ -14,7 +14,7 @@ import {
 const DUMMY_PFP = 'https://i.pinimg.com/474x/13/74/20/137420f5b9c39bc911e472f5d20f053e.jpg'
 
 const RARITY_COLOR: Record<string, string> = {
-  Common: '#6B7280', Uncommon: '#3B82F6', Rare: '#F97316',
+  Common: '#22C55E', Uncommon: '#3B82F6', Rare: '#F97316',
   Epic: '#8B5CF6', Legendary: '#EAB308', Mythic: 'rainbow',
 }
 
