@@ -21,6 +21,11 @@ const RARITY_COLOR: Record<string, string> = {
 const ITEM_COLOR_OVERRIDE: Record<string, string> = {
   prodigy: '#111111',
 }
+function truncateWords(str: string, max = 4): string {
+  const words = str.trim().split(/\s+/)
+  return words.length <= max ? str : words.slice(0, max).join(' ') + '…'
+}
+
 function getRarityColor(rarity: string, itemId?: string | null): string {
   if (itemId && ITEM_COLOR_OVERRIDE[itemId]) return ITEM_COLOR_OVERRIDE[itemId]
   const c = RARITY_COLOR[rarity]
@@ -1168,7 +1173,7 @@ export default function MarketplacePage() {
             <span
               className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : ''}
               style={{ fontSize: 13, fontWeight: 700, color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
-            >{item.tag}</span>
+            >{truncateWords(item.tag ?? '')}</span>
           )}
         </button>
         {type !== 'tag' && (
@@ -2100,7 +2105,7 @@ export default function MarketplacePage() {
                               <span
                                 className={item.name === 'GOD' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : ''}
                                 style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'GOD' || item.name === 'GOAT') ? undefined : item.tagColor ?? '#6B7280' }}
-                              >{item.name}</span>
+                              >{truncateWords(item.name ?? '')}</span>
                             )}
                           </div>
                           {/* Name */}
