@@ -80,8 +80,11 @@ const DEV_ORIGINS = [
   'http://localhost:8081',  // Expo bundler / Metro
 ]
 
-const ACTIVE_ORIGINS = isProd ? ALLOWED_ORIGINS : DEV_ORIGINS
-console.log(`[CORS] Active origins (${isProd ? 'production' : 'development'}):`, ACTIVE_ORIGINS.join(', ') || '(none — all non-browser requests allowed)')
+// Use ALLOWED_ORIGINS if explicitly set (works regardless of NODE_ENV),
+// otherwise fall back to DEV_ORIGINS. This handles Vercel's experimental
+// backend where NODE_ENV may not be 'production'.
+const ACTIVE_ORIGINS = ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : DEV_ORIGINS
+console.log(`[CORS] Active origins:`, ACTIVE_ORIGINS.join(', ') || '(none — all non-browser requests allowed)')
 
 const CORS_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization']
@@ -93,10 +96,9 @@ app.use(cors({
     // No Origin header = native mobile / server-to-server — allow.
     if (!origin) return cb(null, true)
 
-    const list = isProd ? ALLOWED_ORIGINS : DEV_ORIGINS
-    if (list.includes(origin)) return cb(null, true)
+    if (ACTIVE_ORIGINS.includes(origin)) return cb(null, true)
 
-    const allowedStr = list.length > 0 ? list.join(', ') : '(none)'
+    const allowedStr = ACTIVE_ORIGINS.length > 0 ? ACTIVE_ORIGINS.join(', ') : '(none)'
     cb(new Error(`CORS: origin '${origin}' is not allowed. Allowed origins: ${allowedStr}`))
   },
   credentials: true,
