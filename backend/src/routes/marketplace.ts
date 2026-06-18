@@ -92,31 +92,31 @@ const RARITY_RANK: Record<string, number> = {
 // ── Estimated item prices (seed; updated dynamically on each sale) ─────────────
 
 export const SEED_PRICES: Record<string, number> = {
-  // Tags (Common 10, Uncommon 20, Rare 50, Epic 250, Legendary 1k, Mythic GOD 50k)
-  'tag:grinder': 10,         'tag:focused': 10,         'tag:scholar': 10,
-  'tag:honors-student': 20,  'tag:ap-student': 20,
-  'tag:deans-list': 50,      'tag:top-performer': 50,
-  'tag:ace': 250,             'tag:genius': 250,
-  'tag:mastermind': 1000,     'tag:prodigy': 1000,
-  'tag:god': 5000,
+  // Tags — spin cost 10 (was 15, ×2/3): Common 7, Uncommon 13, Rare 33, Epic 167, Legendary 667, GOD 3333, GOAT 33333
+  'tag:grinder': 7,          'tag:focused': 7,          'tag:scholar': 7,
+  'tag:honors-student': 13,  'tag:ap-student': 13,
+  'tag:deans-list': 33,      'tag:top-performer': 33,
+  'tag:ace': 167,            'tag:genius': 167,
+  'tag:mastermind': 667,     'tag:prodigy': 667,
+  'tag:god': 3333,
   // GOAT is the day-100 streak tag (tradeable — rarest item in the game)
-  'tag:GOAT': 50000,
-  // Name Colors (Common 15, Uncommon 30, Rare 75, Epic 350, Legendary 2k, Mythic RGB 250k)
-  'name-color:forest-green': 15,   'name-color:navy-blue': 15,   'name-color:dark-red': 15,
-  'name-color:slate-blue': 15,     'name-color:teal': 15,
-  'name-color:bright-orange': 30,  'name-color:violet': 30,      'name-color:cyan': 30,
-  'name-color:hot-pink': 75,       'name-color:gold': 75,        'name-color:lime-green': 75,
-  'name-color:electric-blue': 350, 'name-color:magenta': 350,
-  'name-color:pure-white': 2000,   'name-color:black': 2000,
-  'name-color:rainbow': 50000,
-  // PFP Effects (Common 20, Uncommon 40, Rare 100, Epic 400, Legendary 3k, Mythic RGB 300k)
-  'pfp:border-green': 20,    'pfp:border-blue': 20,    'pfp:border-red': 20,
-  'pfp:border-navy': 20,     'pfp:border-teal': 20,
-  'pfp:border-orange': 40,   'pfp:border-violet': 40,  'pfp:border-cyan': 40,
-  'pfp:border-hotpink': 100, 'pfp:border-gold': 100,   'pfp:border-lime': 100,
-  'pfp:glow-pink': 400,      'pfp:glow-purple': 400,
-  'pfp:glow-gold': 3000,     'pfp:frame-black': 3000,
-  'pfp:rainbow': 75000,
+  'tag:GOAT': 33333,
+  // Name Colors — spin cost 15 (was 25, ×0.6): Common 9, Uncommon 18, Rare 45, Epic 210, Legendary 1200, Mythic 30000
+  'name-color:forest-green': 9,    'name-color:navy-blue': 9,    'name-color:dark-red': 9,
+  'name-color:slate-blue': 9,      'name-color:teal': 9,
+  'name-color:bright-orange': 18,  'name-color:violet': 18,      'name-color:cyan': 18,
+  'name-color:hot-pink': 45,       'name-color:gold': 45,        'name-color:lime-green': 45,
+  'name-color:electric-blue': 210, 'name-color:magenta': 210,
+  'name-color:pure-white': 1200,   'name-color:black': 1200,
+  'name-color:rainbow': 30000,
+  // PFP Effects — spin cost 20 (was 30, ×2/3): Common 13, Uncommon 27, Rare 67, Epic 267, Legendary 2000, Mythic 50000
+  'pfp:border-green': 13,    'pfp:border-blue': 13,    'pfp:border-red': 13,
+  'pfp:border-navy': 13,     'pfp:border-teal': 13,
+  'pfp:border-orange': 27,   'pfp:border-violet': 27,  'pfp:border-cyan': 27,
+  'pfp:border-hotpink': 67,  'pfp:border-gold': 67,    'pfp:border-lime': 67,
+  'pfp:glow-pink': 267,      'pfp:glow-purple': 267,
+  'pfp:glow-gold': 2000,     'pfp:frame-black': 2000,
+  'pfp:rainbow': 50000,
 }
 
 // Streak milestone tags below GOAT are soulbound (earn-only, never trade/sell)
@@ -311,7 +311,7 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 // Bump this number whenever SEED_PRICES changes — forces a one-time DB reset
 // to the new values, after which dynamic pricing takes over again.
-const SEED_VERSION = 3
+const SEED_VERSION = 4
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
@@ -480,7 +480,7 @@ router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: R
     res.status(400).json({ error: 'boxType must be tag, name-color, or pfp' }); return
   }
 
-  const BOX_COSTS: Record<string, number> = { tag: 15, 'name-color': 25, pfp: 30 }
+  const BOX_COSTS: Record<string, number> = { tag: 10, 'name-color': 15, pfp: 20 }
   const BOX_COST = BOX_COSTS[boxType]
   try {
     const user = await prisma.user.findUnique({
@@ -554,7 +554,7 @@ router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: R
 // ── Quicksell ─────────────────────────────────────────────────────────────────
 
 const QUICKSELL_PRICES: Record<string, number> = {
-  Common: 4, Uncommon: 10, Rare: 20, Epic: 40, Legendary: 150, Mythic: 1000,
+  Common: 3, Uncommon: 7, Rare: 13, Epic: 27, Legendary: 100, Mythic: 667,
 }
 
 router.post('/quicksell/duplicates', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {

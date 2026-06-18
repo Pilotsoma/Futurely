@@ -63,7 +63,7 @@ type DropGroup = { rarity: string; pct: string; items: string[] }
 
 const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: string; desc: string; cost: number; drops: DropGroup[] }[] = [
   {
-    type: 'tag', icon: '🎰', label: 'Tag Spin', desc: 'Win exclusive profile tags', cost: 15,
+    type: 'tag', icon: '🎰', label: 'Tag Spin', desc: 'Win exclusive profile tags', cost: 10,
     drops: [
       { rarity: 'Common',    pct: '60%',   items: ['Grinder', 'Focused', 'Scholar'] },
       { rarity: 'Uncommon',  pct: '25%',   items: ['Honors Student', 'AP Student'] },
@@ -74,7 +74,7 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
     ],
   },
   {
-    type: 'name-color', icon: '🎨', label: 'Name Color Spin', desc: 'Colorize your display name', cost: 25,
+    type: 'name-color', icon: '🎨', label: 'Name Color Spin', desc: 'Colorize your display name', cost: 15,
     drops: [
       { rarity: 'Common',    pct: '60%',    items: ['Forest Green', 'Navy Blue', 'Dark Red', 'Slate Blue', 'Teal'] },
       { rarity: 'Uncommon',  pct: '24.99%', items: ['Bright Orange', 'Violet', 'Cyan'] },
@@ -85,7 +85,7 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
     ],
   },
   {
-    type: 'pfp', icon: '🖼️', label: 'Profile Picture Spin', desc: 'Apply effects to your avatar', cost: 30,
+    type: 'pfp', icon: '🖼️', label: 'Profile Picture Spin', desc: 'Apply effects to your avatar', cost: 20,
     drops: [
       { rarity: 'Common',    pct: '60%',    items: ['Green Border', 'Blue Border', 'Red Border', 'Navy Border', 'Teal Border'] },
       { rarity: 'Uncommon',  pct: '24.99%', items: ['Orange Border', 'Violet Border', 'Cyan Border'] },
@@ -134,7 +134,7 @@ const SIM_ITEMS: Record<'tag' | 'name-color' | 'pfp', SimItem[]> = {
 }
 
 const QUICKSELL_PRICES: Record<string, number> = {
-  Common: 4, Uncommon: 10, Rare: 20, Epic: 40, Legendary: 150, Mythic: 1000,
+  Common: 3, Uncommon: 7, Rare: 13, Epic: 27, Legendary: 100, Mythic: 667,
 }
 
 const RARITY_RANK: Record<string, number> = {
