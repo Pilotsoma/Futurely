@@ -364,18 +364,19 @@ router.post('/daily-coins', requireAuth, async (req: AuthRequest, res: Response)
 
     const todayUTC = new Date().toISOString().slice(0, 10)
     const lastClaimDate = user.lastCoinClaim ? user.lastCoinClaim.toISOString().slice(0, 10) : null
+    const alreadyClaimed = lastClaimDate === todayUTC
 
-    if (lastClaimDate === todayUTC) {
-      res.json({ data: { coins: user.coins, claimed: false, alreadyClaimed: true, coinBonus } })
-      return
-    }
-
+    // Always sync loginStreak so the leaderboard stays accurate.
+    // Only award coins + update lastCoinClaim on the first claim of the day.
     const updated = await prisma.user.update({
       where: { id: req.userId },
-      data: { coins: { increment: coinBonus }, lastCoinClaim: new Date(), loginStreak: streakDay },
+      data: {
+        ...(alreadyClaimed ? {} : { coins: { increment: coinBonus }, lastCoinClaim: new Date() }),
+        loginStreak: streakDay,
+      },
       select: { coins: true },
     })
-    res.json({ data: { coins: updated.coins, claimed: true, alreadyClaimed: false, coinBonus } })
+    res.json({ data: { coins: updated.coins, claimed: !alreadyClaimed, alreadyClaimed, coinBonus } })
   } catch {
     res.status(500).json({ error: 'Failed to claim daily coins' })
   }
@@ -1395,28 +1396,34 @@ router.get('/item/:itemType/:itemId/owners', async (req: Request, res: Response)
     type OwnerRow = { id: number; name: string | null; tag: string; tagColor: string | null; nameColor: string | null; pfpEffect: string | null }
     let owners: OwnerRow[] = []
 
+    // ownedNameColors / ownedPfpEffects / allTags are stored as double-encoded JSON
+    // (JSON.stringify was called before writing to the Json field), so the Postgres
+    // column holds a JSON *string* rather than a JSON array.  #>> '{}' extracts the
+    // raw string content, then LIKE does a text scan for the target id/tag.
+    const idPattern = `%"id":"${itemId}"%`
     if (itemType === 'name-color') {
       owners = await prisma.$queryRaw<OwnerRow[]>`
         SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"
-        FROM "User" u, jsonb_array_elements(u."ownedNameColors") elem
-        WHERE elem->>'id' = ${itemId}
+        FROM "User" u
+        WHERE (u."ownedNameColors" #>> '{}') LIKE ${idPattern}
         AND u."deletedAt" IS NULL
         ORDER BY u.id ASC LIMIT 50`
     } else if (itemType === 'pfp') {
       owners = await prisma.$queryRaw<OwnerRow[]>`
         SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"
-        FROM "User" u, jsonb_array_elements(u."ownedPfpEffects") elem
-        WHERE elem->>'id' = ${itemId}
+        FROM "User" u
+        WHERE (u."ownedPfpEffects" #>> '{}') LIKE ${idPattern}
         AND u."deletedAt" IS NULL
         ORDER BY u.id ASC LIMIT 50`
     } else {
       const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
       const tagName = def ? def.tag : (itemId in STREAK_TAG_META ? itemId : null)
       if (!tagName) { res.json({ data: [] }); return }
+      const tagPattern = `%"tag":"${tagName}"%`
       owners = await prisma.$queryRaw<OwnerRow[]>`
         SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"
-        FROM "User" u, jsonb_array_elements(u."allTags") elem
-        WHERE elem->>'tag' = ${tagName}
+        FROM "User" u
+        WHERE (u."allTags" #>> '{}') LIKE ${tagPattern}
         AND u."deletedAt" IS NULL
         ORDER BY u.id ASC LIMIT 50`
     }
