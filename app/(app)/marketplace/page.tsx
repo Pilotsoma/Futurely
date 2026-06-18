@@ -510,13 +510,23 @@ function SpinWheelModal({
         {/* Wheel (static) + orbiting arrow */}
         <div style={{ width: 300, height: 300 }}>
           <svg width={300} height={300} viewBox="0 0 300 300">
+            <defs>
+              <linearGradient id="mythicRainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stopColor="#ff0000" />
+                <stop offset="20%"  stopColor="#ffff00" />
+                <stop offset="40%"  stopColor="#00ff00" />
+                <stop offset="60%"  stopColor="#00bfff" />
+                <stop offset="80%"  stopColor="#8000ff" />
+                <stop offset="100%" stopColor="#ff0000" />
+              </linearGradient>
+            </defs>
             {segments.map(seg => (
               <path
                 key={seg.rarity}
                 d={segmentPath(seg.start, seg.end)}
                 fill={getRarityWheelColor(seg.rarity)}
-                stroke="#0d1117"
-                strokeWidth={1.5}
+                stroke={seg.rarity === 'Mythic' ? 'url(#mythicRainbow)' : 'none'}
+                strokeWidth={seg.rarity === 'Mythic' ? 2 : 0}
               />
             ))}
             {/* Red arrow orbiting the center hub — rotates via CSS, base hidden under the hub */}
@@ -531,9 +541,8 @@ function SpinWheelModal({
                 style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }}
               />
             </g>
-            {/* Center hub rendered on top to cleanly anchor the arrow base */}
-            <circle cx={CX} cy={CY} r={22} fill="#0d1117" stroke="#444" strokeWidth={2} />
-            <circle cx={CX} cy={CY} r={8} fill="#666" />
+            {/* Center hub: red with black outline, rendered on top to anchor the arrow base */}
+            <circle cx={CX} cy={CY} r={22} fill="#EF4444" stroke="#000" strokeWidth={2} />
           </svg>
         </div>
 
