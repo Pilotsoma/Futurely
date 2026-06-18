@@ -673,6 +673,15 @@ export const api = {
   getItemPrices: () =>
     request<Record<string, number>>('/api/marketplace/prices'),
 
+  marketplaceItemHistory: (itemType: string, itemId: string) =>
+    request<ItemSalePoint[]>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/history`),
+
+  marketplaceItemOwners: (itemType: string, itemId: string) =>
+    request<ItemOwner[]>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/owners`),
+
+  marketplaceLeaderboard: () =>
+    request<LeaderboardData>('/api/marketplace/leaderboard'),
+
   // ── Parent API ────────────────────────────────────────────────────────────────
 
   parentLinkStudent: (credentials: { districtUrl: string; username: string; password: string }) =>
@@ -1099,6 +1108,24 @@ export interface UserPublicInventory {
   tags: TagInventoryItem[]
   nameColors: MarketplaceItem[]
   pfpEffects: MarketplaceItem[]
+}
+
+export interface ItemSalePoint { price: number; soldAt: string }
+
+export interface ItemOwner {
+  rank: number; id: number; name: string | null
+  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null
+}
+
+export interface LeaderboardEntry {
+  rank: number; id: number; name: string | null
+  tag: string | null; tagColor: string | null; nameColor: string | null; value: number
+}
+
+export interface LeaderboardData {
+  coins: LeaderboardEntry[]
+  streak: LeaderboardEntry[]
+  inventory: LeaderboardEntry[]
 }
 
 // ── Parent API ─────────────────────────────────────────────────────────────────

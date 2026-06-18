@@ -31,9 +31,9 @@ export const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'deans-list',     tag: "Dean's List",     tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
   { id: 'top-performer',  tag: 'Top Performer',   tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
   { id: 'ace',            tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      weight: 1.85 },
-  { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#EC4899', rarity: 'Epic',      weight: 1.85 },
-  { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#EAB308', rarity: 'Legendary', weight: 0.5  },
-  { id: 'genius',         tag: 'Genius',          tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
+  { id: 'genius',         tag: 'Genius',          tagColor: '#EC4899', rarity: 'Epic',      weight: 1.85 },
+  { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
+  { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#111111', rarity: 'Legendary', weight: 0.5  },
   { id: 'god',            tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    weight: 0.3  },
 ]
 
@@ -96,10 +96,10 @@ export const SEED_PRICES: Record<string, number> = {
   'tag:grinder': 10,         'tag:focused': 10,         'tag:scholar': 10,
   'tag:honors-student': 20,  'tag:ap-student': 20,
   'tag:deans-list': 50,      'tag:top-performer': 50,
-  'tag:ace': 250,             'tag:prodigy': 250,
-  'tag:mastermind': 1000,     'tag:genius': 1000,
+  'tag:ace': 250,             'tag:genius': 250,
+  'tag:mastermind': 1000,     'tag:prodigy': 1000,
   'tag:god': 5000,
-  // GOAT is the day-100 streak tag (non-tradeable, seed only for inventory worth display)
+  // GOAT is the day-100 streak tag (tradeable — rarest item in the game)
   'tag:GOAT': 50000,
   // Name Colors (Common 15, Uncommon 30, Rare 75, Epic 350, Legendary 2k, Mythic RGB 250k)
   'name-color:forest-green': 15,   'name-color:navy-blue': 15,   'name-color:dark-red': 15,
@@ -119,8 +119,18 @@ export const SEED_PRICES: Record<string, number> = {
   'pfp:rainbow': 75000,
 }
 
-// Tags that can never be listed or traded (streak-earned exclusives)
-const NON_TRADEABLE_TAGS = new Set(['GOAT'])
+// Streak milestone tags below GOAT are soulbound (earn-only, never trade/sell)
+// GOAT (day-100) is the exception — it IS tradeable and sellable
+const NON_TRADEABLE_TAGS = new Set(['Novice', 'Pro', 'Veteran', 'Legend'])
+
+// Proper metadata for streak tags so they get correct rarity/color when listed
+const STREAK_TAG_META: Record<string, { tagColor: string; rarity: string }> = {
+  Novice:  { tagColor: '#22C55E', rarity: 'Common'    },
+  Pro:     { tagColor: '#3B82F6', rarity: 'Uncommon'  },
+  Veteran: { tagColor: '#F97316', rarity: 'Rare'      },
+  Legend:  { tagColor: '#EC4899', rarity: 'Epic'      },
+  GOAT:    { tagColor: '#EAB308', rarity: 'Mythic'    },
+}
 
 // ── Trade item type ────────────────────────────────────────────────────────────
 
@@ -362,7 +372,7 @@ router.post('/daily-coins', requireAuth, async (req: AuthRequest, res: Response)
 
     const updated = await prisma.user.update({
       where: { id: req.userId },
-      data: { coins: { increment: coinBonus }, lastCoinClaim: new Date() },
+      data: { coins: { increment: coinBonus }, lastCoinClaim: new Date(), loginStreak: streakDay },
       select: { coins: true },
     })
     res.json({ data: { coins: updated.coins, claimed: true, alreadyClaimed: false, coinBonus } })
@@ -388,7 +398,8 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
     const rawTags = parseTagArr(user.allTags)
     const ownedTags = rawTags.map(t => {
       const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
-      return { id: def?.id ?? t.tag, tag: t.tag, tagColor: t.tagColor, rarity: def?.rarity ?? 'Common' }
+      const streakMeta = STREAK_TAG_META[t.tag]
+      return { id: def?.id ?? t.tag, tag: t.tag, tagColor: t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
     })
 
     res.json({
@@ -886,8 +897,10 @@ router.post('/listings', requireAuth, txLimiter, async (req: AuthRequest, res: R
         // Awarded/admin-granted tag — itemId is the tag string itself
         const owned = ownedTags.find(t => t.tag === itemId)
         if (!owned) { res.status(403).json({ error: 'You do not own this tag' }); return }
-        itemName = owned.tag; itemValue = owned.tagColor; itemRarity = 'Common'
-        tradeItem.tag = owned.tag; tradeItem.tagColor = owned.tagColor; tradeItem.rarity = 'Common'
+        const streakMeta = STREAK_TAG_META[owned.tag]
+        const fallbackRarity = streakMeta?.rarity ?? 'Common'
+        itemName = owned.tag; itemValue = owned.tagColor; itemRarity = fallbackRarity
+        tradeItem.tag = owned.tag; tradeItem.tagColor = owned.tagColor; tradeItem.rarity = fallbackRarity
       }
     } else if (itemType === 'name-color') {
       const owned = parseJsonArr(user.ownedNameColors)
@@ -1077,7 +1090,8 @@ router.get('/users/:userId/inventory', requireAuth, async (req: AuthRequest, res
       .filter(t => !NON_TRADEABLE_TAGS.has(t.tag))
       .map(t => {
         const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
-        return { id: def?.id ?? t.tag, tag: t.tag, tagColor: t.tagColor, rarity: def?.rarity ?? 'Common' }
+        const streakMeta = STREAK_TAG_META[t.tag]
+        return { id: def?.id ?? t.tag, tag: t.tag, tagColor: t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
       })
 
     res.json({
@@ -1347,6 +1361,138 @@ router.get('/admin/stats', requireAdmin, async (req: AuthRequest, res: Response)
   } catch (err) {
     console.error('[ADMIN STATS]', err)
     res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ── Item Price History ────────────────────────────────────────────────────────
+
+router.get('/item/:itemType/:itemId/history', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const { itemType, itemId } = req.params
+  if (!['tag', 'name-color', 'pfp'].includes(itemType)) {
+    res.status(400).json({ error: 'Invalid itemType' }); return
+  }
+  try {
+    const sales = await prisma.marketplaceListing.findMany({
+      where: { itemType, itemId, status: 'SOLD' },
+      select: { price: true, updatedAt: true },
+      orderBy: { updatedAt: 'asc' },
+      take: 100,
+    })
+    res.json({ data: sales.map(s => ({ price: s.price, soldAt: s.updatedAt.toISOString() })) })
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch item history' })
+  }
+})
+
+// ── Item Owners ───────────────────────────────────────────────────────────────
+
+router.get('/item/:itemType/:itemId/owners', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const { itemType, itemId } = req.params
+  if (!['tag', 'name-color', 'pfp'].includes(itemType)) {
+    res.status(400).json({ error: 'Invalid itemType' }); return
+  }
+  try {
+    type UserRow = { id: number; name: string | null; tag: string; tagColor: string | null; nameColor: string | null; pfpEffect: string | null }
+
+    let owners: UserRow[] = []
+    if (itemType === 'name-color') {
+      const jsonFilter = JSON.stringify([{ id: itemId }])
+      owners = await prisma.$queryRaw<UserRow[]>`
+        SELECT id, name, tag, "tagColor", "nameColor", "pfpEffect"
+        FROM "User"
+        WHERE "ownedNameColors"::jsonb @> ${jsonFilter}::jsonb
+        AND "deletedAt" IS NULL
+        ORDER BY id ASC
+        LIMIT 50
+      `
+    } else if (itemType === 'pfp') {
+      const jsonFilter = JSON.stringify([{ id: itemId }])
+      owners = await prisma.$queryRaw<UserRow[]>`
+        SELECT id, name, tag, "tagColor", "nameColor", "pfpEffect"
+        FROM "User"
+        WHERE "ownedPfpEffects"::jsonb @> ${jsonFilter}::jsonb
+        AND "deletedAt" IS NULL
+        ORDER BY id ASC
+        LIMIT 50
+      `
+    } else {
+      // tag — look up by tag name
+      const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
+      if (!def) { res.json({ data: [] }); return }
+      const tagName = def.tag
+      const jsonFilter = JSON.stringify([{ tag: tagName }])
+      owners = await prisma.$queryRaw<UserRow[]>`
+        SELECT id, name, tag, "tagColor", "nameColor", "pfpEffect"
+        FROM "User"
+        WHERE "allTags"::jsonb @> ${jsonFilter}::jsonb
+        AND "deletedAt" IS NULL
+        ORDER BY id ASC
+        LIMIT 50
+      `
+    }
+
+    res.json({ data: owners.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect })) })
+  } catch (err) {
+    console.error('[ITEM OWNERS]', err)
+    res.status(500).json({ error: 'Failed to fetch item owners' })
+  }
+})
+
+// ── Leaderboards ──────────────────────────────────────────────────────────────
+
+router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userSelect = { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true }
+
+    const [coinsRows, streakRows] = await Promise.all([
+      prisma.user.findMany({
+        where: { deletedAt: null },
+        select: { ...userSelect, coins: true },
+        orderBy: { coins: 'desc' },
+        take: 50,
+      }),
+      prisma.user.findMany({
+        where: { deletedAt: null },
+        select: { ...userSelect, loginStreak: true },
+        orderBy: { loginStreak: 'desc' },
+        take: 50,
+      }),
+    ])
+
+    // Inventory value: scan recently active users, compute value from item prices
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const [activeUsers, allPrices] = await Promise.all([
+      prisma.user.findMany({
+        where: { deletedAt: null, lastSeenAt: { gte: thirtyDaysAgo } },
+        select: { ...userSelect, coins: true, ownedNameColors: true, ownedPfpEffects: true, allTags: true },
+        take: 500,
+        orderBy: { lastSeenAt: 'desc' },
+      }),
+      prisma.itemPrice.findMany({ where: { itemType: { not: 'meta' } } }),
+    ])
+
+    const priceMap = new Map(allPrices.map(p => [`${p.itemType}:${p.itemId}`, p.price]))
+    const withValue = activeUsers.map(u => {
+      let value = u.coins
+      for (const item of parseJsonArr(u.ownedNameColors)) value += priceMap.get(`name-color:${(item as { id: string }).id}`) ?? 0
+      for (const item of parseJsonArr(u.ownedPfpEffects)) value += priceMap.get(`pfp:${(item as { id: string }).id}`) ?? 0
+      for (const t of parseTagArr(u.allTags)) {
+        const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
+        if (def) value += priceMap.get(`tag:${def.id}`) ?? 0
+      }
+      return { id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, inventoryValue: value }
+    }).sort((a, b) => b.inventoryValue - a.inventoryValue).slice(0, 50)
+
+    res.json({
+      data: {
+        coins: coinsRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, value: u.coins })),
+        streak: streakRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, value: u.loginStreak })),
+        inventory: withValue.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, value: u.inventoryValue })),
+      },
+    })
+  } catch (err) {
+    console.error('[LEADERBOARD]', err)
+    res.status(500).json({ error: 'Failed to fetch leaderboard' })
   }
 })
 
