@@ -1392,43 +1392,35 @@ router.get('/item/:itemType/:itemId/owners', requireAuth, async (req: AuthReques
     res.status(400).json({ error: 'Invalid itemType' }); return
   }
   try {
-    type UserRow = { id: number; name: string | null; tag: string; tagColor: string | null; nameColor: string | null; pfpEffect: string | null }
+    const sel = { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true } as const
 
-    let owners: UserRow[] = []
+    let owners: Array<{ id: number; name: string | null; tag: string; tagColor: string | null; nameColor: string | null; pfpEffect: string | null }> = []
+
     if (itemType === 'name-color') {
-      const jsonFilter = JSON.stringify([{ id: itemId }])
-      owners = await prisma.$queryRaw<UserRow[]>`
-        SELECT id, name, tag, "tagColor", "nameColor", "pfpEffect"
-        FROM "User"
-        WHERE "ownedNameColors"::jsonb @> ${jsonFilter}::jsonb
-        AND "deletedAt" IS NULL
-        ORDER BY id ASC
-        LIMIT 50
-      `
+      owners = await prisma.user.findMany({
+        where: { deletedAt: null, ownedNameColors: { array_contains: [{ id: itemId }] } },
+        select: sel,
+        orderBy: { id: 'asc' },
+        take: 50,
+      })
     } else if (itemType === 'pfp') {
-      const jsonFilter = JSON.stringify([{ id: itemId }])
-      owners = await prisma.$queryRaw<UserRow[]>`
-        SELECT id, name, tag, "tagColor", "nameColor", "pfpEffect"
-        FROM "User"
-        WHERE "ownedPfpEffects"::jsonb @> ${jsonFilter}::jsonb
-        AND "deletedAt" IS NULL
-        ORDER BY id ASC
-        LIMIT 50
-      `
+      owners = await prisma.user.findMany({
+        where: { deletedAt: null, ownedPfpEffects: { array_contains: [{ id: itemId }] } },
+        select: sel,
+        orderBy: { id: 'asc' },
+        take: 50,
+      })
     } else {
-      // tag — look up by tag name
+      // tag — box items first, then fall back to streak tag names (GOAT, Novice, etc.)
       const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
-      if (!def) { res.json({ data: [] }); return }
-      const tagName = def.tag
-      const jsonFilter = JSON.stringify([{ tag: tagName }])
-      owners = await prisma.$queryRaw<UserRow[]>`
-        SELECT id, name, tag, "tagColor", "nameColor", "pfpEffect"
-        FROM "User"
-        WHERE "allTags"::jsonb @> ${jsonFilter}::jsonb
-        AND "deletedAt" IS NULL
-        ORDER BY id ASC
-        LIMIT 50
-      `
+      const tagName = def ? def.tag : (itemId in STREAK_TAG_META ? itemId : null)
+      if (!tagName) { res.json({ data: [] }); return }
+      owners = await prisma.user.findMany({
+        where: { deletedAt: null, allTags: { array_contains: [{ tag: tagName }] } },
+        select: sel,
+        orderBy: { id: 'asc' },
+        take: 50,
+      })
     }
 
     res.json({ data: owners.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect })) })
@@ -1444,6 +1436,7 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
   try {
     const userSelect = { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true }
 
+    type StreakRow = { id: number; name: string | null; tag: string; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; loginStreak: number }
     const [coinsRows, streakRows] = await Promise.all([
       prisma.user.findMany({
         where: { deletedAt: null },
@@ -1456,7 +1449,7 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
         select: { ...userSelect, loginStreak: true },
         orderBy: { loginStreak: 'desc' },
         take: 50,
-      }),
+      }).catch(() => [] as StreakRow[]),
     ])
 
     // Inventory value: scan recently active users, compute value from item prices

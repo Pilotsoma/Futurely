@@ -445,7 +445,7 @@ function SpinWheelModal({
   onDone: (result: BoxResult) => void
 }) {
   const [phase, setPhase] = useState<'ready' | 'spinning'>('ready')
-  const [wheelRotation, setWheelRotation] = useState(0)
+  const [pointerAngle, setPointerAngle] = useState(0)
   const [spinDuration, setSpinDuration] = useState(0)
 
   const segments = useMemo(() => {
@@ -469,10 +469,11 @@ function SpinWheelModal({
     const segSize = wonSeg.end - wonSeg.start
     const margin = Math.min(segSize * 0.15, 5)
     const landAngle = wonSeg.start + margin + Math.random() * Math.max(0, segSize - margin * 2)
-    const finalRotation = 5 * 360 + ((360 - landAngle) % 360)
+    // Arrow orbits the center hub — spin 5 full laps then land on the winning segment angle
+    const finalPointerAngle = 5 * 360 + landAngle
 
     setSpinDuration(4000)
-    setWheelRotation(finalRotation)
+    setPointerAngle(finalPointerAngle)
 
     setTimeout(() => {
       onDone(result)
@@ -506,36 +507,34 @@ function SpinWheelModal({
       >
         <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{box.icon} {box.label}</div>
 
-        {/* Wheel + pointer */}
-        <div style={{ position: 'relative', width: 300, height: 300 }}>
-          <div style={{
-            position: 'absolute', top: -4, left: '50%', transform: 'translateX(-50%)',
-            width: 0, height: 0,
-            borderLeft: '10px solid transparent',
-            borderRight: '10px solid transparent',
-            borderTop: '22px solid #FFFFFF',
-            zIndex: 10,
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-          }} />
-          <div style={{
-            width: 300, height: 300,
-            transform: `rotate(${wheelRotation}deg)`,
-            transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
-          }}>
-            <svg width={300} height={300} viewBox="0 0 300 300">
-              {segments.map(seg => (
-                <path
-                  key={seg.rarity}
-                  d={segmentPath(seg.start, seg.end)}
-                  fill={getRarityWheelColor(seg.rarity)}
-                  stroke="#0d1117"
-                  strokeWidth={1.5}
-                />
-              ))}
-              <circle cx={CX} cy={CY} r={22} fill="#0d1117" stroke="#444" strokeWidth={2} />
-              <circle cx={CX} cy={CY} r={8} fill="#666" />
-            </svg>
-          </div>
+        {/* Wheel (static) + orbiting arrow */}
+        <div style={{ width: 300, height: 300 }}>
+          <svg width={300} height={300} viewBox="0 0 300 300">
+            {segments.map(seg => (
+              <path
+                key={seg.rarity}
+                d={segmentPath(seg.start, seg.end)}
+                fill={getRarityWheelColor(seg.rarity)}
+                stroke="#0d1117"
+                strokeWidth={1.5}
+              />
+            ))}
+            {/* Red arrow orbiting the center hub — rotates via CSS, base hidden under the hub */}
+            <g style={{
+              transformOrigin: `${CX}px ${CY}px`,
+              transform: `rotate(${pointerAngle}deg)`,
+              transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
+            }}>
+              <polygon
+                points={`${CX},${CY - 32} ${CX - 7},${CY - 20} ${CX + 7},${CY - 20}`}
+                fill="#EF4444"
+                style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }}
+              />
+            </g>
+            {/* Center hub rendered on top to cleanly anchor the arrow base */}
+            <circle cx={CX} cy={CY} r={22} fill="#0d1117" stroke="#444" strokeWidth={2} />
+            <circle cx={CX} cy={CY} r={8} fill="#666" />
+          </svg>
         </div>
 
         {/* Rarity legend */}
