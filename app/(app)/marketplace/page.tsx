@@ -14,8 +14,8 @@ import {
 const DUMMY_PFP = 'https://i.pinimg.com/474x/13/74/20/137420f5b9c39bc911e472f5d20f053e.jpg'
 
 const RARITY_COLOR: Record<string, string> = {
-  Common: '#6B7280', Uncommon: '#3B82F6', Rare: '#8B5CF6',
-  Epic: '#F97316', Legendary: '#EAB308', Mythic: '#EC4899',
+  Common: '#6B7280', Uncommon: '#3B82F6', Rare: '#F97316',
+  Epic: '#8B5CF6', Legendary: '#EAB308', Mythic: 'rainbow',
 }
 
 const PFP_BORDER_MAP: Record<string, string> = {
@@ -184,6 +184,35 @@ function RarityBadge({ rarity }: { rarity: string }) {
     <span style={{ fontSize: 10, fontWeight: 700, color: RARITY_COLOR[rarity] ?? '#6B7280', background: `${RARITY_COLOR[rarity] ?? '#6B7280'}18`, padding: '2px 7px', borderRadius: 99, border: `1px solid ${RARITY_COLOR[rarity] ?? '#6B7280'}44` }}>
       {rarity}
     </span>
+  )
+}
+
+function getRarityBorderColor(rarity: string): string {
+  const c = RARITY_COLOR[rarity]
+  if (!c || c === 'rainbow') return 'linear-gradient(135deg, #ff6b6b, #ffd43b, #69db7c, #4dabf7, #cc5de8, #ff6b6b)'
+  return c
+}
+
+function ItemBox({ children, rarity, style, onClick }: { children: React.ReactNode; rarity: string; style?: React.CSSProperties; onClick?: () => void }) {
+  const borderColor = getRarityBorderColor(rarity)
+  const isRainbow = RARITY_COLOR[rarity] === 'rainbow'
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '8px 10px',
+        borderRadius: 8,
+        background: 'var(--surface-2)',
+        border: isRainbow ? '2px solid transparent' : `2px solid ${borderColor}44`,
+        ...(isRainbow ? { backgroundImage: borderColor, backgroundOrigin: 'border-box', backgroundClip: 'padding-box' } : {}),
+        ...style,
+      }}
+    >
+      {children}
+    </div>
   )
 }
 
@@ -838,7 +867,7 @@ export default function MarketplacePage() {
           {items.map((item, i) => {
             return (
               <PriceTooltip key={i} price={prices[`${item.type}:${item.id}`]}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <ItemBox rarity={item.rarity}>
                 <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: 'var(--text-muted)', flexShrink: 0 }}>
                   {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
                 </span>
@@ -851,7 +880,7 @@ export default function MarketplacePage() {
                 )}
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{item.name ?? item.tag}</span>
                 <RarityBadge rarity={item.rarity} />
-              </div>
+              </ItemBox>
               </PriceTooltip>
             )
           })}
@@ -1243,12 +1272,11 @@ export default function MarketplacePage() {
                             const sel = selectedRequest.some(i => i.id === t.id && i.type === 'tag')
                             return (
                               <PriceTooltip key={t.id} price={prices[`tag:${t.id}`]}>
-                              <div onClick={() => toggleRequest(item)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)', cursor: 'pointer' }}>
+                              <ItemBox rarity={t.rarity} style={{ cursor: 'pointer', border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)' }} onClick={() => toggleRequest(item)}>
                                 <span className={t.tag === 'GOD' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'GOD') ? undefined : t.tagColor }}>[{t.tag}]</span>
                                 <RarityBadge rarity={t.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </div>
+                              </ItemBox>
                               </PriceTooltip>
                             )
                           })}
@@ -1258,13 +1286,12 @@ export default function MarketplacePage() {
                             const sel = selectedRequest.some(i => i.id === c.id && i.type === 'name-color')
                             return (
                               <PriceTooltip key={c.id} price={prices[`name-color:${c.id}`]}>
-                              <div onClick={() => toggleRequest(item)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)', cursor: 'pointer' }}>
+                              <ItemBox rarity={c.rarity} style={{ cursor: 'pointer', border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)' }} onClick={() => toggleRequest(item)}>
                                 <span className={c.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 800, color: c.value === 'rainbow' ? undefined : c.value, flexShrink: 0 }}>DUMMY</span>
                                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{c.name}</span>
                                 <RarityBadge rarity={c.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </div>
+                              </ItemBox>
                               </PriceTooltip>
                             )
                           })}
@@ -1274,13 +1301,12 @@ export default function MarketplacePage() {
                             const sel = selectedRequest.some(i => i.id === p.id && i.type === 'pfp')
                             return (
                               <PriceTooltip key={p.id} price={prices[`pfp:${p.id}`]}>
-                              <div onClick={() => toggleRequest(item)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)', cursor: 'pointer' }}>
+                              <ItemBox rarity={p.rarity} style={{ cursor: 'pointer', border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)' }} onClick={() => toggleRequest(item)}>
                                 <div className={pfpClass(p.value)} style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, ...pfpStyle(p.value) }} />
                                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{p.name}</span>
                                 <RarityBadge rarity={p.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </div>
+                              </ItemBox>
                               </PriceTooltip>
                             )
                           })}
@@ -1311,12 +1337,11 @@ export default function MarketplacePage() {
                             const sel = selectedOffer.some(i => i.id === t.id && i.type === 'tag')
                             return (
                               <PriceTooltip key={t.id} price={prices[`tag:${t.id}`]}>
-                              <div onClick={() => toggleOffer(item)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)', cursor: 'pointer' }}>
+                              <ItemBox rarity={t.rarity} style={{ cursor: 'pointer', border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)' }} onClick={() => toggleOffer(item)}>
                                 <span className={t.tag === 'GOD' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'GOD') ? undefined : t.tagColor }}>[{t.tag}]</span>
                                 <RarityBadge rarity={t.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </div>
+                              </ItemBox>
                               </PriceTooltip>
                             )
                           })}
@@ -1326,13 +1351,12 @@ export default function MarketplacePage() {
                             const sel = selectedOffer.some(i => i.id === c.id && i.type === 'name-color')
                             return (
                               <PriceTooltip key={c.id} price={prices[`name-color:${c.id}`]}>
-                              <div onClick={() => toggleOffer(item)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)', cursor: 'pointer' }}>
+                              <ItemBox rarity={c.rarity} style={{ cursor: 'pointer', border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)' }} onClick={() => toggleOffer(item)}>
                                 <span className={c.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 800, color: c.value === 'rainbow' ? undefined : c.value, flexShrink: 0 }}>DUMMY</span>
                                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{c.name}</span>
                                 <RarityBadge rarity={c.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </div>
+                              </ItemBox>
                               </PriceTooltip>
                             )
                           })}
@@ -1342,13 +1366,12 @@ export default function MarketplacePage() {
                             const sel = selectedOffer.some(i => i.id === p.id && i.type === 'pfp')
                             return (
                               <PriceTooltip key={p.id} price={prices[`pfp:${p.id}`]}>
-                              <div onClick={() => toggleOffer(item)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)', cursor: 'pointer' }}>
+                              <ItemBox rarity={p.rarity} style={{ cursor: 'pointer', border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)' }} onClick={() => toggleOffer(item)}>
                                 <div className={pfpClass(p.value)} style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, ...pfpStyle(p.value) }} />
                                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{p.name}</span>
                                 <RarityBadge rarity={p.rarity} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </div>
+                              </ItemBox>
                               </PriceTooltip>
                             )
                           })}
