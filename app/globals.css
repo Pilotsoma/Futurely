@@ -362,13 +362,13 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 }
 
 @keyframes pfpVoidPulse {
-  0%, 100% { box-shadow: 0 0 6px #1F2937, 0 0 0px #7C3AED00; border-color: #1F2937; }
-  50%       { box-shadow: 0 0 16px #374151, 0 0 28px #7C3AED33; border-color: #374151; }
+  0%, 100% { box-shadow: 0 0 6px #C084FC66, 0 0 0px #EC489900; border-color: #0a0a0a; }
+  50%       { box-shadow: 0 0 20px #A855F7aa, 0 0 40px #EC489944; border-color: #1a1a1a; }
 }
 .pfp-void-fill {
-  background: #0d0d0d !important;
-  border: 2px solid #1F2937 !important;
-  color: #4B5563 !important;
+  background: #000000 !important;
+  border: 2px solid #0a0a0a !important;
+  color: #1F2937 !important;
   animation: pfpVoidPulse 3s ease-in-out infinite;
 }
 

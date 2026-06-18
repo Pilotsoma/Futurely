@@ -1106,15 +1106,22 @@ router.get('/dev-stats', async (req: Request, res: Response) => {
     const isDev = await hasDevPowers(actorId);
     if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
 
-    const [coinsAgg, allUsers] = await Promise.all([
+    const [coinsAgg, allUsers, itemPrices] = await Promise.all([
       prisma.user.aggregate({ _sum: { coins: true }, where: { deletedAt: null } }),
       prisma.user.findMany({
         where: { deletedAt: null },
         select: { allTags: true, ownedNameColors: true, ownedPfpEffects: true },
       }),
+      prisma.itemPrice.findMany({ where: { itemType: { not: 'meta' } } }),
     ]);
 
     const totalCoins = coinsAgg._sum.coins ?? 0;
+
+    // Build dynamic price map from the DB (fall back to SEED_PRICES if not found)
+    const dynamicPrices: Record<string, number> = {};
+    for (const row of itemPrices) {
+      dynamicPrices[`${row.itemType}:${row.itemId}`] = row.price;
+    }
 
     let totalInventoryValue = 0;
     for (const user of allUsers) {
@@ -1125,10 +1132,10 @@ router.get('/dev-stats', async (req: Request, res: Response) => {
         for (const t of tags) {
           const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag);
           const itemId = def?.id ?? t.tag.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-          totalInventoryValue += SEED_PRICES[`tag:${itemId}`] ?? 0;
+          totalInventoryValue += dynamicPrices[`tag:${itemId}`] ?? SEED_PRICES[`tag:${itemId}`] ?? 0;
         }
-        for (const c of colors) totalInventoryValue += SEED_PRICES[`name-color:${c.id}`] ?? 0;
-        for (const p of pfps) totalInventoryValue += SEED_PRICES[`pfp:${p.id}`] ?? 0;
+        for (const c of colors) totalInventoryValue += dynamicPrices[`name-color:${c.id}`] ?? SEED_PRICES[`name-color:${c.id}`] ?? 0;
+        for (const p of pfps) totalInventoryValue += dynamicPrices[`pfp:${p.id}`] ?? SEED_PRICES[`pfp:${p.id}`] ?? 0;
       } catch { /* malformed JSON — skip */ }
     }
 
