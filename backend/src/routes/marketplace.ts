@@ -372,7 +372,7 @@ router.post('/daily-coins', requireAuth, async (req: AuthRequest, res: Response)
 
     const updated = await prisma.user.update({
       where: { id: req.userId },
-      data: { coins: { increment: coinBonus }, lastCoinClaim: new Date(), loginStreak: streakDay },
+      data: { coins: { increment: coinBonus }, lastCoinClaim: new Date() },
       select: { coins: true },
     })
     res.json({ data: { coins: updated.coins, claimed: true, alreadyClaimed: false, coinBonus } })
@@ -1436,21 +1436,13 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
   try {
     const userSelect = { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true }
 
-    type StreakRow = { id: number; name: string | null; tag: string; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; loginStreak: number }
-    const [coinsRows, streakRows] = await Promise.all([
-      prisma.user.findMany({
-        where: { deletedAt: null },
-        select: { ...userSelect, coins: true },
-        orderBy: { coins: 'desc' },
-        take: 50,
-      }),
-      prisma.user.findMany({
-        where: { deletedAt: null },
-        select: { ...userSelect, loginStreak: true },
-        orderBy: { loginStreak: 'desc' },
-        take: 50,
-      }).catch(() => [] as StreakRow[]),
-    ])
+    const coinsRows = await prisma.user.findMany({
+      where: { deletedAt: null },
+      select: { ...userSelect, coins: true },
+      orderBy: { coins: 'desc' },
+      take: 50,
+    })
+    const streakRows: typeof coinsRows = []
 
     // Inventory value: scan recently active users, compute value from item prices
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -1479,7 +1471,7 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
     res.json({
       data: {
         coins: coinsRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, value: u.coins })),
-        streak: streakRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, value: u.loginStreak })),
+        streak: [],
         inventory: withValue.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, value: u.inventoryValue })),
       },
     })
