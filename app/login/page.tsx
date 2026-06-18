@@ -140,10 +140,9 @@ export default function LoginPage() {
     <div style={styles.page}>
       <div style={styles.card}>
         {/* Logo */}
-        <div style={{ marginBottom: 18 }}>
-          <Image src="/logo.svg" alt="Futurely" width={48} height={48} />
+        <div style={{ marginBottom: -60 }}>
+          <Image src="/logo2.png" alt="Futurely" width={275} height={275} />
         </div>
-        <h1 style={styles.heading}>Futurely</h1>
         <p style={styles.subheading}>{headingText}</p>
 
         {portalDisconnected && (

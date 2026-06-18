@@ -87,42 +87,8 @@ export default function LandingPage() {
       }}>
         <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 28px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}>
-            <svg width="125" height="30" viewBox="0 0 200 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Futurely">
-              <defs>
-                <linearGradient id="nc" x1="0" y1="5" x2="0" y2="44" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%"   stopColor="#22D3EE"/>
-                  <stop offset="45%"  stopColor="#818CF8"/>
-                  <stop offset="100%" stopColor="#A855F7"/>
-                </linearGradient>
-              </defs>
-              {/* Mortarboard diamond */}
-              <path d="M6 11 L22 5 L38 11 L22 17 Z" fill="url(#nc)"/>
-              {/* Cap bevel highlight */}
-              <path d="M6 11 L22 5 L38 11" stroke="white" strokeWidth="0.8" strokeLinejoin="round" fill="none" opacity="0.35"/>
-              {/* Tassel — line + ball */}
-              <line x1="37" y1="10" x2="40" y2="19" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.7"/>
-              <circle cx="40" cy="20.5" r="1.5" fill="white" opacity="0.7"/>
-              {/* Crown — connects board to book */}
-              <rect x="16" y="17" width="12" height="4" rx="1" fill="url(#nc)"/>
-              {/* Book body */}
-              <rect x="8" y="21" width="28" height="23" rx="2" fill="url(#nc)"/>
-              {/* Spine fold */}
-              <line x1="22" y1="21" x2="22" y2="44" stroke="white" strokeWidth="0.8" opacity="0.2"/>
-              {/* Book top edge highlight */}
-              <line x1="8" y1="21" x2="36" y2="21" stroke="white" strokeWidth="0.5" opacity="0.2"/>
-              {/* F — vertical stroke */}
-              <rect x="11" y="24" width="3.5" height="16" rx="1.5" fill="white"/>
-              {/* F — top bar */}
-              <rect x="11" y="24" width="9"   height="3"  rx="1.5" fill="white"/>
-              {/* F — middle bar */}
-              <rect x="11" y="32" width="6"   height="3"  rx="1.5" fill="white"/>
-              {/* Right page text lines */}
-              <line x1="24" y1="28" x2="34" y2="28" stroke="white" strokeWidth="0.7" strokeLinecap="round" opacity="0.25"/>
-              <line x1="24" y1="33" x2="34" y2="33" stroke="white" strokeWidth="0.7" strokeLinecap="round" opacity="0.25"/>
-              <line x1="24" y1="38" x2="34" y2="38" stroke="white" strokeWidth="0.7" strokeLinecap="round" opacity="0.25"/>
-              {/* Wordmark */}
-              <text x="52" y="33" fontFamily="'Inter', 'SF Pro Display', -apple-system, 'Helvetica Neue', Arial, sans-serif" fontSize="26" fontWeight="600" letterSpacing="-1" fill="var(--text)">Futurely</text>
-            </svg>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo1.png" alt="Futurely" style={{ height: 150, width: 'auto', objectFit: 'contain', display: 'block' }} />
           </motion.div>
           <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}>
             <Link href="/login" style={{
@@ -415,9 +381,9 @@ export default function LandingPage() {
           <svg width="83" height="20" viewBox="0 0 200 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Futurely">
             <defs>
               <linearGradient id="fc" x1="0" y1="5" x2="0" y2="44" gradientUnits="userSpaceOnUse">
-                <stop offset="0%"   stopColor="#22D3EE"/>
-                <stop offset="45%"  stopColor="#818CF8"/>
-                <stop offset="100%" stopColor="#A855F7"/>
+                <stop offset="0%"   stopColor="#00E5FF"/>
+                <stop offset="45%"  stopColor="#2979FF"/>
+                <stop offset="100%" stopColor="#7C3AED"/>
               </linearGradient>
             </defs>
             <path d="M6 11 L22 5 L38 11 L22 17 Z" fill="url(#fc)"/>
