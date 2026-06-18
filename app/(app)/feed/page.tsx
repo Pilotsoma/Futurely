@@ -924,7 +924,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             <span style={{ fontSize: 20 }}>{post.unboxItemRarity === 'Mythic' ? '👑' : '🌟'}</span>
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, color: post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308', letterSpacing: '0.5px' }}>
-                {post.unboxItemType === 'tag' ? 'TAG UNBOX' : post.unboxItemType === 'name-color' ? 'NAME COLOR UNBOX' : 'PFP UNBOX'}
+                {post.unboxItemType === 'tag' ? 'TAG SPIN' : post.unboxItemType === 'name-color' ? 'NAME COLOR SPIN' : 'PFP SPIN'}
               </div>
             </div>
             <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, color: post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308', background: `${post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'}18`, border: `1px solid ${post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'}44` }}>

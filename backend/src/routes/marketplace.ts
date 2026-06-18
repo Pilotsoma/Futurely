@@ -445,7 +445,7 @@ async function autoPostUnbox(
 
     const newPost = await prisma.post.create({
       data: {
-        body: `${emoji} I just unboxed ${itemName}!`,
+        body: `${emoji} I just spun ${itemName}!`,
         userId,
         type: 'UNBOX',
         unboxItemType: boxType,
