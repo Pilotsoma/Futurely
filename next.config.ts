@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
+    if (process.env.NODE_ENV === "production") return [];
     const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:3001";
     return [
       {
