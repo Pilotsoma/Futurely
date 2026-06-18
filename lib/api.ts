@@ -1119,7 +1119,7 @@ export interface ItemOwner {
 
 export interface LeaderboardEntry {
   rank: number; id: number; name: string | null
-  tag: string | null; tagColor: string | null; nameColor: string | null; value: number
+  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; value: number
 }
 
 export interface LeaderboardData {

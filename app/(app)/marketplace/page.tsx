@@ -402,7 +402,7 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
                   <span style={{ width: 28, fontSize: 11, fontWeight: 700, color: owner.rank === 1 ? '#EAB308' : 'var(--text-muted)', textAlign: 'right', flexShrink: 0 }}>
                     {owner.rank === 1 ? '🥇' : `#${owner.rank}`}
                   </span>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0 }} />
+                  <div className={pfpClass(owner.pfpEffect)} style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...pfpStyle(owner.pfpEffect) }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <button onClick={() => { onViewProfile(owner.id); onClose() }}
                       className={owner.nameColor === 'rainbow' ? 'name-rainbow' : ''}
@@ -2020,9 +2020,11 @@ export default function MarketplacePage() {
                     <span style={{ width: 32, textAlign: 'center', fontSize: i < 3 ? 18 : 12, fontWeight: 700, color: i === 0 ? '#EAB308' : i === 1 ? '#94A3B8' : i === 2 ? '#CD7F32' : 'var(--text-muted)', flexShrink: 0 }}>
                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.rank}`}
                     </span>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0 }} />
+                    <div className={pfpClass(entry.pfpEffect)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...pfpStyle(entry.pfpEffect) }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <button onClick={() => openProfile(entry.id)} style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(entry.nameColor && entry.nameColor !== 'rainbow' ? { color: entry.nameColor } : { color: 'var(--text)' }) }}>
+                      <button onClick={() => openProfile(entry.id)}
+                        className={entry.nameColor === 'rainbow' ? 'name-rainbow' : ''}
+                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(entry.nameColor && entry.nameColor !== 'rainbow' ? { color: entry.nameColor } : { color: 'var(--text)' }) }}>
                         {entry.name ?? 'Unknown'}
                       </button>
                       {entry.tag && <span style={{ fontSize: 11, fontWeight: 700, color: entry.tagColor ?? '#6B7280' }}>[{entry.tag}]</span>}
