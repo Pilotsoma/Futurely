@@ -63,7 +63,7 @@ type DropGroup = { rarity: string; pct: string; items: string[] }
 
 const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: string; desc: string; cost: number; drops: DropGroup[] }[] = [
   {
-    type: 'tag', icon: '📦', label: 'Tag Box', desc: 'Win exclusive profile tags', cost: 15,
+    type: 'tag', icon: '🎰', label: 'Tag Spin', desc: 'Win exclusive profile tags', cost: 15,
     drops: [
       { rarity: 'Common',    pct: '60%',   items: ['Grinder', 'Focused', 'Scholar'] },
       { rarity: 'Uncommon',  pct: '25%',   items: ['Honors Student', 'AP Student'] },
@@ -74,7 +74,7 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
     ],
   },
   {
-    type: 'name-color', icon: '🎨', label: 'Name Color Box', desc: 'Colorize your display name', cost: 25,
+    type: 'name-color', icon: '🎨', label: 'Name Color Spin', desc: 'Colorize your display name', cost: 25,
     drops: [
       { rarity: 'Common',    pct: '60%',    items: ['Forest Green', 'Navy Blue', 'Dark Red', 'Slate Blue', 'Teal'] },
       { rarity: 'Uncommon',  pct: '24.99%', items: ['Bright Orange', 'Violet', 'Cyan'] },
@@ -85,7 +85,7 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
     ],
   },
   {
-    type: 'pfp', icon: '🖼️', label: 'Profile Picture Box', desc: 'Apply effects to your avatar', cost: 30,
+    type: 'pfp', icon: '🖼️', label: 'Profile Picture Spin', desc: 'Apply effects to your avatar', cost: 30,
     drops: [
       { rarity: 'Common',    pct: '60%',    items: ['Green Border', 'Blue Border', 'Red Border', 'Navy Border', 'Teal Border'] },
       { rarity: 'Uncommon',  pct: '24.99%', items: ['Orange Border', 'Violet Border', 'Cyan Border'] },
@@ -1361,7 +1361,7 @@ export default function MarketplacePage() {
             borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent',
             position: 'relative' as const,
           }}>
-            {t === 'boxes' && '📦 Boxes'}
+            {t === 'boxes' && '🎰 Spins'}
             {t === 'shop' && '🏪 Shop'}
             {t === 'trade' && (
               <>🔄 Trade{pendingIncoming > 0 && tab !== 'trade' && (
@@ -1484,7 +1484,7 @@ export default function MarketplacePage() {
             )
           })()}
 
-          <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 12 }}>Open a Box — spend coins to unlock rewards</p>
+          <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 12 }}>Spin — spend coins to unlock rewards</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {BOX_DEFS.map(box => {
               const isHovered = hoveredBox === box.type
@@ -1936,7 +1936,7 @@ export default function MarketplacePage() {
 
           {(inv?.ownedTags ?? []).length === 0 && (inv?.ownedNameColors ?? []).length === 0 && (inv?.ownedPfpEffects ?? []).length === 0 && myActiveListings.length === 0 ? (
             <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              Your inventory is empty — open boxes to get items
+              Your inventory is empty — spin to get items
             </div>
           ) : (
             <>
