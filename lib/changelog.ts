@@ -11,6 +11,43 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.3',
+    date: 'June 18, 2025',
+    title: 'Marketplace Overhaul',
+    changes: [
+      {
+        emoji: '🎰',
+        headline: 'Spin Wheel',
+        detail: 'Opening a box now launches a spin wheel — segments sized by drop rate, with a 4-second deceleration animation landing on what you won.',
+      },
+      {
+        emoji: '📖',
+        headline: 'Item Catalog',
+        detail: 'New Catalog tab lists every item in the game. Click any item to see its full sales history chart and all current owners.',
+      },
+      {
+        emoji: '🏆',
+        headline: 'Leaderboards',
+        detail: 'New Leaderboard tab with three rankings: richest by coins, richest by inventory value, and highest login streak.',
+      },
+      {
+        emoji: '🐐',
+        headline: 'GOAT Tag Now Tradeable',
+        detail: 'The day-100 streak GOAT tag can now be listed on the marketplace and traded with other players. Lower streak tags (Novice, Pro, Veteran, Legend) remain soulbound.',
+      },
+      {
+        emoji: '🏷️',
+        headline: 'Tag Rebalance',
+        detail: 'Genius is now Epic (pink), Prodigy is now Legendary (black), and Valedictorian\'s color is updated to white.',
+      },
+      {
+        emoji: '🎨',
+        headline: 'Rarity Borders Everywhere',
+        detail: 'Items in your inventory, the shop, and trade offers now show rarity-colored borders. Unbox result cards also use rarity color instead of item color.',
+      },
+    ],
+  },
+  {
     version: '1.0.2',
     date: 'June 17, 2025',
     title: 'Security & Social Updates',
