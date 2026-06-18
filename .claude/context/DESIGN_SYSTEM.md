@@ -7,18 +7,19 @@
 
 ## Color Palette
 ```
-Primary:    #00C896  (NextStep teal-green — brand color)
-Primary Dark: #00A87E
-Background: #0D1117  (dark mode default)
-Surface:    #161B22
-Border:     #30363D
-Text Primary:   #E6EDF3
-Text Secondary: #8B949E
-Text Muted:     #484F58
-Success:    #3FB950
-Warning:    #D29922
-Error:      #F85149
-Info:       #58A6FF
+Primary:      #7B61FF  (electric violet — brand accent)
+Primary Dark: #5B3FDB
+Background:   #07080F  (deep near-black, blue-violet tint)
+Surface:      #0D0E1C
+Border:       #1C1F3C
+Text Primary:   #EDEEFF
+Text Secondary: #8B8FB5
+Text Muted:     #40435E
+Success:    #34D399
+Warning:    #FBBF24
+Error:      #F87171
+Info:       #38BDF8
+Orange:     #FB923C
 ```
 
 ## Typography
@@ -48,8 +49,8 @@ Info:       #58A6FF
 - Padding: 16px
 
 ### Buttons
-- Primary: bg `#00C896`, text `#0D1117`, radius 8px, height 48px, weight 600
-- Secondary: bg transparent, border `#30363D`, text `#E6EDF3`
+- Primary: bg `#7B61FF`, text `#FFFFFF`, radius 8px, height 48px, weight 600
+- Secondary: bg transparent, border `#1C1F3C`, text `#EDEEFF`
 - Destructive: bg `#F85149`, text white
 - Disabled: opacity 0.4, no interaction
 - Loading state: show spinner, disable interaction, preserve width

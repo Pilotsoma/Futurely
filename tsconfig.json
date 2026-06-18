@@ -41,4 +41,5 @@
     "backend",
     "nextstep-mobile"
   ],
+  "extends": "expo/tsconfig.base"
 }
