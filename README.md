@@ -4,11 +4,11 @@ AI-powered academic companion for high school students.
 
 ## Quick Startt
 
-### Prerequisites
+### Prerequisitess
 - Node.js 18+
 - Expo Go app on your phone
 
-### 1. Start the backend
+### 1. Start the backendd
 ```bash
 cd backend
 npm install

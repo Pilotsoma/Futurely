@@ -102,6 +102,7 @@ app.use(cors({
   maxAge: 86400, // cache preflight for 24 h — reduces OPTIONS round-trips
 }))
 
+<<<<<<< HEAD
 // ── Cookie parser — required for httpOnly cookie auth (web clients) ───────────
 app.use(cookieParser())
 
@@ -109,6 +110,8 @@ app.use(cookieParser())
 app.use(express.json({ limit: '50kb' }))
 app.use(express.urlencoded({ extended: true, limit: '50kb' }))
 
+=======
+>>>>>>> a20dbebc93c047e0cac173e903da93c7f0a9767c
 // ── Global rate limiter — 1000 req / 15 min per IP ───────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
