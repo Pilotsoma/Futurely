@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api, getApiToken } from '@/lib/api'
+import { clearWebAuth } from '@/lib/authState'
 
 const IDLE_MS = 30 * 60 * 1000  // 30 minutes before warning
 const WARN_S  = 5 * 60          // 5 minutes to respond
@@ -18,7 +19,7 @@ export default function InactivityWatcher() {
 
   const doLogout = useCallback(() => {
     api.logout().catch(() => null)
-    localStorage.removeItem('ns_token')
+    clearWebAuth()
     localStorage.removeItem('ns_user')
     router.replace('/login')
   }, [router])
@@ -66,7 +67,7 @@ export default function InactivityWatcher() {
   }
 
   useEffect(() => {
-    if (!localStorage.getItem('ns_token')) return
+    if (!getApiToken()) return
     resetIdleTimer()
     const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'] as const
     events.forEach(ev => window.addEventListener(ev, onActivity, { passive: true }))

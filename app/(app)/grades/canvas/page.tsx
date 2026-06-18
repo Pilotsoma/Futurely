@@ -1,5 +1,6 @@
 'use client'
 
+import DOMPurify from 'dompurify'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -137,19 +138,14 @@ function ContentSkeleton() {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function prepareCanvasHtml(html: string, canvasBaseUrl?: string): string {
+  if (typeof window === 'undefined') return ''
   let out = html
-  // strip scripts and dangerous attrs
-  out = out.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-  out = out.replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-  out = out.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
   if (canvasBaseUrl) {
     const base = `https://${canvasBaseUrl.replace(/^https?:\/\//, '')}`
-    // protocol-relative → https
     out = out.replace(/(src|href)=(["'])\/\//gi, `$1=$2https://`)
-    // root-relative → absolute canvas URL
     out = out.replace(/(src|href)=(["'])\//gi, `$1=$2${base}/`)
   }
-  return out
+  return DOMPurify.sanitize(out, { USE_PROFILES: { html: true } })
 }
 
 // ── Page Detail Panel ─────────────────────────────────────────────────────────
@@ -428,7 +424,7 @@ function QuizQuestionRow({ question, submissionData, showCorrect }: {
     <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 12, background: 'var(--surface)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
         <div className="canvas-html" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', lineHeight: 1.5, flex: 1 }}
-          dangerouslySetInnerHTML={{ __html: question.question_text }} />
+          dangerouslySetInnerHTML={{ __html: prepareCanvasHtml(question.question_text) }} />
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{question.points_possible} pt{question.points_possible !== 1 ? 's' : ''}</span>
           {isAnswered && showCorrect && (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PageLoader from '../../../../components/ui/PageLoader'
+import { getApiToken } from '../../../../lib/api'
 
 const BASE = ''
 
@@ -24,8 +25,9 @@ function initials(name: string) {
 }
 
 function apiFetch<T>(path: string): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('ns_token') : null
+  const token = typeof window !== 'undefined' ? getApiToken() : null
   return fetch(`${BASE}${path}`, {
+    credentials: 'include',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   }).then(r => r.json())
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PageLoader from '../../../../components/ui/PageLoader'
-import { api } from '../../../../lib/api'
+import { api, getApiToken } from '../../../../lib/api'
 
 // ── Official Katy ISD GPA Scale ───────────────────────────────────────────────
 // Regular:     A=4.0  B=3.0  C=2.0  F=0.0
@@ -74,9 +74,19 @@ const LEVEL_COLORS: Record<CourseLevel, { bg: string; color: string; border: str
 }
 
 async function apiFetch<T>(path: string): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('ns_token') : null
-  const res = await fetch(path, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-  return (await res.json()).data as T
+  const token = typeof window !== 'undefined' ? getApiToken() : null
+  const res = await fetch(path, {
+    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const msg = typeof json?.error === 'string'
+      ? json.error
+      : (json?.error?.message ?? res.statusText)
+    throw new Error(msg)
+  }
+  return json.data as T
 }
 
 export default function WhatIfGpaPage() {
@@ -116,7 +126,8 @@ export default function WhatIfGpaPage() {
 
         // 2. Fetch current classes for the reference panel
         const classworkRes = await fetch('/api/integrations/grades/classwork', {
-          headers: { Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('ns_token') : null}` },
+          credentials: 'include',
+          headers: { Authorization: `Bearer ${typeof window !== 'undefined' ? getApiToken() : null}` },
         })
         const classworkJson = await classworkRes.json()
         const raw = classworkJson.data?.classes ?? []

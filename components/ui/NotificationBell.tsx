@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { api, AppNotification } from '../../lib/api'
+import { api, AppNotification, getApiToken } from '../../lib/api'
 
 // Module-level dedup set — shared across all instances so toasts fire only once
 const _seen = new Set<number>()
@@ -56,7 +56,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
 
   // WebSocket for real-time notifications
   useEffect(() => {
-    const token = localStorage.getItem('ns_token')
+    const token = getApiToken()
     if (!token) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws')

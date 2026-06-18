@@ -1,13 +1,14 @@
 {
-  "experimentalServices": {
-    "frontend": {
-      "routePrefix": "/",
-      "framework": "nextjs"
-    },
-    "backend": {
-      "root": "backend",
-      "routePrefix": "/api",
-      "entrypoint": "api/index.ts"
+  "functions": {
+    "backend/api/index.ts": {
+      "memory": 1024,
+      "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/backend/api/index"
+    }
+  ]
 }

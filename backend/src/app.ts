@@ -11,8 +11,18 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_JWT_SECRET) {
   }
 }
 
+if (!process.env.CREDENTIAL_ENCRYPTION_KEY) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: CREDENTIAL_ENCRYPTION_KEY is not set.')
+    process.exit(1)
+  } else {
+    console.warn('⚠️  [SECURITY] CREDENTIAL_ENCRYPTION_KEY is missing. HAC/Canvas credential encryption will fail.')
+  }
+}
+
 import express from 'express'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import axios from 'axios'
@@ -31,51 +41,74 @@ import marketplaceRouter from './routes/marketplace'
 import { requireAuth } from './middleware/auth'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
+import { logger } from './common/logger'
 
 const app = express()
 const isProd = process.env.NODE_ENV === 'production'
 
+// Behind a reverse proxy (Render, Railway, Fly.io) req.ip is X-Forwarded-For.
+// trust proxy=1 tells Express to trust one hop, making rate-limit IP accurate.
+if (isProd) app.set('trust proxy', 1)
+
 // ── Security headers ────────────────────────────────────────────────────────
+// crossOriginResourcePolicy is 'same-site': this is a pure JSON API with no
+// public embeddable assets, so there is no reason for cross-origin pages to
+// load resources from it directly.
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow image/asset loading
+  crossOriginResourcePolicy: { policy: 'same-site' },
+  hsts: isProd ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
 }))
 
-// ── CORS — lock to known origins in production ───────────────────────────────
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// Explicit allowlist — never a wildcard, never `origin: true`.
+//
+// Why !origin passes: native mobile clients (Expo Go, React Native fetch) and
+// server-to-server calls omit the Origin header entirely. Allowing these is
+// intentional and safe — browsers always send Origin on cross-site requests.
+//
+// Production: set ALLOWED_ORIGINS=https://app.futurely.app,https://... in .env
+// Development: a small fixed allowlist covers Next.js (3000) and Expo web (19006).
+
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean)
 
+const DEV_ORIGINS = [
+  'http://localhost:3000',  // Next.js web dev server
+  'http://localhost:19006', // Expo web
+  'http://localhost:8081',  // Expo bundler / Metro
+]
+
+const CORS_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization']
+// Expose rate-limit headers so clients can read their quota without guessing.
+const CORS_EXPOSED_HEADERS = ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'RateLimit-Policy']
+
 app.use(cors({
-  origin: isProd
-    ? (origin, cb) => {
-        // Allow server-to-server (no origin) or whitelisted origins
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
-        cb(new Error(`CORS: origin ${origin} not allowed`))
-      }
-    : true,
+  origin: (origin, cb) => {
+    // No Origin header = native mobile / server-to-server — allow.
+    if (!origin) return cb(null, true)
+
+    const list = isProd ? ALLOWED_ORIGINS : DEV_ORIGINS
+    if (list.includes(origin)) return cb(null, true)
+
+    cb(new Error(`CORS: origin '${origin}' is not in the allowed list`))
+  },
   credentials: true,
+  methods: CORS_METHODS,
+  allowedHeaders: CORS_ALLOWED_HEADERS,
+  exposedHeaders: CORS_EXPOSED_HEADERS,
+  maxAge: 86400, // cache preflight for 24 h — reduces OPTIONS round-trips
 }))
+
+// ── Cookie parser — required for httpOnly cookie auth (web clients) ───────────
+app.use(cookieParser())
 
 // ── Body size limit — prevent large-payload DoS ──────────────────────────────
 app.use(express.json({ limit: '50kb' }))
 app.use(express.urlencoded({ extended: true, limit: '50kb' }))
 
-<<<<<<< HEAD
-const SENSITIVE_FIELDS = new Set(['password', 'token', 'refreshToken', 'newPassword', 'currentPassword'])
-
-app.use((req, _res, next) => {
-  console.log(`[REQ] ${req.method} ${req.originalUrl}`)
-  console.log('[REQ] content-type:', req.headers['content-type'])
-  console.log('[REQ] auth header exists:', Boolean(req.headers.authorization))
-
-  if (req.method !== 'GET' && req.body) {
-    const sanitized: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(req.body as Record<string, unknown>)) {
-      sanitized[k] = SENSITIVE_FIELDS.has(k) && v ? '[hidden]' : v
-    }
-    console.log('[REQ] body:', sanitized)
-=======
 // ── Global rate limiter — 1000 req / 15 min per IP ───────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -83,6 +116,10 @@ const globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many requests, please slow down.' } },
+  handler: (req, res, _next, options) => {
+    logger.warn('rate_limit_hit', { type: 'global', ip: req.ip, path: req.originalUrl })
+    res.status(options.statusCode).json(options.message)
+  },
 })
 app.use(globalLimiter)
 
@@ -93,6 +130,10 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many auth attempts, try again later.' } },
+  handler: (req, res, _next, options) => {
+    logger.warn('rate_limit_hit', { type: 'auth', ip: req.ip, path: req.originalUrl })
+    res.status(options.statusCode).json(options.message)
+  },
 })
 
 const aiLimiter = rateLimit({
@@ -101,6 +142,10 @@ const aiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'AI rate limit reached, wait a moment.' } },
+  handler: (req, res, _next, options) => {
+    logger.warn('rate_limit_hit', { type: 'ai', ip: req.ip, path: req.originalUrl })
+    res.status(options.statusCode).json(options.message)
+  },
 })
 
 const registerLimiter = rateLimit({
@@ -109,23 +154,37 @@ const registerLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many accounts created from this IP.' } },
+  handler: (req, res, _next, options) => {
+    logger.warn('rate_limit_hit', { type: 'register', ip: req.ip })
+    res.status(options.statusCode).json(options.message)
+  },
 })
 
-// ── Request logger — prod omits body to avoid leaking PII ───────────────────
-app.use((req, _res, next) => {
-  if (isProd) {
-    console.log(`[REQ] ${req.method} ${req.originalUrl}`)
-  } else {
-    console.log(`[REQ] ${req.method} ${req.originalUrl}`)
+
+// ── Request logger — never log sensitive fields ──────────────────────────────
+const SENSITIVE_FIELDS = new Set(['password', 'token', 'refreshToken', 'newPassword', 'currentPassword'])
+
+app.use((req, res, next) => {
+  const start = Date.now()
+  res.on('finish', () => {
+    logger.info('http_request', {
+      method: req.method,
+      path: req.originalUrl,
+      status: res.statusCode,
+      ip: req.ip,
+      duration_ms: Date.now() - start,
+    })
+  })
+  if (!isProd) {
     console.log('[REQ] content-type:', req.headers['content-type'])
     console.log('[REQ] auth header exists:', Boolean(req.headers.authorization))
-    if (req.method !== 'GET') {
-      console.log('[REQ] body:', {
-        ...req.body,
-        password: req.body?.password ? '[hidden]' : undefined,
-      })
+    if (req.method !== 'GET' && req.body) {
+      const sanitized: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(req.body as Record<string, unknown>)) {
+        sanitized[k] = SENSITIVE_FIELDS.has(k) && v ? '[hidden]' : v
+      }
+      console.log('[REQ] body:', sanitized)
     }
->>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
   }
   next()
 })
@@ -185,7 +244,7 @@ function devBypass(req: any, _res: any, next: any): void {
     try {
       const token = authHeader.slice(7)
       const secret = process.env.JWT_SECRET!
-      const payload = jwt.verify(token, secret) as { sub?: number | string }
+      const payload = jwt.verify(token, secret, { algorithms: ['HS256'] }) as { sub?: number | string }
       const id = typeof payload.sub === 'number'
         ? payload.sub
         : parseInt(String(payload.sub), 10)
@@ -219,11 +278,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/assignments', requireAuth, assignmentsRouter)
   app.use('/students', requireAuth, studentsRouter)
   app.use('/roadmap', requireAuth, roadmapRouter)
-<<<<<<< HEAD
-  app.use('/ai', requireAuth, aiRouter)
-=======
   app.use('/ai', aiLimiter, requireAuth, aiRouter)
->>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
   app.use('/feed', requireAuth, feedRouter)
   app.use('/notifications', requireAuth, notificationsRouter)
   app.use('/integrations/grades', requireAuth, gradesIntegrationRouter)
@@ -232,6 +287,25 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/marketplace', requireAuth, marketplaceRouter)
 }
 
-app.use('/parent', parentRouter)
+app.use('/parent', authLimiter, parentRouter)
+
+// ── Global error handler ─────────────────────────────────────────────────────
+// Catches any error passed to next(err) or thrown inside non-async route handlers.
+// Must be registered AFTER all routes and have exactly four parameters.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const message = err instanceof Error ? err.message : String(err)
+  const stack   = err instanceof Error ? err.stack   : undefined
+
+  // Full error logged server-side.
+  console.error('[GLOBAL ERROR HANDLER]', { message, stack })
+
+  if (!res.headersSent) {
+    res.status(500).json({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' },
+    })
+  }
+})
 
 export default app

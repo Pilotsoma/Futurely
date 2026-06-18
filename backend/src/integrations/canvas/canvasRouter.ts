@@ -314,9 +314,10 @@ router.post(
           continue
         }
         if (err instanceof CanvasNetworkError) {
+          // Store a safe code — err.message is returned to the client via GET /status.
           await prisma.canvasConnection.update({
             where: { userId_canvasInstanceUrl: { userId, canvasInstanceUrl } },
-            data: { syncStatus: 'error', syncError: err.message },
+            data: { syncStatus: 'error', syncError: 'NETWORK_ERROR' },
           })
           lastError = 'CANVAS_UNREACHABLE'
           continue

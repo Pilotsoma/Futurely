@@ -1,5 +1,13 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
+// Access token stored in module memory only — never persisted to localStorage.
+// Set by authState.setWebLogin() after login/register; cleared on logout.
+// httpOnly cookies carry the refresh token; the backend also reads access_token cookie.
+let _apiToken: string | null = null
+export function setApiToken(token: string | null): void { _apiToken = token }
+export function getApiToken(): string | null { return _apiToken }
+export function clearApiToken(): void { _apiToken = null }
+
 export class ApiError extends Error {
   code?: string
   secondsRemaining?: number
@@ -11,9 +19,10 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('ns_token') : null
+  const token = _apiToken
   const res = await fetch(`${BASE}${path}`, {
     ...options,
+    credentials: 'include',  // sends httpOnly cookies (access_token, refresh_token) automatically
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

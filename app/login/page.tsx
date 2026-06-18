@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { api, ApiError } from '../../lib/api'
+import { setWebLogin } from '../../lib/authState'
 import { SORTED_ISD_LIST, type ISDEntry } from '../../lib/isds'
 
 type Mode = 'login' | 'register-student' | 'register-parent'
@@ -79,7 +80,7 @@ export default function LoginPage() {
       } else {
         result = await api.register(email, password, name.trim() || undefined, 'PARENT')
       }
-      localStorage.setItem('ns_token', result.token)
+      setWebLogin(result.token)
       localStorage.setItem('ns_user', JSON.stringify(result.user))
       if (mode === 'register-student') {
         setStep('connecting')

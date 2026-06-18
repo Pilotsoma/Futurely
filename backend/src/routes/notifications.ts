@@ -13,7 +13,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
-        sender: { select: { id: true, name: true, email: true, tag: true, tagColor: true } },
+        sender: { select: { id: true, name: true, tag: true, tagColor: true } },
       },
     })
     const unreadCount = notifications.filter(n => !n.read).length

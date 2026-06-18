@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '../../../lib/api'
+import { clearWebAuth } from '../../../lib/authState'
 
 export default function ParentSettingsPage() {
   const router = useRouter()
@@ -21,7 +22,7 @@ export default function ParentSettingsPage() {
   }, [])
 
   function handleLogout() {
-    localStorage.removeItem('ns_token')
+    clearWebAuth()
     localStorage.removeItem('ns_user')
     router.push('/login')
   }

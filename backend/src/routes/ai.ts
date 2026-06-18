@@ -13,10 +13,12 @@ function extractJson(raw: string): string {
   return fenced ? fenced[1].trim() : raw.trim()
 }
 
-const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY ?? '',
-  baseURL: 'https://openrouter.ai/api/v1',
-})
+function getOpenRouter(): OpenAI {
+  return new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY ?? '',
+    baseURL: 'https://openrouter.ai/api/v1',
+  })
+}
 
 // Read all available portal data from the HAC/PowerSchool cache
 async function getPortalData(userId: number) {
@@ -135,7 +137,7 @@ College goal: ${profile?.futureDecision ?? 'not specified'}
 
 When asked about weakest/strongest class, best/worst grade, or any course comparison — always use "Current semester courses & grades" above, never guess.`
 
-    const response = await openrouter.chat.completions.create({
+    const response = await getOpenRouter().chat.completions.create({
       model: FREE_MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -208,7 +210,7 @@ Respond with ONLY a JSON object in exactly this shape (no markdown, no extra tex
   ]
 }`
 
-    const response = await openrouter.chat.completions.create({
+    const response = await getOpenRouter().chat.completions.create({
       model: FREE_MODEL,
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 2048,

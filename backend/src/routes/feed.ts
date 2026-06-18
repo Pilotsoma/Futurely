@@ -1,20 +1,45 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { broadcast, sendToUser } from '../lib/websocket';
 import { filterContent, recordViolation } from '../lib/contentFilter';
 import { SEED_PRICES, TAG_BOX_ITEMS } from './marketplace';
+import { AuthRequest } from '../middleware/auth';
+import { requireAdmin, requireMod, hasDevPowers } from '../middleware/requireAdmin';
+
+// Keyed by authenticated userId so shared NAT IPs don't block other users.
+const userKey = (req: Request): string => String((req as AuthRequest).userId ?? req.ip ?? 'anon')
+
+const postCreateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  keyGenerator: userKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Posting too fast. Wait a moment.' } },
+})
+
+const commentLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 15,
+  keyGenerator: userKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Commenting too fast. Wait a moment.' } },
+})
+
+const followLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 200,
+  keyGenerator: userKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many follow actions in one hour.' } },
+})
 
 const router = Router();
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-async function hasDevPowers(userId: number): Promise<boolean> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, tag: true, allTags: true } });
-  if (!user) return false;
-  if (user.role === 'ADMIN' || user.tag === 'DEV') return true;
-  const tags = (user.allTags as Array<{ tag: string }> | null) ?? [];
-  return Array.isArray(tags) && tags.some(t => t.tag === 'DEV');
-}
 
 async function hasModTag(userId: number): Promise<boolean> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { allTags: true } });
@@ -158,7 +183,7 @@ router.get('/posts', async (req: Request, res: Response) => {
       include: {
         user: {
           select: {
-            id: true, name: true, email: true,
+            id: true, name: true,
             tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true,
             chatBanned: true, chatMutedUntil: true, deletedAt: true,
             role: true, allTags: true,
@@ -167,7 +192,7 @@ router.get('/posts', async (req: Request, res: Response) => {
         },
         likes: { select: { userId: true } },
         giveawayEntries: { select: { userId: true } },
-        giveawayWinner: { select: { id: true, name: true, email: true } },
+        giveawayWinner: { select: { id: true, name: true } },
         _count: { select: { likes: true, comments: true, giveawayEntries: true } },
       },
     });
@@ -215,7 +240,7 @@ router.get('/posts', async (req: Request, res: Response) => {
 });
 
 /* ---------- Create New Post ---------- */
-router.post('/posts', async (req: Request, res: Response) => {
+router.post('/posts', postCreateLimiter, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as number;
     const { body } = req.body as { body?: string };
@@ -255,7 +280,7 @@ router.post('/posts', async (req: Request, res: Response) => {
 });
 
 /* ---------- Create Giveaway Post (DEV/admin only) ---------- */
-router.post('/posts/giveaway', async (req: Request, res: Response) => {
+router.post('/posts/giveaway', postCreateLimiter, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as number;
     const { body, giveawayTag, giveawayTagColor, giveawayCoinAmount, durationMinutes, giveawayItemType, giveawayItemId, giveawayItemRarity } = req.body as {
@@ -299,7 +324,7 @@ router.post('/posts/giveaway', async (req: Request, res: Response) => {
           user: { select: USER_SELECT },
           likes: { select: { userId: true } },
           giveawayEntries: { select: { userId: true } },
-          giveawayWinner: { select: { id: true, name: true, email: true } },
+          giveawayWinner: { select: { id: true, name: true } },
           _count: { select: { likes: true, comments: true, giveawayEntries: true } },
         },
       }),
@@ -395,7 +420,7 @@ router.get('/posts/:id', async (req: Request, res: Response) => {
 });
 
 /* ---------- Add Comment ---------- */
-router.post('/posts/:id/comments', async (req: Request, res: Response) => {
+router.post('/posts/:id/comments', commentLimiter, async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const userId = (req as any).userId as number;
@@ -514,10 +539,10 @@ router.post('/posts/:id/comments/:commentId/like', async (req: Request, res: Res
 });
 
 /* ---------- Delete Post ---------- */
-router.delete('/posts/:id', async (req: Request, res: Response) => {
+router.delete('/posts/:id', async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const userId = (req as any).userId as number;
+    const userId = req.userId!;
     const post = await prisma.post.findUnique({ where: { id } });
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
@@ -625,7 +650,7 @@ router.post('/posts/:id/giveaway/draw', async (req: Request, res: Response) => {
       }
     }
 
-    const winner = await prisma.user.findUnique({ where: { id: winnerEntry.userId }, select: { id: true, name: true, email: true } });
+    const winner = await prisma.user.findUnique({ where: { id: winnerEntry.userId }, select: { id: true, name: true } });
     broadcast('GIVEAWAY_WINNER', { postId, winner });
 
     const prize = post.giveawayCoinAmount
@@ -641,21 +666,16 @@ router.post('/posts/:id/giveaway/draw', async (req: Request, res: Response) => {
     });
     sendToUser(winnerEntry.userId, 'NOTIFICATION', { ...notif, sender: toFeedUser(notif.sender) });
 
-    res.json({ data: { winnerId: winner?.id, winnerName: winner?.name ?? winner?.email } });
+    res.json({ data: { winnerId: winner?.id, winnerName: winner?.name ?? null } });
   } catch (err) {
     res.status(500).json({ error: 'Failed to draw winner' });
   }
 });
 
 /* ---------- Pin Post for 24h (DEV/admin) ---------- */
-router.put('/posts/:id/pin', async (req: Request, res: Response) => {
+router.put('/posts/:id/pin', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const postId = parseInt(req.params.id);
-    const actorId = (req as any).userId as number;
-
-    const isDev = await hasDevPowers(actorId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
-
     const pinnedUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const updated = await prisma.post.update({ where: { id: postId }, data: { pinnedUntil } });
     broadcast('POST_PINNED', { postId, pinnedUntil: pinnedUntil.toISOString() });
@@ -666,14 +686,9 @@ router.put('/posts/:id/pin', async (req: Request, res: Response) => {
 });
 
 /* ---------- Unpin Post (DEV/admin) ---------- */
-router.put('/posts/:id/unpin', async (req: Request, res: Response) => {
+router.put('/posts/:id/unpin', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const postId = parseInt(req.params.id);
-    const actorId = (req as any).userId as number;
-
-    const isDev = await hasDevPowers(actorId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
-
     await prisma.post.update({ where: { id: postId }, data: { pinnedUntil: null } });
     broadcast('POST_UNPINNED', { postId });
     res.json({ data: { ok: true } });
@@ -704,7 +719,8 @@ router.get('/user/profile', async (req: Request, res: Response) => {
     const profile = await prisma.user.findUnique({ where: { id: userId }, include: { _count: { select: { followers: true, following: true, posts: true } } } });
     if (!profile) return res.status(404).json({ error: 'User not found' });
     const totalLikes = await prisma.like.count({ where: { post: { userId } } });
-    res.json({ ...profile, totalLikes });
+    const { passwordHash, failedLoginAttempts: _fla, lockedUntil: _lu, emailVerificationToken: _evt, emailVerificationExpiry: _eve, ...safe } = profile as typeof profile & { passwordHash: string; failedLoginAttempts: number; lockedUntil: Date | null; emailVerificationToken: string | null; emailVerificationExpiry: Date | null };
+    res.json({ ...safe, totalLikes });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
@@ -719,14 +735,15 @@ router.get('/user/profile/:id', async (req: Request, res: Response) => {
     if (!profile) return res.status(404).json({ error: 'User not found' });
     const totalLikes = await prisma.like.count({ where: { post: { userId: targetId } } });
     const isFollowing = await prisma.follow.findFirst({ where: { followerId: userId, followingId: targetId } });
-    res.json({ ...profile, totalLikes, isFollowing: !!isFollowing });
+    const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, emailVerificationToken: _evt, emailVerificationExpiry: _eve, coins: _coins, ...safe } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; emailVerificationToken: string | null; emailVerificationExpiry: Date | null; coins: number };
+    res.json({ ...safe, totalLikes, isFollowing: !!isFollowing });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
 
 /* ---------- Toggle Follow (legacy) ---------- */
-router.post('/user/follow', async (req: Request, res: Response) => {
+router.post('/user/follow', followLimiter, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as number;
     const { targetId } = req.body as { targetId: number };
@@ -763,13 +780,10 @@ router.get('/search', async (req: Request, res: Response) => {
 });
 
 /* ---------- Admin: Update User Tag (legacy) ---------- */
-router.put('/user/:id/tag', async (req: Request, res: Response) => {
+router.put('/user/:id/tag', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).userId as number;
     const targetId = parseInt(req.params.id);
     const { tag, tagColor } = req.body as { tag?: string; tagColor?: string };
-    const isDev = await hasDevPowers(userId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
     const updated = await prisma.user.update({ where: { id: targetId }, data: { tag, tagColor } });
     res.json({ data: updated });
   } catch (err) {
@@ -778,12 +792,9 @@ router.put('/user/:id/tag', async (req: Request, res: Response) => {
 });
 
 /* ---------- Admin: Reset User Tag (legacy) ---------- */
-router.delete('/user/:id/tag', async (req: Request, res: Response) => {
+router.delete('/user/:id/tag', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).userId as number;
     const targetId = parseInt(req.params.id);
-    const isDev = await hasDevPowers(userId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
     const target = await prisma.user.findUnique({ where: { id: targetId } });
     const defaultTag = target?.role === 'PARENT' ? 'Parent' : 'Student';
     const updated = await prisma.user.update({ where: { id: targetId }, data: { tag: defaultTag, tagColor: 'grey', allTags: '[]' } });
@@ -876,7 +887,7 @@ router.get('/users/:id/posts', async (req: Request, res: Response) => {
           user: { select: USER_SELECT },
           likes: { select: { userId: true } },
           giveawayEntries: { select: { userId: true } },
-          giveawayWinner: { select: { id: true, name: true, email: true } },
+          giveawayWinner: { select: { id: true, name: true } },
           _count: { select: { likes: true, comments: true, giveawayEntries: true } },
         },
       }),
@@ -895,7 +906,7 @@ router.get('/users/:id/posts', async (req: Request, res: Response) => {
 });
 
 /* ---------- Users: Toggle Follow ---------- */
-router.post('/users/:id/follow', async (req: Request, res: Response) => {
+router.post('/users/:id/follow', followLimiter, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as number;
     const targetId = parseInt(req.params.id);
@@ -926,15 +937,11 @@ router.post('/users/:id/follow', async (req: Request, res: Response) => {
 });
 
 /* ---------- Users: Award Tag (DEV/admin) — adds to allTags ---------- */
-router.put('/users/:id/tag', async (req: Request, res: Response) => {
+router.put('/users/:id/tag', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).userId as number;
     const targetId = parseInt(req.params.id);
     const { tag, tagColor } = req.body as { tag?: string; tagColor?: string };
     if (!tag) return res.status(400).json({ error: 'Tag is required' });
-
-    const isDev = await hasDevPowers(userId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
 
     const target = await prisma.user.findUnique({ where: { id: targetId } });
     const existing = parseAllTags(target?.allTags || '[]');
@@ -955,12 +962,9 @@ router.put('/users/:id/tag', async (req: Request, res: Response) => {
 });
 
 /* ---------- Users: Reset All Tags (DEV/admin) ---------- */
-router.delete('/users/:id/tag', async (req: Request, res: Response) => {
+router.delete('/users/:id/tag', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).userId as number;
     const targetId = parseInt(req.params.id);
-    const isDev = await hasDevPowers(userId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
     const target = await prisma.user.findUnique({ where: { id: targetId } });
     const defaultTag = target?.role === 'PARENT' ? 'Parent' : 'Student';
     const updated = await prisma.user.update({
@@ -974,13 +978,10 @@ router.delete('/users/:id/tag', async (req: Request, res: Response) => {
 });
 
 /* ---------- Users: Remove Specific Tag (DEV/admin) ---------- */
-router.delete('/users/:id/tags/:tagname', async (req: Request, res: Response) => {
+router.delete('/users/:id/tags/:tagname', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).userId as number;
     const targetId = parseInt(req.params.id);
     const tagname = decodeURIComponent(req.params.tagname);
-    const isDev = await hasDevPowers(userId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
 
     const target = await prisma.user.findUnique({ where: { id: targetId } });
     const existing = parseAllTags(target?.allTags || '[]');
@@ -1028,13 +1029,10 @@ router.put('/users/me/display-tag', async (req: Request, res: Response) => {
 });
 
 /* ---------- Users: Ban from chat ---------- */
-router.put('/users/:id/ban', async (req: Request, res: Response) => {
+router.put('/users/:id/ban', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const actorId = (req as any).userId as number;
     const targetId = parseInt(req.params.id);
     const { banned } = req.body as { banned: boolean };
-    const isDev = await hasDevPowers(actorId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
     const updated = await prisma.user.update({ where: { id: targetId }, data: { chatBanned: banned } });
     res.json({ data: { banned: updated.chatBanned } });
   } catch (err) {
@@ -1043,17 +1041,13 @@ router.put('/users/:id/ban', async (req: Request, res: Response) => {
 });
 
 /* ---------- Users: Mute from chat ---------- */
-router.put('/users/:id/mute', async (req: Request, res: Response) => {
+router.put('/users/:id/mute', requireMod, async (req: AuthRequest, res: Response) => {
   try {
-    const actorId = (req as any).userId as number;
+    const actorId = req.userId!;
     const targetId = parseInt(req.params.id);
     let { minutes } = req.body as { minutes?: number | null };
     const isDev = await hasDevPowers(actorId);
-    if (!isDev) {
-      const isMod = await hasModTag(actorId);
-      if (!isMod) return res.status(403).json({ error: 'Unauthorized' });
-      if (minutes != null && minutes > 1440) minutes = 1440;
-    }
+    if (!isDev && minutes != null && minutes > 1440) minutes = 1440;
     const mutedUntil = (minutes != null && minutes > 0)
       ? new Date(Date.now() + minutes * 60 * 1000)
       : null;
@@ -1065,13 +1059,11 @@ router.put('/users/:id/mute', async (req: Request, res: Response) => {
 });
 
 /* ---------- Users: Delete account (DEV only — target must be banned) ---------- */
-router.delete('/users/:id', async (req: Request, res: Response) => {
+router.delete('/users/:id', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const actorId = (req as any).userId as number;
+    const actorId = req.userId!;
     const targetId = parseInt(req.params.id);
     if (actorId === targetId) return res.status(400).json({ error: 'Cannot delete your own account' });
-    const isDev = await hasDevPowers(actorId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
     const target = await prisma.user.findUnique({ where: { id: targetId }, select: { chatBanned: true } });
     if (!target) return res.status(404).json({ error: 'User not found' });
     if (!target.chatBanned) return res.status(400).json({ error: 'User must be banned before their account can be deleted' });
@@ -1083,15 +1075,13 @@ router.delete('/users/:id', async (req: Request, res: Response) => {
 });
 
 /* ---------- Users: Set role (DEV only) ---------- */
-router.put('/users/:id/role', async (req: Request, res: Response) => {
+router.put('/users/:id/role', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const actorId = (req as any).userId as number;
+    const actorId = req.userId!;
     const targetId = parseInt(req.params.id);
     if (actorId === targetId) return res.status(400).json({ error: 'Cannot change your own role' });
     const { role } = req.body as { role: string };
     if (!['STUDENT', 'ADMIN'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
-    const isDev = await hasDevPowers(actorId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
     const updated = await prisma.user.update({ where: { id: targetId }, data: { role } });
     res.json({ data: { role: updated.role } });
   } catch (err) {
@@ -1100,12 +1090,8 @@ router.put('/users/:id/role', async (req: Request, res: Response) => {
 });
 
 /* ---------- DEV: Platform Stats (total coins + inventory value) ---------- */
-router.get('/dev-stats', async (req: Request, res: Response) => {
+router.get('/dev-stats', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const actorId = (req as any).userId as number;
-    const isDev = await hasDevPowers(actorId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
-
     const [coinsAgg, allUsers, itemPrices] = await Promise.all([
       prisma.user.aggregate({ _sum: { coins: true }, where: { deletedAt: null } }),
       prisma.user.findMany({
@@ -1146,13 +1132,9 @@ router.get('/dev-stats', async (req: Request, res: Response) => {
 });
 
 /* ---------- DEV: Adjust user coins ---------- */
-router.put('/users/:id/coins', async (req: Request, res: Response) => {
+router.put('/users/:id/coins', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const actorId = (req as any).userId as number;
     const targetId = parseInt(req.params.id);
-    const isDev = await hasDevPowers(actorId);
-    if (!isDev) return res.status(403).json({ error: 'Unauthorized' });
-
     const { action, amount } = req.body as { action: 'add' | 'remove' | 'zero'; amount?: number };
     if (!['add', 'remove', 'zero'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
     if (action !== 'zero' && (typeof amount !== 'number' || amount < 0)) {

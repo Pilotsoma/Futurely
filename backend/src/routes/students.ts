@@ -167,6 +167,16 @@ router.patch('/me/avatar', requireAuth, async (req: AuthRequest, res: Response):
     const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true } })
     if (user?.role !== 'ADMIN') { res.status(403).json({ error: 'DEV only' }); return }
     const { avatarUrl } = req.body as { avatarUrl: string | null }
+    if (avatarUrl !== null && avatarUrl !== undefined) {
+      try {
+        const parsed = new URL(avatarUrl)
+        if (parsed.protocol !== 'https:') {
+          res.status(400).json({ error: 'avatarUrl must use https://' }); return
+        }
+      } catch {
+        res.status(400).json({ error: 'avatarUrl must be a valid URL' }); return
+      }
+    }
     const updated = await prisma.user.update({ where: { id: req.userId }, data: { avatarUrl: avatarUrl ?? null }, select: { avatarUrl: true } })
     res.json({ data: updated })
   } catch {

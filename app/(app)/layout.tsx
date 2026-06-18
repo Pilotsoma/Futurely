@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { motion, AnimatePresence, type Transition } from 'framer-motion'
 import { api } from '../../lib/api'
+import { initWebAuth, clearWebAuth } from '../../lib/authState'
 import NotificationBell from '../../components/ui/NotificationBell'
 import UpdatePopup from '../../components/ui/UpdatePopup'
 import ForcedLogoutWatcher from '../../components/ui/ForcedLogoutWatcher'
@@ -83,11 +84,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [pathname, collapsed])
 
   useEffect(() => {
-    const token = localStorage.getItem('ns_token')
-    const user  = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { name?: string | null } | null
-    if (!token) {
-      router.replace('/login')
-    } else {
+    async function checkAuth() {
+      const ok = await initWebAuth()
+      if (!ok) { router.replace('/login'); return }
+
+      const user = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { name?: string | null } | null
       if (user?.name) {
         const n = user.name
         if (n.includes(',')) {
@@ -98,24 +99,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           setUserName(n.split(' ')[0])
         }
       }
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1])) as { sub?: number }
-        const uid = payload.sub
-        if (uid) {
-          api.feedUserProfile(uid).then(p => {
-            if (p.deletedAt) setIsDeleted(true)
-          }).catch(() => {})
-        }
-      } catch { /* malformed token — auth will fail naturally */ }
-      api.portalStatus()
-        .catch(() => {})
-        .finally(() => setChecked(true))
+      api.portalStatus().catch(() => {}).finally(() => setChecked(true))
     }
+    void checkAuth()
   }, [router])
 
   function handleLogout() {
     api.logout().catch(() => null)
-    localStorage.removeItem('ns_token')
+    clearWebAuth()
     localStorage.removeItem('ns_user')
     router.push('/login')
   }

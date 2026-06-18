@@ -30,13 +30,10 @@ model User {
   failedLoginAttempts      Int                      @default(0)
   lockedUntil              DateTime?
   deletedAt                DateTime?
-<<<<<<< HEAD
   emailVerified            Boolean                  @default(false)
   emailVerificationToken   String?                  @unique
   emailVerificationExpiry  DateTime?
-=======
   lastSeenAt               DateTime?
->>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt
   assignments              Assignment[]
@@ -378,7 +375,7 @@ model CanvasConnection {
 model RefreshToken {
   id        Int       @id @default(autoincrement())
   userId    Int
-  token     String    @unique
+  tokenHash String    @unique
   expiresAt DateTime
   revokedAt DateTime?
   createdAt DateTime  @default(now())
@@ -390,7 +387,7 @@ model RefreshToken {
 model PasswordResetToken {
   id        Int       @id @default(autoincrement())
   userId    Int
-  token     String    @unique
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())

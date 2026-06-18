@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { initWebAuth, clearWebAuth } from '../../lib/authState'
 
 const NAV = [
   {
@@ -26,20 +27,19 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   const [userName, setUserName] = useState('Parent')
 
   useEffect(() => {
-    const token = localStorage.getItem('ns_token')
-    const user  = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { role?: string; name?: string | null } | null
-    if (!token) {
-      router.replace('/login')
-    } else if (user?.role !== 'PARENT') {
-      router.replace('/dashboard')
-    } else {
+    async function checkAuth() {
+      const ok = await initWebAuth()
+      if (!ok) { router.replace('/login'); return }
+      const user = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { role?: string; name?: string | null } | null
+      if (user?.role !== 'PARENT') { router.replace('/dashboard'); return }
       setChecked(true)
       if (user?.name) setUserName(user.name.split(' ')[0])
     }
+    void checkAuth()
   }, [router])
 
   function handleLogout() {
-    localStorage.removeItem('ns_token')
+    clearWebAuth()
     localStorage.removeItem('ns_user')
     router.push('/login')
   }

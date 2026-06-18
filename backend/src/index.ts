@@ -6,12 +6,9 @@ import jwt from 'jsonwebtoken'
 import { clients, userClients } from './lib/websocket'
 
 const PORT = Number(process.env.PORT ?? '3001')
-
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  console.error('FATAL: JWT_SECRET env var is not set. Refusing to start in production.')
-  process.exit(1)
-}
-const JWT_SECRET = process.env.JWT_SECRET ?? 'nextstep-dev-secret-change-in-production'
+// app.ts already exits in production when JWT_SECRET is missing or default.
+// Read directly — no fallback — so WS auth behaves identically to requireAuth middleware.
+const JWT_SECRET = process.env.JWT_SECRET
 
 const server = http.createServer(app)
 const wss = new WebSocketServer({ server })
@@ -23,8 +20,8 @@ wss.on('connection', (ws) => {
   ws.on('message', (raw) => {
     try {
       const msg = JSON.parse(raw.toString()) as { type?: string; token?: string }
-      if (msg.type === 'AUTH' && msg.token) {
-        const payload = jwt.verify(msg.token, JWT_SECRET) as { sub?: string | number }
+      if (msg.type === 'AUTH' && msg.token && JWT_SECRET) {
+        const payload = jwt.verify(msg.token, JWT_SECRET, { algorithms: ['HS256'] }) as { sub?: string | number }
         const userId = typeof payload.sub === 'number' ? payload.sub : parseInt(String(payload.sub ?? ''), 10)
         if (!isNaN(userId)) {
           authedUserId = userId

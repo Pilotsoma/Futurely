@@ -6,8 +6,8 @@ import rateLimit from 'express-rate-limit'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { filterUsername } from '../lib/contentFilter'
-<<<<<<< HEAD
 import { sendEmail } from '../lib/email'
+import { logger } from '../common/logger'
 
 const router = Router()
 
@@ -16,13 +16,18 @@ const router = Router()
 const BCRYPT_ROUNDS = 12
 const ACCESS_TOKEN_EXPIRY = '15m'
 const REFRESH_TOKEN_EXPIRY_DAYS = 7
-const RESET_TOKEN_EXPIRY_MINUTES = 30
+const RESET_TOKEN_EXPIRY_MINUTES = 15
 const VERIFY_TOKEN_EXPIRY_HOURS = 24
+const MAX_FAILED_ATTEMPTS = 5
+const LOCKOUT_DURATION_MS = 2 * 60 * 60 * 1000 // 2 hours
+
+// Stable dummy hash used to normalise timing when user doesn't exist
+const DUMMY_HASH = '$2a$12$RhIbHdMHqDGwkVDSMsqmNOE7I1NLSq9k3n7N4wWfpjBYUdpFCt/0G'
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
@@ -33,7 +38,7 @@ const loginLimiter = rateLimit({
 })
 
 const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
@@ -54,6 +59,39 @@ const passwordResetLimiter = rateLimit({
   },
 })
 
+const refreshTokenLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    data: null,
+    error: { code: 'TOO_MANY_REQUESTS', message: 'Too many token refresh attempts. Try again in 15 minutes.' },
+  },
+})
+
+const verifyEmailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    data: null,
+    error: { code: 'TOO_MANY_REQUESTS', message: 'Too many email verification attempts. Try again in 1 hour.' },
+  },
+})
+
+const resendVerifyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    data: null,
+    error: { code: 'TOO_MANY_REQUESTS', message: 'Too many resend requests. Try again in 1 hour.' },
+  },
+})
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function validatePassword(password: string): string | null {
@@ -64,14 +102,29 @@ function validatePassword(password: string): string | null {
 }
 
 function issueAccessToken(userId: number): string {
-  return jwt.sign({ sub: userId }, process.env.JWT_SECRET!, { expiresIn: ACCESS_TOKEN_EXPIRY })
+  return jwt.sign({ sub: userId }, process.env.JWT_SECRET!, { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_EXPIRY })
+}
+
+const IS_PROD = process.env.NODE_ENV === 'production'
+
+function setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
+  const base = { httpOnly: true, path: '/', sameSite: IS_PROD ? ('none' as const) : ('lax' as const), secure: IS_PROD }
+  res.cookie('access_token', accessToken, { ...base, maxAge: 15 * 60 * 1000 })
+  res.cookie('refresh_token', refreshToken, { ...base, maxAge: REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000 })
+}
+
+function clearAuthCookies(res: Response): void {
+  const base = { httpOnly: true, path: '/', sameSite: IS_PROD ? ('none' as const) : ('lax' as const), secure: IS_PROD }
+  res.clearCookie('access_token', base)
+  res.clearCookie('refresh_token', base)
 }
 
 async function issueRefreshToken(userId: number): Promise<string> {
   const token = crypto.randomBytes(40).toString('hex')
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS)
-  await prisma.refreshToken.create({ data: { userId, token, expiresAt } })
+  await prisma.refreshToken.create({ data: { userId, tokenHash, expiresAt } })
   return token
 }
 
@@ -113,17 +166,6 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
   const { email, password, name, role: roleInput } = req.body as {
     email?: string; password?: string; name?: string; role?: string
   }
-=======
-import { sendToUser } from '../lib/websocket'
-
-const router = Router()
-
-const MAX_FAILED_ATTEMPTS = 5
-const LOCKOUT_DURATION_MS = 2 * 60 * 60 * 1000 // 2 hours
-
-router.post('/register', async (req: Request, res: Response): Promise<void> => {
-  const { email, password, name, role: roleInput } = req.body as { email?: string; password?: string; name?: string; role?: string }
->>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
 
   if (!email || !password) {
     res.status(400).json({
@@ -191,6 +233,9 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
     const token = issueAccessToken(user.id)
     const refreshToken = await issueRefreshToken(user.id)
+    setAuthCookies(res, token, refreshToken)
+
+    logger.info('auth.registered', { userId: user.id })
 
     res.status(201).json({
       data: {
@@ -200,7 +245,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       },
     })
   } catch (e) {
-    console.error('REGISTER ERROR:', e)
+    logger.error('auth.error', { event: 'register', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
@@ -224,18 +269,13 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
   try {
     const user = await prisma.user.findUnique({ where: { email } })
 
-<<<<<<< HEAD
-    // Always run bcrypt to prevent timing-based user enumeration.
-    // The dummy hash is a valid bcrypt hash that will never match any real password.
-    const DUMMY_HASH = '$2a$12$RhIbHdMHqDGwkVDSMsqmNOE7I1NLSq9k3n7N4wWfpjBYUdpFCt/0G'
+    // Always run bcrypt regardless of whether user exists — prevents timing-based
+    // user enumeration (attacker can't tell if email is registered from response time)
     const passwordValid = user
       ? await bcrypt.compare(password, user.passwordHash)
       : await bcrypt.compare(password, DUMMY_HASH).then(() => false)
 
-    if (!user || !passwordValid) {
-=======
     if (!user) {
->>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
       res.status(401).json({
         data: null,
         error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
@@ -251,11 +291,8 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
       return
     }
 
-<<<<<<< HEAD
-    const token = issueAccessToken(user.id)
-    const refreshToken = await issueRefreshToken(user.id)
-=======
     if (user.lockedUntil && user.lockedUntil > new Date()) {
+      logger.warn('auth.login_rejected_locked', { userId: user.id, ip: req.ip })
       const secondsRemaining = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 1000)
       res.status(429).json({
         data: null,
@@ -265,10 +302,8 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
       return
     }
 
-    const passwordValid = await bcrypt.compare(password, user.passwordHash)
-
     if (!passwordValid) {
-      const newAttempts = user.failedLoginAttempts + 1
+      const newAttempts = (user.failedLoginAttempts ?? 0) + 1
       const shouldLock = newAttempts >= MAX_FAILED_ATTEMPTS
 
       await prisma.user.update({
@@ -280,6 +315,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
       })
 
       if (shouldLock) {
+        logger.warn('auth.account_locked', { userId: user.id, ip: req.ip })
         res.status(429).json({
           data: null,
           error: { code: 'ACCOUNT_LOCKED', message: 'Too many failed login attempts. Account locked for 2 hours.' },
@@ -288,6 +324,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
         return
       }
 
+      logger.warn('auth.login_failed', { userId: user.id, ip: req.ip, attempts: newAttempts })
       const attemptsLeft = MAX_FAILED_ATTEMPTS - newAttempts
       res.status(401).json({
         data: null,
@@ -299,13 +336,17 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
       return
     }
 
+    // Reset failed attempts on successful login
     await prisma.user.update({
       where: { id: user.id },
       data: { failedLoginAttempts: 0, lockedUntil: null },
     })
 
-    const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' })
->>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
+    const token = issueAccessToken(user.id)
+    const refreshToken = await issueRefreshToken(user.id)
+    setAuthCookies(res, token, refreshToken)
+
+    logger.info('auth.login_success', { userId: user.id })
 
     res.json({
       data: {
@@ -321,7 +362,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
       },
     })
   } catch (e) {
-    console.error('LOGIN ERROR:', e)
+    logger.error('auth.error', { event: 'login', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
@@ -329,24 +370,28 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
   }
 })
 
-<<<<<<< HEAD
 // ── POST /auth/refresh ────────────────────────────────────────────────────────
 
-router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
-  const { refreshToken } = req.body as { refreshToken?: string }
+router.post('/refresh', refreshTokenLimiter, async (req: Request, res: Response): Promise<void> => {
+  // Accept refresh token from body (mobile) or httpOnly cookie (web)
+  const refreshToken = (req.body as { refreshToken?: string }).refreshToken
+    ?? (req as Request & { cookies?: Record<string, string> }).cookies?.refresh_token
 
   if (!refreshToken) {
-    res.status(400).json({
+    res.status(401).json({
       data: null,
-      error: { code: 'VALIDATION_ERROR', message: 'refreshToken required' },
+      error: { code: 'INVALID_TOKEN', message: 'No refresh token provided' },
     })
     return
   }
 
   try {
-    const stored = await prisma.refreshToken.findUnique({ where: { token: refreshToken } })
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
+    const stored = await prisma.refreshToken.findUnique({ where: { tokenHash } })
 
     if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+      logger.warn('auth.invalid_refresh_token', { ip: req.ip })
+      clearAuthCookies(res)
       res.status(401).json({
         data: null,
         error: { code: 'INVALID_TOKEN', message: 'Invalid or expired refresh token' },
@@ -354,7 +399,7 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    // Rotate: revoke old token and issue a fresh pair
+    // Rotate: revoke old, issue fresh pair
     await prisma.refreshToken.update({
       where: { id: stored.id },
       data: { revokedAt: new Date() },
@@ -362,12 +407,15 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
 
     const newAccessToken = issueAccessToken(stored.userId)
     const newRefreshToken = await issueRefreshToken(stored.userId)
+    setAuthCookies(res, newAccessToken, newRefreshToken)
+
+    logger.info('auth.token_refreshed', { userId: stored.userId })
 
     res.json({
       data: { token: newAccessToken, refreshToken: newRefreshToken },
     })
   } catch (e) {
-    console.error('REFRESH ERROR:', e)
+    logger.error('auth.error', { event: 'refresh', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
@@ -381,14 +429,17 @@ router.post('/logout', requireAuth, async (req: AuthRequest, res: Response): Pro
   const { refreshToken } = req.body as { refreshToken?: string }
 
   if (refreshToken) {
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
     await prisma.refreshToken
       .updateMany({
-        where: { token: refreshToken, userId: req.userId },
+        where: { tokenHash, userId: req.userId },
         data: { revokedAt: new Date() },
       })
       .catch(() => { /* token not found — fine */ })
   }
 
+  clearAuthCookies(res)
+  logger.info('auth.logout', { userId: req.userId })
   res.json({ data: { ok: true } })
 })
 
@@ -405,36 +456,38 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: 
     return
   }
 
-  // Always respond 200 immediately to prevent email enumeration
+  // Respond 200 immediately — prevents email enumeration
   res.json({ data: { message: 'If an account exists for that email, a reset link has been sent.' } })
 
   try {
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user || user.deletedAt) return
 
-    // Invalidate any existing unused tokens for this user
+    // Invalidate any existing unused tokens
     await prisma.passwordResetToken.updateMany({
       where: { userId: user.id, usedAt: null },
       data: { usedAt: new Date() },
     })
 
-    const token = crypto.randomBytes(32).toString('hex')
+    const rawToken = crypto.randomBytes(32).toString('hex')
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
     const expiresAt = new Date()
     expiresAt.setMinutes(expiresAt.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES)
 
-    await prisma.passwordResetToken.create({ data: { userId: user.id, token, expiresAt } })
+    await prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt } })
+    logger.info('auth.password_reset_requested', { userId: user.id })
 
-    void sendPasswordResetEmail(email, token).catch((err) =>
+    void sendPasswordResetEmail(email, rawToken).catch((err) =>
       console.error('Failed to send password reset email:', err),
     )
   } catch (e) {
-    console.error('FORGOT PASSWORD ERROR:', e)
+    logger.error('auth.error', { event: 'forgot_password', error: e instanceof Error ? e.message : String(e) })
   }
 })
 
 // ── POST /auth/reset-password ─────────────────────────────────────────────────
 
-router.post('/reset-password', async (req: Request, res: Response): Promise<void> => {
+router.post('/reset-password', passwordResetLimiter, async (req: Request, res: Response): Promise<void> => {
   const { token, password } = req.body as { token?: string; password?: string }
 
   if (!token || !password) {
@@ -455,9 +508,16 @@ router.post('/reset-password', async (req: Request, res: Response): Promise<void
   }
 
   try {
-    const resetToken = await prisma.passwordResetToken.findUnique({ where: { token } })
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
 
-    if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
+    // Atomically claim the token — prevents TOCTOU race where two concurrent requests
+    // both pass the usedAt check before either marks it consumed
+    const claimed = await prisma.passwordResetToken.updateMany({
+      where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+      data: { usedAt: new Date() },
+    })
+
+    if (claimed.count === 0) {
       res.status(400).json({
         data: null,
         error: { code: 'INVALID_TOKEN', message: 'Invalid or expired reset token' },
@@ -465,27 +525,31 @@ router.post('/reset-password', async (req: Request, res: Response): Promise<void
       return
     }
 
+    const resetToken = await prisma.passwordResetToken.findUnique({ where: { tokenHash } })
+    if (!resetToken) {
+      res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
+      return
+    }
+
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
 
     await prisma.$transaction([
-      prisma.passwordResetToken.update({
-        where: { id: resetToken.id },
-        data: { usedAt: new Date() },
-      }),
       prisma.user.update({
         where: { id: resetToken.userId },
-        data: { passwordHash },
+        data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
       }),
-      // Revoke all active refresh tokens — forces re-login after password reset
+      // Force re-login on all devices after password reset
       prisma.refreshToken.updateMany({
         where: { userId: resetToken.userId, revokedAt: null },
         data: { revokedAt: new Date() },
       }),
     ])
 
+    clearAuthCookies(res)
+    logger.info('auth.password_reset_success', { userId: resetToken.userId })
     res.json({ data: { message: 'Password reset successful. Please log in again.' } })
   } catch (e) {
-    console.error('RESET PASSWORD ERROR:', e)
+    logger.error('auth.error', { event: 'reset_password', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
@@ -495,7 +559,7 @@ router.post('/reset-password', async (req: Request, res: Response): Promise<void
 
 // ── POST /auth/verify-email ───────────────────────────────────────────────────
 
-router.post('/verify-email', async (req: Request, res: Response): Promise<void> => {
+router.post('/verify-email', verifyEmailLimiter, async (req: Request, res: Response): Promise<void> => {
   const { token } = req.body as { token?: string }
 
   if (!token) {
@@ -536,9 +600,10 @@ router.post('/verify-email', async (req: Request, res: Response): Promise<void> 
       },
     })
 
+    logger.info('auth.email_verified', { userId: user.id })
     res.json({ data: { message: 'Email verified successfully' } })
   } catch (e) {
-    console.error('VERIFY EMAIL ERROR:', e)
+    logger.error('auth.error', { event: 'verify_email', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
@@ -548,7 +613,7 @@ router.post('/verify-email', async (req: Request, res: Response): Promise<void> 
 
 // ── POST /auth/resend-verification ────────────────────────────────────────────
 
-router.post('/resend-verification', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/resend-verification', resendVerifyLimiter, requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId } })
 
@@ -576,7 +641,7 @@ router.post('/resend-verification', requireAuth, async (req: AuthRequest, res: R
 
     res.json({ data: { message: 'Verification email sent' } })
   } catch (e) {
-    console.error('RESEND VERIFICATION ERROR:', e)
+    logger.error('auth.error', { event: 'resend_verification', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
@@ -586,13 +651,6 @@ router.post('/resend-verification', requireAuth, async (req: AuthRequest, res: R
 
 // ── GET /auth/me ──────────────────────────────────────────────────────────────
 
-=======
-router.post('/logout', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
-  sendToUser(req.userId!, 'FORCE_LOGOUT', {})
-  res.json({ data: { ok: true } })
-})
-
->>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
 router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const user = await prisma.user.findUnique({
@@ -608,7 +666,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
     }
     res.json({ data: user })
   } catch (e) {
-    console.error('ME ERROR:', e)
+    logger.error('auth.error', { event: 'me', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
@@ -648,9 +706,10 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
       }),
     ])
 
+    logger.info('auth.account_deleted', { userId })
     res.json({ data: { deleted: true } })
   } catch (e) {
-    console.error('DELETE ACCOUNT ERROR:', e)
+    logger.error('auth.error', { event: 'delete_account', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },

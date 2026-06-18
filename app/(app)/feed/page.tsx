@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
-import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification } from '@/lib/api'
+import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification, getApiToken } from '@/lib/api'
 import CoinIcon from '@/components/ui/CoinIcon'
 
 function timeAgo(dateStr: string): string {
@@ -1599,7 +1599,7 @@ export default function StudyFeedPage() {
 
   useEffect(() => {
     try {
-      const token = localStorage.getItem('ns_token')
+      const token = getApiToken()
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1]))
         const uid = payload.sub || 0
@@ -1626,7 +1626,7 @@ export default function StudyFeedPage() {
 
   // WebSocket — NEW_POST events only (notifications handled globally by NotificationBell in layout)
   useEffect(() => {
-    const token = localStorage.getItem('ns_token')
+    const token = getApiToken()
     if (!token) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws')

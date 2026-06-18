@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { getApiToken, clearApiToken } from '../../lib/api'
+import { onCrossTabLogout } from '../../lib/authState'
 
 export default function ForcedLogoutWatcher() {
   const router = useRouter()
@@ -13,15 +15,15 @@ export default function ForcedLogoutWatcher() {
     fired.current = true
     setShow(true)
     setTimeout(() => {
-      localStorage.removeItem('ns_token')
+      clearApiToken()
       localStorage.removeItem('ns_user')
       router.replace('/login')
     }, 2000)
   }
 
-  // WebSocket — catches cross-device logout
+  // WebSocket — catches cross-device logout (FORCE_LOGOUT server event)
   useEffect(() => {
-    const token = localStorage.getItem('ns_token')
+    const token = getApiToken()
     if (!token) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws')
@@ -33,8 +35,7 @@ export default function ForcedLogoutWatcher() {
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data as string) as { event: string }
-          if (msg.event === 'FORCE_LOGOUT' && localStorage.getItem('ns_token')) {
-            // Only act if this tab still holds a token (i.e. wasn't the one that initiated logout)
+          if (msg.event === 'FORCE_LOGOUT' && getApiToken()) {
             trigger()
           }
         } catch { /* ignore */ }
@@ -46,13 +47,9 @@ export default function ForcedLogoutWatcher() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Storage event — catches same-browser cross-tab logout
+  // BroadcastChannel — catches same-browser cross-tab logout
   useEffect(() => {
-    function onStorage(e: StorageEvent) {
-      if (e.key === 'ns_token' && e.newValue === null) trigger()
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    return onCrossTabLogout(trigger)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

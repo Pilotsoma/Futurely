@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, type StudentData, type CanvasStatus } from '../../../lib/api'
+import { clearWebAuth } from '../../../lib/authState'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import { CHANGELOG } from '../../../lib/changelog'
 
@@ -19,7 +20,7 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
     setLoading(true); setError(null)
     try {
       await api.deleteAccount(password)
-      localStorage.removeItem('ns_token')
+      clearWebAuth()
       localStorage.removeItem('ns_user')
       router.push('/login')
     } catch (err) {

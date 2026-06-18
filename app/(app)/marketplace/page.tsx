@@ -6,6 +6,7 @@ import CoinIcon from '../../../components/ui/CoinIcon'
 import {
   api, ApiError, InventoryData, BoxResult, MarketplaceItem, TagInventoryItem,
   MarketplaceListing, TradeOffer, TradeItem, UserPublicInventory, FeedUserProfile,
+  getApiToken,
 } from '../../../lib/api'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -310,7 +311,7 @@ export default function MarketplacePage() {
     api.getItemPrices().then(setPrices).catch(() => {})
 
     try {
-      const token = localStorage.getItem('ns_token')
+      const token = getApiToken()
       if (token) {
         const uid = JSON.parse(atob(token.split('.')[1])).sub
         if (uid) {
@@ -334,7 +335,7 @@ export default function MarketplacePage() {
     api.marketplaceGetListings()
       .then(all => {
         try {
-          const token = localStorage.getItem('ns_token')
+          const token = getApiToken()
           if (token) {
             const uid = Number(JSON.parse(atob(token.split('.')[1])).sub)
             setMyActiveListings(all.filter(l => l.sellerId === uid))

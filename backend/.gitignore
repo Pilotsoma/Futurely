@@ -1,5 +1,7 @@
 node_modules/
 dist/
 .env
+.env.local
 dev.db
 *.db-journal
+!.env.example

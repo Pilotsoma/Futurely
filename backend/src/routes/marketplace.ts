@@ -1,7 +1,19 @@
-import { Router, Response } from 'express'
+import { Router, Request, Response } from 'express'
+import rateLimit from 'express-rate-limit'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
+import { requireAdmin } from '../middleware/requireAdmin'
 import { sendToUser, broadcast } from '../lib/websocket'
+
+// User-keyed limiter for coin-spending / inventory-mutating actions.
+const txLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  keyGenerator: (req: Request): string => String((req as AuthRequest).userId ?? req.ip ?? 'anon'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many marketplace actions. Slow down.' } },
+})
 
 const router = Router()
 
@@ -293,16 +305,6 @@ const SEED_VERSION = 3
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "ItemPrice" (
-        "id" SERIAL PRIMARY KEY,
-        "itemType" TEXT NOT NULL,
-        "itemId" TEXT NOT NULL,
-        "price" INTEGER NOT NULL,
-        CONSTRAINT "ItemPrice_itemType_itemId_key" UNIQUE ("itemType", "itemId")
-      )
-    `)
-
     // Check if DB prices are from the current seed version
     const versionRow = await prisma.itemPrice.findUnique({
       where: { itemType_itemId: { itemType: 'meta', itemId: 'seed_version' } },
@@ -425,7 +427,7 @@ async function autoPostUnbox(
 
     const postUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true },
+      select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true },
     })
     if (!postUser) return
 
@@ -445,7 +447,7 @@ async function autoPostUnbox(
       include: {
         likes: { select: { userId: true } },
         giveawayEntries: { select: { userId: true } },
-        giveawayWinner: { select: { id: true, name: true, email: true } },
+        giveawayWinner: { select: { id: true, name: true } },
         _count: { select: { likes: true, comments: true, giveawayEntries: true } },
       },
     })
@@ -459,7 +461,7 @@ async function autoPostUnbox(
 
 // ── Open Box ──────────────────────────────────────────────────────────────────
 
-router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const { boxType } = req.body as { boxType?: string }
   if (!boxType || !['tag', 'name-color', 'pfp'].includes(boxType)) {
@@ -543,7 +545,7 @@ const QUICKSELL_PRICES: Record<string, number> = {
   Common: 4, Uncommon: 10, Rare: 20, Epic: 40, Legendary: 150, Mythic: 1000,
 }
 
-router.post('/quicksell/duplicates', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/quicksell/duplicates', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   try {
     // exclude = ["tag:someId", "pfp:otherId", ...] — kept entirely (all copies)
@@ -613,7 +615,7 @@ router.post('/quicksell/duplicates', requireAuth, async (req: AuthRequest, res: 
   }
 })
 
-router.post('/quicksell', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/quicksell', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const { itemType, itemId } = req.body as { itemType?: string; itemId?: string }
   if (!itemType || !['tag', 'name-color', 'pfp'].includes(itemType) || !itemId) {
@@ -743,14 +745,8 @@ router.put('/equip', requireAuth, async (req: AuthRequest, res: Response): Promi
 
 // ── DEV Admin Grant (self only) ───────────────────────────────────────────────
 
-router.post('/admin/grant', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
-  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+router.post('/admin/grant', requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const me = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, tag: true } })
-    if (me?.role !== 'DEV' && me?.role !== 'ADMIN' && me?.tag !== 'DEV') {
-      res.status(403).json({ error: 'DEV access required' }); return
-    }
-
     const { type, amount, itemId } = req.body as {
       type: 'coins' | 'name-color' | 'pfp' | 'tag'
       amount?: number
@@ -841,7 +837,7 @@ router.get('/listings', requireAuth, async (_req: AuthRequest, res: Response): P
   }
 })
 
-router.post('/listings', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/listings', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const { itemType, itemId, price } = req.body as { itemType?: string; itemId?: string; price?: number }
 
@@ -979,7 +975,7 @@ router.delete('/listings/:id', requireAuth, async (req: AuthRequest, res: Respon
   }
 })
 
-router.post('/listings/:id/buy', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/listings/:id/buy', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const listingId = parseInt(req.params.id)
   if (isNaN(listingId)) { res.status(400).json({ error: 'Invalid listing id' }); return }
@@ -1050,11 +1046,11 @@ router.post('/listings/:id/buy', requireAuth, async (req: AuthRequest, res: Resp
         preview: `${listing.itemName} for 🪙 ${listing.price}`,
       },
       include: {
-        sender: { select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true } },
+        sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true } },
       },
     })
     const sender = notif.sender
-    const senderOut = { id: sender.id, name: sender.name, email: sender.email, tag: sender.tag, tagColor: sender.tagColor, nameColor: sender.nameColor, pfpEffect: sender.pfpEffect }
+    const senderOut = { id: sender.id, name: sender.name, tag: sender.tag, tagColor: sender.tagColor, nameColor: sender.nameColor, pfpEffect: sender.pfpEffect }
     sendToUser(listing.sellerId, 'NOTIFICATION', { ...notif, sender: senderOut })
 
     res.json({ data: { ok: true, coins: updatedBuyer.coins } })
@@ -1133,7 +1129,7 @@ router.get('/trades/sent', requireAuth, async (req: AuthRequest, res: Response):
   }
 })
 
-router.post('/trades', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/trades', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const { receiverId, senderItems, receiverItems } = req.body as {
     receiverId?: number
@@ -1208,7 +1204,7 @@ router.post('/trades', requireAuth, async (req: AuthRequest, res: Response): Pro
   }
 })
 
-router.post('/trades/:id/accept', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/trades/:id/accept', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const tradeId = parseInt(req.params.id)
   if (isNaN(tradeId)) { res.status(400).json({ error: 'Invalid trade id' }); return }
@@ -1263,8 +1259,8 @@ router.post('/trades/:id/accept', requireAuth, async (req: AuthRequest, res: Res
 
     res.json({ data: { ok: true } })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to accept trade'
-    res.status(400).json({ error: msg })
+    console.error('[MARKETPLACE] Trade accept failed', { message: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ error: 'Failed to accept trade' })
   }
 })
 
@@ -1338,13 +1334,8 @@ router.post('/trades/:id/cancel', requireAuth, async (req: AuthRequest, res: Res
   }
 })
 
-router.get('/admin/stats', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
-  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+router.get('/admin/stats', requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const me = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, tag: true } })
-    if (me?.role !== 'DEV' && me?.role !== 'ADMIN' && me?.tag !== 'DEV') {
-      res.status(403).json({ error: 'DEV access required' }); return
-    }
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000)
     const [totalUsers, activeUsers, liveUsers] = await Promise.all([

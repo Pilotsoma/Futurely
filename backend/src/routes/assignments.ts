@@ -133,7 +133,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
           type: 'ASSIGNMENT_CREATED',
           preview: `${title.trim()} — due ${due}`,
         },
-        include: { sender: { select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
       })
       sendToUser(req.userId, 'NOTIFICATION', notif)
     } catch { /* non-critical */ }

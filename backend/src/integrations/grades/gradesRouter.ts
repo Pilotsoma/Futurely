@@ -149,9 +149,9 @@ function statusFromError(message: string, status?: number): number {
 
 function sendError(res: Response, label: string, err: unknown, fallbackCode: string): void {
   const details = getErrorDetails(err)
-  // Typed errors carry their own status — use it directly
   const status = err instanceof APIError ? err.status : statusFromError(details.message, details.status)
 
+  // Full details logged server-side only — never sent to client.
   console.error(`[${label}] FAILED`, {
     message: details.message,
     code: details.code,
@@ -160,16 +160,21 @@ function sendError(res: Response, label: string, err: unknown, fallbackCode: str
     stack: details.stack,
   })
 
+  // Client-facing message: safe, categorised, no internal detail.
+  const clientMessage =
+    err instanceof AuthenticationError
+      ? 'Invalid credentials. Please check your username and password.'
+      : status === 504
+      ? 'The school portal did not respond in time. Please try again later.'
+      : status === 502
+      ? 'Could not reach the school portal. Please try again later.'
+      : 'An error occurred. Please try again.'
+
   res.status(status).json({
     data: null,
     error: {
       code: err instanceof AuthenticationError ? 'AUTH_ERROR' : fallbackCode,
-      message: details.message,
-      details: {
-        code: details.code,
-        status: details.status,
-        responseData: details.responseData,
-      },
+      message: clientMessage,
     },
   })
 }
@@ -181,13 +186,17 @@ function asyncHandler(
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req as AuthRequest, res, next)).catch(err => {
+      console.error('[GRADES ROUTER] Unhandled route error', {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      })
       if (!res.headersSent) {
         const status = err instanceof APIError ? err.status : 500
         res.status(status).json({
           data: null,
           error: {
             code: err instanceof AuthenticationError ? 'AUTH_ERROR' : 'INTERNAL_ERROR',
-            message: err instanceof Error ? err.message : 'Internal server error',
+            message: 'Internal server error',
           },
         })
       }
@@ -454,17 +463,25 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
     console.log('[GRADES ROUTER] Background sync complete for userId:', userId)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[GRADES ROUTER] Background sync failed for userId:', userId, ':', msg)
+    console.error('[GRADES ROUTER] Background sync failed for userId:', userId, ':', msg, err instanceof Error ? err.stack : '')
+    // Store a safe category code — never raw exception text — because syncError
+    // is returned to the client via GET /sync-status.
+    const syncErrCode =
+      err instanceof AuthenticationError
+        ? 'AUTH_FAILED'
+        : msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('reach') || msg.toLowerCase().includes('network')
+        ? 'UNREACHABLE'
+        : 'SYNC_FAILED'
     await prisma.schoolConnection.update({
       where: { userId },
-      data: { syncStatus: 'error', syncError: msg },
+      data: { syncStatus: 'error', syncError: syncErrCode },
     }).catch(() => {})
   }
 }
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 
-router.post('/hac/login', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/hac/login', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   console.log('[GRADES ROUTER] HAC login route hit')
 
   const parse = hacLoginSchema.safeParse(req.body)
@@ -601,9 +618,9 @@ router.post('/hac/login', async (req: AuthRequest, res: Response): Promise<void>
   } catch (err: unknown) {
     sendError(res, 'HAC_LOGIN', err, 'LOGIN_FAILED')
   }
-})
+}))
 
-router.post('/powerschool/login', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/powerschool/login', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   console.log('[GRADES ROUTER] PowerSchool login route hit')
 
   const parse = psLoginSchema.safeParse(req.body)
@@ -685,9 +702,9 @@ router.post('/powerschool/login', async (req: AuthRequest, res: Response): Promi
   } catch (err: unknown) {
     sendError(res, 'POWERSCHOOL_LOGIN', err, 'LOGIN_FAILED')
   }
-})
+}))
 
-router.get('/current', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/current', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId!
   const entry = await resolveSession(userId, res)
   if (!entry) return
@@ -720,9 +737,9 @@ router.get('/current', async (req: AuthRequest, res: Response): Promise<void> =>
   } catch (err: unknown) {
     sendError(res, 'FETCH_CURRENT_GRADES', err, 'FETCH_ERROR')
   }
-})
+}))
 
-router.get('/transcript', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/transcript', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
@@ -745,9 +762,9 @@ router.get('/transcript', async (req: AuthRequest, res: Response): Promise<void>
   } catch (err: unknown) {
     sendError(res, 'FETCH_TRANSCRIPT', err, 'FETCH_ERROR')
   }
-})
+}))
 
-router.get('/schedule', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/schedule', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
@@ -776,9 +793,9 @@ router.get('/schedule', async (req: AuthRequest, res: Response): Promise<void> =
   } catch (err: unknown) {
     sendError(res, 'FETCH_SCHEDULE', err, 'FETCH_ERROR')
   }
-})
+}))
 
-router.get('/gpa', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/gpa', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
@@ -824,9 +841,9 @@ router.get('/gpa', async (req: AuthRequest, res: Response): Promise<void> => {
   } catch (err: unknown) {
     sendError(res, 'FETCH_GPA', err, 'FETCH_ERROR')
   }
-})
+}))
 
-router.get('/info', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/info', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
@@ -851,9 +868,9 @@ router.get('/info', async (req: AuthRequest, res: Response): Promise<void> => {
   } catch (err: unknown) {
     sendError(res, 'FETCH_STUDENT_INFO', err, 'FETCH_ERROR')
   }
-})
+}))
 
-router.delete('/session', async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/session', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId!
   deleteSessionByUserId(userId)
 
@@ -868,9 +885,9 @@ router.delete('/session', async (req: AuthRequest, res: Response): Promise<void>
   }
 
   res.json({ data: { disconnected: true } })
-})
+}))
 
-router.get('/status', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/status', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId!
 
   let entry = getSessionByUserId(userId)
@@ -908,9 +925,9 @@ router.get('/status', async (req: AuthRequest, res: Response): Promise<void> => 
         : 0,
     },
   })
-})
+}))
 
-router.get('/sync-status', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/sync-status', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId!
   const connection = await prisma.schoolConnection.findUnique({
     where: { userId },
@@ -929,9 +946,9 @@ router.get('/sync-status', async (req: AuthRequest, res: Response): Promise<void
       errorMessage: connection.syncError ?? null,
     },
   })
-})
+}))
 
-router.get('/classwork', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/classwork', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
@@ -957,9 +974,9 @@ router.get('/classwork', async (req: AuthRequest, res: Response): Promise<void> 
   } catch (err: unknown) {
     sendError(res, 'FETCH_CLASSWORK', err, 'FETCH_ERROR')
   }
-})
+}))
 
-router.get('/report-card', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/report-card', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
@@ -985,9 +1002,9 @@ router.get('/report-card', async (req: AuthRequest, res: Response): Promise<void
   } catch (err: unknown) {
     sendError(res, 'FETCH_REPORT_CARD', err, 'FETCH_ERROR')
   }
-})
+}))
 
-router.get('/progress-report', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/progress-report', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
@@ -1013,9 +1030,9 @@ router.get('/progress-report', async (req: AuthRequest, res: Response): Promise<
   } catch (err: unknown) {
     sendError(res, 'FETCH_PROGRESS_REPORT', err, 'FETCH_ERROR')
   }
-})
+}))
 
-router.get('/attendance', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/attendance', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
@@ -1041,9 +1058,9 @@ router.get('/attendance', async (req: AuthRequest, res: Response): Promise<void>
   } catch (err: unknown) {
     sendError(res, 'FETCH_ATTENDANCE', err, 'FETCH_ERROR')
   }
-})
+}))
 
-router.get('/contact-teachers', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/contact-teachers', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const entry = await resolveSession(req.userId!, res)
   if (!entry) return
 
@@ -1066,10 +1083,10 @@ router.get('/contact-teachers', async (req: AuthRequest, res: Response): Promise
   } catch (err: unknown) {
     sendError(res, 'FETCH_CONTACT_TEACHERS', err, 'FETCH_ERROR')
   }
-})
+}))
 
 // ── Re-sync student profile from HAC (counselor, graduation year, name) ────
-router.post('/sync-profile', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/sync-profile', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId!
 
   // Force a fresh login rather than relying on a potentially-stale cached cookie.
@@ -1164,6 +1181,6 @@ router.post('/sync-profile', async (req: AuthRequest, res: Response): Promise<vo
   } catch (err: unknown) {
     sendError(res, 'SYNC_PROFILE', err, 'SYNC_ERROR')
   }
-})
+}))
 
 export default router

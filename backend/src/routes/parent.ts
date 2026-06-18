@@ -1,7 +1,9 @@
-import { Router, Response } from 'express'
+import { Router, Request, Response } from 'express'
+import rateLimit from 'express-rate-limit'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
+import { requireParent } from '../middleware/requireAdmin'
 import { loginHAC, getGrades, getStudentInfo, getTranscript } from '../integrations/grades/hacClient'
 import { normalizeHacGrades } from '../integrations/grades/normalizeGrades'
 import { encryptPassword, decryptPassword } from '../integrations/grades/credentialCrypto'
@@ -9,6 +11,16 @@ import { deleteSessionByUserId } from '../integrations/grades/sessionStore'
 
 const router = Router()
 router.use(requireAuth)
+router.use(requireParent)
+
+const parentChatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  keyGenerator: (req: Request): string => String((req as AuthRequest).userId ?? req.ip ?? 'anon'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'AI chat rate limit reached. Wait a moment.' } },
+})
 
 const connectSchema = z.object({
   districtUrl: z.string().url('districtUrl must be a valid URL'),
@@ -105,11 +117,6 @@ async function scrapeStudentData(
 router.post('/link-student', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const parentId = req.userId!
-    const parent = await prisma.user.findUnique({ where: { id: parentId } })
-    if (!parent || parent.role !== 'PARENT') {
-      res.status(403).json({ error: { message: 'Only parent accounts can link students' } })
-      return
-    }
 
     const parse = connectSchema.safeParse(req.body)
     if (!parse.success) {
@@ -582,7 +589,7 @@ router.delete('/students/:studentId', async (req: AuthRequest, res: Response): P
 
 // ── AI chat in context of a linked child ──────────────────────────────────────
 
-router.post('/students/:studentId/chat', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/students/:studentId/chat', parentChatLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const parentId = req.userId!
     const connId = parseInt(req.params.studentId)
