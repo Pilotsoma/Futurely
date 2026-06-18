@@ -80,6 +80,9 @@ const DEV_ORIGINS = [
   'http://localhost:8081',  // Expo bundler / Metro
 ]
 
+const ACTIVE_ORIGINS = isProd ? ALLOWED_ORIGINS : DEV_ORIGINS
+console.log(`[CORS] Active origins (${isProd ? 'production' : 'development'}):`, ACTIVE_ORIGINS.join(', ') || '(none — all non-browser requests allowed)')
+
 const CORS_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization']
 // Expose rate-limit headers so clients can read their quota without guessing.
@@ -93,7 +96,8 @@ app.use(cors({
     const list = isProd ? ALLOWED_ORIGINS : DEV_ORIGINS
     if (list.includes(origin)) return cb(null, true)
 
-    cb(new Error(`CORS: origin '${origin}' is not in the allowed list`))
+    const allowedStr = list.length > 0 ? list.join(', ') : '(none)'
+    cb(new Error(`CORS: origin '${origin}' is not allowed. Allowed origins: ${allowedStr}`))
   },
   credentials: true,
   methods: CORS_METHODS,
