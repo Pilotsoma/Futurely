@@ -1,4 +1,4 @@
-# NextStep MVP Productssssssssssssskkk
+# NextStep MVP Productssssssssssssskkkk
 
 AI-powered academic companion for high school students.
 
