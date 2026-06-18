@@ -1,4 +1,16 @@
 import 'dotenv/config'
+
+// Crash fast in production if JWT_SECRET is missing or is the default dev value
+const DEFAULT_JWT_SECRET = 'nextstep-dev-secret-change-in-production'
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: JWT_SECRET is not set or is the default insecure value.')
+    process.exit(1)
+  } else {
+    console.warn('⚠️  [SECURITY] JWT_SECRET is missing or is the default dev value. Set a strong secret before deploying.')
+  }
+}
+
 import express from 'express'
 import cors from 'cors'
 import axios from 'axios'
@@ -28,16 +40,19 @@ app.use(cors({
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+const SENSITIVE_FIELDS = new Set(['password', 'token', 'refreshToken', 'newPassword', 'currentPassword'])
+
 app.use((req, _res, next) => {
   console.log(`[REQ] ${req.method} ${req.originalUrl}`)
   console.log('[REQ] content-type:', req.headers['content-type'])
   console.log('[REQ] auth header exists:', Boolean(req.headers.authorization))
 
-  if (req.method !== 'GET') {
-    console.log('[REQ] body:', {
-      ...req.body,
-      password: req.body?.password ? '[hidden]' : undefined,
-    })
+  if (req.method !== 'GET' && req.body) {
+    const sanitized: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(req.body as Record<string, unknown>)) {
+      sanitized[k] = SENSITIVE_FIELDS.has(k) && v ? '[hidden]' : v
+    }
+    console.log('[REQ] body:', sanitized)
   }
 
   next()
@@ -134,10 +149,10 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/colleges', devBypass, collegesRouter)
   app.use('/marketplace', devBypass, marketplaceRouter)
 } else {
-  app.use('/assignments', assignmentsRouter)
-  app.use('/students', studentsRouter)
-  app.use('/roadmap', roadmapRouter)
-  app.use('/ai', aiRouter)
+  app.use('/assignments', requireAuth, assignmentsRouter)
+  app.use('/students', requireAuth, studentsRouter)
+  app.use('/roadmap', requireAuth, roadmapRouter)
+  app.use('/ai', requireAuth, aiRouter)
   app.use('/feed', requireAuth, feedRouter)
   app.use('/notifications', requireAuth, notificationsRouter)
   app.use('/integrations/grades', requireAuth, gradesIntegrationRouter)
