@@ -116,7 +116,8 @@ export default function LoginPage() {
           : `${mins}m`
         setError(`Account locked. Too many failed attempts — try again in ${timeStr}.`)
       } else {
-        setError(err instanceof Error ? err.message : mode === 'login' ? 'Login failed' : 'Registration failed')
+        const msg = err instanceof Error ? err.message : (mode === 'login' ? 'Login failed' : 'Registration failed')
+        setError(msg)
       }
     } finally { setIsLoading(false); setStep('auth') }
   }
@@ -140,8 +141,8 @@ export default function LoginPage() {
     <div style={styles.page}>
       <div style={styles.card}>
         {/* Logo */}
-        <div style={{ marginBottom: -60 }}>
-          <Image src="/logo2.png" alt="Futurely" width={275} height={275} />
+        <div style={{ marginBottom: 12 }}>
+          <Image src="/logo2.png" alt="Futurely" width={120} height={120} />
         </div>
         <p style={styles.subheading}>{headingText}</p>
 
