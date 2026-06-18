@@ -1441,13 +1441,13 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
         where: { deletedAt: null },
         select: { ...userSelect, coins: true },
         orderBy: { coins: 'desc' },
-        take: 50,
+        take: 15,
       }),
       prisma.user.findMany({
         where: { deletedAt: null },
         select: { ...userSelect, loginStreak: true },
         orderBy: { loginStreak: 'desc' },
-        take: 50,
+        take: 15,
       }),
     ])
 
@@ -1473,7 +1473,7 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
         if (def) value += priceMap.get(`tag:${def.id}`) ?? 0
       }
       return { id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, inventoryValue: value }
-    }).sort((a, b) => b.inventoryValue - a.inventoryValue).slice(0, 50)
+    }).sort((a, b) => b.inventoryValue - a.inventoryValue).slice(0, 15)
 
     res.json({
       data: {
