@@ -34,6 +34,7 @@ model User {
   emailVerificationToken   String?                  @unique
   emailVerificationExpiry  DateTime?
   lastSeenAt               DateTime?
+  loginStreak              Int                      @default(0)
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt
   assignments              Assignment[]
