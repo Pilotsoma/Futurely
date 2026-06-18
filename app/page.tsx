@@ -377,31 +377,8 @@ export default function LandingPage() {
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
       <footer style={{ borderTop: '1px solid var(--border)', padding: '32px 28px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 8 }}>
-          <svg width="83" height="20" viewBox="0 0 200 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Futurely">
-            <defs>
-              <linearGradient id="fc" x1="0" y1="5" x2="0" y2="44" gradientUnits="userSpaceOnUse">
-                <stop offset="0%"   stopColor="#00E5FF"/>
-                <stop offset="45%"  stopColor="#2979FF"/>
-                <stop offset="100%" stopColor="#7C3AED"/>
-              </linearGradient>
-            </defs>
-            <path d="M6 11 L22 5 L38 11 L22 17 Z" fill="url(#fc)"/>
-            <path d="M6 11 L22 5 L38 11" stroke="white" strokeWidth="0.8" strokeLinejoin="round" fill="none" opacity="0.35"/>
-            <line x1="37" y1="10" x2="40" y2="19" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.7"/>
-            <circle cx="40" cy="20.5" r="1.5" fill="white" opacity="0.7"/>
-            <rect x="16" y="17" width="12" height="4" rx="1" fill="url(#fc)"/>
-            <rect x="8"  y="21" width="28" height="23" rx="2" fill="url(#fc)"/>
-            <line x1="22" y1="21" x2="22" y2="44" stroke="white" strokeWidth="0.8" opacity="0.2"/>
-            <line x1="8"  y1="21" x2="36" y2="21" stroke="white" strokeWidth="0.5" opacity="0.2"/>
-            <rect x="11" y="24" width="3.5" height="16" rx="1.5" fill="white"/>
-            <rect x="11" y="24" width="9"   height="3"  rx="1.5" fill="white"/>
-            <rect x="11" y="32" width="6"   height="3"  rx="1.5" fill="white"/>
-            <line x1="24" y1="28" x2="34" y2="28" stroke="white" strokeWidth="0.7" strokeLinecap="round" opacity="0.25"/>
-            <line x1="24" y1="33" x2="34" y2="33" stroke="white" strokeWidth="0.7" strokeLinecap="round" opacity="0.25"/>
-            <line x1="24" y1="38" x2="34" y2="38" stroke="white" strokeWidth="0.7" strokeLinecap="round" opacity="0.25"/>
-            <text x="52" y="33" fontFamily="'Inter', 'SF Pro Display', -apple-system, 'Helvetica Neue', Arial, sans-serif" fontSize="26" fontWeight="600" letterSpacing="-1" fill="var(--text-secondary)">Futurely</text>
-          </svg>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+          <img src="/logo.png" alt="Futurely" style={{ height: 36, width: 'auto', objectFit: 'contain' }} />
         </div>
         <p>© 2026 Futurely · Built for high school students who mean business.</p>
       </footer>
