@@ -13,6 +13,8 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_JWT_SECRET) {
 
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
+import rateLimit from 'express-rate-limit'
 import axios from 'axios'
 import jwt from 'jsonwebtoken'
 import authRoutes from './routes/auth'
@@ -31,15 +33,35 @@ import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
 
 const app = express()
+const isProd = process.env.NODE_ENV === 'production'
+
+// ── Security headers ────────────────────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow image/asset loading
+}))
+
+// ── CORS — lock to known origins in production ───────────────────────────────
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean)
 
 app.use(cors({
-  origin: true,
+  origin: isProd
+    ? (origin, cb) => {
+        // Allow server-to-server (no origin) or whitelisted origins
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
+        cb(new Error(`CORS: origin ${origin} not allowed`))
+      }
+    : true,
   credentials: true,
 }))
 
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+// ── Body size limit — prevent large-payload DoS ──────────────────────────────
+app.use(express.json({ limit: '50kb' }))
+app.use(express.urlencoded({ extended: true, limit: '50kb' }))
 
+<<<<<<< HEAD
 const SENSITIVE_FIELDS = new Set(['password', 'token', 'refreshToken', 'newPassword', 'currentPassword'])
 
 app.use((req, _res, next) => {
@@ -53,8 +75,58 @@ app.use((req, _res, next) => {
       sanitized[k] = SENSITIVE_FIELDS.has(k) && v ? '[hidden]' : v
     }
     console.log('[REQ] body:', sanitized)
-  }
+=======
+// ── Global rate limiter — 1000 req / 15 min per IP ───────────────────────────
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many requests, please slow down.' } },
+})
+app.use(globalLimiter)
 
+// ── Strict limiters for expensive / sensitive endpoints ──────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many auth attempts, try again later.' } },
+})
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'AI rate limit reached, wait a moment.' } },
+})
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many accounts created from this IP.' } },
+})
+
+// ── Request logger — prod omits body to avoid leaking PII ───────────────────
+app.use((req, _res, next) => {
+  if (isProd) {
+    console.log(`[REQ] ${req.method} ${req.originalUrl}`)
+  } else {
+    console.log(`[REQ] ${req.method} ${req.originalUrl}`)
+    console.log('[REQ] content-type:', req.headers['content-type'])
+    console.log('[REQ] auth header exists:', Boolean(req.headers.authorization))
+    if (req.method !== 'GET') {
+      console.log('[REQ] body:', {
+        ...req.body,
+        password: req.body?.password ? '[hidden]' : undefined,
+      })
+    }
+>>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
+  }
   next()
 })
 
@@ -91,7 +163,9 @@ app.get('/health/connectivity', async (_req, res) => {
   }
 })
 
-app.use('/auth', authRoutes)
+// Auth routes get their own tight limiter; register gets an even stricter one
+app.use('/auth/register', registerLimiter)
+app.use('/auth', authLimiter, authRoutes)
 app.use('/grades', gradesRoutes)
 
 /**
@@ -100,23 +174,17 @@ app.use('/grades', gradesRoutes)
  * routes inject userId=1 so the app works without a JWT.  This lets you test
  * on-device via Expo Go without going through the full auth flow first.
  *
- * Before production, remove this block and restore the plain registrations.
+ * Before production, set ENABLE_DEV_INTEGRATION_AUTH_BYPASS=false.
  */
 const ENABLE_DEV_INTEGRATION_AUTH_BYPASS =
   process.env.ENABLE_DEV_INTEGRATION_AUTH_BYPASS === 'true'
 
-/**
- * Development auth bypass middleware.
- * If a real JWT is present in the Authorization header, decode it and use
- * the real userId. Only falls back to userId=1 if no token is present.
- * This prevents multi-user conflicts on shared dev environments.
- */
 function devBypass(req: any, _res: any, next: any): void {
   const authHeader = req.headers?.authorization as string | undefined
   if (authHeader?.startsWith('Bearer ')) {
     try {
       const token = authHeader.slice(7)
-      const secret = process.env.JWT_SECRET ?? 'nextstep-dev-secret-change-in-production'
+      const secret = process.env.JWT_SECRET!
       const payload = jwt.verify(token, secret) as { sub?: number | string }
       const id = typeof payload.sub === 'number'
         ? payload.sub
@@ -130,7 +198,6 @@ function devBypass(req: any, _res: any, next: any): void {
       // Token invalid — fall through to default
     }
   }
-  // No valid token — use default test user
   req.userId = 1
   next()
 }
@@ -141,7 +208,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/assignments', devBypass, assignmentsRouter)
   app.use('/students', devBypass, studentsRouter)
   app.use('/roadmap', devBypass, roadmapRouter)
-  app.use('/ai', devBypass, aiRouter)
+  app.use('/ai', aiLimiter, devBypass, aiRouter)
   app.use('/feed', devBypass, feedRouter)
   app.use('/notifications', devBypass, notificationsRouter)
   app.use('/integrations/grades', devBypass, gradesIntegrationRouter)
@@ -152,7 +219,11 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/assignments', requireAuth, assignmentsRouter)
   app.use('/students', requireAuth, studentsRouter)
   app.use('/roadmap', requireAuth, roadmapRouter)
+<<<<<<< HEAD
   app.use('/ai', requireAuth, aiRouter)
+=======
+  app.use('/ai', aiLimiter, requireAuth, aiRouter)
+>>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
   app.use('/feed', requireAuth, feedRouter)
   app.use('/notifications', requireAuth, notificationsRouter)
   app.use('/integrations/grades', requireAuth, gradesIntegrationRouter)

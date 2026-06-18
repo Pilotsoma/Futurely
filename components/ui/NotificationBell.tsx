@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { api, AppNotification } from '../../lib/api'
 
 // Module-level dedup set — shared across all instances so toasts fire only once
@@ -20,7 +20,7 @@ function timeAgo(iso: string): string {
 
 function senderFirst(notif: AppNotification): string {
   const raw = notif.sender.name
-  if (!raw) return notif.sender.email.split('@')[0]
+  if (!raw) return 'User'
   if (raw.includes(',')) {
     const parts = raw.split(',')
     const given = parts[1]?.trim().split(' ')[0] ?? ''
@@ -32,10 +32,12 @@ function senderFirst(notif: AppNotification): string {
 interface Props {
   showToasts?: boolean
   collapsed?: boolean
+  onOpenProfile?: (userId: number) => void
 }
 
-export default function NotificationBell({ showToasts = false, collapsed = false }: Props) {
+export default function NotificationBell({ showToasts = false, collapsed = false, onOpenProfile }: Props) {
   const router = useRouter()
+  const pathname = usePathname()
   const [notifs, setNotifs]       = useState<AppNotification[]>([])
   const [unread, setUnread]       = useState(0)
   const [showPanel, setShowPanel] = useState(false)
@@ -183,7 +185,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 const name = senderFirst(n)
                 const icon = n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : n.type === 'LISTING_SOLD' ? '🏷️' : n.type.startsWith('TRADE') ? '🔄' : n.type === 'ASSIGNMENT_CREATED' ? '📚' : '💬'
                 const link = (label: React.ReactNode) => (
-                  <b onClick={() => { setShowPanel(false); router.push('/feed') }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
+                  <b onClick={() => { setShowPanel(false); if (onOpenProfile) { onOpenProfile(n.fromUserId) } else if (pathname === '/feed') { window.dispatchEvent(new CustomEvent('ns:open-profile', { detail: n.fromUserId })) } else { sessionStorage.setItem('ns_open_profile', String(n.fromUserId)); router.push('/feed') } }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
                 )
                 let body: React.ReactNode
                 if (n.type === 'FOLLOW')           body = <>{link(name)} started following you</>
@@ -197,7 +199,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 else if (n.type === 'ASSIGNMENT_CREATED') body = n.preview ?? 'New assignment added'
                 else body = n.preview ?? 'New notification'
                 return (
-                  <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(75,110,255,0.07)' }}>
+                  <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)' }}>
                     <span style={{ fontSize: 15, flexShrink: 0 }}>{icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.4 }}>{body}</div>
@@ -220,7 +222,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
               switch (t.notif.type) {
                 case 'LIKE':             return { emoji: '❤️', accent: '#EF4444', text: `${name} liked your post` }
                 case 'COMMENT':          return { emoji: '💬', accent: '#3B82F6', text: `${name} commented on your post` }
-                case 'FOLLOW':           return { emoji: '👤', accent: '#00C896', text: `${name} started following you` }
+                case 'FOLLOW':           return { emoji: '👤', accent: '#2D6A4F', text: `${name} started following you` }
                 case 'GIVEAWAY_WIN':     return { emoji: '🎉', accent: '#EAB308', text: t.notif.preview ?? 'You won a giveaway!' }
                 case 'TRADE_OFFER':      return { emoji: '🔄', accent: '#8B5CF6', text: `${name} sent you a trade offer` }
                 case 'TRADE_ACCEPTED':   return { emoji: '✅', accent: '#22C55E', text: `${name} accepted your trade` }

@@ -138,7 +138,7 @@ export default function WhatIfScorer({ currentAverage, existingAssignments, onCl
 }
 
 const S: Record<string, React.CSSProperties> = {
-  wrap:     { background: 'rgba(0,200,150,0.04)', border: '1px solid rgba(0,200,150,0.2)', borderRadius: 10, padding: '14px 16px' },
+  wrap:     { background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 10, padding: '14px 16px' },
   header:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   label:    { fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)' },
   closeBtn: { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' },

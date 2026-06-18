@@ -53,13 +53,13 @@ export default function TranscriptPage() {
 
       {/* GPA summary cards */}
       <div style={S.gpaGrid}>
-        <div className="ns-card" style={{ ...S.gpaHero, border: '1px solid rgba(75,110,255,0.25)', background: 'rgba(75,110,255,0.05)' }}>
+        <div className="ns-card" style={{ ...S.gpaHero, border: '1px solid rgba(43,74,142,0.25)', background: 'rgba(43,74,142,0.05)' }}>
           <p style={S.gpaLabel}>Weighted GPA</p>
-          <p style={{ ...S.gpaValue, color: '#4B6EFF' }}>{formatGpa(data?.weightedGPA)}</p>
+          <p style={{ ...S.gpaValue, color: 'var(--accent-blue)' }}>{formatGpa(data?.weightedGPA)}</p>
         </div>
-        <div className="ns-card" style={{ ...S.gpaHero, border: '1px solid rgba(0,200,150,0.25)', background: 'rgba(0,200,150,0.05)' }}>
+        <div className="ns-card" style={{ ...S.gpaHero, border: '1px solid var(--primary-glow)', background: 'var(--primary-dim)' }}>
           <p style={S.gpaLabel}>Unweighted GPA</p>
-          <p style={{ ...S.gpaValue, color: '#00C896' }}>{formatGpa(data?.unweightedGPA)}</p>
+          <p style={{ ...S.gpaValue, color: 'var(--primary)' }}>{formatGpa(data?.unweightedGPA)}</p>
         </div>
         <div className="ns-card" style={{ ...S.gpaHero, border: '1px solid rgba(255,170,50,0.25)', background: 'rgba(255,170,50,0.05)' }}>
           <p style={S.gpaLabel}>Class Rank</p>

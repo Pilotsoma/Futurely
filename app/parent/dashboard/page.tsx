@@ -340,7 +340,7 @@ export default function ParentDashboard() {
 }
 
 const gradientStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg,#00C896,#4DC8E0)',
+  background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)',
   WebkitBackgroundClip: 'text',
   WebkitTextFillColor: 'transparent',
   backgroundClip: 'text',
@@ -362,7 +362,7 @@ const S: Record<string, React.CSSProperties> = {
   emptyTitle:      { fontSize: 17, fontWeight: 700, marginBottom: 6 },
   emptySub:        { fontSize: 13, color: 'var(--text-secondary)' },
   grid:            { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 },
-  avatar:          { width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#00A3CC,#4DC8E0)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 800, flexShrink: 0 },
+  avatar:          { width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 800, flexShrink: 0 },
   removeBtn:       { background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center' },
   gpaRow:          { display: 'flex', background: 'var(--surface-2)', borderRadius: 10, padding: '12px 0', marginBottom: 16, border: '1px solid var(--border)' },
   gpaVal:          { fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1, marginBottom: 4 },

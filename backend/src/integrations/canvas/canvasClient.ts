@@ -34,6 +34,175 @@ export interface CanvasSelf {
   name: string
 }
 
+export interface CanvasTodoItem {
+  type: string
+  assignment: {
+    id: number
+    name: string
+    due_at: string | null
+    points_possible: number | null
+    course_id: number
+    html_url: string
+  }
+  context_name: string
+  html_url: string
+  ignore: string
+}
+
+export interface CanvasModuleItem {
+  id: number
+  title: string
+  type: string
+  content_id: number | null
+  html_url: string
+  url: string | null
+  published: boolean
+  completion_requirement: {
+    type: string
+    min_score?: number
+    completed: boolean
+  } | null
+}
+
+export interface CanvasModule {
+  id: number
+  name: string
+  position: number
+  unlock_at: string | null
+  items_count: number
+  items: CanvasModuleItem[]
+}
+
+export interface CanvasAnnouncement {
+  id: number
+  title: string
+  message: string
+  posted_at: string
+  author: { display_name: string; avatar_image_url: string | null }
+  read_state: string
+  html_url: string
+}
+
+export interface CanvasAssignmentDetail {
+  id: number
+  name: string
+  description: string | null
+  due_at: string | null
+  points_possible: number | null
+  submission_types: string[]
+  html_url: string
+  course_id: number
+  submission: CanvasSubmission | null
+  rubric?: Array<{
+    id: string
+    description: string
+    long_description: string
+    points: number
+  }>
+}
+
+export interface CanvasPage {
+  url: string
+  title: string
+  body: string | null
+  updated_at: string
+}
+
+export interface CanvasDiscussionParticipant {
+  id: number
+  display_name: string
+  avatar_image_url: string | null
+}
+
+export interface CanvasDiscussionEntry {
+  id: number
+  user_id: number
+  message: string
+  created_at: string
+  replies?: CanvasDiscussionEntry[]
+  read_state?: string
+}
+
+export interface CanvasDiscussionTopic {
+  id: number
+  title: string
+  message: string | null
+  posted_at: string
+  discussion_type: string
+  assignment_id: number | null
+  html_url: string
+  author: { display_name: string; avatar_image_url: string | null }
+}
+
+export interface CanvasDiscussionView {
+  participants: CanvasDiscussionParticipant[]
+  unread_entries: number[]
+  view: CanvasDiscussionEntry[]
+}
+
+export interface CanvasQuizAnswer {
+  id: number
+  text: string
+  html?: string
+  weight: number
+}
+
+export interface CanvasQuizQuestion {
+  id: number
+  question_name: string
+  question_text: string
+  question_type: string
+  points_possible: number
+  answers?: CanvasQuizAnswer[]
+}
+
+export interface CanvasQuizDetail {
+  id: number
+  title: string
+  description: string | null
+  time_limit: number | null
+  question_count: number
+  quiz_type: string
+  allowed_attempts: number
+  points_possible: number
+  due_at: string | null
+  show_correct_answers: boolean
+  html_url: string
+}
+
+export interface CanvasQuizSubmissionData {
+  question_id: number
+  correct: boolean | null
+  points: number
+  answer_id?: number
+  text?: string
+  answer_for_text_entry?: string
+}
+
+export interface CanvasQuizSubmission {
+  id: number
+  quiz_id: number
+  score: number | null
+  kept_score: number | null
+  workflow_state: string
+  finished_at: string | null
+  attempt: number
+  quiz_points_possible: number
+  submission_data?: CanvasQuizSubmissionData[]
+}
+
+export interface CanvasCourseFile {
+  id: number
+  display_name: string
+  filename: string
+  'content-type': string
+  url: string
+  size: number
+  updated_at: string
+  folder_id: number
+  locked: boolean
+}
+
 export interface CanvasCourse {
   id: number
   name: string
@@ -280,6 +449,223 @@ export async function fetchCanvasAssignmentsWithSubmissions(
   } catch {
     logger.warn('Failed to fetch Canvas assignments for course', { instanceUrl, courseId })
     return []
+  }
+}
+
+/**
+ * Fetch the user's Canvas to-do list (assignments due soon).
+ */
+export async function fetchCanvasTodo(instanceUrl: string, token: string): Promise<CanvasTodoItem[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/users/self/todo?per_page=20`
+  try {
+    const response = await axios.get<CanvasTodoItem[]>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) return []
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch modules (with items) for a course.
+ */
+export async function fetchCanvasModules(instanceUrl: string, token: string, courseId: number): Promise<CanvasModule[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/modules?include[]=items&include[]=content_details&per_page=50`
+  try {
+    const response = await axios.get<CanvasModule[]>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    if (err instanceof AxiosError && (err.response?.status === 404 || err.response?.status === 403)) return []
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch announcements for a course.
+ */
+export async function fetchCanvasAnnouncements(instanceUrl: string, token: string, courseId: number): Promise<CanvasAnnouncement[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/discussion_topics?only_announcements=true&per_page=20&order_by=posted_at`
+  try {
+    const response = await axios.get<CanvasAnnouncement[]>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    if (err instanceof AxiosError && (err.response?.status === 404 || err.response?.status === 403)) return []
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch a single assignment's full detail including description and submission.
+ */
+export async function fetchCanvasAssignmentDetail(
+  instanceUrl: string,
+  token: string,
+  courseId: number,
+  assignmentId: number,
+): Promise<CanvasAssignmentDetail> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/assignments/${assignmentId}?include[]=submission`
+  try {
+    const response = await axios.get<CanvasAssignmentDetail>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch files for a course (flat list, most recently updated first).
+ */
+export async function fetchCanvasCourseFiles(instanceUrl: string, token: string, courseId: number): Promise<CanvasCourseFile[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/files?per_page=50&sort=updated_at&order=desc`
+  try {
+    const response = await axios.get<CanvasCourseFile[]>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    if (err instanceof AxiosError && (err.response?.status === 404 || err.response?.status === 403)) return []
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch a single Canvas page body by slug.
+ */
+export async function fetchCanvasPage(
+  instanceUrl: string,
+  token: string,
+  courseId: number,
+  pageSlug: string,
+): Promise<CanvasPage> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/pages/${encodeURIComponent(pageSlug)}`
+  try {
+    const response = await axios.get<CanvasPage>(url, {
+      headers: buildAuthHeaders(token),
+      timeout: 15_000,
+    })
+    return response.data
+  } catch (err) {
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch a discussion topic's metadata (title, prompt HTML).
+ */
+export async function fetchCanvasDiscussionTopic(
+  instanceUrl: string, token: string, courseId: number, topicId: number,
+): Promise<CanvasDiscussionTopic> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/discussion_topics/${topicId}`
+  try {
+    const res = await axios.get<CanvasDiscussionTopic>(url, { headers: buildAuthHeaders(token), timeout: 15_000 })
+    return res.data
+  } catch (err) { handleAxiosError(err, instanceUrl) }
+}
+
+/**
+ * Fetch all entries/replies in a discussion thread.
+ */
+export async function fetchCanvasDiscussionView(
+  instanceUrl: string, token: string, courseId: number, topicId: number,
+): Promise<CanvasDiscussionView> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/discussion_topics/${topicId}/view`
+  try {
+    const res = await axios.get<CanvasDiscussionView>(url, { headers: buildAuthHeaders(token), timeout: 15_000 })
+    return res.data
+  } catch (err) { handleAxiosError(err, instanceUrl) }
+}
+
+/**
+ * Post a new top-level entry or a reply to an existing entry in a discussion.
+ */
+export async function postCanvasDiscussionEntry(
+  instanceUrl: string, token: string, courseId: number, topicId: number,
+  message: string, parentEntryId?: number,
+): Promise<{ id: number }> {
+  const base = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/discussion_topics/${topicId}`
+  const url = parentEntryId ? `${base}/entries/${parentEntryId}/replies` : `${base}/entries`
+  try {
+    const res = await axios.post<{ id: number }>(url, { message }, { headers: buildAuthHeaders(token), timeout: 15_000 })
+    return res.data
+  } catch (err) { handleAxiosError(err, instanceUrl) }
+}
+
+/**
+ * Fetch quiz metadata.
+ */
+export async function fetchCanvasQuizDetail(
+  instanceUrl: string, token: string, courseId: number, quizId: number,
+): Promise<CanvasQuizDetail> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/quizzes/${quizId}`
+  try {
+    const res = await axios.get<CanvasQuizDetail>(url, { headers: buildAuthHeaders(token), timeout: 15_000 })
+    return res.data
+  } catch (err) { handleAxiosError(err, instanceUrl) }
+}
+
+/**
+ * Fetch questions for a quiz. Canvas only returns answers/weights when the quiz allows it.
+ */
+export async function fetchCanvasQuizQuestions(
+  instanceUrl: string, token: string, courseId: number, quizId: number,
+): Promise<CanvasQuizQuestion[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/quizzes/${quizId}/questions?per_page=100`
+  try {
+    const res = await axios.get<CanvasQuizQuestion[]>(url, { headers: buildAuthHeaders(token), timeout: 15_000 })
+    return res.data
+  } catch (err) {
+    if (err instanceof AxiosError && (err.response?.status === 403 || err.response?.status === 401)) return []
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch the student's quiz submissions including answer data.
+ */
+export async function fetchCanvasQuizSubmissions(
+  instanceUrl: string, token: string, courseId: number, quizId: number,
+): Promise<CanvasQuizSubmission[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/quizzes/${quizId}/submissions?include[]=submission_history`
+  try {
+    const res = await axios.get<{ quiz_submissions: CanvasQuizSubmission[] }>(url, { headers: buildAuthHeaders(token), timeout: 15_000 })
+    return res.data.quiz_submissions ?? []
+  } catch (err) {
+    if (err instanceof AxiosError && (err.response?.status === 403 || err.response?.status === 404)) return []
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Submit an assignment on behalf of the student.
+ */
+export async function submitCanvasAssignment(
+  instanceUrl: string,
+  token: string,
+  courseId: number,
+  assignmentId: number,
+  submission: { submission_type: 'online_text_entry' | 'online_url'; body?: string; url?: string },
+): Promise<void> {
+  const apiUrl = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/assignments/${assignmentId}/submissions`
+  try {
+    await axios.post(apiUrl, { submission }, {
+      headers: buildAuthHeaders(token),
+      timeout: 20_000,
+    })
+  } catch (err) {
+    handleAxiosError(err, instanceUrl)
   }
 }
 

@@ -97,7 +97,7 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
       prisma.profile.findUnique({ where: { userId: req.userId } }),
       prisma.user.findUnique({ where: { id: req.userId } }),
       prisma.assignment.findMany({
-        where: { userId: req.userId, completed: false },
+        where: { userId: req.userId, completed: false, source: { notIn: ['SEED', 'HAC'] } },
         orderBy: { dueDate: 'asc' },
         take: 5,
       }),
@@ -159,7 +159,7 @@ router.get('/study-plan', requireAuth, async (req: AuthRequest, res: Response): 
   }
   try {
     const assignments = await prisma.assignment.findMany({
-      where: { userId: req.userId, completed: false },
+      where: { userId: req.userId, completed: false, source: { notIn: ['SEED', 'HAC'] } },
       orderBy: { dueDate: 'asc' },
       take: 20,
     })

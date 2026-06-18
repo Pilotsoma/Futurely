@@ -185,7 +185,7 @@ export default function AttendancePage() {
         </button>
       </div>
 
-      {loading && <div style={{ height: 240, background: 'rgba(255,255,255,0.04)', borderRadius: 12 }} />}
+      {loading && <div style={{ height: 240, background: 'var(--surface-2)', borderRadius: 12 }} />}
 
       {!loading && !data && !error && (
         <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8 }}>
@@ -203,7 +203,7 @@ export default function AttendancePage() {
               ))}
             </div>
             {grid.map((week, wi) => (
-              <div key={wi} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <div key={wi} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--surface-2)' }}>
                 {week.map((cell, di) => {
                   const day = cell?.day ?? null
                   const style = day ? getDayStyle(day.description) : null
@@ -221,7 +221,7 @@ export default function AttendancePage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: 12,
-                        borderRight: di < 6 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                        borderRight: di < 6 ? '1px solid var(--surface-2)' : 'none',
                         cursor: (style || closed) ? 'help' : 'default',
                         background: closed ? 'rgba(156,163,175,0.07)' : (style?.bg ?? 'transparent'),
                         color: style?.color ?? (closed ? 'rgba(156,163,175,0.5)' : 'var(--text-secondary)'),
@@ -265,7 +265,7 @@ export default function AttendancePage() {
                       style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 14px', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}
                     >
                       <div style={{
-                        background: style?.bg ?? 'rgba(255,255,255,0.06)',
+                        background: style?.bg ?? 'var(--surface-2)',
                         color: style?.color ?? 'var(--text-muted)',
                         border: `1px solid ${style?.border ?? 'var(--border)'}`,
                         width: 34, height: 34, borderRadius: 8,
@@ -290,7 +290,7 @@ export default function AttendancePage() {
                                 <span key={pi} style={{
                                   fontSize: 10, fontWeight: 600,
                                   padding: '2px 7px', borderRadius: 999,
-                                  background: ps?.bg ?? 'rgba(255,255,255,0.06)',
+                                  background: ps?.bg ?? 'var(--surface-2)',
                                   color: ps?.color ?? 'var(--text-muted)',
                                   border: `1px solid ${ps?.border ?? 'var(--border)'}`,
                                 }}>

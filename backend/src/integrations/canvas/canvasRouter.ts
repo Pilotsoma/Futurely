@@ -12,6 +12,19 @@ import {
   fetchCanvasOverdueAssignments,
   fetchCanvasCoursesWithGrades,
   fetchCanvasAssignmentsWithSubmissions,
+  fetchCanvasTodo,
+  fetchCanvasModules,
+  fetchCanvasAnnouncements,
+  fetchCanvasAssignmentDetail,
+  fetchCanvasCourseFiles,
+  fetchCanvasPage,
+  fetchCanvasDiscussionTopic,
+  fetchCanvasDiscussionView,
+  postCanvasDiscussionEntry,
+  fetchCanvasQuizDetail,
+  fetchCanvasQuizQuestions,
+  fetchCanvasQuizSubmissions,
+  submitCanvasAssignment,
   CanvasTokenError,
   CanvasNetworkError,
 } from './canvasClient'
@@ -60,7 +73,28 @@ function asyncHandler(
   fn: (req: AuthRequest, res: Response, next: NextFunction) => Promise<void>
 ) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    Promise.resolve(fn(req as AuthRequest, res, next)).catch(err => {
+    Promise.resolve(fn(req as AuthRequest, res, next)).catch(async err => {
+      if (err instanceof CanvasTokenError) {
+        const userId = (req as AuthRequest).userId
+        const instanceUrl =
+          (req.query.canvasInstanceUrl as string | undefined) ||
+          (req.body as { canvasInstanceUrl?: string } | undefined)?.canvasInstanceUrl
+        if (userId) {
+          try {
+            await prisma.canvasConnection.updateMany({
+              where: { userId, ...(instanceUrl ? { canvasInstanceUrl: instanceUrl } : {}) },
+              data: { tokenInvalid: true },
+            })
+          } catch { /* best effort */ }
+        }
+        if (!res.headersSent) {
+          res.status(401).json({
+            data: null,
+            error: { code: 'CANVAS_TOKEN_EXPIRED', message: 'Canvas access token is invalid or expired.' },
+          })
+        }
+        return
+      }
       if (!res.headersSent) {
         logger.error('Unhandled Canvas route error', {
           message: err instanceof Error ? err.message : String(err),
@@ -485,6 +519,7 @@ router.get(
           lastSynced: c.lastSynced,
           syncStatus: c.syncStatus,
           syncError: c.syncError,
+          tokenInvalid: c.tokenInvalid,
         })),
         // Backwards-compat: first connection
         canvasInstanceUrl: connections[0].canvasInstanceUrl,
@@ -492,6 +527,7 @@ router.get(
         lastSynced: connections[0].lastSynced,
         syncStatus: connections[0].syncStatus,
         syncError: connections[0].syncError,
+        tokenInvalid: connections[0].tokenInvalid,
       },
     })
   })
@@ -571,6 +607,375 @@ router.delete(
       })
     }
   })
+)
+
+// ── Shared helper: resolve a connection by optional instance URL ─────────────
+
+async function resolveConnection(
+  userId: number,
+  instanceUrl?: string,
+): Promise<{ canvasInstanceUrl: string; token: string } | null> {
+  const connection = instanceUrl
+    ? await prisma.canvasConnection.findFirst({ where: { userId, canvasInstanceUrl: instanceUrl } })
+    : await prisma.canvasConnection.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } })
+  if (!connection) return null
+  return { canvasInstanceUrl: connection.canvasInstanceUrl, token: decryptPassword(connection.encryptedToken) }
+}
+
+// ── GET /dashboard ───────────────────────────────────────────────────────────
+// Returns to-do items + courses with grades for a specific Canvas instance.
+
+router.get(
+  '/dashboard',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const { canvasInstanceUrl, token } = conn
+
+    const [todo, courses] = await Promise.all([
+      fetchCanvasTodo(canvasInstanceUrl, token).catch(() => []),
+      fetchCanvasCoursesWithGrades(canvasInstanceUrl, token).catch(() => []),
+    ])
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_DASHBOARD', action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: { canvasInstanceUrl, todo, courses } })
+  }),
+)
+
+// ── GET /courses/:courseId/modules ───────────────────────────────────────────
+
+router.get(
+  '/courses/:courseId/modules',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    if (isNaN(courseId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId' } })
+      return
+    }
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const modules = await fetchCanvasModules(conn.canvasInstanceUrl, conn.token, courseId)
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_MODULES', resourceId: String(courseId), action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: modules })
+  }),
+)
+
+// ── GET /courses/:courseId/announcements ─────────────────────────────────────
+
+router.get(
+  '/courses/:courseId/announcements',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    if (isNaN(courseId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId' } })
+      return
+    }
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const announcements = await fetchCanvasAnnouncements(conn.canvasInstanceUrl, conn.token, courseId)
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_ANNOUNCEMENTS', resourceId: String(courseId), action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: announcements })
+  }),
+)
+
+// ── GET /courses/:courseId/assignments/:assignmentId ─────────────────────────
+
+router.get(
+  '/courses/:courseId/assignments/:assignmentId',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const assignmentId = parseInt(req.params.assignmentId)
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    if (isNaN(courseId) || isNaN(assignmentId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId or assignmentId' } })
+      return
+    }
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const assignment = await fetchCanvasAssignmentDetail(conn.canvasInstanceUrl, conn.token, courseId, assignmentId)
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_ASSIGNMENT', resourceId: String(assignmentId), action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: assignment })
+  }),
+)
+
+// ── GET /courses/:courseId/files ─────────────────────────────────────────────
+
+router.get(
+  '/courses/:courseId/files',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    if (isNaN(courseId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId' } })
+      return
+    }
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const files = await fetchCanvasCourseFiles(conn.canvasInstanceUrl, conn.token, courseId)
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_FILES', resourceId: String(courseId), action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: files })
+  }),
+)
+
+// ── GET /courses/:courseId/pages/:pageSlug ──────────────────────────────────
+
+router.get(
+  '/courses/:courseId/pages/:pageSlug',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const pageSlug = req.params.pageSlug
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+
+    if (isNaN(courseId) || !pageSlug) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId or pageSlug' } })
+      return
+    }
+
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } })
+      return
+    }
+
+    const page = await fetchCanvasPage(conn.canvasInstanceUrl, conn.token, courseId, pageSlug)
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_PAGE', resourceId: pageSlug, action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: page })
+  }),
+)
+
+// ── POST /courses/:courseId/assignments/:assignmentId/submit ─────────────────
+
+router.post(
+  '/courses/:courseId/assignments/:assignmentId/submit',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const assignmentId = parseInt(req.params.assignmentId)
+    const { submissionType, body, url, canvasInstanceUrl } = req.body as {
+      submissionType?: string; body?: string; url?: string; canvasInstanceUrl?: string
+    }
+
+    if (isNaN(courseId) || isNaN(assignmentId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId or assignmentId' } }); return
+    }
+    if (submissionType !== 'online_text_entry' && submissionType !== 'online_url') {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'submissionType must be online_text_entry or online_url' } }); return
+    }
+    if (submissionType === 'online_text_entry' && !body?.trim()) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'body is required for text submissions' } }); return
+    }
+    if (submissionType === 'online_url' && !url?.trim()) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'url is required for URL submissions' } }); return
+    }
+
+    const conn = await resolveConnection(userId, canvasInstanceUrl)
+    if (!conn) {
+      res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } }); return
+    }
+
+    await submitCanvasAssignment(conn.canvasInstanceUrl, conn.token, courseId, assignmentId, {
+      submission_type: submissionType as 'online_text_entry' | 'online_url',
+      body,
+      url,
+    })
+
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_ASSIGNMENT', resourceId: String(assignmentId), action: 'CANVAS_SUBMIT', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
+    res.json({ data: { ok: true } })
+  }),
+)
+
+// ── GET /courses/:courseId/discussions/:topicId ──────────────────────────────
+
+router.get(
+  '/courses/:courseId/discussions/:topicId',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const topicId = parseInt(req.params.topicId)
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+    if (isNaN(courseId) || isNaN(topicId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId or topicId' } }); return
+    }
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) { res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } }); return }
+    const [topic, view] = await Promise.all([
+      fetchCanvasDiscussionTopic(conn.canvasInstanceUrl, conn.token, courseId, topicId),
+      fetchCanvasDiscussionView(conn.canvasInstanceUrl, conn.token, courseId, topicId),
+    ])
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_DISCUSSION', resourceId: String(topicId), action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+    res.json({ data: { topic, view } })
+  }),
+)
+
+// ── POST /courses/:courseId/discussions/:topicId/entries ─────────────────────
+
+router.post(
+  '/courses/:courseId/discussions/:topicId/entries',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const topicId = parseInt(req.params.topicId)
+    const { message, parentEntryId, canvasInstanceUrl } = req.body as { message?: string; parentEntryId?: number; canvasInstanceUrl?: string }
+    if (isNaN(courseId) || isNaN(topicId) || !message?.trim()) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid params or empty message' } }); return
+    }
+    const conn = await resolveConnection(userId, canvasInstanceUrl)
+    if (!conn) { res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } }); return }
+    const entry = await postCanvasDiscussionEntry(conn.canvasInstanceUrl, conn.token, courseId, topicId, message, parentEntryId)
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_DISCUSSION', resourceId: String(topicId), action: 'CANVAS_SUBMIT', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+    res.json({ data: entry })
+  }),
+)
+
+// ── GET /courses/:courseId/quizzes/:quizId ────────────────────────────────────
+
+router.get(
+  '/courses/:courseId/quizzes/:quizId',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const courseId = parseInt(req.params.courseId)
+    const quizId = parseInt(req.params.quizId)
+    const instanceUrl = req.query.canvasInstanceUrl as string | undefined
+    if (isNaN(courseId) || isNaN(quizId)) {
+      res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid courseId or quizId' } }); return
+    }
+    const conn = await resolveConnection(userId, instanceUrl)
+    if (!conn) { res.status(404).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No Canvas account connected.' } }); return }
+    const [quiz, questions, submissions] = await Promise.all([
+      fetchCanvasQuizDetail(conn.canvasInstanceUrl, conn.token, courseId, quizId),
+      fetchCanvasQuizQuestions(conn.canvasInstanceUrl, conn.token, courseId, quizId),
+      fetchCanvasQuizSubmissions(conn.canvasInstanceUrl, conn.token, courseId, quizId),
+    ])
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_QUIZ', resourceId: String(quizId), action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+    res.json({ data: { quiz, questions, submissions } })
+  }),
+)
+
+// ── POST /refresh-token ──────────────────────────────────────────────────────
+// Accepts a new Canvas token for an instance whose token has expired.
+// Verifies it against Canvas before saving and clears tokenInvalid.
+
+router.post(
+  '/refresh-token',
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.userId!
+    const { canvasInstanceUrl, newToken } = req.body as {
+      canvasInstanceUrl?: string
+      newToken?: string
+    }
+
+    if (!canvasInstanceUrl || !newToken) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'VALIDATION_ERROR', message: 'canvasInstanceUrl and newToken are required.' },
+      })
+      return
+    }
+
+    let self: Awaited<ReturnType<typeof verifyCanvasToken>>
+    try {
+      self = await verifyCanvasToken(canvasInstanceUrl, newToken)
+    } catch (err) {
+      if (err instanceof CanvasTokenError) {
+        res.status(401).json({
+          data: null,
+          error: { code: 'INVALID_TOKEN', message: 'The token you provided is invalid. Please check and try again.' },
+        })
+      } else {
+        res.status(502).json({
+          data: null,
+          error: { code: 'CANVAS_UNREACHABLE', message: 'Could not reach Canvas to verify the token. Please try again.' },
+        })
+      }
+      return
+    }
+
+    const encryptedToken = encryptPassword(newToken)
+
+    await prisma.canvasConnection.update({
+      where: { userId_canvasInstanceUrl: { userId, canvasInstanceUrl } },
+      data: {
+        encryptedToken,
+        tokenInvalid: false,
+        canvasUserId: String(self.id),
+        canvasUserName: self.name,
+      },
+    })
+
+    logger.info('Canvas token refreshed', { userId, canvasInstanceUrl })
+
+    res.json({ data: { success: true } })
+  }),
 )
 
 export default router

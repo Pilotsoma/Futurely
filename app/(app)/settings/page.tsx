@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, type StudentData, type CanvasStatus } from '../../../lib/api'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
+import { CHANGELOG } from '../../../lib/changelog'
 
 function DeleteAccountModal({ onClose }: { onClose: () => void }) {
   const router = useRouter()
@@ -126,6 +127,10 @@ export default function SettingsPage() {
   const districtRef = useRef<HTMLDivElement>(null)
   const [avatarSaving, setAvatarSaving]       = useState(false)
   const [avatarMsg, setAvatarMsg]             = useState<string | null>(null)
+  const [showChangelog, setShowChangelog]     = useState(false)
+  const [hideGpa, setHideGpa]                 = useState(false)
+  const [devStats, setDevStats]               = useState<{ totalUsers: number; activeUsers: number; liveUsers: number } | null>(null)
+  const [devStatsLoading, setDevStatsLoading] = useState(false)
 
   async function handleSaveAvatar() {
     setAvatarSaving(true); setAvatarMsg(null)
@@ -142,6 +147,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setTheme((localStorage.getItem('ns_theme') as 'dark' | 'light') || 'dark')
+    setHideGpa(localStorage.getItem('ns_hide_gpa') === '1')
     try {
       const saved = localStorage.getItem('ns_grade_colors_v2')
       if (saved) {
@@ -191,6 +197,10 @@ export default function SettingsPage() {
       setSatScore(d.profile?.satScore?.toString() ?? '')
       setActScore(d.profile?.actScore?.toString() ?? '')
       setFuturePlan(d.profile?.futureDecision ?? '')
+      if (d.role === 'DEV' || d.role === 'ADMIN') {
+        setDevStatsLoading(true)
+        api.adminStats().then(setDevStats).catch(() => null).finally(() => setDevStatsLoading(false))
+      }
     }).catch(() => null)
     api.portalStatus().then(status => {
       setPortalStatus(status)
@@ -465,7 +475,7 @@ export default function SettingsPage() {
                         padding: '0 16px',
                         fontSize: 13,
                         color: 'var(--primary)',
-                        borderColor: 'rgba(75,110,255,0.3)',
+                        borderColor: 'rgba(43,74,142,0.3)',
                         width: '100%',
                         display: 'flex',
                         alignItems: 'center',
@@ -550,6 +560,9 @@ export default function SettingsPage() {
               <form onSubmit={e => void handleCanvasConnect(e)} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
                   Get your token: Canvas → Profile → Settings → Approved Integrations → New Access Token
+                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, padding: '6px 10px', background: 'var(--surface-2)', borderRadius: 6, border: '1px solid var(--border)' }}>
+                  When creating the token, set the expiry to <strong>120 days</strong> (the maximum recommended). Futurely will alert you when your token expires so you can renew it.
                 </p>
                 <div ref={districtRef} style={{ position: 'relative' }}>
                   <input
@@ -645,7 +658,7 @@ export default function SettingsPage() {
                     {canvasConnections.length < 2 && (
                       <button
                         className="ns-btn-ghost"
-                        style={{ height: 32, padding: '0 12px', fontSize: 12, color: 'var(--primary)', borderColor: 'rgba(75,110,255,0.4)', opacity: canvasLoading ? 0.6 : 1 }}
+                        style={{ height: 32, padding: '0 12px', fontSize: 12, color: 'var(--primary)', borderColor: 'rgba(43,74,142,0.4)', opacity: canvasLoading ? 0.6 : 1 }}
                         onClick={() => setShowCanvasForm(true)}
                         disabled={canvasLoading}
                       >
@@ -724,6 +737,24 @@ export default function SettingsPage() {
                 {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
               </button>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div>
+                <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Hide GPA on dashboard</span>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Blur your GPA so others can&apos;t see it over your shoulder</div>
+              </div>
+              <button
+                onClick={() => { const next = !hideGpa; setHideGpa(next); localStorage.setItem('ns_hide_gpa', next ? '1' : '0') }}
+                style={{
+                  width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                  background: hideGpa ? 'var(--primary)' : 'var(--border)', transition: 'background 0.2s',
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 3, left: hideGpa ? 23 : 3, width: 18, height: 18,
+                  borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
             <div style={{ padding: '10px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div>
@@ -778,9 +809,47 @@ export default function SettingsPage() {
             Sign Out
           </button>
 
+          {/* DEV-only: platform stats */}
+          {(data?.role === 'DEV' || data?.role === 'ADMIN') && (
+            <div className="ns-card" style={{ ...S.card, border: '1px solid rgba(43,74,142,0.25)', marginTop: 16 }}>
+              <p style={{ ...S.cardLabel, color: 'var(--primary)', marginBottom: 14 }}>DEV — Platform Stats</p>
+              {devStatsLoading ? (
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Loading…</p>
+              ) : devStats ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {([
+                    { label: 'Total Users', value: devStats.totalUsers.toLocaleString(), desc: 'All accounts created' },
+                    { label: 'Active Users', value: devStats.activeUsers.toLocaleString(), desc: 'Active in the last 3 days' },
+                    { label: 'Live Users', value: devStats.liveUsers.toLocaleString(), desc: 'Active in the last 10 minutes' },
+                  ] as { label: string; value: string; desc: string }[]).map(row => (
+                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{row.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{row.desc}</div>
+                      </div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>{row.value}</div>
+                    </div>
+                  ))}
+                  <button
+                    className="ns-btn-ghost"
+                    style={{ alignSelf: 'flex-end', height: 32, padding: '0 14px', fontSize: 12, marginTop: 4 }}
+                    onClick={() => {
+                      setDevStatsLoading(true)
+                      api.adminStats().then(setDevStats).catch(() => null).finally(() => setDevStatsLoading(false))
+                    }}
+                  >
+                    Refresh
+                  </button>
+                </div>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--error)' }}>Failed to load stats</p>
+              )}
+            </div>
+          )}
+
           {/* DEV-only: profile picture URL */}
           {data?.role === 'ADMIN' && (
-            <div className="ns-card" style={{ ...S.card, border: '1px solid rgba(75,110,255,0.25)' }}>
+            <div className="ns-card" style={{ ...S.card, border: '1px solid rgba(43,74,142,0.25)' }}>
               <p style={{ ...S.cardLabel, color: 'var(--primary)' }}>DEV — Avatar URL</p>
               <div style={S.fieldRow}>
                 <label style={S.fieldRowLabel}>Image URL</label>
@@ -832,6 +901,54 @@ export default function SettingsPage() {
               Delete Account
             </button>
           </div>
+
+          {/* Changelog */}
+          <div className="ns-card" style={{ ...S.card, marginTop: 16 }}>
+            <button
+              onClick={() => setShowChangelog(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' as const }}
+            >
+              <div>
+                <p style={{ ...S.cardLabel, marginBottom: 4 }}>Changelog</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  Every update to Futurely, explained in plain English.
+                </p>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: 16, transform: showChangelog ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {showChangelog && (
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 24, marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                {CHANGELOG.map((entry, ei) => (
+                  <div key={entry.version}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 99, padding: '2px 10px' }}>
+                        v{entry.version}
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{entry.title}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{entry.date}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                      {entry.changes.map((c, ci) => (
+                        <div key={ci} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0, width: 24, textAlign: 'center' as const, marginTop: 1 }}>{c.emoji}</span>
+                          <div>
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{c.headline}</div>
+                            <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>{c.detail}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {ei < CHANGELOG.length - 1 && (
+                      <div style={{ borderBottom: '1px solid var(--border)', marginTop: 20 }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -856,7 +973,7 @@ const S: Record<string, React.CSSProperties> = {
   title:        { fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 24 },
   layout:       { display: 'flex', gap: 20, alignItems: 'flex-start' },
   profileCard:  { display: 'flex', alignItems: 'center', gap: 16, padding: 20, marginBottom: 16 },
-  avatar:       { width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#4B6EFF,#00C896)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, flexShrink: 0 },
+  avatar:       { width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#2B4A8E,#2D6A4F)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, flexShrink: 0 },
   profileName:  { fontSize: 17, fontWeight: 700 },
   profileSub:   { fontSize: 13, color: 'var(--text-secondary)', marginTop: 3 },
   card:         { padding: 20, marginBottom: 16 },

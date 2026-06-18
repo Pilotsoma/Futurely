@@ -10,7 +10,7 @@ const router = Router()
 interface TagItem  { id: string; tag: string; tagColor: string; rarity: string; weight: number }
 interface ColorItem { id: string; name: string; value: string; rarity: string; weight: number }
 
-const TAG_BOX_ITEMS: TagItem[] = [
+export const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'grinder',        tag: 'Grinder',        tagColor: '#6B7280', rarity: 'Common',    weight: 20   },
   { id: 'focused',        tag: 'Focused',         tagColor: '#6B7280', rarity: 'Common',    weight: 20   },
   { id: 'scholar',        tag: 'Scholar',         tagColor: '#6B7280', rarity: 'Common',    weight: 20   },
@@ -23,6 +23,15 @@ const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#EAB308', rarity: 'Legendary', weight: 0.5  },
   { id: 'genius',         tag: 'Genius',          tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
   { id: 'god',            tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    weight: 0.3  },
+]
+
+// Special role/staff tags — not in loot boxes, only grantable by DEV/ADMIN
+const SPECIAL_TAGS: { id: string; tag: string; tagColor: string; rarity: string }[] = [
+  { id: 'dev',   tag: 'DEV',   tagColor: '#ff6b6b', rarity: 'Staff'  },
+  { id: 'admin', tag: 'Admin', tagColor: '#EF4444', rarity: 'Staff'  },
+  { id: 'mod',   tag: 'MOD',   tagColor: '#3B82F6', rarity: 'Staff'  },
+  { id: 'vip',   tag: 'VIP',   tagColor: '#A855F7', rarity: 'Staff'  },
+  { id: 'bot',   tag: 'BOT',   tagColor: '#6B7280', rarity: 'Staff'  },
 ]
 
 const NAME_COLOR_BOX_ITEMS: ColorItem[] = [
@@ -70,7 +79,7 @@ const RARITY_RANK: Record<string, number> = {
 
 // ── Estimated item prices (seed; updated dynamically on each sale) ─────────────
 
-const SEED_PRICES: Record<string, number> = {
+export const SEED_PRICES: Record<string, number> = {
   // Tags (Common 10, Uncommon 20, Rare 50, Epic 250, Legendary 1k, Mythic GOD 50k)
   'tag:grinder': 10,         'tag:focused': 10,         'tag:scholar': 10,
   'tag:honors-student': 20,  'tag:ap-student': 20,
@@ -168,19 +177,32 @@ function removeItem(user: UserSnap, item: TradeItem): Record<string, string | nu
   const updates: Record<string, string | null> = {}
   if (item.type === 'tag') {
     const tagName = resolveTagName(item)
-    const tags = parseTagArr(user.allTags).filter(t => t.tag !== tagName)
+    const tags = parseTagArr(user.allTags)
+    const idx = tags.findIndex(t => t.tag === tagName)
+    if (idx !== -1) tags.splice(idx, 1)
     updates.allTags = JSON.stringify(tags)
-    if (user.tag === tagName) { updates.tag = 'Student'; updates.tagColor = null }
+    // Only unequip if no copies remain
+    if (user.tag === tagName && !tags.some(t => t.tag === tagName)) {
+      updates.tag = 'Student'; updates.tagColor = null
+    }
   } else if (item.type === 'name-color') {
-    const owned = parseJsonArr(user.ownedNameColors).filter(i => i.id !== item.id)
+    const owned = parseJsonArr(user.ownedNameColors)
+    const idx = owned.findIndex((i: { id: string }) => i.id === item.id)
+    if (idx !== -1) owned.splice(idx, 1)
     updates.ownedNameColors = JSON.stringify(owned)
     const def = NAME_COLOR_BOX_ITEMS.find(c => c.id === item.id)
-    if (def && user.nameColor === def.value) updates.nameColor = null
+    if (def && user.nameColor === def.value && !owned.some((i: { id: string }) => i.id === item.id)) {
+      updates.nameColor = null
+    }
   } else if (item.type === 'pfp') {
-    const owned = parseJsonArr(user.ownedPfpEffects).filter(i => i.id !== item.id)
+    const owned = parseJsonArr(user.ownedPfpEffects)
+    const idx = owned.findIndex((i: { id: string }) => i.id === item.id)
+    if (idx !== -1) owned.splice(idx, 1)
     updates.ownedPfpEffects = JSON.stringify(owned)
     const def = PFP_EFFECT_BOX_ITEMS.find(c => c.id === item.id)
-    if (def && user.pfpEffect === def.value) updates.pfpEffect = null
+    if (def && user.pfpEffect === def.value && !owned.some((i: { id: string }) => i.id === item.id)) {
+      updates.pfpEffect = null
+    }
   }
   return updates
 }
@@ -192,19 +214,15 @@ function addItem(user: UserSnap, item: TradeItem): Record<string, string> {
     const tagName = tagDef ? tagDef.tag : (item.tag ?? item.id)
     const tagColor = tagDef ? tagDef.tagColor : (item.tagColor ?? '#6B7280')
     const tags = parseTagArr(user.allTags)
-    if (!tags.some(t => t.tag === tagName)) tags.push({ tag: tagName, tagColor })
+    tags.push({ tag: tagName, tagColor })
     updates.allTags = JSON.stringify(tags)
   } else if (item.type === 'name-color') {
     const owned = parseJsonArr(user.ownedNameColors)
-    if (!owned.some(i => i.id === item.id)) {
-      owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
-    }
+    owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
     updates.ownedNameColors = JSON.stringify(owned)
   } else if (item.type === 'pfp') {
     const owned = parseJsonArr(user.ownedPfpEffects)
-    if (!owned.some(i => i.id === item.id)) {
-      owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
-    }
+    owned.push({ id: item.id, name: item.name, value: item.value, rarity: item.rarity })
     updates.ownedPfpEffects = JSON.stringify(owned)
   }
   return updates
@@ -358,7 +376,7 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { coins: true, nameColor: true, pfpEffect: true, ownedNameColors: true, ownedPfpEffects: true, lastCoinClaim: true, allTags: true },
+      select: { coins: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, ownedNameColors: true, ownedPfpEffects: true, lastCoinClaim: true, allTags: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
@@ -375,6 +393,8 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
       data: {
         coins: user.coins,
         canClaimToday,
+        tag: user.tag,
+        tagColor: user.tagColor,
         nameColor: user.nameColor,
         pfpEffect: user.pfpEffect,
         ownedTags,
@@ -520,7 +540,7 @@ router.post('/open-box', requireAuth, async (req: AuthRequest, res: Response): P
 // ── Quicksell ─────────────────────────────────────────────────────────────────
 
 const QUICKSELL_PRICES: Record<string, number> = {
-  Common: 2, Uncommon: 5, Rare: 10, Epic: 20, Legendary: 75, Mythic: 500,
+  Common: 4, Uncommon: 10, Rare: 20, Epic: 40, Legendary: 150, Mythic: 1000,
 }
 
 router.post('/quicksell/duplicates', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
@@ -659,16 +679,38 @@ router.post('/quicksell', requireAuth, async (req: AuthRequest, res: Response): 
 router.put('/equip', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const { type, itemId } = req.body as { type?: string; itemId?: string | null }
-  if (!type || !['name-color', 'pfp'].includes(type)) {
-    res.status(400).json({ error: 'type must be name-color or pfp' }); return
+  if (!type || !['name-color', 'pfp', 'tag'].includes(type)) {
+    res.status(400).json({ error: 'type must be name-color, pfp, or tag' }); return
   }
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { ownedNameColors: true, ownedPfpEffects: true },
+      select: { ownedNameColors: true, ownedPfpEffects: true, allTags: true, tag: true, tagColor: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
+    if (type === 'tag') {
+      if (itemId) {
+        const owned = parseTagArr(user.allTags)
+        const tagDef = TAG_BOX_ITEMS.find(d => d.id === itemId)
+        const ownedMatch = owned.find(t => (TAG_BOX_ITEMS.find(d => d.tag === t.tag)?.id ?? t.tag) === itemId)
+        if (!ownedMatch) { res.status(403).json({ error: 'You do not own this tag' }); return }
+        const updated = await prisma.user.update({
+          where: { id: req.userId },
+          data: { tag: ownedMatch.tag, tagColor: tagDef?.tagColor ?? ownedMatch.tagColor },
+          select: { tag: true, tagColor: true },
+        })
+        res.json({ data: { tag: updated.tag, tagColor: updated.tagColor } })
+      } else {
+        const updated = await prisma.user.update({
+          where: { id: req.userId },
+          data: { tag: 'Student', tagColor: 'grey' },
+          select: { tag: true, tagColor: true },
+        })
+        res.json({ data: { tag: updated.tag, tagColor: updated.tagColor } })
+      }
+      return
+    }
     if (type === 'name-color') {
       if (itemId !== null && itemId !== undefined) {
         const owned = parseJsonArr(user.ownedNameColors)
@@ -742,7 +784,8 @@ router.post('/admin/grant', requireAuth, async (req: AuthRequest, res: Response)
 
     } else if (type === 'tag') {
       if (!itemId?.trim()) { res.status(400).json({ error: 'Provide a tag id' }); return }
-      const tagDef = TAG_BOX_ITEMS.find(t => t.id === itemId.trim())
+      const id = itemId.trim()
+      const tagDef = TAG_BOX_ITEMS.find(t => t.id === id) ?? SPECIAL_TAGS.find(t => t.id === id)
       if (!tagDef) { res.status(400).json({ error: 'Unknown tag id' }); return }
       const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { allTags: true, tag: true } })
       const existing = parseTagArr(user?.allTags)
@@ -752,9 +795,8 @@ router.post('/admin/grant', requireAuth, async (req: AuthRequest, res: Response)
         where: { id: req.userId },
         data: {
           allTags: JSON.stringify(newAllTags),
-          ...(!user?.tag || user.tag === 'Student' || user.tag === 'Parent'
-            ? { tag: tagDef.tag, tagColor: tagDef.tagColor }
-            : {}),
+          tag: tagDef.tag,
+          tagColor: tagDef.tagColor,
         },
         select: { tag: true, tagColor: true },
       })
@@ -774,6 +816,7 @@ router.get('/catalog', (_req, res: Response) => {
   res.json({
     data: {
       tagBox: TAG_BOX_ITEMS,
+      specialTags: SPECIAL_TAGS,
       nameColorBox: NAME_COLOR_BOX_ITEMS,
       pfpBox: PFP_EFFECT_BOX_ITEMS,
       boxCost: 10,
@@ -1011,9 +1054,7 @@ router.post('/listings/:id/buy', requireAuth, async (req: AuthRequest, res: Resp
       },
     })
     const sender = notif.sender
-    const senderOut = sender.role === 'ADMIN'
-      ? { id: sender.id, name: sender.name, email: sender.email, tag: 'DEV', tagColor: 'lightblue', nameColor: sender.nameColor, pfpEffect: sender.pfpEffect }
-      : { id: sender.id, name: sender.name, email: sender.email, tag: sender.tag, tagColor: sender.tagColor, nameColor: sender.nameColor, pfpEffect: sender.pfpEffect }
+    const senderOut = { id: sender.id, name: sender.name, email: sender.email, tag: sender.tag, tagColor: sender.tagColor, nameColor: sender.nameColor, pfpEffect: sender.pfpEffect }
     sendToUser(listing.sellerId, 'NOTIFICATION', { ...notif, sender: senderOut })
 
     res.json({ data: { ok: true, coins: updatedBuyer.coins } })
@@ -1294,6 +1335,27 @@ router.post('/trades/:id/cancel', requireAuth, async (req: AuthRequest, res: Res
     res.json({ data: { ok: true } })
   } catch {
     res.status(500).json({ error: 'Failed to cancel trade' })
+  }
+})
+
+router.get('/admin/stats', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  try {
+    const me = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true, tag: true } })
+    if (me?.role !== 'DEV' && me?.role !== 'ADMIN' && me?.tag !== 'DEV') {
+      res.status(403).json({ error: 'DEV access required' }); return
+    }
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000)
+    const [totalUsers, activeUsers, liveUsers] = await Promise.all([
+      prisma.user.count({ where: { deletedAt: null } }),
+      prisma.user.count({ where: { deletedAt: null, lastSeenAt: { gte: threeDaysAgo } } }),
+      prisma.user.count({ where: { deletedAt: null, lastSeenAt: { gte: tenMinAgo } } }),
+    ])
+    res.json({ data: { totalUsers, activeUsers, liveUsers } })
+  } catch (err) {
+    console.error('[ADMIN STATS]', err)
+    res.status(500).json({ error: 'Internal server error' })
   }
 })
 

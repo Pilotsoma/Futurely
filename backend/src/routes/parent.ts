@@ -261,9 +261,7 @@ async function getStudentHacData(hacUsername: string, districtUrl?: string): Pro
   const includeClause = {
     user: {
       include: {
-        // 'SEED' assignments are garbage data from broken HAC imports — exclude them.
-        // Only show MANUAL (user-created) and HAC (properly synced) assignments.
-        assignments: { where: { source: { not: 'SEED' } }, orderBy: { dueDate: 'asc' as const } },
+        assignments: { where: { source: { notIn: ['SEED', 'HAC'] as string[] } }, orderBy: { dueDate: 'asc' as const } },
         courses: { include: { grades: { orderBy: { createdAt: 'desc' as const }, take: 1 } } },
         profile: true,
       },

@@ -7,6 +7,11 @@ import Image from 'next/image'
 import { motion, AnimatePresence, type Transition } from 'framer-motion'
 import { api } from '../../lib/api'
 import NotificationBell from '../../components/ui/NotificationBell'
+import UpdatePopup from '../../components/ui/UpdatePopup'
+import ForcedLogoutWatcher from '../../components/ui/ForcedLogoutWatcher'
+import InactivityWatcher from '../../components/ui/InactivityWatcher'
+import ExternalLinkGuard from '../../components/ui/ExternalLinkGuard'
+import CanvasTokenExpiredBanner from '../../components/ui/CanvasTokenExpiredBanner'
 
 const NAV = [
   {
@@ -109,6 +114,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [router])
 
   function handleLogout() {
+    api.logout().catch(() => null)
     localStorage.removeItem('ns_token')
     localStorage.removeItem('ns_user')
     router.push('/login')
@@ -293,6 +299,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </motion.aside>
 
+      <UpdatePopup />
+      <ForcedLogoutWatcher />
+      <InactivityWatcher />
+      <ExternalLinkGuard />
+      <CanvasTokenExpiredBanner />
+
       {/* Main content — spring-follows sidebar width */}
       <motion.main
         animate={{ marginLeft: sideW }}
@@ -316,15 +328,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  sidebar:    { flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '16px 10px 20px', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50, overflow: 'hidden', boxShadow: '2px 0 12px rgba(0,0,0,0.08)' },
+  sidebar:    { flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '16px 10px 20px', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50, overflow: 'hidden', boxShadow: '2px 0 20px rgba(26,21,14,0.05)' },
   toggleBtn:  { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: 'auto', marginBottom: 18, flexShrink: 0 },
   logoRow:    { paddingLeft: 0, marginBottom: 24, display: 'flex' },
-  logoText:   { fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.3px', whiteSpace: 'nowrap' },
+  logoText:   { fontSize: 15, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.3px', whiteSpace: 'nowrap' },
   nav:        { flex: 1, display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden', position: 'relative' },
-  navPill:    { position: 'absolute', left: 0, right: 0, borderRadius: 8, background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.14)', pointerEvents: 'none', zIndex: 0 },
+  navPill:    { position: 'absolute', left: 0, right: 0, borderRadius: 9, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', pointerEvents: 'none', zIndex: 0 },
   bottom:     { borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 8 },
   userRow:    { display: 'flex', alignItems: 'center', gap: 9, paddingLeft: 4, overflow: 'hidden' },
-  userAvatar: { width: 26, height: 26, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid rgba(0,200,150,0.3)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 },
+  userAvatar: { width: 26, height: 26, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 },
   userName:   { fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   logoutBtn:  { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '8px 12px' },
   main:       { flex: 1, padding: 'var(--page-px)', minHeight: '100vh' },

@@ -121,17 +121,17 @@ const S: Record<string, React.CSSProperties> = {
 
   chat:       { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 },
   chatHeader: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' },
-  aiLogo:     { width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#00A3CC,#4DC8E0)', color: '#060D10', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  aiLogo:     { width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   aiName:     { fontSize: 15, fontWeight: 700, color: 'var(--text)' },
   aiSub:      { fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 },
 
   messages:   { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4, marginBottom: 16 },
   empty:      { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, textAlign: 'center' as const, padding: '20px 40px' },
-  emptyLogo:  { width: 60, height: 60, borderRadius: 18, background: 'rgba(0,163,204,0.1)', border: '1px solid rgba(0,163,204,0.2)', color: '#00A3CC', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyLogo:  { width: 60, height: 60, borderRadius: 18, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyTitle: { fontSize: 17, fontWeight: 700, marginBottom: 8 },
   emptySub:   { fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 },
 
-  bubbleUser: { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 14, lineHeight: 1.55, background: 'var(--primary)', color: '#060D10', alignSelf: 'flex-end', fontWeight: 500 },
+  bubbleUser: { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 14, lineHeight: 1.55, background: 'var(--primary)', color: '#FFFFFF', alignSelf: 'flex-end', fontWeight: 500 },
   bubbleAi:   { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 16px 4px', fontSize: 14, lineHeight: 1.55, background: 'var(--surface-2)', border: '1px solid var(--border)', alignSelf: 'flex-start', color: 'var(--text)', whiteSpace: 'pre-wrap' as const },
   dot:        { width: 6, height: 6, borderRadius: '50%', background: 'var(--text-muted)' },
 

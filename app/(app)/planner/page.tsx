@@ -580,7 +580,7 @@ export default function PlannerPage() {
                       }}>
                         <div style={{
                           flexShrink: 0, width: 42, height: 42, borderRadius: 8,
-                          background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.25)',
+                          background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 12, fontWeight: 800, color: 'var(--primary)',
                         }}>

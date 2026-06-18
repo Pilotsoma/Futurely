@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -61,31 +60,32 @@ export default function AIChatPage() {
   const [input, setInput]         = useState('')
   const [sending, setSending]     = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const searchParams = useSearchParams()
-  const handledQ = useRef<string | null>(null)
+  // Holds a message that should be auto-sent once the component is ready
+  const pendingAutoSend = useRef<string | null>(null)
 
   useEffect(() => {
     const loaded = loadSessions()
     setSessions(loaded)
     saveSessions(loaded)
-    // one-time localStorage prefill (legacy path)
-    const prefill = localStorage.getItem('ns_ai_prefill')
-    if (prefill) {
-      localStorage.removeItem('ns_ai_prefill')
-      void handleSend(prefill)
+
+    // Check for a message passed from the dashboard AiBar via sessionStorage
+    const pending = sessionStorage.getItem('ns_ai_pending')
+    if (pending) {
+      pendingAutoSend.current = pending
+      // Delay removal so React Strict Mode's double-invoke (dev only) can read it on remount
+      setTimeout(() => sessionStorage.removeItem('ns_ai_pending'), 100)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Fires on mount AND whenever the URL changes (e.g. navigating from dashboard while page is already mounted)
+  // Separate effect: fires after the initial state is set, then auto-sends
   useEffect(() => {
-    const q = searchParams.get('q')
-    if (!q || q === handledQ.current) return
-    handledQ.current = q
-    window.history.replaceState({}, '', '/ai')
-    void handleSend(q)
+    if (pendingAutoSend.current && !sending) {
+      const msg = pendingAutoSend.current
+      pendingAutoSend.current = null
+      void handleSend(msg)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
+  }, [sessions])
 
   function startNewChat() {
     setActiveId(null)
@@ -110,7 +110,7 @@ export default function AIChatPage() {
     })
   }
 
-  async function handleSend(text?: string) {
+  const handleSend = useCallback(async function handleSend(text?: string) {
     const msg = (text ?? input).trim()
     if (!msg || sending) return
     setInput('')
@@ -146,7 +146,8 @@ export default function AIChatPage() {
       setSending(false)
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
     }
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, sending, messages, sessions, activeId])
 
   return (
     <div className="fade-up" style={S.shell}>
@@ -216,8 +217,8 @@ export default function AIChatPage() {
             </div>
           ))}
           {sending && (
-            <div style={{ ...S.bubbleAi, color: 'var(--text-muted)', display: 'flex', gap: 4, alignItems: 'center' }}>
-              <span style={S.dot}/><span style={S.dot}/><span style={S.dot}/>
+            <div style={{ ...S.bubbleAi, display: 'flex', gap: 6, alignItems: 'center', padding: '14px 18px' }}>
+              <span className="ai-dot"/><span className="ai-dot"/><span className="ai-dot"/>
             </div>
           )}
           <div ref={bottomRef} />
@@ -272,16 +273,15 @@ const S: Record<string, React.CSSProperties> = {
   // Chat
   chat:             { flex: 1, display: 'flex', flexDirection: 'column' as const, minHeight: 0 },
   chatHeader:       { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' },
-  aiLogo:           { width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#4B6EFF,#00C896)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  aiLogo:           { width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#2B4A8E,#2D6A4F)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   aiName:           { fontSize: 15, fontWeight: 700, color: 'var(--text)' },
   aiSub:            { fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 },
   messages:         { flex: 1, overflowY: 'auto' as const, display: 'flex', flexDirection: 'column' as const, gap: 10, paddingRight: 4, marginBottom: 16 },
   empty:            { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', flex: 1, textAlign: 'center' as const, padding: '20px 40px' },
-  emptyLogo:        { width: 60, height: 60, borderRadius: 18, background: 'var(--primary-dim)', border: '1px solid rgba(0,200,150,0.2)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyLogo:        { width: 60, height: 60, borderRadius: 18, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   emptyTitle:       { fontSize: 17, fontWeight: 700, marginBottom: 8 },
   emptySub:         { fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 },
-  bubbleUser:       { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 14, lineHeight: 1.55, background: 'var(--primary)', color: '#060D10', alignSelf: 'flex-end', fontWeight: 500 },
+  bubbleUser:       { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 14, lineHeight: 1.55, background: 'var(--primary)', color: '#FFFFFF', alignSelf: 'flex-end', fontWeight: 500 },
   bubbleAi:         { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 16px 4px', fontSize: 14, lineHeight: 1.55, background: 'var(--surface-2)', border: '1px solid var(--border)', alignSelf: 'flex-start', color: 'var(--text)', whiteSpace: 'pre-wrap' as const },
-  dot:              { width: 6, height: 6, borderRadius: '50%', background: 'var(--text-muted)' },
   inputBar:         { display: 'flex', gap: 10 },
 }

@@ -27,10 +27,16 @@ model User {
   role                     String                   @default("STUDENT")
   chatBanned               Boolean                  @default(false)
   chatMutedUntil           DateTime?
+  failedLoginAttempts      Int                      @default(0)
+  lockedUntil              DateTime?
   deletedAt                DateTime?
+<<<<<<< HEAD
   emailVerified            Boolean                  @default(false)
   emailVerificationToken   String?                  @unique
   emailVerificationExpiry  DateTime?
+=======
+  lastSeenAt               DateTime?
+>>>>>>> f01817b64eca5105b905754c54e92d32bd21eff3
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt
   assignments              Assignment[]
@@ -361,6 +367,7 @@ model CanvasConnection {
   lastSynced        DateTime?
   syncStatus        String?
   syncError         String?
+  tokenInvalid      Boolean   @default(false)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -102,6 +102,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+  logout: () =>
+    request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
   me: () => request<StudentData>('/api/students/me'),
   updateProfile: (fields: { satScore?: number | null; actScore?: number | null; futureDecision?: string | null }) =>
     request<{ id: number }>('/api/students/me/profile', {
@@ -347,7 +349,7 @@ export const api = {
     request<FeedUserProfile>(`/api/feed/users/${targetUserId}/profile`),
 
   feedSearchUsers: (q: string) =>
-    request<Array<{ id: number; name: string | null; email: string; tag: string | null; tagColor: string | null }>>(
+    request<Array<{ id: number; name: string | null; tag: string | null; tagColor: string | null; avatarUrl?: string | null }>>(
       `/api/feed/users/search?q=${encodeURIComponent(q)}`,
     ),
 
@@ -417,6 +419,15 @@ export const api = {
   feedDeleteUser: (targetUserId: number) =>
     request<{ deleted: boolean }>(`/api/feed/users/${targetUserId}`, { method: 'DELETE' }),
 
+  feedDevStats: () =>
+    request<{ totalCoins: number; totalInventoryValue: number; userCount: number }>('/api/feed/dev-stats'),
+
+  feedAdjustCoins: (targetUserId: number, action: 'add' | 'remove' | 'zero', amount?: number) =>
+    request<{ coins: number }>(`/api/feed/users/${targetUserId}/coins`, {
+      method: 'PUT',
+      body: JSON.stringify({ action, amount }),
+    }),
+
   feedCreateGiveaway: (data: { body: string; durationMinutes: number; giveawayTag?: string; giveawayTagColor?: string; giveawayCoinAmount?: number; giveawayItemType?: string; giveawayItemId?: string; giveawayItemRarity?: string }) =>
     request<FeedPost>('/api/feed/posts/giveaway', {
       method: 'POST',
@@ -478,8 +489,66 @@ export const api = {
       { method: 'POST' }
     ),
 
+  canvasDashboard: (canvasInstanceUrl?: string) =>
+    request<{ canvasInstanceUrl: string; todo: CanvasTodoItem[]; courses: CanvasCourseWithGrade[] }>(
+      `/api/integrations/canvas/dashboard${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasCourseModules: (courseId: number, canvasInstanceUrl?: string) =>
+    request<CanvasModule[]>(
+      `/api/integrations/canvas/courses/${courseId}/modules${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasCourseAnnouncements: (courseId: number, canvasInstanceUrl?: string) =>
+    request<CanvasAnnouncement[]>(
+      `/api/integrations/canvas/courses/${courseId}/announcements${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasAssignmentDetail: (courseId: number, assignmentId: number, canvasInstanceUrl?: string) =>
+    request<CanvasAssignmentDetail>(
+      `/api/integrations/canvas/courses/${courseId}/assignments/${assignmentId}${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasCourseFiles: (courseId: number, canvasInstanceUrl?: string) =>
+    request<CanvasCourseFile[]>(
+      `/api/integrations/canvas/courses/${courseId}/files${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasCoursePage: (courseId: number, pageSlug: string, canvasInstanceUrl?: string) =>
+    request<CanvasPage>(
+      `/api/integrations/canvas/courses/${courseId}/pages/${encodeURIComponent(pageSlug)}${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasDiscussion: (courseId: number, topicId: number, canvasInstanceUrl?: string) =>
+    request<{ topic: CanvasDiscussionTopic; view: CanvasDiscussionView }>(
+      `/api/integrations/canvas/courses/${courseId}/discussions/${topicId}${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasDiscussionPost: (courseId: number, topicId: number, body: { message: string; parentEntryId?: number; canvasInstanceUrl?: string }) =>
+    request<{ id: number }>(
+      `/api/integrations/canvas/courses/${courseId}/discussions/${topicId}/entries`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+
+  canvasQuiz: (courseId: number, quizId: number, canvasInstanceUrl?: string) =>
+    request<{ quiz: CanvasQuizDetail; questions: CanvasQuizQuestion[]; submissions: CanvasQuizSubmission[] }>(
+      `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasSubmitAssignment: (courseId: number, assignmentId: number, submission: { submissionType: 'online_text_entry' | 'online_url'; body?: string; url?: string; canvasInstanceUrl?: string }) =>
+    request<{ ok: boolean }>(
+      `/api/integrations/canvas/courses/${courseId}/assignments/${assignmentId}/submit`,
+      { method: 'POST', body: JSON.stringify(submission) },
+    ),
+
   canvasGrades: () =>
     request<CanvasGradesConnection[]>('/api/integrations/canvas/grades'),
+
+  canvasRefreshToken: (canvasInstanceUrl: string, newToken: string) =>
+    request<{ success: boolean }>(
+      '/api/integrations/canvas/refresh-token',
+      { method: 'POST', body: JSON.stringify({ canvasInstanceUrl, newToken }) },
+    ),
 
   canvasDisconnect: (canvasInstanceUrl?: string) =>
     request<{ disconnected: boolean; deletedAssignmentsCount: number; canvasInstanceUrl?: string }>(
@@ -541,7 +610,7 @@ export const api = {
   marketplaceQuicksellDuplicates: (exclude: string[] = []) =>
     request<{ coins: number; sold: number; totalPayout: number }>('/api/marketplace/quicksell/duplicates', { method: 'POST', body: JSON.stringify({ exclude }), headers: { 'Content-Type': 'application/json' } }),
 
-  marketplaceEquip: (type: 'name-color' | 'pfp', itemId: string | null) =>
+  marketplaceEquip: (type: 'name-color' | 'pfp' | 'tag', itemId: string | null) =>
     request<{ nameColor?: string | null; pfpEffect?: string | null }>('/api/marketplace/equip', {
       method: 'PUT',
       body: JSON.stringify({ type, itemId }),
@@ -622,6 +691,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ message }),
     }),
+
+  adminStats: () =>
+    request<{ totalUsers: number; activeUsers: number; liveUsers: number }>('/api/marketplace/admin/stats'),
 }
 
 // ── Planner types ─────────────────────────────────────────────────────────
@@ -644,6 +716,7 @@ export interface CanvasConnectionInfo {
   lastSynced: string | null
   syncStatus: string | null
   syncError: string | null
+  tokenInvalid: boolean
 }
 
 export interface CanvasStatus {
@@ -655,9 +728,186 @@ export interface CanvasStatus {
   lastSynced: string | null
   syncStatus: string | null
   syncError: string | null
+  tokenInvalid?: boolean
 }
 
-// ── Canvas Grades types ────────────────────────────────────────────────────
+// ── Canvas Dashboard types ─────────────────────────────────────────────────
+
+export interface CanvasCourseWithGrade {
+  id: number
+  name: string
+  currentScore: number | null
+  currentGrade: string | null
+}
+
+export interface CanvasTodoItem {
+  type: string
+  assignment: {
+    id: number
+    name: string
+    due_at: string | null
+    points_possible: number | null
+    course_id: number
+    html_url: string
+  }
+  context_name: string
+  html_url: string
+  ignore: string
+}
+
+export interface CanvasModuleItem {
+  id: number
+  title: string
+  type: string
+  content_id: number | null
+  html_url: string
+  url: string | null
+  published: boolean
+  completion_requirement: {
+    type: string
+    min_score?: number
+    completed: boolean
+  } | null
+}
+
+export interface CanvasModule {
+  id: number
+  name: string
+  position: number
+  unlock_at: string | null
+  items_count: number
+  items: CanvasModuleItem[]
+}
+
+export interface CanvasAnnouncement {
+  id: number
+  title: string
+  message: string
+  posted_at: string
+  author: { display_name: string; avatar_image_url: string | null }
+  read_state: string
+  html_url: string
+}
+
+export interface CanvasAssignmentDetail {
+  id: number
+  name: string
+  description: string | null
+  due_at: string | null
+  points_possible: number | null
+  submission_types: string[]
+  html_url: string
+  course_id: number
+  submission: CanvasGradesSubmission | null
+  rubric?: Array<{
+    id: string
+    description: string
+    long_description: string
+    points: number
+  }>
+}
+
+export interface CanvasPage {
+  url: string
+  title: string
+  body: string | null
+  updated_at: string
+}
+
+export interface CanvasDiscussionParticipant {
+  id: number
+  display_name: string
+  avatar_image_url: string | null
+}
+
+export interface CanvasDiscussionEntry {
+  id: number
+  user_id: number
+  message: string
+  created_at: string
+  replies?: CanvasDiscussionEntry[]
+  read_state?: string
+}
+
+export interface CanvasDiscussionTopic {
+  id: number
+  title: string
+  message: string | null
+  posted_at: string
+  author: { display_name: string; avatar_image_url: string | null }
+  html_url: string
+}
+
+export interface CanvasDiscussionView {
+  participants: CanvasDiscussionParticipant[]
+  unread_entries: number[]
+  view: CanvasDiscussionEntry[]
+}
+
+export interface CanvasQuizAnswer {
+  id: number
+  text: string
+  html?: string
+  weight: number
+}
+
+export interface CanvasQuizQuestion {
+  id: number
+  question_name: string
+  question_text: string
+  question_type: string
+  points_possible: number
+  answers?: CanvasQuizAnswer[]
+}
+
+export interface CanvasQuizDetail {
+  id: number
+  title: string
+  description: string | null
+  time_limit: number | null
+  question_count: number
+  quiz_type: string
+  allowed_attempts: number
+  points_possible: number
+  due_at: string | null
+  show_correct_answers: boolean
+  html_url: string
+}
+
+export interface CanvasQuizSubmissionData {
+  question_id: number
+  correct: boolean | null
+  points: number
+  answer_id?: number
+  text?: string
+  answer_for_text_entry?: string
+}
+
+export interface CanvasQuizSubmission {
+  id: number
+  quiz_id: number
+  score: number | null
+  kept_score: number | null
+  workflow_state: string
+  finished_at: string | null
+  attempt: number
+  quiz_points_possible: number
+  submission_data?: CanvasQuizSubmissionData[]
+}
+
+export interface CanvasCourseFile {
+  id: number
+  display_name: string
+  filename: string
+  'content-type': string
+  url: string
+  size: number
+  updated_at: string
+  folder_id: number
+  locked: boolean
+}
+
+// ── Canvas Grades types ─────────────────────────────────────────────────────
 
 export interface CanvasGradesSubmission {
   score: number | null
@@ -697,7 +947,6 @@ export interface CanvasGradesConnection {
 export interface FeedUser {
   id: number
   name: string | null
-  email: string
   tag: string | null
   tagColor: string | null
   nameColor: string | null
@@ -749,7 +998,6 @@ export interface FeedComment {
 export interface FeedUserProfile {
   id: number
   name: string | null
-  email: string
   tag: string | null
   tagColor: string | null
   nameColor: string | null
@@ -763,6 +1011,7 @@ export interface FeedUserProfile {
   deletedAt?: string | null
   allTags: Array<{ tag: string; tagColor: string }>
   _count: { followers: number; following: number; posts: number }
+  coins?: number
 }
 
 export interface MarketplaceItem {
@@ -783,6 +1032,8 @@ export interface TagInventoryItem {
 export interface InventoryData {
   coins: number
   canClaimToday: boolean
+  tag: string | null
+  tagColor: string | null
   nameColor: string | null
   pfpEffect: string | null
   ownedTags: TagInventoryItem[]
