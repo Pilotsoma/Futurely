@@ -527,23 +527,13 @@ function SpinWheelModal({
         {/* Wheel (static) + orbiting arrow */}
         <div style={{ width: 300, height: 300 }}>
           <svg width={300} height={300} viewBox="0 0 300 300">
-            <defs>
-              <linearGradient id="mythicRainbow" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%"   stopColor="#ff0000" />
-                <stop offset="20%"  stopColor="#ffff00" />
-                <stop offset="40%"  stopColor="#00ff00" />
-                <stop offset="60%"  stopColor="#00bfff" />
-                <stop offset="80%"  stopColor="#8000ff" />
-                <stop offset="100%" stopColor="#ff0000" />
-              </linearGradient>
-            </defs>
             {segments.map(seg => (
               <path
                 key={seg.rarity}
                 d={segmentPath(seg.start, seg.end)}
-                fill={getRarityWheelColor(seg.rarity)}
-                stroke={seg.rarity === 'Mythic' ? 'url(#mythicRainbow)' : 'none'}
-                strokeWidth={seg.rarity === 'Mythic' ? 2 : 0}
+                fill={seg.rarity === 'Mythic' ? '#ff0000' : getRarityWheelColor(seg.rarity)}
+                stroke="none"
+                className={seg.rarity === 'Mythic' ? 'mythic-hue' : undefined}
               />
             ))}
             {/* Red arrow orbiting the center hub — rotates via CSS, base hidden under the hub */}
@@ -567,8 +557,8 @@ function SpinWheelModal({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', justifyContent: 'center' }}>
           {segments.map(seg => (
             <div key={seg.rarity} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: getRarityWheelColor(seg.rarity), display: 'inline-block', flexShrink: 0 }} />
-              <span style={{ color: getRarityWheelColor(seg.rarity), fontWeight: 700 }}>{seg.rarity}</span>
+              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : undefined} style={{ width: 10, height: 10, borderRadius: 2, background: seg.rarity === 'Mythic' ? '#ff0000' : getRarityWheelColor(seg.rarity), display: 'inline-block', flexShrink: 0 }} />
+              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : undefined} style={{ color: seg.rarity === 'Mythic' ? '#ff0000' : getRarityWheelColor(seg.rarity), fontWeight: 700 }}>{seg.rarity}</span>
               <span style={{ color: 'var(--text-muted)' }}>{seg.pct}%</span>
             </div>
           ))}

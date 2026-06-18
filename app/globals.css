@@ -464,6 +464,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 }
 .mythic-text { animation: mythicText 1.5s ease-in-out infinite; }
 
+@keyframes mythicHue {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+.mythic-hue { animation: mythicHue 2s linear infinite; }
+
 /* ── Spinner ──────────────────────────────────────────────────────────────── */
 @keyframes spin {
   from { transform: rotate(0deg); }
