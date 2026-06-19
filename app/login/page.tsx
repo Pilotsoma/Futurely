@@ -126,7 +126,9 @@ export default function LoginPage() {
       }
       router.push(result.user.role === 'PARENT' ? '/parent/dashboard' : '/dashboard')
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'ACCOUNT_LOCKED' && err.secondsRemaining) {
+      if (err instanceof ApiError && err.code === 'NAME_TAKEN') {
+        setError('That display name is already taken. Please choose a different one.')
+      } else if (err instanceof ApiError && err.code === 'ACCOUNT_LOCKED' && err.secondsRemaining) {
         const totalMins = Math.ceil(err.secondsRemaining / 60)
         const hours = Math.floor(totalMins / 60)
         const mins = totalMins % 60

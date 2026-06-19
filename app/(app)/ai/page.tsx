@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -53,39 +54,33 @@ function formatSessionDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export default function AIChatPage() {
+function AIChatInner() {
+  const searchParams = useSearchParams()
   const [sessions, setSessions]   = useState<ChatSession[]>([])
   const [activeId, setActiveId]   = useState<string | null>(null)
   const [messages, setMessages]   = useState<Msg[]>([])
   const [input, setInput]         = useState('')
   const [sending, setSending]     = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  // Holds a message that should be auto-sent once the component is ready
-  const pendingAutoSend = useRef<string | null>(null)
+  const autoSentRef = useRef(false)
 
   useEffect(() => {
     const loaded = loadSessions()
     setSessions(loaded)
     saveSessions(loaded)
-
-    // Check for a message passed from the dashboard AiBar via sessionStorage
-    const pending = sessionStorage.getItem('ns_ai_pending')
-    if (pending) {
-      pendingAutoSend.current = pending
-      // Delay removal so React Strict Mode's double-invoke (dev only) can read it on remount
-      setTimeout(() => sessionStorage.removeItem('ns_ai_pending'), 100)
-    }
   }, [])
 
-  // Separate effect: fires after the initial state is set, then auto-sends
+  // Auto-send the ?q= param from the dashboard AiBar exactly once
   useEffect(() => {
-    if (pendingAutoSend.current && !sending) {
-      const msg = pendingAutoSend.current
-      pendingAutoSend.current = null
-      void handleSend(msg)
+    const q = searchParams.get('q')
+    if (q && !autoSentRef.current && !sending) {
+      autoSentRef.current = true
+      // Remove the param from URL without reloading so it doesn't re-fire on re-render
+      window.history.replaceState({}, '', '/ai')
+      void handleSend(q)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessions])
+  }, [searchParams])
 
   function startNewChat() {
     setActiveId(null)
@@ -248,6 +243,14 @@ export default function AIChatPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AIChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <AIChatInner />
+    </Suspense>
   )
 }
 

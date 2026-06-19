@@ -185,7 +185,17 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 const name = senderFirst(n)
                 const icon = n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : n.type === 'LISTING_SOLD' ? '🏷️' : n.type.startsWith('TRADE') ? '🔄' : n.type === 'ASSIGNMENT_CREATED' ? '📚' : '💬'
                 const link = (label: React.ReactNode) => (
-                  <b onClick={() => { setShowPanel(false); if (onOpenProfile) { onOpenProfile(n.fromUserId) } else if (pathname === '/feed') { window.dispatchEvent(new CustomEvent('ns:open-profile', { detail: n.fromUserId })) } else { sessionStorage.setItem('ns_open_profile', String(n.fromUserId)); router.push('/feed') } }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
+                  <b onClick={() => {
+                    setShowPanel(false)
+                    if (onOpenProfile) {
+                      onOpenProfile(n.fromUserId)
+                    } else if (pathname === '/feed') {
+                      window.dispatchEvent(new CustomEvent('ns:open-profile', { detail: n.fromUserId }))
+                    } else {
+                      // Use ?profile= query param — more reliable than sessionStorage on Vercel
+                      router.push(`/feed?profile=${n.fromUserId}`)
+                    }
+                  }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
                 )
                 let body: React.ReactNode
                 if (n.type === 'FOLLOW')           body = <>{link(name)} started following you</>

@@ -422,8 +422,9 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
       try {
         const studentInfo = await getStudentInfo(sessionToken)
         if (studentInfo.name?.trim()) {
-          await prisma.user.update({ where: { id: userId }, data: { name: studentInfo.name.trim() } })
-          console.log('[GRADES ROUTER] Background sync: updated user name:', studentInfo.name.trim())
+          // Write to hacName — never overwrite the user's chosen display name
+          await prisma.user.update({ where: { id: userId }, data: { hacName: studentInfo.name.trim() } })
+          console.log('[GRADES ROUTER] Background sync: updated hacName:', studentInfo.name.trim())
         }
         const profileUpdate: Record<string, unknown> = {}
         if (studentInfo.counselor?.trim()) profileUpdate.counselorName = studentInfo.counselor.trim()
@@ -1120,9 +1121,9 @@ router.post('/sync-profile', asyncHandler(async (req: AuthRequest, res: Response
     const profileUpdate: Record<string, unknown> = {}
     const userUpdate: Record<string, unknown> = {}
 
-    // Update name from HAC
+    // Write to hacName — never overwrite the user's chosen display name
     if (studentInfo.name?.trim()) {
-      userUpdate.name = studentInfo.name.trim()
+      userUpdate.hacName = studentInfo.name.trim()
     }
 
     // Update counselor from HAC

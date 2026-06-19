@@ -240,22 +240,35 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     return
   }
 
-  const displayName = name ?? email.split('@')[0]
-  const nameCheck = filterUsername(displayName)
-  if (!nameCheck.ok) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'INAPPROPRIATE_NAME', message: nameCheck.reason },
-    })
-    return
+  // Display name is optional — only validate if provided
+  const displayName = name?.trim() || null
+  if (displayName) {
+    const nameCheck = filterUsername(displayName)
+    if (!nameCheck.ok) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'INAPPROPRIATE_NAME', message: nameCheck.reason },
+      })
+      return
+    }
   }
 
   try {
-    const existing = await prisma.user.findUnique({ where: { email } })
-    if (existing) {
+    const [emailTaken, nameTaken] = await Promise.all([
+      prisma.user.findUnique({ where: { email } }),
+      displayName ? prisma.user.findFirst({ where: { name: displayName } }) : Promise.resolve(null),
+    ])
+    if (emailTaken) {
       res.status(409).json({
         data: null,
         error: { code: 'CONFLICT', message: 'An account with this email already exists' },
+      })
+      return
+    }
+    if (nameTaken) {
+      res.status(409).json({
+        data: null,
+        error: { code: 'NAME_TAKEN', message: 'That display name is already taken. Please choose another.' },
       })
       return
     }
@@ -272,7 +285,7 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
       data: {
         email,
         passwordHash,
-        name: displayName,
+        name: displayName,   // null if not provided — hacName will be populated from HAC sync
         role: userRole,
         tag: defaultTag,
         tagColor: 'grey',

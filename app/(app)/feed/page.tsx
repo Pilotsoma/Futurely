@@ -26,12 +26,14 @@ function parseHacName(raw: string | null | undefined): string {
   return raw
 }
 
-function displayName(user: { name: string | null }): string {
-  return parseHacName(user.name) || 'User'
+function displayName(user: { name: string | null; hacName?: string | null }): string {
+  if (user.name) return user.name
+  if (user.hacName) return parseHacName(user.hacName)
+  return 'User'
 }
 
-function initials(user: { name: string | null }): string {
-  const n = parseHacName(user.name) || 'U'
+function initials(user: { name: string | null; hacName?: string | null }): string {
+  const n = displayName(user)
   const parts = n.trim().split(' ')
   return parts.length >= 2
     ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
@@ -236,6 +238,9 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
               <div className={pfpClass(profile.pfpEffect)} style={{ ...O.avatar, ...pfpStyle(profile.pfpEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(profile)}</div>
               <div style={{ flex: 1 }}>
                 <div className={nameColorClass(profile.nameColor)} style={{ ...O.name, ...nameColorStyle(profile.nameColor) }}>{displayName(profile)}</div>
+                {profile.hacName && parseHacName(profile.hacName) !== displayName(profile) && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>{parseHacName(profile.hacName)}</div>
+                )}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 3 }}>
                   {(profile.chatBanned || (profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())) && (
                     <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, display: 'inline-block', ...(profile.chatBanned ? { color: '#EF4444', background: '#EF444422', border: '1px solid #EF4444' } : { color: '#f97316', background: '#f9731622', border: '1px solid #f97316' }) }}>

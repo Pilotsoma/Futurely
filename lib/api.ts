@@ -1029,6 +1029,7 @@ export interface FeedComment {
 export interface FeedUserProfile {
   id: number
   name: string | null
+  hacName?: string | null
   tag: string | null
   tagColor: string | null
   nameColor: string | null

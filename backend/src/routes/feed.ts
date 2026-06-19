@@ -75,7 +75,7 @@ const USER_SELECT = {
 } as const;
 
 type RawUser = {
-  id: number; name: string | null;
+  id: number; name: string | null; hacName?: string | null;
   tag: string | null; tagColor: string | null;
   nameColor: string | null; pfpEffect: string | null; avatarUrl: string | null;
   chatBanned: boolean; chatMutedUntil: Date | null;
@@ -83,10 +83,10 @@ type RawUser = {
 };
 
 function toFeedUser(u: RawUser) {
-  if (u.deletedAt) return { id: u.id, name: u.name, tag: 'DELETED', tagColor: '#6B7280', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  if (u.chatBanned) return { id: u.id, name: u.name, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  return { id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
+  if (u.deletedAt) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'DELETED', tagColor: '#6B7280', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
+  if (u.chatBanned) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
+  if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
+  return { id: u.id, name: u.name, hacName: u.hacName, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
 }
 
 function parseAllTags(raw: unknown): Array<{ tag: string; tagColor: string }> {
@@ -769,9 +769,9 @@ router.get('/search', async (req: Request, res: Response) => {
     if (!q) return res.json({ data: [] });
     const isDev = await hasDevPowers(userId);
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
+      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
-      select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
+      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -814,9 +814,9 @@ router.get('/users/search', async (req: Request, res: Response) => {
     if (!q) return res.json({ data: [] });
     const isDev = await hasDevPowers(userId);
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
+      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
-      select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
+      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
