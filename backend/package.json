@@ -5,7 +5,7 @@
   "main": "api/index.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "prisma migrate deploy && prisma generate && tsc",
+    "build": "node scripts/prisma-baseline.js && prisma migrate deploy && prisma generate && tsc",
     "postinstall": "prisma generate",
     "start": "node dist/src/index.js",
     "db:migrate": "prisma migrate dev",
