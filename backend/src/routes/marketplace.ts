@@ -127,8 +127,8 @@ export const SEED_PRICES: Record<string, number> = {
   'pfp:glow-pink': 267,      'pfp:glow-purple': 267,
   'pfp:glow-gold': 2000,     'pfp:frame-black': 2000,   'pfp:fill-white': 2000,
   'pfp:rainbow': 50000,
-  // Developer's Curse — expected value: 0.001% × 100000 = 1 coin = spin cost
-  'pfp:curse': 100000,
+  // Developer's Curse — 0.001% chance, estimated market value
+  'pfp:curse': 1_000_000,
 }
 
 // Streak milestone tags below GOAT are soulbound (earn-only, never trade/sell)
@@ -323,7 +323,7 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 // Bump this number whenever SEED_PRICES changes — forces a one-time DB reset
 // to the new values, after which dynamic pricing takes over again.
-const SEED_VERSION = 6
+const SEED_VERSION = 7
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
@@ -488,7 +488,7 @@ async function autoPostUnbox(
 router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const { boxType, quantity: rawQty = 1 } = req.body as { boxType?: string; quantity?: number }
-  const quantity = Math.max(1, Math.min(100, Math.floor(Number(rawQty) || 1)))
+  const quantity = Math.max(1, Math.min(1_000_000, Math.floor(Number(rawQty) || 1)))
 
   if (!boxType || !['tag', 'name-color', 'pfp', 'dev-curse'].includes(boxType)) {
     res.status(400).json({ error: 'boxType must be tag, name-color, pfp, or dev-curse' }); return

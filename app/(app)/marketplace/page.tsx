@@ -677,10 +677,10 @@ function SpinWheelModal({
               <input
                 type="number"
                 min={1}
-                max={100}
+                max={1000000}
                 value={quantity}
                 onChange={e => {
-                  const v = Math.max(1, Math.min(100, parseInt(e.target.value) || 1))
+                  const v = Math.max(1, Math.min(1_000_000, parseInt(e.target.value) || 1))
                   setQuantity(v)
                   setSpinError(null)
                 }}
