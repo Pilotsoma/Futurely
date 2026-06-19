@@ -341,6 +341,46 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 }
 .name-rainbow { animation: nameRainbow 2.3s linear infinite; }
 
+@keyframes nameCurse {
+  0%   { color: #ff0000; text-shadow: 0 0 8px #ff000099; }
+  3%   { color: #ff8800; }
+  6%   { color: #ffdd00; }
+  9%   { color: #00ee00; }
+  12%  { color: #00ddff; }
+  15%  { color: #0044ff; }
+  18%  { color: #cc00ff; text-shadow: 0 0 8px #cc00ff99; }
+  26%  { color: #4080ff; text-shadow: 0 0 12px #4080ffcc; }
+  34%  { color: #5050ee; }
+  44%  { color: #000000; text-shadow: none; }
+  50%  { color: #111111; }
+  56%  { color: #EC4899; text-shadow: 0 0 8px #EC4899cc; }
+  66%  { color: #ffffff; text-shadow: 0 0 8px #ffffffcc; }
+  76%  { color: #EF4444; text-shadow: 0 0 8px #EF4444cc; }
+  90%  { color: #ff0000; text-shadow: 0 0 8px #ff000099; }
+  100% { color: #ff0000; text-shadow: 0 0 8px #ff000099; }
+}
+.name-curse { animation: nameCurse 7s linear infinite; }
+
+@keyframes tagCurse {
+  0%   { background: #ff000022; border-color: #ff0000; color: #ff0000; }
+  3%   { background: #ff880022; border-color: #ff8800; color: #ff8800; }
+  6%   { background: #ffdd0022; border-color: #ffdd00; color: #ccaa00; }
+  9%   { background: #00ee0022; border-color: #00ee00; color: #00aa00; }
+  12%  { background: #00ddff22; border-color: #00ddff; color: #009fbb; }
+  15%  { background: #0044ff22; border-color: #0044ff; color: #0044ff; }
+  18%  { background: #cc00ff22; border-color: #cc00ff; color: #cc00ff; }
+  26%  { background: #0a003088; border-color: #6040cc; color: #a080ff; }
+  34%  { background: #1a004088; border-color: #a040ff; color: #c080ff; }
+  44%  { background: #05050888; border-color: #1a1a2e; color: #3a2a6e; }
+  50%  { background: #00000088; border-color: #111111; color: #222222; }
+  56%  { background: #EC489922; border-color: #EC4899; color: #EC4899; }
+  66%  { background: #ffffff22; border-color: #e5e5e5; color: #dddddd; }
+  76%  { background: #EF444422; border-color: #EF4444; color: #EF4444; }
+  90%  { background: #ff000022; border-color: #ff0000; color: #ff0000; }
+  100% { background: #ff000022; border-color: #ff0000; color: #ff0000; }
+}
+.tag-curse { animation: tagCurse 7s linear infinite; font-weight: 800 !important; }
+
 @keyframes pfpRainbow {
   0%   { filter: hue-rotate(0deg) saturate(1.4) brightness(1.05); }
   50%  { filter: hue-rotate(180deg) saturate(1.4) brightness(1.05); }

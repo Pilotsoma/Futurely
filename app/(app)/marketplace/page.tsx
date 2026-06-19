@@ -110,8 +110,8 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
       <div key={`${boxType}-${idx}`} style={{ animation: 'boxPreviewFadeIn 0.4s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {boxType === 'tag' && (
           <span
-            className={item.tag === 'GOD' ? 'tag-mythic' : ''}
-            style={item.tag === 'GOD' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : {
+            className={item.tag === 'GOD' ? 'tag-mythic' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+            style={item.tag === 'GOD' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : item.tagColor === 'curse' ? { fontSize: 14, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #ff0000' } : {
               fontSize: 14, fontWeight: 800,
               color: item.tagColor,
               textShadow: item.rarity === 'Legendary' ? `0 0 10px ${rarityColor}88` : undefined,
@@ -125,10 +125,10 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
         )}
         {boxType === 'name-color' && (
           <span
-            className={item.value === 'rainbow' ? 'name-rainbow' : ''}
+            className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''}
             style={{
               fontSize: 16, fontWeight: 800, letterSpacing: '0.3px',
-              color: item.value !== 'rainbow' ? item.value : undefined,
+              color: (item.value !== 'rainbow' && item.value !== 'curse') ? item.value : undefined,
               textShadow: item.rarity === 'Legendary' ? `0 0 10px ${item.value}88` : undefined,
             }}
           >
@@ -201,10 +201,12 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
     ],
   },
   {
-    type: 'dev-curse', icon: '💀', label: "Developer's Curse", desc: '1 coin · mostly Common · 0.001% Curse rarity', cost: 1,
+    type: 'dev-curse', icon: '💀', label: "Developer's Curse", desc: '1 coin · mostly Common · 0.001% each: Curse Tag, Curse Name, Curse PFP', cost: 1,
     drops: [
-      { rarity: 'Common',       pct: '99.999%', items: ['Learner', 'C Student', 'Bottom 100'] },
-      { rarity: 'Curse', pct: '0.001%',  items: ['The Curse'] },
+      { rarity: 'Common', pct: '99.997%', items: ['Learner', 'C Student', 'Bottom 100'] },
+      { rarity: 'Curse',  pct: '0.001%',  items: ['CURSE tag'] },
+      { rarity: 'Curse',  pct: '0.001%',  items: ['Curse Name Color'] },
+      { rarity: 'Curse',  pct: '0.001%',  items: ['The Curse PFP'] },
     ],
   },
 ]
@@ -245,10 +247,12 @@ const SIM_ITEMS: Record<BoxType, SimItem[]> = {
     { id: 'rainbow',        label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic',  type: 'pfp', name: 'Rainbow Animated', value: 'rainbow' },
   ],
   'dev-curse': [
-    { id: 'learner',    label: 'Learner (Common)',           rarity: 'Common',       type: 'tag', tag: 'Learner',    tagColor: '#94A3B8' },
-    { id: 'c-student',  label: 'C Student (Common)',         rarity: 'Common',       type: 'tag', tag: 'C Student',  tagColor: '#78716C' },
-    { id: 'bottom-100', label: 'Bottom 100 (Common)',        rarity: 'Common',       type: 'tag', tag: 'Bottom 100', tagColor: '#6B7280' },
-    { id: 'curse',      label: 'The Curse',  rarity: 'Curse', type: 'pfp', name: 'The Curse', value: 'unobtainable-curse' },
+    { id: 'learner',      label: 'Learner (Common)',        rarity: 'Common', type: 'tag',        tag: 'Learner',    tagColor: '#94A3B8' },
+    { id: 'c-student',    label: 'C Student (Common)',      rarity: 'Common', type: 'tag',        tag: 'C Student',  tagColor: '#78716C' },
+    { id: 'bottom-100',   label: 'Bottom 100 (Common)',     rarity: 'Common', type: 'tag',        tag: 'Bottom 100', tagColor: '#6B7280' },
+    { id: 'curse-tag',    label: 'CURSE tag',               rarity: 'Curse',  type: 'tag',        tag: 'CURSE',      tagColor: 'curse' },
+    { id: 'curse-name',   label: 'Curse Name Color',        rarity: 'Curse',  type: 'name-color', name: 'Curse Name Color', value: 'curse' },
+    { id: 'curse',        label: 'The Curse PFP',           rarity: 'Curse',  type: 'pfp',        name: 'The Curse', value: 'unobtainable-curse' },
   ],
 }
 
@@ -338,7 +342,9 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'frame-black',    type: 'pfp', name: 'Void Fill',         rarity: 'Legendary', value: 'frame-black'    },
   { id: 'fill-white',     type: 'pfp', name: 'White Fill',        rarity: 'Legendary', value: 'fill-white'     },
   { id: 'rainbow',        type: 'pfp', name: 'Rainbow Animated ✨', rarity: 'Mythic',       value: 'rainbow'              },
-  { id: 'curse',         type: 'pfp', name: 'The Curse',           rarity: 'Unobtainable', value: 'unobtainable-curse'   },
+  { id: 'curse',         type: 'pfp',        name: 'The Curse PFP',     rarity: 'Curse', value: 'unobtainable-curse' },
+  { id: 'curse-tag',    type: 'tag',        name: 'CURSE tag',         rarity: 'Curse', tagColor: 'curse' },
+  { id: 'curse-name',   type: 'name-color', name: 'Curse Name Color',  rarity: 'Curse', value: 'curse' },
   // Developer's Curse exclusives (Common, zero-quicksell)
   { id: 'Learner',    type: 'tag', name: 'Learner',    rarity: 'Common', tagColor: '#94A3B8' },
   { id: 'C Student',  type: 'tag', name: 'C Student',  rarity: 'Common', tagColor: '#78716C' },
@@ -552,11 +558,11 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
                   <div className={pfpClass(owner.pfpEffect)} style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...pfpStyle(owner.pfpEffect) }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <button onClick={() => { onViewProfile(owner.id); onClose() }}
-                      className={owner.nameColor === 'rainbow' ? 'name-rainbow' : ''}
-                      style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(owner.nameColor && owner.nameColor !== 'rainbow' ? { color: owner.nameColor } : { color: 'var(--text)' }) }}>
+                      className={owner.nameColor === 'rainbow' ? 'name-rainbow' : owner.nameColor === 'curse' ? 'name-curse' : ''}
+                      style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(owner.nameColor && owner.nameColor !== 'rainbow' && owner.nameColor !== 'curse' ? { color: owner.nameColor } : { color: 'var(--text)' }) }}>
                       {owner.name ?? 'Unknown'}
                     </button>
-                    {owner.tag && <span style={{ fontSize: 11, fontWeight: 700, color: owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>}
+                    {owner.tag && <span className={owner.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, fontWeight: 700, color: owner.tagColor === 'curse' ? undefined : owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>}
                   </div>
                   {owner.rank === 1 && <span style={{ fontSize: 10, color: '#EAB308', fontWeight: 700, background: '#EAB30818', borderRadius: 99, padding: '2px 6px', flexShrink: 0 }}>First</span>}
                 </div>
@@ -783,10 +789,11 @@ function SpinWheelModal({
               <input
                 type="number"
                 min={1}
-                max={100}
+                max={box.type === 'dev-curse' ? 5000 : 100}
                 value={quantity}
                 onChange={e => {
-                  const v = Math.max(1, Math.min(100, parseInt(e.target.value) || 1))
+                  const maxQ = box.type === 'dev-curse' ? 5000 : 100
+                  const v = Math.max(1, Math.min(maxQ, parseInt(e.target.value) || 1))
                   setQuantity(v)
                   setSpinError(null)
                 }}
@@ -931,7 +938,8 @@ export default function MarketplacePage() {
   }, [])
 
   useEffect(() => {
-    setStreak(parseInt(localStorage.getItem('ns_streak') ?? '0', 10))
+    const uid = (() => { try { return (JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { id?: number } | null)?.id ?? 'anon' } catch { return 'anon' } })()
+    setStreak(parseInt(localStorage.getItem(`ns_streak_${uid}`) ?? '0', 10))
 
     api.marketplaceInventory()
       .then(d => { setInv(d); setLoading(false) })
@@ -1403,27 +1411,27 @@ export default function MarketplacePage() {
           title="Preview item"
         >
           {type === 'name-color' && (
-            <span style={{ width: 20, height: 20, borderRadius: '50%', border: '1px solid var(--border)', background: item.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : item.value }} />
+            <span className={item.value === 'curse' ? 'name-curse' : ''} style={{ width: 20, height: 20, borderRadius: '50%', border: '1px solid var(--border)', background: item.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : item.value === 'curse' ? undefined : item.value }} />
           )}
           {type === 'pfp' && (
             <div className={pfpClass(item.value)} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...pfpStyle(item.value) }} />
           )}
           {type === 'tag' && (
             <span
-              className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : ''}
-              style={{ fontSize: 13, fontWeight: 700, color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+              className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+              style={{ fontSize: 13, fontWeight: 700, color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}
             >{truncateTag(item.tag ?? '')}</span>
           )}
         </button>
         {type !== 'tag' && (
-          <span className={item.value === 'rainbow' ? 'name-rainbow' : ''} style={{ flex: 1, fontSize: 13, fontWeight: 600, ...(type === 'name-color' && item.value !== 'rainbow' ? { color: item.value } : { color: 'var(--text)' }) }}>
+          <span className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''} style={{ flex: 1, fontSize: 13, fontWeight: 600, ...(type === 'name-color' && item.value !== 'rainbow' && item.value !== 'curse' ? { color: item.value } : { color: 'var(--text)' }) }}>
             {item.name ?? item.tag}
           </span>
         )}
         {type === 'tag' && (
           <span
-            className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : ''}
-            style={{ flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+            className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+            style={{ flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}
           >{item.tag}</span>
         )}
         <RarityBadge rarity={item.rarity} itemId={item.id} />
@@ -1518,7 +1526,7 @@ export default function MarketplacePage() {
                   {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
                 </span>
                 {item.type === 'tag' ? (
-                  <span className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.tag === 'GOAT' || item.tag === 'GOD') ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
+                  <span className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.tag === 'GOAT' || item.tag === 'GOD' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
                 ) : item.type === 'name-color' ? (
                   <span className={item.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 12, fontWeight: 800, color: item.value === 'rainbow' ? undefined : item.value }}>DUMMY</span>
                 ) : (

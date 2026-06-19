@@ -155,10 +155,15 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    // Track day streak using localStorage
+    // Track day streak using user-specific localStorage keys so accounts
+    // on the same device don't inherit each other's streak.
+    const uid = (() => { try { return (JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { id?: number } | null)?.id ?? 'anon' } catch { return 'anon' } })()
+    const streakKey = `ns_streak_${uid}`
+    const visitKey  = `ns_lastVisit_${uid}`
+
     const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-    const lastVisit = localStorage.getItem('ns_lastVisit')
-    const streak = parseInt(localStorage.getItem('ns_streak') ?? '0', 10)
+    const lastVisit = localStorage.getItem(visitKey)
+    const streak = parseInt(localStorage.getItem(streakKey) ?? '0', 10)
 
     let currentStreak = streak
     if (lastVisit === today) {
@@ -169,25 +174,25 @@ export default function DashboardPage() {
       const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / 86400000)
       if (diffDays === 1) {
         currentStreak = streak + 1
-        localStorage.setItem('ns_streak', String(currentStreak))
+        localStorage.setItem(streakKey, String(currentStreak))
         setDayStreak(currentStreak)
       } else {
         currentStreak = 1
-        localStorage.setItem('ns_streak', '1')
+        localStorage.setItem(streakKey, '1')
         setDayStreak(1)
       }
     } else {
       currentStreak = 1
-      localStorage.setItem('ns_streak', '1')
+      localStorage.setItem(streakKey, '1')
       setDayStreak(1)
     }
-    localStorage.setItem('ns_lastVisit', today)
+    localStorage.setItem(visitKey, today)
 
     // Show milestone celebration popup once per milestone
     if (lastVisit !== today) {
       const milestone = STREAK_MILESTONES.find(m => m.days === currentStreak)
       if (milestone) {
-        const seenKey = `ns_milestone_seen_${milestone.days}`
+        const seenKey = `ns_milestone_seen_${uid}_${milestone.days}`
         if (!localStorage.getItem(seenKey)) {
           localStorage.setItem(seenKey, '1')
           setStreakMilestone(milestone)
