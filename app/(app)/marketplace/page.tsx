@@ -1771,7 +1771,7 @@ export default function MarketplacePage() {
         <>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)' }}>
-              Player Listings — sorted by value
+              User Listings — sorted by value
             </p>
             <button onClick={fetchListings} disabled={listingsLoading}
               style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
@@ -2359,7 +2359,7 @@ export default function MarketplacePage() {
         const rarityOrder: Record<string, number> = { Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5 }
         return (
           <>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20, marginTop: -8 }}>Every item in the game — click any item to see who owns it.</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20, marginTop: -8 }}>Every single item — click any item to see who owns it.</p>
             {sections.map(sec => {
               const items = CATALOG_ALL_ITEMS
                 .filter(i => i.type === sec.type)
