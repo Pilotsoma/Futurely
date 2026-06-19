@@ -40,11 +40,12 @@ export const TAG_BOX_ITEMS: TagItem[] = [
 
 // Special role/staff tags — not in loot boxes, only grantable by DEV/ADMIN
 const SPECIAL_TAGS: { id: string; tag: string; tagColor: string; rarity: string }[] = [
-  { id: 'dev',   tag: 'DEV',   tagColor: '#ff6b6b', rarity: 'Staff'  },
-  { id: 'admin', tag: 'Admin', tagColor: '#EF4444', rarity: 'Staff'  },
-  { id: 'mod',   tag: 'MOD',   tagColor: '#3B82F6', rarity: 'Staff'  },
-  { id: 'vip',   tag: 'VIP',   tagColor: '#A855F7', rarity: 'Staff'  },
-  { id: 'bot',   tag: 'BOT',   tagColor: '#6B7280', rarity: 'Staff'  },
+  { id: 'dev',            tag: 'DEV',      tagColor: '#ff6b6b',       rarity: 'Staff'  },
+  { id: 'admin',          tag: 'Admin',    tagColor: '#EF4444',       rarity: 'Staff'  },
+  { id: 'mod',            tag: 'MOD',      tagColor: '#3B82F6',       rarity: 'Staff'  },
+  { id: 'vip',            tag: 'VIP',      tagColor: '#A855F7',       rarity: 'Staff'  },
+  { id: 'bot',            tag: 'BOT',      tagColor: '#6B7280',       rarity: 'Staff'  },
+  { id: 'verified-blue',  tag: 'Verified', tagColor: 'verified-blue', rarity: 'Mythic' },
 ]
 
 const NAME_COLOR_BOX_ITEMS: ColorItem[] = [
@@ -426,6 +427,7 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
     const ownedTags = rawTags.map(t => {
       const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
              ?? TAG_BOX_ITEMS.find(d => d.tag === t.tag)
+             ?? SPECIAL_TAGS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
       const streakMeta = STREAK_TAG_META[t.tag]
       return { id: def?.id ?? t.tag, tag: t.tag, tagColor: def?.tagColor ?? t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
     })
