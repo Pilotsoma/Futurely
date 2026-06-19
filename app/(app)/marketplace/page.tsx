@@ -621,13 +621,13 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
   const summaryRows = [...summaryMap.values()].sort((a, b) => (RARITY_RANK[a.won.rarity] ?? 99) - (RARITY_RANK[b.won.rarity] ?? 99))
   const highlight = summaryRows.find(g => HIGHLIGHT_RARITIES.includes(g.won.rarity))
 
-  // For > 10 spins: build carousel of each Legendary+ result
-  const carouselCards: BoxResult['won'][] | null = qty > 10 ? (() => {
+  // Build carousel of each Legendary+ result (always)
+  const carouselCards: BoxResult['won'][] | null = (() => {
     const good = result.results.filter(r => HIGHLIGHT_RARITIES.includes(r.won.rarity)).map(r => r.won)
     if (good.length > 0) return good
     const best = [...result.results].sort((a, b) => (RARITY_RANK[a.won.rarity] ?? 99) - (RARITY_RANK[b.won.rarity] ?? 99))[0]
     return best ? [best.won] : []
-  })() : null
+  })()
 
   const safeIdx = carouselCards ? Math.min(cardIdx, carouselCards.length - 1) : 0
   const current = carouselCards?.[safeIdx] ?? null
