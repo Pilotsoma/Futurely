@@ -38,6 +38,12 @@ export default function LoginPage() {
   const [agreedPrivacy, setAgreedPrivacy]       = useState(false)
   const [agreedAge, setAgreedAge]               = useState(false)
 
+  const [showForgot, setShowForgot]       = useState(false)
+  const [forgotEmail, setForgotEmail]     = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotError, setForgotError]     = useState<string | null>(null)
+  const [forgotSent, setForgotSent]       = useState(false)
+
   useEffect(() => {
     function onOutsideClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -135,6 +141,20 @@ export default function LoginPage() {
     } finally { setIsLoading(false); setStep('auth') }
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setForgotError(null)
+    setForgotLoading(true)
+    try {
+      await api.forgotPassword(forgotEmail.trim())
+      setForgotSent(true)
+    } catch (err) {
+      setForgotError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
   const btnLabel = isLoading
     ? step === 'connecting' ? 'Connecting to school portal...'
     : step === 'syncing'    ? 'Syncing grades...'
@@ -185,7 +205,15 @@ export default function LoginPage() {
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Password</label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={styles.label}>Password</label>
+              {mode === 'login' && (
+                <button type="button" onClick={() => { setShowForgot(true); setForgotEmail(email); setForgotError(null); setForgotSent(false) }}
+                  style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: 0 }}>
+                  Forgot password?
+                </button>
+              )}
+            </div>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder={mode !== 'login' ? 'At least 6 characters' : '••••••••'}
               required minLength={mode !== 'login' ? 6 : undefined} style={styles.input} />
@@ -307,6 +335,54 @@ export default function LoginPage() {
           </p>
         )}
       </div>
+
+      {/* ── Forgot Password Modal ── */}
+      {showForgot && (
+        <div style={styles.modalBackdrop} onClick={() => setShowForgot(false)}>
+          <div style={{ ...styles.modalCard, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Reset your password</span>
+              <button type="button" onClick={() => setShowForgot(false)} style={styles.modalClose}>✕</button>
+            </div>
+            <div style={{ padding: '28px 28px 32px' }}>
+              {forgotSent ? (
+                <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                  <div style={{ fontSize: 44 }}>📬</div>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Check your email</p>
+                  <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, maxWidth: 300 }}>
+                    If an account exists for <strong>{forgotEmail}</strong>, a password reset link is on its way. Check your spam folder if you don&apos;t see it.
+                  </p>
+                  <button type="button" onClick={() => setShowForgot(false)} style={{ ...styles.btn, marginTop: 8 }}>
+                    Back to login
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={e => void handleForgotPassword(e)} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                    Enter the email address for your Futurely account and we&apos;ll send you a reset link.
+                  </p>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Email address</label>
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={e => setForgotEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      autoFocus
+                      style={styles.input}
+                    />
+                  </div>
+                  {forgotError && <p style={styles.error}>{forgotError}</p>}
+                  <button type="submit" disabled={forgotLoading || !forgotEmail.trim()} style={{ ...styles.btn, marginTop: 0, opacity: forgotLoading || !forgotEmail.trim() ? 0.55 : 1 }}>
+                    {forgotLoading ? 'Sending...' : 'Send reset link'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Privacy Policy Modal ── */}
       {showPrivacyModal && (

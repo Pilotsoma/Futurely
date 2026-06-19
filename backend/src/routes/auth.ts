@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
+import { promises as dnsPromises } from 'dns'
 import rateLimit from 'express-rate-limit'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
@@ -144,6 +145,21 @@ async function sendVerificationEmail(email: string, token: string): Promise<void
   })
 }
 
+// Returns false only when DNS conclusively confirms the domain has no mail handler.
+// Fails open on timeouts/SERVFAIL so transient DNS issues don't block real users.
+async function hasValidMailDomain(email: string): Promise<boolean> {
+  const domain = email.split('@')[1]?.toLowerCase()
+  if (!domain || !domain.includes('.')) return false
+  try {
+    const records = await dnsPromises.resolveMx(domain)
+    return records.length > 0
+  } catch (err: unknown) {
+    const code = (err as { code?: string }).code
+    if (code === 'ENOTFOUND' || code === 'ENODATA') return false
+    return true // SERVFAIL, ETIMEOUT, etc. → fail open
+  }
+}
+
 async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
   const appUrl = process.env.APP_URL ?? 'https://futurely.app'
   const link = `${appUrl}/reset-password?token=${token}`
@@ -151,12 +167,52 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
     to: email,
     subject: 'Reset your Futurely password',
     html: `
-      <p>You requested a password reset for your Futurely account.</p>
-      <p>Click the link below to reset your password:</p>
-      <p><a href="${link}">Reset Password</a></p>
-      <p>This link expires in ${RESET_TOKEN_EXPIRY_MINUTES} minutes.</p>
-      <p>If you didn't request this, you can safely ignore this email.</p>
-    `,
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F0F4FF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0F4FF;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:480px;background:#ffffff;border-radius:18px;border:1px solid #C0CCE8;box-shadow:0 8px 40px rgba(26,21,14,0.08);overflow:hidden;">
+        <tr>
+          <td style="padding:36px 40px 28px;text-align:center;border-bottom:1px solid #C0CCE8;">
+            <span style="font-size:28px;font-weight:700;color:#050B18;letter-spacing:-0.5px;">Futurely</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 40px 28px;">
+            <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#050B18;">Reset your password</h1>
+            <p style="margin:0 0 24px;font-size:15px;color:#3D4F72;line-height:1.6;">
+              We received a request to reset your Futurely password. Click the button below — this link expires in <strong>${RESET_TOKEN_EXPIRY_MINUTES} minutes</strong>.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center">
+                  <a href="${link}" style="display:inline-block;background:#2979FF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:10px;letter-spacing:0.1px;">
+                    Reset my password
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:28px 0 0;font-size:13px;color:#7B8DB0;line-height:1.6;">
+              If the button doesn't work, copy and paste this link into your browser:<br>
+              <a href="${link}" style="color:#2979FF;word-break:break-all;">${link}</a>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 40px;border-top:1px solid #C0CCE8;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#7B8DB0;line-height:1.5;">
+              If you didn't request a password reset, you can safely ignore this email.<br>
+              Your password won't change.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
   })
 }
 
@@ -452,6 +508,26 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: 
     res.status(400).json({
       data: null,
       error: { code: 'VALIDATION_ERROR', message: 'email required' },
+    })
+    return
+  }
+
+  // Basic format check before DNS lookup
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'Please enter a valid email address.' },
+    })
+    return
+  }
+
+  // MX-record check: reject domains that provably cannot receive email.
+  // This catches typos like @gmal.com or @fakdomain — not whether an account exists.
+  const domainValid = await hasValidMailDomain(email)
+  if (!domainValid) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'That email domain doesn\'t appear to be valid. Please check for typos.' },
     })
     return
   }
