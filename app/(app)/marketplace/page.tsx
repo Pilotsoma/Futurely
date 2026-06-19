@@ -586,7 +586,85 @@ function getRarityWheelColor(rarity: string): string {
 
 type MultiBoxResult = { coins: number; results: Array<{ won: BoxResult['won']; alreadyHad: boolean }> }
 
+function sampleEvenly<T>(arr: T[], n: number): T[] {
+  if (arr.length <= n) return arr
+  const step = arr.length / n
+  return Array.from({ length: n }, (_, i) => arr[Math.floor(i * step)])
+}
+
+const HIGHLIGHT_RARITIES = ['Curse', 'Unobtainable', 'Mythic', 'Legendary']
+
 function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; onClose: () => void }) {
+  const [cardIdx, setCardIdx] = useState(0)
+
+  const qty = result.results.length
+
+  // For > 10 spins: build individual cards for each Legendary+ result
+  const carouselCards: BoxResult['won'][] | null = qty > 10 ? (() => {
+    const good = result.results.filter(r => HIGHLIGHT_RARITIES.includes(r.won.rarity)).map(r => r.won)
+    if (good.length > 0) return good
+    const best = [...result.results].sort((a, b) => (RARITY_RANK[a.won.rarity] ?? 99) - (RARITY_RANK[b.won.rarity] ?? 99))[0]
+    return best ? [best.won] : []
+  })() : null
+
+  if (carouselCards && carouselCards.length > 0) {
+    const safeIdx = Math.min(cardIdx, carouselCards.length - 1)
+    const current = carouselCards[safeIdx]
+    const color = getRarityColor(current.rarity, current.id)
+    return createPortal(
+      <div
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}
+        onClick={onClose}
+      >
+        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>
+          {carouselCards.length > 1
+            ? `✨ ${safeIdx + 1} of ${carouselCards.length} highlights  ·  ${result.coins.toLocaleString()} coins left`
+            : `✨ Best result  ·  ${result.coins.toLocaleString()} coins left`}
+        </div>
+        <div
+          className="ns-card"
+          style={{ padding: '36px 32px', width: '88%', maxWidth: 360, textAlign: 'center', border: `2px solid ${color}`, boxShadow: `0 0 40px ${color}55` }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div style={{ fontSize: 11, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14 }}>
+            {current.rarity}
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 8, color: 'var(--text)' }}>
+            {current.tag
+              ? <span style={{ color: current.tagColor ?? color }}>[{current.tag}]</span>
+              : <span>{current.name}</span>
+            }
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            {current.type === 'tag' ? 'Tag' : current.type === 'name-color' ? 'Name Color' : 'PFP Effect'}
+          </div>
+        </div>
+        {carouselCards.length > 1 && (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+            <button
+              disabled={safeIdx === 0}
+              onClick={() => setCardIdx(i => Math.max(0, i - 1))}
+              style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', cursor: safeIdx === 0 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: safeIdx === 0 ? 0.35 : 1 }}
+            >← Prev</button>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 56, textAlign: 'center' }}>
+              {safeIdx + 1} / {carouselCards.length}
+            </span>
+            <button
+              disabled={safeIdx === carouselCards.length - 1}
+              onClick={() => setCardIdx(i => Math.min(carouselCards.length - 1, i + 1))}
+              style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', cursor: safeIdx === carouselCards.length - 1 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: safeIdx === carouselCards.length - 1 ? 0.35 : 1 }}
+            >Next →</button>
+          </div>
+        )}
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 13, padding: '4px 10px' }}>
+          Done
+        </button>
+      </div>,
+      document.body
+    )
+  }
+
+  // Grouped view for ≤10 spins
   const grouped = new Map<string, { won: BoxResult['won']; count: number }>()
   for (const r of result.results) {
     const key = `${r.won.type}:${r.won.id}`
@@ -595,7 +673,7 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
     else grouped.set(key, { won: r.won, count: 1 })
   }
   const sorted = [...grouped.values()].sort((a, b) => (RARITY_RANK[a.won.rarity] ?? 99) - (RARITY_RANK[b.won.rarity] ?? 99))
-  const highlight = sorted.find(g => ['Curse', 'Unobtainable', 'Mythic', 'Legendary'].includes(g.won.rarity))
+  const highlight = sorted.find(g => HIGHLIGHT_RARITIES.includes(g.won.rarity))
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
       <div className="ns-card" style={{ padding: 28, maxWidth: 420, width: '92%', display: 'flex', flexDirection: 'column', gap: 14 }} onClick={e => e.stopPropagation()}>
@@ -653,6 +731,8 @@ function SpinWheelModal({
   const [spinDuration, setSpinDuration] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [spinError, setSpinError] = useState<string | null>(null)
+  const [multiArrows, setMultiArrows] = useState<Array<{ finalAngle: number; color: string }>>([])
+  const [arrowsLanded, setArrowsLanded] = useState(false)
 
   const segments = useMemo(() => {
     let cum = 0
@@ -671,30 +751,39 @@ function SpinWheelModal({
     if (phase !== 'ready') return
     setSpinError(null)
     setPhase('spinning')
+    setMultiArrows([])
+    setArrowsLanded(false)
     const result = await onSpin(box.type, quantity)
     if (!result) { setPhase('ready'); return }
 
-    if (quantity > 1 || 'results' in result) {
-      onDone(result)
-      onClose()
+    if (quantity === 1 && !('results' in result)) {
+      const singleResult = result as BoxResult
+      const wonSeg = segments.find(s => s.rarity === singleResult.won.rarity) ?? segments[0]
+      const segSize = wonSeg.end - wonSeg.start
+      const margin = Math.min(segSize * 0.15, 5)
+      const landAngle = wonSeg.start + margin + Math.random() * Math.max(0, segSize - margin * 2)
+      const finalPointerAngle = 5 * 360 + landAngle
+      setSpinDuration(4000)
+      setPointerAngle(finalPointerAngle)
+      setTimeout(() => { onDone(singleResult); onClose() }, 4300)
       return
     }
 
-    const singleResult = result as BoxResult
-    const wonSeg = segments.find(s => s.rarity === singleResult.won.rarity) ?? segments[0]
-    const segSize = wonSeg.end - wonSeg.start
-    const margin = Math.min(segSize * 0.15, 5)
-    const landAngle = wonSeg.start + margin + Math.random() * Math.max(0, segSize - margin * 2)
-    // Arrow orbits the center hub — spin 5 full laps then land on the winning segment angle
-    const finalPointerAngle = 5 * 360 + landAngle
-
-    setSpinDuration(4000)
-    setPointerAngle(finalPointerAngle)
-
-    setTimeout(() => {
-      onDone(singleResult)
-      onClose()
-    }, 4300)
+    // Multi-spin: show N arrows spinning to their individual results
+    const multiResult = result as MultiBoxResult
+    const sampled = sampleEvenly(multiResult.results, Math.min(multiResult.results.length, 100))
+    const arrows = sampled.map(r => {
+      const seg = segments.find(s => s.rarity === r.won.rarity) ?? segments[0]
+      const segSize = seg.end - seg.start
+      const margin = Math.min(segSize * 0.15, 5)
+      const landAngle = seg.start + margin + Math.random() * Math.max(0, segSize - margin * 2)
+      const spins = 3 + Math.floor(Math.random() * 3)
+      return { finalAngle: spins * 360 + landAngle, color: getRarityWheelColor(r.won.rarity) }
+    })
+    setMultiArrows(arrows)
+    // After first paint (arrows at 0), trigger the spin animation
+    setTimeout(() => setArrowsLanded(true), 60)
+    setTimeout(() => { onDone(multiResult); onClose() }, 3600)
   }
 
   const CX = 150, CY = 150, R = 130
@@ -735,19 +824,35 @@ function SpinWheelModal({
                 className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined}
               />
             ))}
-            {/* Red arrow orbiting the center hub — rotates via CSS, base hidden under the hub */}
-            <g style={{
-              transformOrigin: `${CX}px ${CY}px`,
-              transform: `rotate(${pointerAngle}deg)`,
-              transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
-            }}>
-              <polygon
-                points={`${CX},${CY - 32} ${CX - 7},${CY - 20} ${CX + 7},${CY - 20}`}
-                fill="#EF4444"
-                style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }}
-              />
-            </g>
-            {/* Center hub: red with black outline, rendered on top to anchor the arrow base */}
+            {/* Single arrow — only for qty=1 */}
+            {quantity === 1 && multiArrows.length === 0 && (
+              <g style={{
+                transformOrigin: `${CX}px ${CY}px`,
+                transform: `rotate(${pointerAngle}deg)`,
+                transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
+              }}>
+                <polygon
+                  points={`${CX},${CY - 32} ${CX - 7},${CY - 20} ${CX + 7},${CY - 20}`}
+                  fill="#EF4444"
+                  style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }}
+                />
+              </g>
+            )}
+            {/* Multi arrows — one per spin (capped at 100), all animate simultaneously */}
+            {multiArrows.map((arrow, i) => (
+              <g key={i} style={{
+                transformOrigin: `${CX}px ${CY}px`,
+                transform: `rotate(${arrowsLanded ? arrow.finalAngle : 0}deg)`,
+                transition: arrowsLanded ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
+              }}>
+                <polygon
+                  points={`${CX},${CY - 28} ${CX - 5},${CY - 18} ${CX + 5},${CY - 18}`}
+                  fill={arrow.color}
+                  fillOpacity={multiArrows.length <= 10 ? 0.75 : multiArrows.length <= 50 ? 0.45 : 0.25}
+                />
+              </g>
+            ))}
+            {/* Center hub: anchors all arrow bases */}
             <circle cx={CX} cy={CY} r={22} fill="#EF4444" stroke="#000" strokeWidth={2} />
           </svg>
         </div>
