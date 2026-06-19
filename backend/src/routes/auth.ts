@@ -545,33 +545,35 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: 
     return
   }
 
-  // Respond 200 immediately — prevents email enumeration
-  res.json({ data: { message: 'If an account exists for that email, a reset link has been sent.' } })
-
+  // Do all work before responding — on Vercel serverless the function can be
+  // killed immediately after res.json(), so fire-and-forget after the response
+  // is unreliable. Always return the same generic message to prevent enumeration.
   try {
     const user = await prisma.user.findUnique({ where: { email } })
-    if (!user || user.deletedAt) return
 
-    // Invalidate any existing unused tokens
-    await prisma.passwordResetToken.updateMany({
-      where: { userId: user.id, usedAt: null },
-      data: { usedAt: new Date() },
-    })
+    if (user && !user.deletedAt) {
+      // Invalidate any existing unused tokens
+      await prisma.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      })
 
-    const rawToken = crypto.randomBytes(32).toString('hex')
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
-    const expiresAt = new Date()
-    expiresAt.setMinutes(expiresAt.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES)
+      const rawToken = crypto.randomBytes(32).toString('hex')
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
+      const expiresAt = new Date()
+      expiresAt.setMinutes(expiresAt.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES)
 
-    await prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt } })
-    logger.info('auth.password_reset_requested', { userId: user.id })
+      await prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt } })
+      logger.info('auth.password_reset_requested', { userId: user.id })
 
-    void sendPasswordResetEmail(email, rawToken).catch((err) =>
-      console.error('Failed to send password reset email:', err),
-    )
+      await sendPasswordResetEmail(email, rawToken)
+    }
   } catch (e) {
     logger.error('auth.error', { event: 'forgot_password', error: e instanceof Error ? e.message : String(e) })
   }
+
+  // Always respond with the same message — never reveal whether the email exists
+  res.json({ data: { message: 'If an account exists for that email, a reset link has been sent.' } })
 })
 
 // ── POST /auth/reset-password ─────────────────────────────────────────────────
