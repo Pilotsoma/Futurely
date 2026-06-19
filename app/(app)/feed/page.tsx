@@ -13,7 +13,7 @@ function VerifiedBadge({ variant, size = 18 }: { variant: 'yellow' | 'blue'; siz
       src={VERIFIED_BADGE_URL}
       alt="Verified"
       style={{ width: size, height: size, verticalAlign: 'middle', flexShrink: 0, display: 'inline-block',
-        filter: variant === 'yellow' ? 'hue-rotate(195deg) saturate(1.1) brightness(0.9)' : undefined }}
+        filter: variant === 'yellow' ? 'hue-rotate(195deg) saturate(2) brightness(1.3)' : undefined }}
     />
   )
 }
