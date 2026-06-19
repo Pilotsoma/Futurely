@@ -381,23 +381,6 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 }
 .tag-curse { animation: tagCurse 7s linear infinite; font-weight: 800 !important; }
 
-.tag-verified-yellow,
-.tag-verified-blue {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 11px;
-  font-weight: 900;
-  color: #ffffff !important;
-  flex-shrink: 0;
-  vertical-align: middle;
-  line-height: 1;
-}
-.tag-verified-yellow { background: #EAB308; }
-.tag-verified-blue   { background: #1D9BF0; }
 
 @keyframes pfpRainbow {
   0%   { filter: hue-rotate(0deg) saturate(1.4) brightness(1.05); }

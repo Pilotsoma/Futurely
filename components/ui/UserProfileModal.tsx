@@ -13,6 +13,18 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+const VERIFIED_BADGE_URL = 'https://static.vecteezy.com/system/resources/thumbnails/047/309/918/small/verified-badge-profile-icon-png.png'
+function VerifiedBadge({ variant, size = 18 }: { variant: 'yellow' | 'blue'; size?: number }) {
+  return (
+    <img
+      src={VERIFIED_BADGE_URL}
+      alt="Verified"
+      style={{ width: size, height: size, verticalAlign: 'middle', flexShrink: 0, display: 'inline-block',
+        filter: variant === 'yellow' ? 'hue-rotate(195deg) saturate(1.1) brightness(0.9)' : undefined }}
+    />
+  )
+}
+
 function parseHacName(raw: string | null | undefined): string {
   if (!raw) return ''
   if (raw.includes(',')) {
@@ -147,7 +159,7 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
                 </div>
                 {profile.tag && !profile.chatBanned && (
                   profile.tagColor === 'verified-yellow' || profile.tagColor === 'verified-blue'
-                    ? <span className={profile.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+                    ? <VerifiedBadge variant={profile.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                     : <span
                         className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
                         style={isDevTag ? S.tagDev : isMythicTag ? { ...S.tagGod, color: undefined, background: undefined, border: undefined } : isGodTag ? S.tagGod : {

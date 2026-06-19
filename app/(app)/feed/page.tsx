@@ -6,6 +6,18 @@ import { useSearchParams } from 'next/navigation'
 import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification, getApiToken } from '@/lib/api'
 import CoinIcon from '@/components/ui/CoinIcon'
 
+const VERIFIED_BADGE_URL = 'https://static.vecteezy.com/system/resources/thumbnails/047/309/918/small/verified-badge-profile-icon-png.png'
+function VerifiedBadge({ variant, size = 18 }: { variant: 'yellow' | 'blue'; size?: number }) {
+  return (
+    <img
+      src={VERIFIED_BADGE_URL}
+      alt="Verified"
+      style={{ width: size, height: size, verticalAlign: 'middle', flexShrink: 0, display: 'inline-block',
+        filter: variant === 'yellow' ? 'hue-rotate(195deg) saturate(1.1) brightness(0.9)' : undefined }}
+    />
+  )
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
   if (diff < 60) return 'just now'
@@ -249,7 +261,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
                   )}
                   {profile.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
                     profile.tagColor === 'verified-yellow' || profile.tagColor === 'verified-blue'
-                      ? <span className={profile.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+                      ? <VerifiedBadge variant={profile.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                       : <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''} style={isDevTag ? O.tagDev : isMythicTag ? O.tagGod : isGodTag ? O.tagGod : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
                           {profile.tag}
                         </span>
@@ -589,7 +601,7 @@ function DevAdminPanel({
               return (
                 <div key={`${t.tag}:${t.tagColor}`} style={{ display: 'flex', alignItems: 'center', gap: 4, background: isVerified ? 'rgba(128,128,128,0.12)' : t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`, border: `1px solid ${isVerified ? (t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0') : t.tagColor === 'grey' ? 'rgba(128,128,128,0.4)' : t.tagColor}`, borderRadius: 4, padding: '2px 6px 2px 8px' }}>
                   {isVerified
-                    ? <span className={t.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'} style={{ width: 16, height: 16, fontSize: 10 }}>✓</span>
+                    ? <VerifiedBadge variant={t.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
                     : <span style={{ fontSize: 11, fontWeight: 700, color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor }}>{t.tag}</span>
                   }
                   <button
@@ -822,7 +834,7 @@ function OwnTagPicker({ profile, onUpdateTag }: {
                     transition: 'all 0.15s',
                   }}
                 >
-                  <span className={t.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'} style={{ width: 16, height: 16, fontSize: 10 }}>✓</span>
+                  <VerifiedBadge variant={t.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
                   <span style={{ fontSize: 12, fontWeight: 700, color: t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0' }}>
                     {saving === savingKey ? '…' : (t.tagColor === 'verified-yellow' ? 'Verified' : 'Verified (Blue)')}
                   </span>
@@ -940,7 +952,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             <span className={nameColorClass(post.user.nameColor)} style={{ ...P.authorName, ...nameColorStyle(post.user.nameColor) }} onClick={() => onOpenProfile(post.user.id)}>{displayName(post.user)}</span>
             {post.user.tag && (
               tagColor === 'verified-yellow' || tagColor === 'verified-blue'
-                ? <span className={tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+                ? <VerifiedBadge variant={tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                 : <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''} style={isDevTag ? P.tagDev : isMythicTag ? P.tagGod : isGodTag ? P.tagGod : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
                     {post.user.tag}
                   </span>
@@ -1443,7 +1455,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                   </button>
                   {c.user.tag && (
                     tagColor === 'verified-yellow' || tagColor === 'verified-blue'
-                      ? <span className={tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'} style={{ width: 16, height: 16, fontSize: 10 }}>✓</span>
+                      ? <VerifiedBadge variant={tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
                       : <span
                           className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
                           style={isDevTag
@@ -1543,7 +1555,7 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
               <span style={{ fontSize: 14, fontWeight: 600 }}>{displayName(u)}</span>
               {u.tag && (
                 u.tagColor === 'verified-yellow' || u.tagColor === 'verified-blue'
-                  ? <span className={u.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+                  ? <VerifiedBadge variant={u.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                   : <span
                       className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'GOD' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : ''}
                       style={u.tag === 'DEV' ? P.tagDev : u.tag === 'GOD' ? P.tagGod : u.tag === 'GOAT' ? P.tagGod : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}

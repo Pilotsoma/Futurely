@@ -9,6 +9,18 @@ import {
   getApiToken, ItemSalePoint, ItemOwner, LeaderboardData, LeaderboardEntry,
 } from '../../../lib/api'
 
+const VERIFIED_BADGE_URL = 'https://static.vecteezy.com/system/resources/thumbnails/047/309/918/small/verified-badge-profile-icon-png.png'
+function VerifiedBadge({ variant, size = 18 }: { variant: 'yellow' | 'blue'; size?: number }) {
+  return (
+    <img
+      src={VERIFIED_BADGE_URL}
+      alt="Verified"
+      style={{ width: size, height: size, verticalAlign: 'middle', flexShrink: 0, display: 'inline-block',
+        filter: variant === 'yellow' ? 'hue-rotate(195deg) saturate(1.1) brightness(0.9)' : undefined }}
+    />
+  )
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DUMMY_PFP = 'https://i.pinimg.com/474x/13/74/20/137420f5b9c39bc911e472f5d20f053e.jpg'
@@ -111,7 +123,7 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
       <div key={`${boxType}-${idx}`} style={{ animation: 'boxPreviewFadeIn 0.4s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {boxType === 'tag' && (
           item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue'
-            ? <span className={item.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'} style={{ width: 26, height: 26, fontSize: 15 }}>✓</span>
+            ? <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={26} />
             : <span
                 className={item.tag === 'GOD' ? 'tag-mythic' : item.tagColor === 'curse' ? 'tag-curse' : ''}
                 style={item.tag === 'GOD' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : item.tagColor === 'curse' ? { fontSize: 14, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #ff0000' } : {
@@ -572,7 +584,7 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
                     </button>
                     {owner.tag && (
                       (owner.tagColor === 'verified-yellow' || owner.tagColor === 'verified-blue')
-                        ? <span className={owner.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'} style={{ marginLeft: 2 }}>✓</span>
+                        ? <VerifiedBadge variant={owner.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                         : <span className={owner.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, fontWeight: 700, color: owner.tagColor === 'curse' ? undefined : owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>
                     )}
                   </div>
@@ -1532,7 +1544,7 @@ export default function MarketplacePage() {
           )}
           {type === 'tag' && (
             (item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue')
-              ? <span className={item.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+              ? <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
               : <span
                   className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
                   style={item.tagColor === 'curse'
@@ -1549,7 +1561,7 @@ export default function MarketplacePage() {
         {type === 'tag' && (
           (item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue')
             ? <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span className={item.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+                <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                 <span style={{ fontSize: 13, fontWeight: 700, color: item.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0' }}>
                   {item.tagColor === 'verified-yellow' ? 'Verified' : 'Verified (Blue)'}
                 </span>
