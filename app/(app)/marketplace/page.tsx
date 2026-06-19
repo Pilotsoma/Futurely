@@ -26,6 +26,11 @@ function truncateWords(str: string, max = 4): string {
   return words.length <= max ? str : words.slice(0, max).join(' ') + '…'
 }
 
+// Character-based truncation for the small icon boxes in inventory/catalog
+function truncateTag(str: string, max = 4): string {
+  return str.length <= max ? str : str.slice(0, max)
+}
+
 function getRarityColor(rarity: string, itemId?: string | null): string {
   if (itemId && ITEM_COLOR_OVERRIDE[itemId]) return ITEM_COLOR_OVERRIDE[itemId]
   const c = RARITY_COLOR[rarity]
@@ -1166,7 +1171,7 @@ export default function MarketplacePage() {
             <span
               className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : ''}
               style={{ fontSize: 13, fontWeight: 700, color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
-            >{truncateWords(item.tag ?? '')}</span>
+            >{truncateTag(item.tag ?? '')}</span>
           )}
         </button>
         {type !== 'tag' && (
@@ -2137,7 +2142,7 @@ export default function MarketplacePage() {
                               <span
                                 className={item.name === 'GOD' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : ''}
                                 style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'GOD' || item.name === 'GOAT') ? undefined : item.tagColor ?? '#6B7280' }}
-                              >{truncateWords(item.name ?? '')}</span>
+                              >{truncateTag(item.name ?? '')}</span>
                             )}
                           </div>
                           {/* Name */}
