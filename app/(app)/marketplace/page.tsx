@@ -667,9 +667,11 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
             <div style={{ fontSize: 11, fontWeight: 800, color: carouselColor, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14 }}>
               {current.rarity}
             </div>
-            <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 8, color: 'var(--text)' }}>
+            <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 8, color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
               {current.tag
-                ? <span style={{ color: current.tagColor ?? carouselColor }}>[{current.tag}]</span>
+                ? (current.tagColor === 'verified-yellow' || current.tagColor === 'verified-blue')
+                  ? <VerifiedBadge variant={current.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={48} />
+                  : <span style={{ color: current.tagColor ?? carouselColor }}>[{current.tag}]</span>
                 : <span>{current.name}</span>
               }
             </div>
@@ -708,7 +710,11 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
             <span style={{ fontSize: 20 }}>✨</span>
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, color: getRarityColor(highlight.won.rarity, highlight.won.id) }}>{highlight.won.rarity}!</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{highlight.won.name ?? highlight.won.tag}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {(highlight.won.tagColor === 'verified-yellow' || highlight.won.tagColor === 'verified-blue')
+                  ? <><VerifiedBadge variant={highlight.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} /> Verified</>
+                  : (highlight.won.name ?? highlight.won.tag)}
+              </div>
             </div>
           </div>
         )}
@@ -716,8 +722,10 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
           {summaryRows.map((g, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 8, background: 'var(--surface-2)' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: getRarityColor(g.won.rarity, g.won.id), flexShrink: 0 }} />
-              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {g.won.tag ? `[${g.won.tag}]` : (g.won.name ?? g.won.id)}
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
+                {(g.won.tagColor === 'verified-yellow' || g.won.tagColor === 'verified-blue')
+                  ? <><VerifiedBadge variant={g.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} /> Verified</>
+                  : g.won.tag ? `[${g.won.tag}]` : (g.won.name ?? g.won.id)}
               </div>
               <div style={{ fontSize: 11, color: getRarityColor(g.won.rarity, g.won.id), fontWeight: 700, flexShrink: 0 }}>{g.won.rarity}</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)', flexShrink: 0, minWidth: 32, textAlign: 'right' }}>×{g.count}</div>
@@ -1125,7 +1133,7 @@ export default function MarketplacePage() {
   useEffect(() => {
     if (tab === 'shop') { fetchListings(); fetchMyActiveListings() }
     if (tab === 'trade') fetchTrades()
-    if (tab === 'inventory') fetchMyActiveListings()
+    if (tab === 'inventory') { fetchMyActiveListings(); refreshInventory() }
     if (tab === 'leaderboard' && !leaderboard) {
       setLeaderboardLoading(true)
       api.marketplaceLeaderboard()
@@ -1778,9 +1786,11 @@ export default function MarketplacePage() {
             const borderColor = getRarityColor(result.won.rarity, result.won.id)
 
             const itemPreview = result.won.type === 'tag' ? (
-              <div className={result.won.tag === 'GOD' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 22, fontWeight: 800, color: (result.won.tag === 'GOAT' || result.won.tag === 'GOD') ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
-                [{result.won.tag}]
-              </div>
+              (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
+                ? <div style={{ marginBottom: 4 }}><VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={64} /></div>
+                : <div className={result.won.tag === 'GOD' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 22, fontWeight: 800, color: (result.won.tag === 'GOAT' || result.won.tag === 'GOD') ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
+                    [{result.won.tag}]
+                  </div>
             ) : result.won.type === 'name-color' ? (
               <div className={isRainbow ? 'name-rainbow' : ''} style={{ fontSize: 24, fontWeight: 800, color: isRainbow ? undefined : result.won.value, marginBottom: 4 }}>
                 {result.won.name}
@@ -1828,9 +1838,16 @@ export default function MarketplacePage() {
                     >
                       DUMMY
                     </span>
-                    <span className={result.won.type === 'tag' && result.won.tag === 'GOD' ? 'tag-mythic' : result.won.type === 'tag' && result.won.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 12, fontWeight: 700, color: result.won.type === 'tag' && result.won.tag !== 'GOAT' && result.won.tag !== 'GOD' ? (result.won.tagColor ?? '#6B7280') : undefined }}>
-                      [{result.won.type === 'tag' ? result.won.tag : 'DUMMY'}]
-                    </span>
+                    {result.won.type === 'tag' && (
+                      (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
+                        ? <VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
+                        : <span className={result.won.tag === 'GOD' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 12, fontWeight: 700, color: result.won.tag !== 'GOAT' && result.won.tag !== 'GOD' ? (result.won.tagColor ?? '#6B7280') : undefined }}>
+                            [{result.won.tag}]
+                          </span>
+                    )}
+                    {result.won.type !== 'tag' && (
+                      <span>[DUMMY]</span>
+                    )}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Here&apos;s a preview of your new item ✨</div>
                 </div>
