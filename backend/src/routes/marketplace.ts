@@ -401,7 +401,7 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
     const ownedTags = rawTags.map(t => {
       const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
       const streakMeta = STREAK_TAG_META[t.tag]
-      return { id: def?.id ?? t.tag, tag: t.tag, tagColor: t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
+      return { id: def?.id ?? t.tag, tag: t.tag, tagColor: def?.tagColor ?? t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
     })
 
     res.json({
@@ -1093,7 +1093,7 @@ router.get('/users/:userId/inventory', requireAuth, async (req: AuthRequest, res
       .map(t => {
         const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
         const streakMeta = STREAK_TAG_META[t.tag]
-        return { id: def?.id ?? t.tag, tag: t.tag, tagColor: t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
+        return { id: def?.id ?? t.tag, tag: t.tag, tagColor: def?.tagColor ?? t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
       })
 
     res.json({

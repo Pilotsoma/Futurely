@@ -18,9 +18,7 @@ const RARITY_COLOR: Record<string, string> = {
   Epic: '#8B5CF6', Legendary: '#EAB308', Mythic: 'rainbow',
 }
 // Per-item display color overrides — take precedence over rarity color everywhere
-const ITEM_COLOR_OVERRIDE: Record<string, string> = {
-  prodigy: '#111111',
-}
+const ITEM_COLOR_OVERRIDE: Record<string, string> = {}
 function truncateWords(str: string, max = 4): string {
   const words = str.trim().split(/\s+/)
   return words.length <= max ? str : words.slice(0, max).join(' ') + '…'
@@ -1183,7 +1181,12 @@ export default function MarketplacePage() {
             {item.name ?? item.tag}
           </span>
         )}
-        {type === 'tag' && <span style={{ flex: 1 }} />}
+        {type === 'tag' && (
+          <span
+            className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : ''}
+            style={{ flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+          >{item.tag}</span>
+        )}
         <RarityBadge rarity={item.rarity} itemId={item.id} />
         {count > 1 && (
           <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 99, padding: '1px 7px' }}>x{count}</span>
