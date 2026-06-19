@@ -808,4 +808,25 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
   }
 })
 
+// ── GET /auth/test-email ─────────────────────────────────────────────────────
+// Temporary diagnostic endpoint — remove once email delivery is confirmed.
+router.get('/test-email', async (req: Request, res: Response): Promise<void> => {
+  const to = (req.query.to as string) || 'srikar.vattem@gmail.com'
+
+  const env = {
+    RESEND_API_KEY: process.env.RESEND_API_KEY ? '✓ set' : '✗ missing',
+    SMTP_HOST: process.env.SMTP_HOST ?? '✗ missing',
+    SMTP_PASS: process.env.SMTP_PASS ? `✓ set (starts with ${(process.env.SMTP_PASS ?? '').slice(0, 6)}...)` : '✗ missing',
+    SMTP_FROM: process.env.SMTP_FROM ?? '✗ missing',
+    APP_URL: process.env.APP_URL ?? '✗ missing',
+  }
+
+  try {
+    await sendEmail({ to, subject: 'Futurely email test', html: '<p>If you see this, email delivery works!</p>' })
+    res.json({ data: { status: 'sent', to, env } })
+  } catch (e) {
+    res.status(500).json({ data: null, error: { message: e instanceof Error ? e.message : String(e) }, env })
+  }
+})
+
 export default router
