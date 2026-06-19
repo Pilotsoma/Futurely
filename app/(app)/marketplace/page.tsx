@@ -69,6 +69,103 @@ function pfpClass(effect: string | null | undefined): string {
 type DropGroup = { rarity: string; pct: string; items: string[] }
 type BoxType = 'tag' | 'name-color' | 'pfp' | 'dev-curse'
 
+// ── Box card cycling previews ──────────────────────────────────────────────────
+
+const BOX_CYCLE_PREVIEWS: Record<string, Array<{ tag?: string; tagColor?: string; name?: string; value?: string; rarity: string }>> = {
+  'tag': [
+    { tag: 'Valedictorian', tagColor: '#F8FAFC', rarity: 'Legendary' },
+    { tag: 'Ace',           tagColor: '#F97316', rarity: 'Epic'      },
+    { tag: 'GOD',           tagColor: '#111111', rarity: 'Mythic'    },
+  ],
+  'name-color': [
+    { name: 'Pure White', value: '#F8FAFC', rarity: 'Legendary' },
+    { name: 'Magenta',    value: '#C026D3', rarity: 'Epic'      },
+    { name: 'Rainbow',    value: 'rainbow', rarity: 'Mythic'    },
+  ],
+  'pfp': [
+    { name: 'Gold Fill', value: 'glow-gold', rarity: 'Legendary' },
+    { name: 'Pink Glow', value: 'glow-pink', rarity: 'Epic'      },
+    { name: 'Rainbow',   value: 'rainbow',   rarity: 'Mythic'    },
+  ],
+}
+
+function BoxCardPreview({ boxType }: { boxType: BoxType }) {
+  const [idx, setIdx] = useState(0)
+  const items = BOX_CYCLE_PREVIEWS[boxType]
+
+  useEffect(() => {
+    if (!items) return
+    const t = setInterval(() => setIdx(i => (i + 1) % items.length), 1800)
+    return () => clearInterval(t)
+  }, [items])
+
+  if (!items) return <div style={{ fontSize: 38 }}>💀</div>
+
+  const item = items[idx]
+  const rarityColor = RARITY_COLOR[item.rarity] === 'rainbow' ? '#FFD700' : (RARITY_COLOR[item.rarity] ?? '#22C55E')
+
+  return (
+    <div style={{ width: 60, height: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+      {/* key change remounts the div so the CSS animation replays each cycle */}
+      <div key={`${boxType}-${idx}`} style={{ animation: 'boxPreviewFadeIn 0.4s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {boxType === 'tag' && (
+          <span
+            className={item.tag === 'GOD' ? 'tag-mythic' : ''}
+            style={item.tag === 'GOD' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : {
+              fontSize: 14, fontWeight: 800,
+              color: item.tagColor,
+              textShadow: item.rarity === 'Legendary' ? `0 0 10px ${rarityColor}88` : undefined,
+              padding: '5px 10px', borderRadius: 8,
+              background: `${rarityColor}1A`,
+              border: `1.5px solid ${rarityColor}55`,
+            }}
+          >
+            {item.tag}
+          </span>
+        )}
+        {boxType === 'name-color' && (
+          <span
+            className={item.value === 'rainbow' ? 'name-rainbow' : ''}
+            style={{
+              fontSize: 16, fontWeight: 800, letterSpacing: '0.3px',
+              color: item.value !== 'rainbow' ? item.value : undefined,
+              textShadow: item.rarity === 'Legendary' ? `0 0 10px ${item.value}88` : undefined,
+            }}
+          >
+            Username
+          </span>
+        )}
+        {boxType === 'pfp' && (
+          <div
+            className={pfpClass(item.value)}
+            style={{
+              width: 40, height: 40, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontWeight: 800, fontSize: 15, flexShrink: 0,
+              ...pfpStyle(item.value),
+            }}
+          >
+            A
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        {items.map((it, i) => {
+          const rc = RARITY_COLOR[it.rarity] === 'rainbow' ? '#FFD700' : (RARITY_COLOR[it.rarity] ?? '#22C55E')
+          return (
+            <div key={i} style={{
+              width: i === idx ? 6 : 4, height: i === idx ? 6 : 4, borderRadius: '50%',
+              background: i === idx ? rc : `${rc}55`,
+              transition: 'all 0.3s ease',
+            }} />
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost: number; drops: DropGroup[] }[] = [
   {
     type: 'tag', icon: '🎰', label: 'Tag Spin', desc: 'Win exclusive profile tags', cost: 10,
@@ -1640,7 +1737,7 @@ export default function MarketplacePage() {
                   onMouseEnter={() => setHoveredBox(box.type)}
                   onMouseLeave={() => setHoveredBox(null)}
                   style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10 }}>
-                  <div style={{ fontSize: 38 }}>{box.icon}</div>
+                  <BoxCardPreview boxType={box.type} />
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{box.label}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{box.desc}</div>
                   <button onClick={() => setSpinnerBox(box.type)}
