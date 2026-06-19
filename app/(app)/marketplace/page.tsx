@@ -106,8 +106,7 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
   {
     type: 'dev-curse', icon: '💀', label: "Developer's Curse", desc: '1 coin · mostly Common · soulbound Uncommons · 0.001% Unobtainable', cost: 1,
     drops: [
-      { rarity: 'Common',       pct: '84%',     items: ['Grinder', 'Focused', 'Scholar'] },
-      { rarity: 'Uncommon',     pct: '15.999%', items: ['Learner', 'C Student', 'Bottom 100'] },
+      { rarity: 'Common',       pct: '99.999%', items: ['Learner', 'C Student', 'Bottom 100'] },
       { rarity: 'Unobtainable', pct: '0.001%',  items: ['The Curse'] },
     ],
   },
@@ -149,12 +148,9 @@ const SIM_ITEMS: Record<BoxType, SimItem[]> = {
     { id: 'rainbow',        label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic',  type: 'pfp', name: 'Rainbow Animated', value: 'rainbow' },
   ],
   'dev-curse': [
-    { id: 'grinder',    label: 'Grinder (Common)',           rarity: 'Common',      type: 'tag', tag: 'Grinder',    tagColor: '#6B7280' },
-    { id: 'focused',    label: 'Focused (Common)',           rarity: 'Common',      type: 'tag', tag: 'Focused',     tagColor: '#6B7280' },
-    { id: 'scholar',    label: 'Scholar (Common)',           rarity: 'Common',      type: 'tag', tag: 'Scholar',     tagColor: '#6B7280' },
-    { id: 'learner',    label: 'Learner (Uncommon)',         rarity: 'Uncommon',    type: 'tag', tag: 'Learner',     tagColor: '#94A3B8' },
-    { id: 'c-student',  label: 'C Student (Uncommon)',       rarity: 'Uncommon',    type: 'tag', tag: 'C Student',   tagColor: '#78716C' },
-    { id: 'bottom-100', label: 'Bottom 100 (Uncommon)',      rarity: 'Uncommon',    type: 'tag', tag: 'Bottom 100',  tagColor: '#6B7280' },
+    { id: 'learner',    label: 'Learner (Common)',           rarity: 'Common',       type: 'tag', tag: 'Learner',    tagColor: '#94A3B8' },
+    { id: 'c-student',  label: 'C Student (Common)',         rarity: 'Common',       type: 'tag', tag: 'C Student',  tagColor: '#78716C' },
+    { id: 'bottom-100', label: 'Bottom 100 (Common)',        rarity: 'Common',       type: 'tag', tag: 'Bottom 100', tagColor: '#6B7280' },
     { id: 'curse',      label: 'The Curse (Unobtainable)',  rarity: 'Unobtainable', type: 'pfp', name: 'The Curse', value: 'unobtainable-curse' },
   ],
 }
@@ -185,11 +181,13 @@ function groupById<T extends { id: string }>(arr: T[]): Array<T & { count: numbe
   return [...map.values()]
 }
 
-// Matches backend NON_TRADEABLE_TAGS — soulbound: untradeable, unlistable, unquicksellable
+// Untradeable + unlistable (all soulbound tags). Also used to filter trade UI.
 const NON_TRADEABLE_TAG_IDS = new Set([
   'Novice', 'Pro', 'Veteran', 'Legend',
   'Learner', 'C Student', 'Bottom 100',
 ])
+// Dev-curse exclusives: quicksell IS allowed but yields 0 coins
+const ZERO_QUICKSELL_TAG_IDS = new Set(['Learner', 'C Student', 'Bottom 100'])
 
 // Every item that exists in the app — mirrors backend TAG_BOX_ITEMS / NAME_COLOR_BOX_ITEMS / PFP_EFFECT_BOX_ITEMS
 type CatalogItem = { id: string; type: 'tag' | 'name-color' | 'pfp'; name: string; rarity: string; value?: string; tagColor?: string }
@@ -244,10 +242,10 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'fill-white',     type: 'pfp', name: 'White Fill',        rarity: 'Legendary', value: 'fill-white'     },
   { id: 'rainbow',        type: 'pfp', name: 'Rainbow Animated ✨', rarity: 'Mythic',       value: 'rainbow'              },
   { id: 'curse',         type: 'pfp', name: 'The Curse',           rarity: 'Unobtainable', value: 'unobtainable-curse'   },
-  // Developer's Curse exclusives (soulbound Uncommons)
-  { id: 'Learner',    type: 'tag', name: 'Learner',    rarity: 'Uncommon', tagColor: '#94A3B8' },
-  { id: 'C Student',  type: 'tag', name: 'C Student',  rarity: 'Uncommon', tagColor: '#78716C' },
-  { id: 'Bottom 100', type: 'tag', name: 'Bottom 100', rarity: 'Uncommon', tagColor: '#6B7280' },
+  // Developer's Curse exclusives (Common, zero-quicksell)
+  { id: 'Learner',    type: 'tag', name: 'Learner',    rarity: 'Common', tagColor: '#94A3B8' },
+  { id: 'C Student',  type: 'tag', name: 'C Student',  rarity: 'Common', tagColor: '#78716C' },
+  { id: 'Bottom 100', type: 'tag', name: 'Bottom 100', rarity: 'Common', tagColor: '#6B7280' },
 ]
 
 type Tab = 'boxes' | 'shop' | 'trade' | 'inventory' | 'leaderboard' | 'catalog'
@@ -1055,7 +1053,7 @@ export default function MarketplacePage() {
     const itemName = itemType === 'tag' ? ((first as { tag?: string }).tag ?? itemId) : ((first as { name?: string }).name ?? itemId)
     const isLastCopy = count === 1
     const isRare = rarity === 'Legendary' || rarity === 'Mythic'
-    const coins = QUICKSELL_PRICES[rarity] ?? 5
+    const coins = ZERO_QUICKSELL_TAG_IDS.has((first as { tag?: string }).tag ?? '') ? 0 : (QUICKSELL_PRICES[rarity] ?? 5)
 
     if (isLastCopy || isRare) {
       setQuicksellConfirm({ itemType, itemId, itemName, rarity, coins, isLastCopy, isRare })
@@ -1073,7 +1071,7 @@ export default function MarketplacePage() {
     for (const [id, cnt] of tagMap) {
       if (cnt > 1) {
         const t = (inv.ownedTags ?? []).find(x => x.id === id)!
-        result.push({ type: 'tag', id, name: t.tag, rarity: t.rarity, count: cnt - 1, coinsEach: QUICKSELL_PRICES[t.rarity] ?? 5 })
+        result.push({ type: 'tag', id, name: t.tag, rarity: t.rarity, count: cnt - 1, coinsEach: ZERO_QUICKSELL_TAG_IDS.has(t.tag) ? 0 : (QUICKSELL_PRICES[t.rarity] ?? 5) })
       }
     }
     const colorMap = new Map<string, number>()
@@ -1294,7 +1292,7 @@ export default function MarketplacePage() {
     const isListed = myListedIds.has(itemKey)
     const listing = myActiveListings.find(l => l.itemType === type && l.itemId === item.id)
     const isListingThis = listingItem?.type === type && listingItem?.id === item.id
-    const sellPrice = QUICKSELL_PRICES[item.rarity] ?? 5
+    const sellPrice = ZERO_QUICKSELL_TAG_IDS.has(item.tag ?? '') ? 0 : (QUICKSELL_PRICES[item.rarity] ?? 5)
     const isQS = quickselling === itemKey
 
     const rarityBorderColor = getRarityColor(item.rarity, item.id)
