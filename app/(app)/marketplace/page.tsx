@@ -53,6 +53,7 @@ function pfpStyle(effect: string | null | undefined): React.CSSProperties {
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
   if (effect === 'glow-gold')   return {}
   if (effect === 'frame-black') return {}
+  if (effect === 'fill-white')  return {}
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
   return {}
@@ -61,6 +62,7 @@ function pfpClass(effect: string | null | undefined): string {
   if (effect === 'rainbow')      return 'pfp-rainbow'
   if (effect === 'glow-gold')    return 'pfp-gold-fill'
   if (effect === 'frame-black')  return 'pfp-void-fill'
+  if (effect === 'fill-white')   return 'pfp-white-fill'
   return ''
 }
 
@@ -134,6 +136,7 @@ const SIM_ITEMS: Record<'tag' | 'name-color' | 'pfp', SimItem[]> = {
     { id: 'glow-purple',    label: 'Purple Glow (Epic)',         rarity: 'Epic',      type: 'pfp', name: 'Purple Glow',      value: 'glow-purple' },
     { id: 'glow-gold',      label: 'Gold Fill (Legendary)',      rarity: 'Legendary', type: 'pfp', name: 'Gold Fill',        value: 'glow-gold' },
     { id: 'frame-black',    label: 'Void Fill (Legendary)',      rarity: 'Legendary', type: 'pfp', name: 'Void Fill',        value: 'frame-black' },
+    { id: 'fill-white',     label: 'White Fill (Legendary)',     rarity: 'Legendary', type: 'pfp', name: 'White Fill',       value: 'fill-white' },
     { id: 'rainbow',        label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic',  type: 'pfp', name: 'Rainbow Animated', value: 'rainbow' },
   ],
 }
@@ -217,6 +220,7 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'glow-purple',    type: 'pfp', name: 'Purple Glow',       rarity: 'Epic',      value: 'glow-purple'    },
   { id: 'glow-gold',      type: 'pfp', name: 'Gold Fill',         rarity: 'Legendary', value: 'glow-gold'      },
   { id: 'frame-black',    type: 'pfp', name: 'Void Fill',         rarity: 'Legendary', value: 'frame-black'    },
+  { id: 'fill-white',     type: 'pfp', name: 'White Fill',        rarity: 'Legendary', value: 'fill-white'     },
   { id: 'rainbow',        type: 'pfp', name: 'Rainbow Animated ✨', rarity: 'Mythic',  value: 'rainbow'        },
 ]
 
@@ -1403,7 +1407,7 @@ export default function MarketplacePage() {
             )
 
             // Fill effects replace the entire circle — show a pure div, no image
-            const PFP_FILL_EFFECTS = new Set(['rainbow', 'glow-gold', 'frame-black'])
+            const PFP_FILL_EFFECTS = new Set(['rainbow', 'glow-gold', 'frame-black', 'fill-white'])
             const isPfpFill = result.won.type === 'pfp' && PFP_FILL_EFFECTS.has(result.won.value ?? '')
             const effectStyle = pfpStyle(result.won.type === 'pfp' ? result.won.value : undefined)
             const dummyImgStyle: React.CSSProperties = {
@@ -2136,7 +2140,7 @@ export default function MarketplacePage() {
                               <span style={{ width: 20, height: 20, borderRadius: '50%', display: 'inline-block', border: '1px solid var(--border)', background: item.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : item.value }} />
                             )}
                             {item.type === 'pfp' && (
-                              <div className={item.value === 'rainbow' ? 'pfp-rainbow' : ''} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...(item.value && item.value !== 'rainbow' ? { boxShadow: `0 0 0 2.5px ${PFP_BORDER_MAP[item.value] ?? borderColor}` } : {}) }} />
+                              <div className={pfpClass(item.value)} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...pfpStyle(item.value) }} />
                             )}
                             {item.type === 'tag' && (
                               <span

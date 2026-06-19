@@ -81,6 +81,7 @@ const PFP_EFFECT_BOX_ITEMS: ColorItem[] = [
   { id: 'glow-purple',     name: 'Purple Glow',      value: 'glow-purple',    rarity: 'Epic',      weight: 1.98 },
   { id: 'glow-gold',       name: 'Gold Fill',        value: 'glow-gold',      rarity: 'Legendary', weight: 0.5  },
   { id: 'frame-black',     name: 'Void Fill',        value: 'frame-black',    rarity: 'Legendary', weight: 0.5  },
+  { id: 'fill-white',      name: 'White Fill',       value: 'fill-white',     rarity: 'Legendary', weight: 0.5  },
   { id: 'rainbow',         name: 'Rainbow Animated', value: 'rainbow',        rarity: 'Mythic',    weight: 0.05 },
 ]
 
@@ -115,7 +116,7 @@ export const SEED_PRICES: Record<string, number> = {
   'pfp:border-orange': 27,   'pfp:border-violet': 27,  'pfp:border-cyan': 27,
   'pfp:border-hotpink': 67,  'pfp:border-gold': 67,    'pfp:border-lime': 67,
   'pfp:glow-pink': 267,      'pfp:glow-purple': 267,
-  'pfp:glow-gold': 2000,     'pfp:frame-black': 2000,
+  'pfp:glow-gold': 2000,     'pfp:frame-black': 2000,   'pfp:fill-white': 2000,
   'pfp:rainbow': 50000,
 }
 
@@ -311,7 +312,7 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 // Bump this number whenever SEED_PRICES changes — forces a one-time DB reset
 // to the new values, after which dynamic pricing takes over again.
-const SEED_VERSION = 4
+const SEED_VERSION = 5
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {

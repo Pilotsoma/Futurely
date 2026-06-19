@@ -372,6 +372,17 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   animation: pfpVoidPulse 3s ease-in-out infinite;
 }
 
+@keyframes pfpWhiteGlow {
+  0%, 100% { box-shadow: 0 0 8px #FFFFFF88,  0 0 0px  #FFFFFF00; border-color: #e5e5e5; }
+  50%       { box-shadow: 0 0 22px #FFFFFFdd, 0 0 44px #FFFFFF66; border-color: #FFFFFF; }
+}
+.pfp-white-fill {
+  background: #FFFFFF !important;
+  border: 2px solid #e5e5e5 !important;
+  color: #111111 !important;
+  animation: pfpWhiteGlow 2.5s ease-in-out infinite;
+}
+
 @keyframes boxPop {
   0%   { transform: scale(0.7); opacity: 0; }
   70%  { transform: scale(1.08); opacity: 1; }
