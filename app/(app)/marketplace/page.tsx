@@ -610,7 +610,18 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
 
   const qty = result.results.length
 
-  // For > 10 spins: build individual cards for each Legendary+ result
+  // Build full summary grouped by item (always)
+  const summaryMap = new Map<string, { won: BoxResult['won']; count: number }>()
+  for (const r of result.results) {
+    const key = `${r.won.type}:${r.won.id}`
+    const ex = summaryMap.get(key)
+    if (ex) ex.count++
+    else summaryMap.set(key, { won: r.won, count: 1 })
+  }
+  const summaryRows = [...summaryMap.values()].sort((a, b) => (RARITY_RANK[a.won.rarity] ?? 99) - (RARITY_RANK[b.won.rarity] ?? 99))
+  const highlight = summaryRows.find(g => HIGHLIGHT_RARITIES.includes(g.won.rarity))
+
+  // For > 10 spins: build carousel of each Legendary+ result
   const carouselCards: BoxResult['won'][] | null = qty > 10 ? (() => {
     const good = result.results.filter(r => HIGHLIGHT_RARITIES.includes(r.won.rarity)).map(r => r.won)
     if (good.length > 0) return good
@@ -618,78 +629,63 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
     return best ? [best.won] : []
   })() : null
 
-  if (carouselCards && carouselCards.length > 0) {
-    const safeIdx = Math.min(cardIdx, carouselCards.length - 1)
-    const current = carouselCards[safeIdx]
-    const color = getRarityColor(current.rarity, current.id)
-    return createPortal(
-      <div
-        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}
-        onClick={onClose}
-      >
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>
-          {carouselCards.length > 1
-            ? `✨ ${safeIdx + 1} of ${carouselCards.length} highlights  ·  ${result.coins.toLocaleString()} coins left`
-            : `✨ Best result  ·  ${result.coins.toLocaleString()} coins left`}
-        </div>
-        <div
-          className="ns-card"
-          style={{ padding: '36px 32px', width: '88%', maxWidth: 360, textAlign: 'center', border: `2px solid ${color}`, boxShadow: `0 0 40px ${color}55` }}
-          onClick={e => e.stopPropagation()}
-        >
-          <div style={{ fontSize: 11, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14 }}>
-            {current.rarity}
-          </div>
-          <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 8, color: 'var(--text)' }}>
-            {current.tag
-              ? <span style={{ color: current.tagColor ?? color }}>[{current.tag}]</span>
-              : <span>{current.name}</span>
-            }
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            {current.type === 'tag' ? 'Tag' : current.type === 'name-color' ? 'Name Color' : 'PFP Effect'}
-          </div>
-        </div>
-        {carouselCards.length > 1 && (
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-            <button
-              disabled={safeIdx === 0}
-              onClick={() => setCardIdx(i => Math.max(0, i - 1))}
-              style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', cursor: safeIdx === 0 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: safeIdx === 0 ? 0.35 : 1 }}
-            >← Prev</button>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 56, textAlign: 'center' }}>
-              {safeIdx + 1} / {carouselCards.length}
-            </span>
-            <button
-              disabled={safeIdx === carouselCards.length - 1}
-              onClick={() => setCardIdx(i => Math.min(carouselCards.length - 1, i + 1))}
-              style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', cursor: safeIdx === carouselCards.length - 1 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: safeIdx === carouselCards.length - 1 ? 0.35 : 1 }}
-            >Next →</button>
-          </div>
-        )}
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 13, padding: '4px 10px' }}>
-          Done
-        </button>
-      </div>,
-      document.body
-    )
-  }
+  const safeIdx = carouselCards ? Math.min(cardIdx, carouselCards.length - 1) : 0
+  const current = carouselCards?.[safeIdx] ?? null
+  const carouselColor = current ? getRarityColor(current.rarity, current.id) : 'var(--primary)'
 
-  // Grouped view for ≤10 spins
-  const grouped = new Map<string, { won: BoxResult['won']; count: number }>()
-  for (const r of result.results) {
-    const key = `${r.won.type}:${r.won.id}`
-    const ex = grouped.get(key)
-    if (ex) ex.count++
-    else grouped.set(key, { won: r.won, count: 1 })
-  }
-  const sorted = [...grouped.values()].sort((a, b) => (RARITY_RANK[a.won.rarity] ?? 99) - (RARITY_RANK[b.won.rarity] ?? 99))
-  const highlight = sorted.find(g => HIGHLIGHT_RARITIES.includes(g.won.rarity))
   return createPortal(
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div className="ns-card" style={{ padding: 28, maxWidth: 420, width: '92%', display: 'flex', flexDirection: 'column', gap: 14 }} onClick={e => e.stopPropagation()}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 14, padding: '24px 0 32px', overflowY: 'auto' }}
+      onClick={onClose}
+    >
+      {/* Carousel section — only for >10 spins */}
+      {carouselCards && current && (
+        <>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', flexShrink: 0 }}>
+            {carouselCards.length > 1
+              ? `✨ ${safeIdx + 1} of ${carouselCards.length} highlights  ·  ${result.coins.toLocaleString()} coins left`
+              : `✨ Best result  ·  ${result.coins.toLocaleString()} coins left`}
+          </div>
+          <div
+            className="ns-card"
+            style={{ padding: '32px 28px', width: '88%', maxWidth: 360, textAlign: 'center', border: `2px solid ${carouselColor}`, boxShadow: `0 0 40px ${carouselColor}55`, flexShrink: 0 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800, color: carouselColor, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14 }}>
+              {current.rarity}
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 8, color: 'var(--text)' }}>
+              {current.tag
+                ? <span style={{ color: current.tagColor ?? carouselColor }}>[{current.tag}]</span>
+                : <span>{current.name}</span>
+              }
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {current.type === 'tag' ? 'Tag' : current.type === 'name-color' ? 'Name Color' : 'PFP Effect'}
+            </div>
+          </div>
+          {carouselCards.length > 1 && (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+              <button disabled={safeIdx === 0} onClick={() => setCardIdx(i => Math.max(0, i - 1))}
+                style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', cursor: safeIdx === 0 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: safeIdx === 0 ? 0.35 : 1 }}
+              >← Prev</button>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 56, textAlign: 'center' }}>{safeIdx + 1} / {carouselCards.length}</span>
+              <button disabled={safeIdx === carouselCards.length - 1} onClick={() => setCardIdx(i => Math.min(carouselCards.length - 1, i + 1))}
+                style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', cursor: safeIdx === carouselCards.length - 1 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: safeIdx === carouselCards.length - 1 ? 0.35 : 1 }}
+              >Next →</button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Full summary card — always shown */}
+      <div
+        className="ns-card"
+        style={{ width: '88%', maxWidth: 420, padding: 22, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14 }}
+        onClick={e => e.stopPropagation()}
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>🎰 {result.results.length} Spins</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>🎰 {qty} Spins — Summary</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-muted)' }}>
             <CoinIcon size={13} />{result.coins.toLocaleString()} left
           </div>
@@ -703,15 +699,15 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
             </div>
           </div>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 280, overflowY: 'auto' }}>
-          {sorted.map((g, i) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 320, overflowY: 'auto' }}>
+          {summaryRows.map((g, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 8, background: 'var(--surface-2)' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: getRarityColor(g.won.rarity, g.won.id), flexShrink: 0 }} />
-              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {g.won.tag ? `[${g.won.tag}]` : (g.won.name ?? g.won.id)}
               </div>
-              <div style={{ fontSize: 11, color: getRarityColor(g.won.rarity, g.won.id), fontWeight: 700 }}>{g.won.rarity}</div>
-              {g.count > 1 && <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)' }}>×{g.count}</div>}
+              <div style={{ fontSize: 11, color: getRarityColor(g.won.rarity, g.won.id), fontWeight: 700, flexShrink: 0 }}>{g.won.rarity}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)', flexShrink: 0, minWidth: 32, textAlign: 'right' }}>×{g.count}</div>
             </div>
           ))}
         </div>
