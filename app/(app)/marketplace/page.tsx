@@ -15,7 +15,7 @@ const DUMMY_PFP = 'https://i.pinimg.com/474x/13/74/20/137420f5b9c39bc911e472f5d2
 
 const RARITY_COLOR: Record<string, string> = {
   Common: '#22C55E', Uncommon: '#3B82F6', Rare: '#F97316',
-  Epic: '#8B5CF6', Legendary: '#EAB308', Mythic: 'rainbow',
+  Epic: '#8B5CF6', Legendary: '#EAB308', Mythic: 'rainbow', Unobtainable: '#7C3AED',
 }
 // Per-item display color overrides — take precedence over rarity color everywhere
 const ITEM_COLOR_OVERRIDE: Record<string, string> = {}
@@ -49,24 +49,27 @@ const PFP_GLOW_MAP: Record<string, [string, string]> = {
 function pfpStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
-  if (effect === 'glow-gold')   return {}
-  if (effect === 'frame-black') return {}
-  if (effect === 'fill-white')  return {}
+  if (effect === 'glow-gold')           return {}
+  if (effect === 'frame-black')         return {}
+  if (effect === 'fill-white')          return {}
+  if (effect === 'unobtainable-curse')  return {}
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
   return {}
 }
 function pfpClass(effect: string | null | undefined): string {
-  if (effect === 'rainbow')      return 'pfp-rainbow'
-  if (effect === 'glow-gold')    return 'pfp-gold-fill'
-  if (effect === 'frame-black')  return 'pfp-void-fill'
-  if (effect === 'fill-white')   return 'pfp-white-fill'
+  if (effect === 'rainbow')           return 'pfp-rainbow'
+  if (effect === 'glow-gold')         return 'pfp-gold-fill'
+  if (effect === 'frame-black')       return 'pfp-void-fill'
+  if (effect === 'fill-white')        return 'pfp-white-fill'
+  if (effect === 'unobtainable-curse') return 'pfp-curse'
   return ''
 }
 
 type DropGroup = { rarity: string; pct: string; items: string[] }
+type BoxType = 'tag' | 'name-color' | 'pfp' | 'dev-curse'
 
-const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: string; desc: string; cost: number; drops: DropGroup[] }[] = [
+const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost: number; drops: DropGroup[] }[] = [
   {
     type: 'tag', icon: '🎰', label: 'Tag Spin', desc: 'Win exclusive profile tags', cost: 10,
     drops: [
@@ -96,14 +99,21 @@ const BOX_DEFS: { type: 'tag' | 'name-color' | 'pfp'; icon: string; label: strin
       { rarity: 'Uncommon',  pct: '24.99%', items: ['Orange Border', 'Violet Border', 'Cyan Border'] },
       { rarity: 'Rare',      pct: '10%',    items: ['Hot Pink Border', 'Gold Border', 'Lime Border'] },
       { rarity: 'Epic',      pct: '3.96%',  items: ['Pink Glow', 'Purple Glow'] },
-      { rarity: 'Legendary', pct: '1%',     items: ['Gold Fill', 'Void Fill'] },
+      { rarity: 'Legendary', pct: '1%',     items: ['Gold Fill', 'Void Fill', 'White Fill'] },
       { rarity: 'Mythic',    pct: '0.05%',  items: ['Rainbow Animated ✨'] },
+    ],
+  },
+  {
+    type: 'dev-curse', icon: '💀', label: "Developer's Curse", desc: '1 coin · 99.999% Common tag · 0.001% Unobtainable PFP', cost: 1,
+    drops: [
+      { rarity: 'Common',      pct: '99.999%', items: ['Grinder', 'Focused', 'Scholar'] },
+      { rarity: 'Unobtainable', pct: '0.001%', items: ['The Curse'] },
     ],
   },
 ]
 
 type SimItem = { id: string; label: string; rarity: string; type: 'tag' | 'name-color' | 'pfp'; tag?: string; tagColor?: string; value?: string; name?: string }
-const SIM_ITEMS: Record<'tag' | 'name-color' | 'pfp', SimItem[]> = {
+const SIM_ITEMS: Record<BoxType, SimItem[]> = {
   tag: [
     { id: 'grinder',        label: 'Grinder (Common)',          rarity: 'Common',    type: 'tag', tag: 'Grinder',        tagColor: '#6B7280' },
     { id: 'focused',        label: 'Focused (Common)',          rarity: 'Common',    type: 'tag', tag: 'Focused',         tagColor: '#6B7280' },
@@ -137,14 +147,20 @@ const SIM_ITEMS: Record<'tag' | 'name-color' | 'pfp', SimItem[]> = {
     { id: 'fill-white',     label: 'White Fill (Legendary)',     rarity: 'Legendary', type: 'pfp', name: 'White Fill',       value: 'fill-white' },
     { id: 'rainbow',        label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic',  type: 'pfp', name: 'Rainbow Animated', value: 'rainbow' },
   ],
+  'dev-curse': [
+    { id: 'grinder', label: 'Grinder (Common)',              rarity: 'Common',      type: 'tag', tag: 'Grinder', tagColor: '#6B7280' },
+    { id: 'focused', label: 'Focused (Common)',              rarity: 'Common',      type: 'tag', tag: 'Focused',  tagColor: '#6B7280' },
+    { id: 'scholar', label: 'Scholar (Common)',              rarity: 'Common',      type: 'tag', tag: 'Scholar',  tagColor: '#6B7280' },
+    { id: 'curse',   label: 'The Curse (Unobtainable)',     rarity: 'Unobtainable', type: 'pfp', name: 'The Curse', value: 'unobtainable-curse' },
+  ],
 }
 
 const QUICKSELL_PRICES: Record<string, number> = {
-  Common: 3, Uncommon: 7, Rare: 13, Epic: 27, Legendary: 100, Mythic: 667,
+  Common: 3, Uncommon: 7, Rare: 13, Epic: 27, Legendary: 100, Mythic: 667, Unobtainable: 5000,
 }
 
 const RARITY_RANK: Record<string, number> = {
-  Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5,
+  Unobtainable: -1, Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5,
 }
 
 function byRarity<T extends { rarity: string; id: string }>(arr: T[]): T[] {
@@ -219,7 +235,8 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'glow-gold',      type: 'pfp', name: 'Gold Fill',         rarity: 'Legendary', value: 'glow-gold'      },
   { id: 'frame-black',    type: 'pfp', name: 'Void Fill',         rarity: 'Legendary', value: 'frame-black'    },
   { id: 'fill-white',     type: 'pfp', name: 'White Fill',        rarity: 'Legendary', value: 'fill-white'     },
-  { id: 'rainbow',        type: 'pfp', name: 'Rainbow Animated ✨', rarity: 'Mythic',  value: 'rainbow'        },
+  { id: 'rainbow',        type: 'pfp', name: 'Rainbow Animated ✨', rarity: 'Mythic',       value: 'rainbow'              },
+  { id: 'curse',         type: 'pfp', name: 'The Curse',           rarity: 'Unobtainable', value: 'unobtainable-curse'   },
 ]
 
 type Tab = 'boxes' | 'shop' | 'trade' | 'inventory' | 'leaderboard' | 'catalog'
@@ -455,6 +472,57 @@ function getRarityWheelColor(rarity: string): string {
   return c
 }
 
+type MultiBoxResult = { coins: number; results: Array<{ won: BoxResult['won']; alreadyHad: boolean }> }
+
+function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; onClose: () => void }) {
+  const grouped = new Map<string, { won: BoxResult['won']; count: number }>()
+  for (const r of result.results) {
+    const key = `${r.won.type}:${r.won.id}`
+    const ex = grouped.get(key)
+    if (ex) ex.count++
+    else grouped.set(key, { won: r.won, count: 1 })
+  }
+  const sorted = [...grouped.values()].sort((a, b) => (RARITY_RANK[a.won.rarity] ?? 99) - (RARITY_RANK[b.won.rarity] ?? 99))
+  const highlight = sorted.find(g => ['Unobtainable', 'Mythic', 'Legendary'].includes(g.won.rarity))
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div className="ns-card" style={{ padding: 28, maxWidth: 420, width: '92%', display: 'flex', flexDirection: 'column', gap: 14 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>🎰 {result.results.length} Spins</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-muted)' }}>
+            <CoinIcon size={13} />{result.coins.toLocaleString()} left
+          </div>
+        </div>
+        {highlight && (
+          <div style={{ background: `${getRarityColor(highlight.won.rarity, highlight.won.id)}22`, border: `1px solid ${getRarityColor(highlight.won.rarity, highlight.won.id)}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>✨</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: getRarityColor(highlight.won.rarity, highlight.won.id) }}>{highlight.won.rarity}!</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{highlight.won.name ?? highlight.won.tag}</div>
+            </div>
+          </div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 280, overflowY: 'auto' }}>
+          {sorted.map((g, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 8, background: 'var(--surface-2)' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: getRarityColor(g.won.rarity, g.won.id), flexShrink: 0 }} />
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                {g.won.tag ? `[${g.won.tag}]` : (g.won.name ?? g.won.id)}
+              </div>
+              <div style={{ fontSize: 11, color: getRarityColor(g.won.rarity, g.won.id), fontWeight: 700 }}>{g.won.rarity}</div>
+              {g.count > 1 && <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)' }}>×{g.count}</div>}
+            </div>
+          ))}
+        </div>
+        <button onClick={onClose} style={{ padding: '10px 0', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#060D10', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+          Nice!
+        </button>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 function SpinWheelModal({
   box,
   inv,
@@ -465,12 +533,14 @@ function SpinWheelModal({
   box: (typeof BOX_DEFS)[0]
   inv: InventoryData | null
   onClose: () => void
-  onSpin: (boxType: 'tag' | 'name-color' | 'pfp') => Promise<BoxResult | null>
-  onDone: (result: BoxResult) => void
+  onSpin: (boxType: BoxType, quantity: number) => Promise<BoxResult | MultiBoxResult | null>
+  onDone: (result: BoxResult | MultiBoxResult) => void
 }) {
   const [phase, setPhase] = useState<'ready' | 'spinning'>('ready')
   const [pointerAngle, setPointerAngle] = useState(0)
   const [spinDuration, setSpinDuration] = useState(0)
+  const [quantity, setQuantity] = useState(1)
+  const [spinError, setSpinError] = useState<string | null>(null)
 
   const segments = useMemo(() => {
     let cum = 0
@@ -483,13 +553,23 @@ function SpinWheelModal({
     })
   }, [box])
 
+  const totalCost = box.cost * quantity
+
   async function handleSpin() {
     if (phase !== 'ready') return
+    setSpinError(null)
     setPhase('spinning')
-    const result = await onSpin(box.type)
+    const result = await onSpin(box.type, quantity)
     if (!result) { setPhase('ready'); return }
 
-    const wonSeg = segments.find(s => s.rarity === result.won.rarity) ?? segments[0]
+    if (quantity > 1 || 'results' in result) {
+      onDone(result)
+      onClose()
+      return
+    }
+
+    const singleResult = result as BoxResult
+    const wonSeg = segments.find(s => s.rarity === singleResult.won.rarity) ?? segments[0]
     const segSize = wonSeg.end - wonSeg.start
     const margin = Math.min(segSize * 0.15, 5)
     const landAngle = wonSeg.start + margin + Math.random() * Math.max(0, segSize - margin * 2)
@@ -500,7 +580,7 @@ function SpinWheelModal({
     setPointerAngle(finalPointerAngle)
 
     setTimeout(() => {
-      onDone(result)
+      onDone(singleResult)
       onClose()
     }, 4300)
   }
@@ -517,7 +597,7 @@ function SpinWheelModal({
     return `M ${CX} ${CY} L ${s.x.toFixed(3)} ${s.y.toFixed(3)} A ${R} ${R} 0 ${large} 1 ${e.x.toFixed(3)} ${e.y.toFixed(3)} Z`
   }
 
-  const canSpin = phase === 'ready' && !!inv && inv.coins >= box.cost
+  const canSpin = phase === 'ready' && !!inv && inv.coins >= totalCost
 
   return createPortal(
     <div
@@ -538,9 +618,9 @@ function SpinWheelModal({
               <path
                 key={seg.rarity}
                 d={segmentPath(seg.start, seg.end)}
-                fill={seg.rarity === 'Mythic' ? '#ff0000' : getRarityWheelColor(seg.rarity)}
+                fill={seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' ? '#ff0000' : getRarityWheelColor(seg.rarity)}
                 stroke="none"
-                className={seg.rarity === 'Mythic' ? 'mythic-hue' : undefined}
+                className={seg.rarity === 'Mythic' ? 'mythic-hue' : seg.rarity === 'Unobtainable' ? 'unobtainable-hue' : undefined}
               />
             ))}
             {/* Red arrow orbiting the center hub — rotates via CSS, base hidden under the hub */}
@@ -564,8 +644,8 @@ function SpinWheelModal({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', justifyContent: 'center' }}>
           {segments.map(seg => (
             <div key={seg.rarity} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
-              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : undefined} style={{ width: 10, height: 10, borderRadius: 2, background: seg.rarity === 'Mythic' ? '#ff0000' : getRarityWheelColor(seg.rarity), display: 'inline-block', flexShrink: 0 }} />
-              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : undefined} style={{ color: seg.rarity === 'Mythic' ? '#ff0000' : getRarityWheelColor(seg.rarity), fontWeight: 700 }}>{seg.rarity}</span>
+              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : seg.rarity === 'Unobtainable' ? 'unobtainable-hue' : undefined} style={{ width: 10, height: 10, borderRadius: 2, background: (seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable') ? '#ff0000' : getRarityWheelColor(seg.rarity), display: 'inline-block', flexShrink: 0 }} />
+              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : seg.rarity === 'Unobtainable' ? 'unobtainable-hue' : undefined} style={{ color: (seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable') ? '#ff0000' : getRarityWheelColor(seg.rarity), fontWeight: 700 }}>{seg.rarity}</span>
               <span style={{ color: 'var(--text-muted)' }}>{seg.pct}%</span>
             </div>
           ))}
@@ -585,9 +665,45 @@ function SpinWheelModal({
         >
           {phase === 'spinning'
             ? '🌀 Spinning…'
-            : <><CoinIcon size={15} />{box.cost} — Spin!</>
+            : <><CoinIcon size={15} />{totalCost} — Spin{quantity > 1 ? ` ×${quantity}` : ''}!</>
           }
         </button>
+
+        {/* Quantity input */}
+        {phase === 'ready' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Quantity:</span>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={quantity}
+                onChange={e => {
+                  const v = Math.max(1, Math.min(100, parseInt(e.target.value) || 1))
+                  setQuantity(v)
+                  setSpinError(null)
+                }}
+                style={{ width: 64, padding: '5px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, textAlign: 'center' }}
+              />
+              {quantity > 1 && (
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  = <CoinIcon size={11} /> {totalCost.toLocaleString()} total
+                </span>
+              )}
+            </div>
+            {spinError && (
+              <div style={{ fontSize: 12, color: '#EF4444', textAlign: 'center', padding: '4px 10px', background: '#EF444420', borderRadius: 6 }}>
+                {spinError}
+              </div>
+            )}
+            {inv && inv.coins < totalCost && (
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                You can afford up to {Math.floor(inv.coins / box.cost)} spin{Math.floor(inv.coins / box.cost) !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+        )}
 
         {phase === 'ready' && (
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', padding: '4px 10px' }}>
@@ -612,9 +728,10 @@ export default function MarketplacePage() {
   const [loading, setLoading] = useState(true)
 
   // Box opening
-  const [opening, setOpening] = useState<'tag' | 'name-color' | 'pfp' | null>(null)
-  const [spinnerBox, setSpinnerBox] = useState<'tag' | 'name-color' | 'pfp' | null>(null)
-  const [hoveredBox, setHoveredBox] = useState<'tag' | 'name-color' | 'pfp' | null>(null)
+  const [opening, setOpening] = useState<BoxType | null>(null)
+  const [multiResult, setMultiResult] = useState<MultiBoxResult | null>(null)
+  const [spinnerBox, setSpinnerBox] = useState<BoxType | null>(null)
+  const [hoveredBox, setHoveredBox] = useState<BoxType | null>(null)
   const [result, setResult] = useState<(BoxResult & { dismissed?: boolean }) | null>(null)
   const [resultId, setResultId] = useState(0)
   const [dismissCountdown, setDismissCountdown] = useState(0)
@@ -811,24 +928,32 @@ export default function MarketplacePage() {
     } catch { /* ignore */ }
   }
 
-  async function doOpenBoxAPI(boxType: 'tag' | 'name-color' | 'pfp'): Promise<BoxResult | null> {
-    const cost = BOX_DEFS.find(b => b.type === boxType)!.cost
-    if (opening || !inv || inv.coins < cost) return null
+  async function doOpenBoxAPI(boxType: BoxType, quantity = 1): Promise<BoxResult | MultiBoxResult | null> {
+    const boxDef = BOX_DEFS.find(b => b.type === boxType)
+    if (!boxDef) return null
+    const totalCost = boxDef.cost * quantity
+    if (opening || !inv || inv.coins < totalCost) return null
     setOpening(boxType)
     try {
-      const r = await api.marketplaceOpenBox(boxType)
+      const r = await api.marketplaceOpenBox(boxType, quantity)
+      if (r.results) {
+        // Multi-spin: just update coin balance; inventory refreshes on next load
+        setInv(prev => prev ? { ...prev, coins: r.coins } : prev)
+        return { coins: r.coins, results: r.results } as MultiBoxResult
+      }
+      // Single spin: update inventory optimistically
       setInv(prev => {
         if (!prev) return prev
         const next = { ...prev, coins: r.coins }
-        if (boxType === 'name-color' && r.won.value) {
+        if (r.won.type === 'name-color' && r.won.value) {
           const item: MarketplaceItem = { id: r.won.id, name: r.won.name ?? r.won.id, value: r.won.value, rarity: r.won.rarity, weight: 0 }
           next.ownedNameColors = prev.ownedNameColors.some(i => i.id === r.won.id) ? prev.ownedNameColors : [...prev.ownedNameColors, item]
         }
-        if (boxType === 'pfp' && r.won.value) {
+        if (r.won.type === 'pfp' && r.won.value) {
           const item: MarketplaceItem = { id: r.won.id, name: r.won.name ?? r.won.id, value: r.won.value, rarity: r.won.rarity, weight: 0 }
           next.ownedPfpEffects = prev.ownedPfpEffects.some(i => i.id === r.won.id) ? prev.ownedPfpEffects : [...prev.ownedPfpEffects, item]
         }
-        if (boxType === 'tag' && r.won.tag) {
+        if (r.won.type === 'tag' && r.won.tag) {
           const item: TagInventoryItem = { id: r.won.id, tag: r.won.tag, tagColor: r.won.tagColor ?? '#6B7280', rarity: r.won.rarity }
           next.ownedTags = (prev.ownedTags ?? []).some(i => i.id === r.won.id) ? (prev.ownedTags ?? []) : [...(prev.ownedTags ?? []), item]
         }
@@ -842,10 +967,18 @@ export default function MarketplacePage() {
     }
   }
 
-  async function handleOpenBox(boxType: 'tag' | 'name-color' | 'pfp') {
+  async function handleOpenBox(boxType: BoxType, quantity = 1) {
     setResult(null)
-    const r = await doOpenBoxAPI(boxType)
-    if (r) { setResult(r); setResultId(id => id + 1) }
+    setMultiResult(null)
+    const r = await doOpenBoxAPI(boxType, quantity)
+    if (r) {
+      if ('results' in r) {
+        setMultiResult(r as MultiBoxResult)
+      } else {
+        setResult(r as BoxResult)
+        setResultId(id => id + 1)
+      }
+    }
   }
 
   async function handleEquip(type: 'name-color' | 'pfp' | 'tag', itemId: string | null) {
@@ -1410,7 +1543,7 @@ export default function MarketplacePage() {
             )
 
             // Fill effects replace the entire circle — show a pure div, no image
-            const PFP_FILL_EFFECTS = new Set(['rainbow', 'glow-gold', 'frame-black', 'fill-white'])
+            const PFP_FILL_EFFECTS = new Set(['rainbow', 'glow-gold', 'frame-black', 'fill-white', 'unobtainable-curse'])
             const isPfpFill = result.won.type === 'pfp' && PFP_FILL_EFFECTS.has(result.won.value ?? '')
             const effectStyle = pfpStyle(result.won.type === 'pfp' ? result.won.value : undefined)
             const dummyImgStyle: React.CSSProperties = {
@@ -1490,7 +1623,7 @@ export default function MarketplacePage() {
           })()}
 
           <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 12 }}>Spin — spend coins to unlock rewards</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
             {BOX_DEFS.map(box => {
               const isHovered = hoveredBox === box.type
               return (
@@ -2185,8 +2318,18 @@ export default function MarketplacePage() {
           inv={inv}
           onClose={() => setSpinnerBox(null)}
           onSpin={doOpenBoxAPI}
-          onDone={r => { setResult(r); setResultId(id => id + 1) }}
+          onDone={r => {
+            if ('results' in r) {
+              setMultiResult(r as MultiBoxResult)
+            } else {
+              setResult(r as BoxResult)
+              setResultId(id => id + 1)
+            }
+          }}
         />
+      )}
+      {multiResult && (
+        <MultiSpinResultOverlay result={multiResult} onClose={() => setMultiResult(null)} />
       )}
 
       {/* ── Profile Panel ── */}

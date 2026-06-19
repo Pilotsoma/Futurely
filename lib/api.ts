@@ -607,8 +607,8 @@ export const api = {
   marketplaceInventory: () =>
     request<InventoryData>('/api/marketplace/inventory'),
 
-  marketplaceOpenBox: (boxType: 'tag' | 'name-color' | 'pfp') =>
-    request<BoxResult>('/api/marketplace/open-box', { method: 'POST', body: JSON.stringify({ boxType }) }),
+  marketplaceOpenBox: (boxType: string, quantity = 1) =>
+    request<BoxResult & { results?: Array<{ won: BoxResult['won']; alreadyHad: boolean }> }>('/api/marketplace/open-box', { method: 'POST', body: JSON.stringify({ boxType, quantity }) }),
 
   marketplaceQuicksell: (itemType: 'tag' | 'name-color' | 'pfp', itemId: string) =>
     request<{ coins: number; payout: number }>('/api/marketplace/quicksell', {

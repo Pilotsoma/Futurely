@@ -85,9 +85,18 @@ const PFP_EFFECT_BOX_ITEMS: ColorItem[] = [
   { id: 'rainbow',         name: 'Rainbow Animated', value: 'rainbow',        rarity: 'Mythic',    weight: 0.05 },
 ]
 
-export const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
+interface DevCurseItem { id: string; name: string; tag?: string; tagColor?: string; value?: string; rarity: string; itemType: 'tag' | 'pfp'; weight: number }
+// Common: 33333×3 = 99999 (99.999%) | Unobtainable: 1 (0.001%) | Total: 100000
+const DEV_CURSE_ITEMS: DevCurseItem[] = [
+  { id: 'grinder', name: 'Grinder',   tag: 'Grinder', tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 33333 },
+  { id: 'focused', name: 'Focused',   tag: 'Focused',  tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 33333 },
+  { id: 'scholar', name: 'Scholar',   tag: 'Scholar',  tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 33333 },
+  { id: 'curse',   name: 'The Curse', value: 'unobtainable-curse',          rarity: 'Unobtainable', itemType: 'pfp', weight: 1    },
+]
+
+export const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Unobtainable']
 const RARITY_RANK: Record<string, number> = {
-  Common: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5,
+  Common: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5, Unobtainable: 6,
 }
 
 // ── Estimated item prices (seed; updated dynamically on each sale) ─────────────
@@ -118,6 +127,8 @@ export const SEED_PRICES: Record<string, number> = {
   'pfp:glow-pink': 267,      'pfp:glow-purple': 267,
   'pfp:glow-gold': 2000,     'pfp:frame-black': 2000,   'pfp:fill-white': 2000,
   'pfp:rainbow': 50000,
+  // Developer's Curse — expected value: 0.001% × 100000 = 1 coin = spin cost
+  'pfp:curse': 100000,
 }
 
 // Streak milestone tags below GOAT are soulbound (earn-only, never trade/sell)
@@ -312,7 +323,7 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 // Bump this number whenever SEED_PRICES changes — forces a one-time DB reset
 // to the new values, after which dynamic pricing takes over again.
-const SEED_VERSION = 5
+const SEED_VERSION = 6
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
@@ -476,77 +487,104 @@ async function autoPostUnbox(
 
 router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
-  const { boxType } = req.body as { boxType?: string }
-  if (!boxType || !['tag', 'name-color', 'pfp'].includes(boxType)) {
-    res.status(400).json({ error: 'boxType must be tag, name-color, or pfp' }); return
+  const { boxType, quantity: rawQty = 1 } = req.body as { boxType?: string; quantity?: number }
+  const quantity = Math.max(1, Math.min(100, Math.floor(Number(rawQty) || 1)))
+
+  if (!boxType || !['tag', 'name-color', 'pfp', 'dev-curse'].includes(boxType)) {
+    res.status(400).json({ error: 'boxType must be tag, name-color, pfp, or dev-curse' }); return
   }
 
-  const BOX_COSTS: Record<string, number> = { tag: 10, 'name-color': 15, pfp: 20 }
+  const BOX_COSTS: Record<string, number> = { tag: 10, 'name-color': 15, pfp: 20, 'dev-curse': 1 }
   const BOX_COST = BOX_COSTS[boxType]
+  const totalCost = BOX_COST * quantity
+
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
       select: { coins: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
-    if (user.coins < BOX_COST) {
-      res.status(402).json({ error: 'Not enough coins', coins: user.coins }); return
+    if (user.coins < totalCost) {
+      const maxAffordable = Math.floor(user.coins / BOX_COST)
+      res.status(402).json({ error: 'Not enough coins', coins: user.coins, maxAffordable }); return
     }
 
-    if (boxType === 'tag') {
-      const won = weightedRandom(TAG_BOX_ITEMS)
-      const existingTags = parseTagArr(user.allTags)
-      const alreadyHas = existingTags.some(t => t.tag === won.tag)
-      const newAllTags = [...existingTags, { tag: won.tag, tagColor: won.tagColor }]
+    const newTags = parseTagArr(user.allTags)
+    const newColors = parseJsonArr(user.ownedNameColors)
+    const newPfps = parseJsonArr(user.ownedPfpEffects)
+    const tagSet   = new Set(newTags.map(t => t.tag))
+    const colorSet = new Set(newColors.map(c => c.id as string))
+    const pfpSet   = new Set(newPfps.map(p => p.id as string))
 
-      const updated = await prisma.user.update({
-        where: { id: req.userId },
-        data: { coins: { decrement: BOX_COST }, allTags: JSON.stringify(newAllTags) },
-        select: { coins: true },
-      })
-      res.json({ data: { coins: updated.coins, won: { ...won, type: 'tag' }, alreadyHad: alreadyHas } })
+    const results: Array<{ won: Record<string, unknown>; alreadyHad: boolean }> = []
+    const postArgs: Parameters<typeof autoPostUnbox>[] = []
 
-      // Auto-post for Legendary/Mythic unboxes
-      if (won.rarity === 'Legendary' || won.rarity === 'Mythic') {
-        autoPostUnbox(req.userId, 'tag', won.id, won.tag, undefined, won.rarity, won.tagColor)
+    for (let i = 0; i < quantity; i++) {
+      if (boxType === 'tag') {
+        const won = weightedRandom(TAG_BOX_ITEMS)
+        const alreadyHad = tagSet.has(won.tag)
+        newTags.push({ tag: won.tag, tagColor: won.tagColor })
+        tagSet.add(won.tag)
+        results.push({ won: { ...won, type: 'tag' }, alreadyHad })
+        if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
+          postArgs.push([req.userId, 'tag', won.id, won.tag, undefined, won.rarity, won.tagColor])
+
+      } else if (boxType === 'name-color') {
+        const won = weightedRandom(NAME_COLOR_BOX_ITEMS)
+        const alreadyHad = colorSet.has(won.id)
+        newColors.push({ id: won.id, name: won.name, value: won.value, rarity: won.rarity })
+        colorSet.add(won.id)
+        results.push({ won: { ...won, type: 'name-color' }, alreadyHad })
+        if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
+          postArgs.push([req.userId, 'name-color', won.id, won.name, won.value, won.rarity, undefined])
+
+      } else if (boxType === 'pfp') {
+        const won = weightedRandom(PFP_EFFECT_BOX_ITEMS)
+        const alreadyHad = pfpSet.has(won.id)
+        newPfps.push({ id: won.id, name: won.name, value: won.value, rarity: won.rarity })
+        pfpSet.add(won.id)
+        results.push({ won: { ...won, type: 'pfp' }, alreadyHad })
+        if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
+          postArgs.push([req.userId, 'pfp', won.id, won.name, won.value, won.rarity, undefined])
+
+      } else { // dev-curse
+        const cursed = weightedRandom(DEV_CURSE_ITEMS)
+        if (cursed.itemType === 'tag') {
+          const alreadyHad = tagSet.has(cursed.tag!)
+          newTags.push({ tag: cursed.tag!, tagColor: cursed.tagColor! })
+          tagSet.add(cursed.tag!)
+          results.push({ won: { id: cursed.id, name: cursed.name, tag: cursed.tag, tagColor: cursed.tagColor, rarity: cursed.rarity, type: 'tag' }, alreadyHad })
+          if (cursed.rarity === 'Unobtainable')
+            postArgs.push([req.userId, 'tag', cursed.id, cursed.tag!, undefined, cursed.rarity, cursed.tagColor])
+        } else {
+          const alreadyHad = pfpSet.has(cursed.id)
+          newPfps.push({ id: cursed.id, name: cursed.name, value: cursed.value, rarity: cursed.rarity })
+          pfpSet.add(cursed.id)
+          results.push({ won: { id: cursed.id, name: cursed.name, value: cursed.value, rarity: cursed.rarity, type: 'pfp' }, alreadyHad })
+          if (cursed.rarity === 'Unobtainable')
+            postArgs.push([req.userId, 'pfp', cursed.id, cursed.name, cursed.value!, cursed.rarity, undefined])
+        }
       }
+    }
 
-    } else if (boxType === 'name-color') {
-      const won = weightedRandom(NAME_COLOR_BOX_ITEMS)
-      const owned = parseJsonArr(user.ownedNameColors)
-      const alreadyHas = owned.some(i => i.id === won.id)
-      const newOwned = [...owned, { id: won.id, name: won.name, value: won.value, rarity: won.rarity }]
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: {
+        coins: { decrement: totalCost },
+        allTags: JSON.stringify(newTags),
+        ownedNameColors: JSON.stringify(newColors),
+        ownedPfpEffects: JSON.stringify(newPfps),
+      },
+      select: { coins: true },
+    })
 
-      const updated = await prisma.user.update({
-        where: { id: req.userId },
-        data: { coins: { decrement: BOX_COST }, ownedNameColors: JSON.stringify(newOwned) },
-        select: { coins: true },
-      })
-      res.json({ data: { coins: updated.coins, won: { ...won, type: 'name-color' }, alreadyHad: alreadyHas } })
-
-      // Auto-post for Legendary/Mythic unboxes
-      if (won.rarity === 'Legendary' || won.rarity === 'Mythic') {
-        autoPostUnbox(req.userId, 'name-color', won.id, won.name, won.value, won.rarity, undefined)
-      }
-
+    if (quantity === 1) {
+      res.json({ data: { coins: updated.coins, won: results[0].won, alreadyHad: results[0].alreadyHad } })
     } else {
-      const won = weightedRandom(PFP_EFFECT_BOX_ITEMS)
-      const owned = parseJsonArr(user.ownedPfpEffects)
-      const alreadyHas = owned.some(i => i.id === won.id)
-      const newOwned = [...owned, { id: won.id, name: won.name, value: won.value, rarity: won.rarity }]
-
-      const updated = await prisma.user.update({
-        where: { id: req.userId },
-        data: { coins: { decrement: BOX_COST }, ownedPfpEffects: JSON.stringify(newOwned) },
-        select: { coins: true },
-      })
-      res.json({ data: { coins: updated.coins, won: { ...won, type: 'pfp' }, alreadyHad: alreadyHas } })
-
-      // Auto-post for Legendary/Mythic unboxes
-      if (won.rarity === 'Legendary' || won.rarity === 'Mythic') {
-        autoPostUnbox(req.userId, 'pfp', won.id, won.name, won.value, won.rarity, undefined)
-      }
+      res.json({ data: { coins: updated.coins, results } })
     }
+
+    for (const args of postArgs) autoPostUnbox(...args)
   } catch {
     res.status(500).json({ error: 'Failed to open box' })
   }
@@ -555,7 +593,7 @@ router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: R
 // ── Quicksell ─────────────────────────────────────────────────────────────────
 
 const QUICKSELL_PRICES: Record<string, number> = {
-  Common: 3, Uncommon: 7, Rare: 13, Epic: 27, Legendary: 100, Mythic: 667,
+  Common: 3, Uncommon: 7, Rare: 13, Epic: 27, Legendary: 100, Mythic: 667, Unobtainable: 5000,
 }
 
 router.post('/quicksell/duplicates', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
