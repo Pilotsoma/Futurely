@@ -1437,9 +1437,10 @@ router.get('/item/:itemType/:itemId/owners', async (req: Request, res: Response)
         AND u."deletedAt" IS NULL
         ORDER BY u.id ASC LIMIT 50`
     } else {
-      const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
-      const tagName = def ? def.tag : (itemId in STREAK_TAG_META ? itemId : null)
-      if (!tagName) { res.json({ data: [] }); return }
+      const spinDef    = TAG_BOX_ITEMS.find(t => t.id === itemId)
+      const specialDef = SPECIAL_TAGS.find(t => t.tag === itemId || t.id === itemId || t.id === itemId.toLowerCase())
+      // Fall back to itemId itself — works when itemId IS the tag name (DEV, VIP, GOAT, Novice …)
+      const tagName = spinDef?.tag ?? specialDef?.tag ?? itemId
       const tagPattern = `%"tag":"${tagName}"%`
       owners = await prisma.$queryRaw<OwnerRow[]>`
         SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"
