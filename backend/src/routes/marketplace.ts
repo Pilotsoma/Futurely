@@ -86,12 +86,15 @@ const PFP_EFFECT_BOX_ITEMS: ColorItem[] = [
 ]
 
 interface DevCurseItem { id: string; name: string; tag?: string; tagColor?: string; value?: string; rarity: string; itemType: 'tag' | 'pfp'; weight: number }
-// Common: 33333×3 = 99999 (99.999%) | Unobtainable: 1 (0.001%) | Total: 100000
+// Weights: Common 84000 (84%), Uncommon 15999 (15.999%), Unobtainable 1 (0.001%) — total 100000
 const DEV_CURSE_ITEMS: DevCurseItem[] = [
-  { id: 'grinder', name: 'Grinder',   tag: 'Grinder', tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 33333 },
-  { id: 'focused', name: 'Focused',   tag: 'Focused',  tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 33333 },
-  { id: 'scholar', name: 'Scholar',   tag: 'Scholar',  tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 33333 },
-  { id: 'curse',   name: 'The Curse', value: 'unobtainable-curse',          rarity: 'Unobtainable', itemType: 'pfp', weight: 1    },
+  { id: 'grinder',    name: 'Grinder',   tag: 'Grinder',    tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 28000 },
+  { id: 'focused',    name: 'Focused',   tag: 'Focused',     tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 28000 },
+  { id: 'scholar',    name: 'Scholar',   tag: 'Scholar',     tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 28000 },
+  { id: 'learner',    name: 'Learner',   tag: 'Learner',     tagColor: '#94A3B8', rarity: 'Uncommon',    itemType: 'tag', weight: 5333  },
+  { id: 'c-student',  name: 'C Student', tag: 'C Student',   tagColor: '#78716C', rarity: 'Uncommon',    itemType: 'tag', weight: 5333  },
+  { id: 'bottom-100', name: 'Bottom 100', tag: 'Bottom 100', tagColor: '#6B7280', rarity: 'Uncommon',    itemType: 'tag', weight: 5333  },
+  { id: 'curse',      name: 'The Curse', value: 'unobtainable-curse',              rarity: 'Unobtainable', itemType: 'pfp', weight: 1    },
 ]
 
 export const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Unobtainable']
@@ -131,17 +134,24 @@ export const SEED_PRICES: Record<string, number> = {
   'pfp:curse': 1_000_000,
 }
 
-// Streak milestone tags below GOAT are soulbound (earn-only, never trade/sell)
-// GOAT (day-100) is the exception — it IS tradeable and sellable
-const NON_TRADEABLE_TAGS = new Set(['Novice', 'Pro', 'Veteran', 'Legend'])
+// Soulbound tags: untradeable, unlistable, unquicksellable in all forms
+// Streak milestone tags below GOAT + Developer's Curse exclusive uncommons
+const NON_TRADEABLE_TAGS = new Set([
+  'Novice', 'Pro', 'Veteran', 'Legend',          // streak soulbound
+  'Learner', 'C Student', 'Bottom 100',           // dev-curse exclusive
+])
 
-// Proper metadata for streak tags so they get correct rarity/color when listed
+// Proper metadata for soulbound tags (streak + dev-curse exclusives)
 const STREAK_TAG_META: Record<string, { tagColor: string; rarity: string }> = {
-  Novice:  { tagColor: '#22C55E', rarity: 'Common'    },
-  Pro:     { tagColor: '#3B82F6', rarity: 'Uncommon'  },
-  Veteran: { tagColor: '#F97316', rarity: 'Rare'      },
-  Legend:  { tagColor: '#EC4899', rarity: 'Epic'      },
-  GOAT:    { tagColor: '#EAB308', rarity: 'Mythic'    },
+  Novice:      { tagColor: '#22C55E', rarity: 'Common'    },
+  Pro:         { tagColor: '#3B82F6', rarity: 'Uncommon'  },
+  Veteran:     { tagColor: '#F97316', rarity: 'Rare'      },
+  Legend:      { tagColor: '#EC4899', rarity: 'Epic'      },
+  GOAT:        { tagColor: '#EAB308', rarity: 'Mythic'    },
+  // Developer's Curse exclusives (Uncommon, soulbound)
+  'Learner':    { tagColor: '#94A3B8', rarity: 'Uncommon' },
+  'C Student':  { tagColor: '#78716C', rarity: 'Uncommon' },
+  'Bottom 100': { tagColor: '#6B7280', rarity: 'Uncommon' },
 }
 
 // ── Trade item type ────────────────────────────────────────────────────────────
@@ -614,12 +624,12 @@ router.post('/quicksell/duplicates', requireAuth, txLimiter, async (req: AuthReq
 
     let totalPayout = 0
 
-    // Keep first occurrence of each tag; sell remaining duplicates (unless excluded)
+    // Keep first occurrence of each tag; sell remaining duplicates (unless excluded or soulbound)
     const finalTags: typeof rawTags = []
     const tagKept = new Set<string>()
     for (const t of rawTags) {
       const key = `tag:${t.tag}`
-      if (exclude.has(key) || !tagKept.has(t.tag)) { finalTags.push(t); tagKept.add(t.tag) }
+      if (NON_TRADEABLE_TAGS.has(t.tag) || exclude.has(key) || !tagKept.has(t.tag)) { finalTags.push(t); tagKept.add(t.tag) }
       else {
         const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
         totalPayout += QUICKSELL_PRICES[def?.rarity ?? 'Common'] ?? 5
@@ -685,6 +695,11 @@ router.post('/quicksell', requireAuth, txLimiter, async (req: AuthRequest, res: 
     if (itemType === 'tag') {
       const tags = parseTagArr(user.allTags)
       const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
+      // Block soulbound tags from quicksell
+      const tagName = def?.tag ?? itemId
+      if (NON_TRADEABLE_TAGS.has(tagName)) {
+        res.status(403).json({ error: 'This tag cannot be quicksold' }); return
+      }
       if (def) {
         // Box tag — match by tag name from definition
         rarity = def.rarity

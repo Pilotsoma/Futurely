@@ -104,10 +104,11 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
     ],
   },
   {
-    type: 'dev-curse', icon: '💀', label: "Developer's Curse", desc: '1 coin · 99.999% Common tag · 0.001% Unobtainable PFP', cost: 1,
+    type: 'dev-curse', icon: '💀', label: "Developer's Curse", desc: '1 coin · mostly Common · soulbound Uncommons · 0.001% Unobtainable', cost: 1,
     drops: [
-      { rarity: 'Common',      pct: '99.999%', items: ['Grinder', 'Focused', 'Scholar'] },
-      { rarity: 'Unobtainable', pct: '0.001%', items: ['The Curse'] },
+      { rarity: 'Common',       pct: '84%',     items: ['Grinder', 'Focused', 'Scholar'] },
+      { rarity: 'Uncommon',     pct: '15.999%', items: ['Learner', 'C Student', 'Bottom 100'] },
+      { rarity: 'Unobtainable', pct: '0.001%',  items: ['The Curse'] },
     ],
   },
 ]
@@ -148,10 +149,13 @@ const SIM_ITEMS: Record<BoxType, SimItem[]> = {
     { id: 'rainbow',        label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic',  type: 'pfp', name: 'Rainbow Animated', value: 'rainbow' },
   ],
   'dev-curse': [
-    { id: 'grinder', label: 'Grinder (Common)',              rarity: 'Common',      type: 'tag', tag: 'Grinder', tagColor: '#6B7280' },
-    { id: 'focused', label: 'Focused (Common)',              rarity: 'Common',      type: 'tag', tag: 'Focused',  tagColor: '#6B7280' },
-    { id: 'scholar', label: 'Scholar (Common)',              rarity: 'Common',      type: 'tag', tag: 'Scholar',  tagColor: '#6B7280' },
-    { id: 'curse',   label: 'The Curse (Unobtainable)',     rarity: 'Unobtainable', type: 'pfp', name: 'The Curse', value: 'unobtainable-curse' },
+    { id: 'grinder',    label: 'Grinder (Common)',           rarity: 'Common',      type: 'tag', tag: 'Grinder',    tagColor: '#6B7280' },
+    { id: 'focused',    label: 'Focused (Common)',           rarity: 'Common',      type: 'tag', tag: 'Focused',     tagColor: '#6B7280' },
+    { id: 'scholar',    label: 'Scholar (Common)',           rarity: 'Common',      type: 'tag', tag: 'Scholar',     tagColor: '#6B7280' },
+    { id: 'learner',    label: 'Learner (Uncommon)',         rarity: 'Uncommon',    type: 'tag', tag: 'Learner',     tagColor: '#94A3B8' },
+    { id: 'c-student',  label: 'C Student (Uncommon)',       rarity: 'Uncommon',    type: 'tag', tag: 'C Student',   tagColor: '#78716C' },
+    { id: 'bottom-100', label: 'Bottom 100 (Uncommon)',      rarity: 'Uncommon',    type: 'tag', tag: 'Bottom 100',  tagColor: '#6B7280' },
+    { id: 'curse',      label: 'The Curse (Unobtainable)',  rarity: 'Unobtainable', type: 'pfp', name: 'The Curse', value: 'unobtainable-curse' },
   ],
 }
 
@@ -181,8 +185,11 @@ function groupById<T extends { id: string }>(arr: T[]): Array<T & { count: numbe
   return [...map.values()]
 }
 
-// Streak tags below GOAT are soulbound — matches backend NON_TRADEABLE_TAGS
-const NON_TRADEABLE_TAG_IDS = new Set(['Novice', 'Pro', 'Veteran', 'Legend'])
+// Matches backend NON_TRADEABLE_TAGS — soulbound: untradeable, unlistable, unquicksellable
+const NON_TRADEABLE_TAG_IDS = new Set([
+  'Novice', 'Pro', 'Veteran', 'Legend',
+  'Learner', 'C Student', 'Bottom 100',
+])
 
 // Every item that exists in the app — mirrors backend TAG_BOX_ITEMS / NAME_COLOR_BOX_ITEMS / PFP_EFFECT_BOX_ITEMS
 type CatalogItem = { id: string; type: 'tag' | 'name-color' | 'pfp'; name: string; rarity: string; value?: string; tagColor?: string }
@@ -237,6 +244,10 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'fill-white',     type: 'pfp', name: 'White Fill',        rarity: 'Legendary', value: 'fill-white'     },
   { id: 'rainbow',        type: 'pfp', name: 'Rainbow Animated ✨', rarity: 'Mythic',       value: 'rainbow'              },
   { id: 'curse',         type: 'pfp', name: 'The Curse',           rarity: 'Unobtainable', value: 'unobtainable-curse'   },
+  // Developer's Curse exclusives (soulbound Uncommons)
+  { id: 'Learner',    type: 'tag', name: 'Learner',    rarity: 'Uncommon', tagColor: '#94A3B8' },
+  { id: 'C Student',  type: 'tag', name: 'C Student',  rarity: 'Uncommon', tagColor: '#78716C' },
+  { id: 'Bottom 100', type: 'tag', name: 'Bottom 100', rarity: 'Uncommon', tagColor: '#6B7280' },
 ]
 
 type Tab = 'boxes' | 'shop' | 'trade' | 'inventory' | 'leaderboard' | 'catalog'
