@@ -34,6 +34,10 @@ export default function LoginPage() {
   const [step, setStep]       = useState<'auth' | 'connecting' | 'syncing'>('auth')
   const [portalDisconnected, setPortalDisconnected] = useState(false)
 
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+  const [agreedPrivacy, setAgreedPrivacy]       = useState(false)
+  const [agreedAge, setAgreedAge]               = useState(false)
+
   useEffect(() => {
     function onOutsideClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -62,14 +66,23 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     reset()
-    if (mode !== 'login') {
-      if (password !== confirmPassword) { setError('Passwords do not match'); return }
-      if (password.length < 6)          { setError('Password must be at least 6 characters'); return }
-      if (mode === 'register-student') {
-        if (!hacUsername.trim() || !hacPassword.trim()) { setError('School portal credentials are required'); return }
-        if (!hacUrl.trim()) { setError('Please select your school district'); return }
-      }
+    if (mode === 'login') {
+      await doRegisterOrLogin()
+      return
     }
+    // Registration — validate then show privacy modal
+    if (password !== confirmPassword) { setError('Passwords do not match'); return }
+    if (password.length < 6)          { setError('Password must be at least 6 characters'); return }
+    if (mode === 'register-student') {
+      if (!hacUsername.trim() || !hacPassword.trim()) { setError('School portal credentials are required'); return }
+      if (!hacUrl.trim()) { setError('Please select your school district'); return }
+    }
+    setAgreedPrivacy(false)
+    setAgreedAge(false)
+    setShowPrivacyModal(true)
+  }
+
+  async function doRegisterOrLogin() {
     setIsLoading(true)
     try {
       let result: { token: string; user: { id: number; name: string | null; role: string } }
@@ -294,6 +307,125 @@ export default function LoginPage() {
           </p>
         )}
       </div>
+
+      {/* ── Privacy Policy Modal ── */}
+      {showPrivacyModal && (
+        <div style={styles.modalBackdrop} onClick={() => setShowPrivacyModal(false)}>
+          <div style={styles.modalCard} onClick={e => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Privacy Policy</span>
+              <button type="button" onClick={() => setShowPrivacyModal(false)} style={styles.modalClose}>✕</button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <p style={styles.ppMeta}>Effective Date: June 18, 2026 · Futurely, Inc.</p>
+
+              <p style={styles.ppText}>
+                Welcome to Futurely. This Privacy Policy explains how we collect, use, and protect
+                your information when you use our platform. By creating an account you agree to
+                these terms.
+              </p>
+
+              <p style={styles.ppSection}>1. Information We Collect</p>
+              <p style={styles.ppText}>
+                We collect the information you provide when registering (name, email address, and
+                password). For students who connect their school portal, we temporarily process
+                your Home Access Center credentials solely to fetch your academic data — these
+                credentials are <strong>never stored</strong> on our servers. We also collect
+                usage data (pages visited, features used) to improve the platform.
+              </p>
+
+              <p style={styles.ppSection}>2. How We Use Your Information</p>
+              <p style={styles.ppText}>
+                Your information is used to operate and personalize the Futurely platform, display
+                your grades and academic progress, power AI-assisted features, and communicate
+                important account updates. We do <strong>not</strong> use your data for advertising
+                or sell it to third parties under any circumstances.
+              </p>
+
+              <p style={styles.ppSection}>3. Data Sharing</p>
+              <p style={styles.ppText}>
+                We do not sell, rent, or share your personal information with third parties except
+                as required by law or with your explicit consent. We use industry-standard
+                service providers (hosting, infrastructure) who are contractually bound to protect
+                your data and may not use it for any other purpose.
+              </p>
+
+              <p style={styles.ppSection}>4. Educational Records (FERPA)</p>
+              <p style={styles.ppText}>
+                Futurely is designed to comply with the Family Educational Rights and Privacy Act
+                (FERPA). Academic data fetched from your school portal is used solely to provide
+                you with the services you request and is never disclosed to unauthorized parties.
+              </p>
+
+              <p style={styles.ppSection}>5. Children&apos;s Privacy (COPPA)</p>
+              <p style={styles.ppText}>
+                Futurely is intended for users who are <strong>13 years of age or older</strong>.
+                We do not knowingly collect personal information from children under 13. If you
+                believe a child under 13 has created an account, please contact us and we will
+                promptly delete the account and any associated data.
+              </p>
+
+              <p style={styles.ppSection}>6. Data Security</p>
+              <p style={styles.ppText}>
+                We use encryption in transit (HTTPS/TLS) and at rest to protect your data.
+                Passwords are hashed using industry-standard algorithms and are never stored in
+                plain text. Despite these measures, no system is completely secure — please use a
+                strong, unique password for your account.
+              </p>
+
+              <p style={styles.ppSection}>7. Your Rights</p>
+              <p style={styles.ppText}>
+                You may request access to, correction of, or deletion of your personal data at any
+                time by visiting Settings → Account or contacting us at{' '}
+                <strong>support@futurely.app</strong>. Account deletion permanently removes all
+                your data from our systems within 30 days.
+              </p>
+
+              <p style={styles.ppSection}>8. Changes to This Policy</p>
+              <p style={styles.ppText}>
+                We may update this Privacy Policy periodically. We will notify you of material
+                changes via email or an in-app notice. Continued use of Futurely after such notice
+                constitutes acceptance of the updated policy.
+              </p>
+
+              <p style={styles.ppSection}>9. Contact Us</p>
+              <p style={styles.ppText}>
+                Questions or concerns? Reach us at <strong>support@futurely.app</strong>.
+              </p>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <label style={styles.checkRow}>
+                <input
+                  type="checkbox"
+                  checked={agreedPrivacy}
+                  onChange={e => setAgreedPrivacy(e.target.checked)}
+                  style={styles.checkbox}
+                />
+                <span style={styles.checkLabel}>I have read and agree to the Privacy Policy</span>
+              </label>
+              <label style={styles.checkRow}>
+                <input
+                  type="checkbox"
+                  checked={agreedAge}
+                  onChange={e => setAgreedAge(e.target.checked)}
+                  style={styles.checkbox}
+                />
+                <span style={styles.checkLabel}>I am at least 13 years of age</span>
+              </label>
+              <button
+                type="button"
+                disabled={!agreedPrivacy || !agreedAge || isLoading}
+                onClick={() => { setShowPrivacyModal(false); void doRegisterOrLogin() }}
+                style={{ ...styles.btn, marginTop: 6, opacity: (!agreedPrivacy || !agreedAge || isLoading) ? 0.45 : 1 }}
+              >
+                {isLoading ? 'Creating account...' : 'Continue & Create Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -324,4 +456,17 @@ const styles: Record<string, React.CSSProperties> = {
   dropdownItem:    { display: 'flex', alignItems: 'center', width: '100%', padding: '9px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13, textAlign: 'left' as const, transition: 'background 0.1s' },
   dropdownEmpty:   { padding: '12px 10px', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' as const },
   dropdownDivider: { height: 1, background: 'var(--border)', margin: '4px 0' },
+
+  modalBackdrop:  { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  modalCard:      { width: '100%', maxWidth: 540, maxHeight: '88vh', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, display: 'flex', flexDirection: 'column' as const, boxShadow: '0 24px 80px rgba(0,0,0,0.35)' },
+  modalHeader:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', flexShrink: 0 },
+  modalClose:     { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16, padding: '2px 6px', borderRadius: 6 },
+  modalBody:      { overflowY: 'auto' as const, padding: '20px 22px', flex: 1 },
+  modalFooter:    { padding: '16px 22px 20px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column' as const, gap: 12, flexShrink: 0 },
+  ppMeta:         { fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 14 },
+  ppSection:      { fontWeight: 700, fontSize: 13, color: 'var(--text)', marginTop: 18, marginBottom: 4 },
+  ppText:         { fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 },
+  checkRow:       { display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' },
+  checkbox:       { width: 16, height: 16, marginTop: 1, flexShrink: 0, accentColor: 'var(--primary)', cursor: 'pointer' },
+  checkLabel:     { fontSize: 13.5, color: 'var(--text)', lineHeight: 1.4 },
 }
