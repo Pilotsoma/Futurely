@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { api, type StudentData } from '../../../lib/api'
@@ -440,7 +441,7 @@ export default function DashboardPage() {
       <div style={{ flex: 1 }} />
 
       {/* Streak Milestone Celebration Popup */}
-      {streakMilestone && (
+      {streakMilestone && createPortal(
         <div style={S.popupOverlay} onClick={() => setStreakMilestone(null)}>
           <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setStreakMilestone(null)} style={S.popupClose}>×</button>
@@ -479,11 +480,12 @@ export default function DashboardPage() {
               Let&apos;s go! 🚀
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Streak Popup */}
-      {showStreakPopup && (
+      {showStreakPopup && createPortal(
         <div style={S.popupOverlay} onClick={() => setShowStreakPopup(false)}>
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowStreakPopup(false)} style={S.popupClose}>×</button>
@@ -568,11 +570,12 @@ export default function DashboardPage() {
               Got it!
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* GPA Percentile Welcome Popup (one-time) */}
-      {showGpaWelcome && (
+      {showGpaWelcome && createPortal(
         <div style={S.popupOverlay} onClick={() => setShowGpaWelcome(false)}>
           <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowGpaWelcome(false)} style={S.popupClose}>×</button>
@@ -616,11 +619,12 @@ export default function DashboardPage() {
               Got it! 🚀
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* HAC session expired / resync popup */}
-      {showResyncPopup && (
+      {showResyncPopup && createPortal(
         <div style={S.popupOverlay} onClick={() => setShowResyncPopup(false)}>
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowResyncPopup(false)} style={S.popupClose}>×</button>
@@ -658,7 +662,8 @@ export default function DashboardPage() {
               Dismiss
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* AI bar */}

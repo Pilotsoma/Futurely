@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, FeedPost, FeedUserProfile } from '@/lib/api'
+import Portal from './Portal'
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -124,6 +125,7 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
   const isMythicTag = profile?.tag === 'GOD'
 
   return (
+    <Portal>
     <div style={S.overlay} onClick={onClose}>
       <div style={S.panel} onClick={e => e.stopPropagation()}>
         {loading ? (
@@ -216,6 +218,7 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
         )}
       </div>
     </div>
+    </Portal>
   )
 }
 

@@ -15,7 +15,7 @@ const DUMMY_PFP = 'https://i.pinimg.com/474x/13/74/20/137420f5b9c39bc911e472f5d2
 
 const RARITY_COLOR: Record<string, string> = {
   Common: '#22C55E', Uncommon: '#3B82F6', Rare: '#F97316',
-  Epic: '#8B5CF6', Legendary: '#EAB308', Mythic: 'rainbow', Unobtainable: '#7C3AED',
+  Epic: '#8B5CF6', Legendary: '#EAB308', Mythic: 'rainbow', Unobtainable: '#7C3AED', Curse: '#ff0000',
 }
 // Per-item display color overrides — take precedence over rarity color everywhere
 const ITEM_COLOR_OVERRIDE: Record<string, string> = {}
@@ -257,11 +257,11 @@ const SIM_ITEMS: Record<BoxType, SimItem[]> = {
 }
 
 const QUICKSELL_PRICES: Record<string, number> = {
-  Common: 3, Uncommon: 7, Rare: 13, Epic: 27, Legendary: 100, Mythic: 667, Unobtainable: 5000,
+  Common: 3, Uncommon: 7, Rare: 13, Epic: 27, Legendary: 100, Mythic: 667, Unobtainable: 5000, Curse: 0,
 }
 
 const RARITY_RANK: Record<string, number> = {
-  Unobtainable: -1, Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5,
+  Curse: -2, Unobtainable: -1, Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5,
 }
 
 function byRarity<T extends { rarity: string; id: string }>(arr: T[]): T[] {
@@ -595,7 +595,7 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
     else grouped.set(key, { won: r.won, count: 1 })
   }
   const sorted = [...grouped.values()].sort((a, b) => (RARITY_RANK[a.won.rarity] ?? 99) - (RARITY_RANK[b.won.rarity] ?? 99))
-  const highlight = sorted.find(g => ['Unobtainable', 'Mythic', 'Legendary'].includes(g.won.rarity))
+  const highlight = sorted.find(g => ['Curse', 'Unobtainable', 'Mythic', 'Legendary'].includes(g.won.rarity))
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
       <div className="ns-card" style={{ padding: 28, maxWidth: 420, width: '92%', display: 'flex', flexDirection: 'column', gap: 14 }} onClick={e => e.stopPropagation()}>
@@ -730,9 +730,9 @@ function SpinWheelModal({
               <path
                 key={seg.rarity}
                 d={segmentPath(seg.start, seg.end)}
-                fill={seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' ? '#ff0000' : getRarityWheelColor(seg.rarity)}
+                fill={seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse' ? '#ff0000' : getRarityWheelColor(seg.rarity)}
                 stroke="none"
-                className={seg.rarity === 'Mythic' ? 'mythic-hue' : seg.rarity === 'Unobtainable' ? 'unobtainable-hue' : undefined}
+                className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined}
               />
             ))}
             {/* Red arrow orbiting the center hub — rotates via CSS, base hidden under the hub */}
@@ -756,8 +756,8 @@ function SpinWheelModal({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', justifyContent: 'center' }}>
           {segments.map(seg => (
             <div key={seg.rarity} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
-              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : seg.rarity === 'Unobtainable' ? 'unobtainable-hue' : undefined} style={{ width: 10, height: 10, borderRadius: 2, background: (seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable') ? '#ff0000' : getRarityWheelColor(seg.rarity), display: 'inline-block', flexShrink: 0 }} />
-              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : seg.rarity === 'Unobtainable' ? 'unobtainable-hue' : undefined} style={{ color: (seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable') ? '#ff0000' : getRarityWheelColor(seg.rarity), fontWeight: 700 }}>{seg.rarity}</span>
+              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined} style={{ width: 10, height: 10, borderRadius: 2, background: (seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? '#ff0000' : getRarityWheelColor(seg.rarity), display: 'inline-block', flexShrink: 0 }} />
+              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined} style={{ color: (seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? '#ff0000' : getRarityWheelColor(seg.rarity), fontWeight: 700 }}>{seg.rarity}</span>
               <span style={{ color: 'var(--text-muted)' }}>{seg.pct}%</span>
             </div>
           ))}
@@ -2447,7 +2447,7 @@ export default function MarketplacePage() {
       )}
 
       {/* ── Profile Panel ── */}
-      {(profilePanel || profilePanelLoading) && (
+      {(profilePanel || profilePanelLoading) && createPortal(
         <div
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={() => setProfilePanel(null)}
@@ -2506,7 +2506,8 @@ export default function MarketplacePage() {
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── DEV Panel ── */}

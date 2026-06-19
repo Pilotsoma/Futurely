@@ -225,7 +225,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
   const isGodTag = profile?.tag === 'GOAT'
   const isMythicTag = profile?.tag === 'GOD'
 
-  return (
+  return createPortal(
     <div style={O.overlay} onClick={onClose}>
       <div style={O.panel} onClick={e => e.stopPropagation()}>
         {loading ? (
@@ -323,7 +323,8 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -1211,7 +1212,7 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
     finally { setSubmitting(false) }
   }
 
-  return (
+  return createPortal(
     <div style={O.overlay} onClick={onClose}>
       <div style={{ ...O.panel, maxWidth: 560 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
@@ -1303,7 +1304,8 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -1368,7 +1370,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
 
   const sorted = [...comments].sort((a, b) => (b._count?.likes ?? 0) - (a._count?.likes ?? 0))
 
-  return (
+  return createPortal(
     <div style={O.overlay} onClick={onClose}>
       <div style={{ ...O.panel, maxWidth: 500 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
@@ -1462,7 +1464,8 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

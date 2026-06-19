@@ -85,18 +85,20 @@ const PFP_EFFECT_BOX_ITEMS: ColorItem[] = [
   { id: 'rainbow',         name: 'Rainbow Animated', value: 'rainbow',        rarity: 'Mythic',    weight: 0.05 },
 ]
 
-interface DevCurseItem { id: string; name: string; tag?: string; tagColor?: string; value?: string; rarity: string; itemType: 'tag' | 'pfp'; weight: number }
-// Common: 33333×3 = 99999 (99.999%) | Unobtainable: 1 (0.001%) | Total: 100000
+interface DevCurseItem { id: string; name: string; tag?: string; tagColor?: string; value?: string; rarity: string; itemType: 'tag' | 'name-color' | 'pfp'; weight: number }
+// Common: 33332+33332+33333 = 99997 (99.997%) | Curse: 1×3 = 3 (0.001% each) | Total: 100000
 const DEV_CURSE_ITEMS: DevCurseItem[] = [
-  { id: 'learner',    name: 'Learner',    tag: 'Learner',    tagColor: '#94A3B8', rarity: 'Common', itemType: 'tag', weight: 33333 },
-  { id: 'c-student',  name: 'C Student',  tag: 'C Student',  tagColor: '#78716C', rarity: 'Common', itemType: 'tag', weight: 33333 },
+  { id: 'learner',    name: 'Learner',    tag: 'Learner',    tagColor: '#94A3B8', rarity: 'Common', itemType: 'tag', weight: 33332 },
+  { id: 'c-student',  name: 'C Student',  tag: 'C Student',  tagColor: '#78716C', rarity: 'Common', itemType: 'tag', weight: 33332 },
   { id: 'bottom-100', name: 'Bottom 100', tag: 'Bottom 100', tagColor: '#6B7280', rarity: 'Common', itemType: 'tag', weight: 33333 },
-  { id: 'curse',      name: 'The Curse',  value: 'unobtainable-curse', rarity: 'Unobtainable', itemType: 'pfp', weight: 1 },
+  { id: 'curse-tag',  name: 'CURSE tag',  tag: 'CURSE',      tagColor: 'curse',   rarity: 'Curse',  itemType: 'tag', weight: 1 },
+  { id: 'curse-name', name: 'Curse Name Color', value: 'curse', rarity: 'Curse', itemType: 'name-color', weight: 1 },
+  { id: 'curse',      name: 'The Curse PFP', value: 'unobtainable-curse', rarity: 'Curse', itemType: 'pfp', weight: 1 },
 ]
 
-export const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Unobtainable']
+export const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Unobtainable', 'Curse']
 const RARITY_RANK: Record<string, number> = {
-  Common: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5, Unobtainable: 6,
+  Common: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5, Unobtainable: 6, Curse: 7,
 }
 
 // ── Estimated item prices (seed; updated dynamically on each sale) ─────────────
@@ -126,14 +128,16 @@ export const SEED_PRICES: Record<string, number> = {
   'pfp:glow-pink': 267,      'pfp:glow-purple': 267,
   'pfp:glow-gold': 2000,     'pfp:frame-black': 2000,   'pfp:fill-white': 2000,
   'pfp:rainbow': 50000,
-  // Developer's Curse — 0.001% chance, estimated market value
+  // Developer's Curse — 0.001% chance each, estimated market value
   'pfp:curse': 1_000_000,
+  'tag:curse-tag': 1_000_000,
+  'name-color:curse-name': 1_000_000,
 }
 
 // Streak tags: fully soulbound — no trade, no list, no quicksell
 const SOULBOUND_TAGS = new Set(['Novice', 'Pro', 'Veteran', 'Legend'])
 // Dev-curse exclusives: no trade, no list; quicksell allowed but yields 0 coins
-const ZERO_QUICKSELL_TAGS = new Set(['Learner', 'C Student', 'Bottom 100'])
+const ZERO_QUICKSELL_TAGS = new Set(['Learner', 'C Student', 'Bottom 100', 'CURSE'])
 // Union used for trade + listing checks
 const NON_TRADEABLE_TAGS = new Set([...SOULBOUND_TAGS, ...ZERO_QUICKSELL_TAGS])
 
@@ -148,6 +152,7 @@ const STREAK_TAG_META: Record<string, { tagColor: string; rarity: string }> = {
   'Learner':    { tagColor: '#94A3B8', rarity: 'Common' },
   'C Student':  { tagColor: '#78716C', rarity: 'Common' },
   'Bottom 100': { tagColor: '#6B7280', rarity: 'Common' },
+  'CURSE':      { tagColor: 'curse',   rarity: 'Curse'  },
 }
 
 // ── Trade item type ────────────────────────────────────────────────────────────
@@ -561,14 +566,21 @@ router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: R
           newTags.push({ tag: cursed.tag!, tagColor: cursed.tagColor! })
           tagSet.add(cursed.tag!)
           results.push({ won: { id: cursed.id, name: cursed.name, tag: cursed.tag, tagColor: cursed.tagColor, rarity: cursed.rarity, type: 'tag' }, alreadyHad })
-          if (cursed.rarity === 'Unobtainable')
+          if (cursed.rarity === 'Curse')
             postArgs.push([req.userId, 'tag', cursed.id, cursed.tag!, undefined, cursed.rarity, cursed.tagColor])
+        } else if (cursed.itemType === 'name-color') {
+          const alreadyHad = colorSet.has(cursed.id)
+          newColors.push({ id: cursed.id, name: cursed.name, value: cursed.value, rarity: cursed.rarity })
+          colorSet.add(cursed.id)
+          results.push({ won: { id: cursed.id, name: cursed.name, value: cursed.value, rarity: cursed.rarity, type: 'name-color' }, alreadyHad })
+          if (cursed.rarity === 'Curse')
+            postArgs.push([req.userId, 'name-color', cursed.id, cursed.name, cursed.value!, cursed.rarity, undefined])
         } else {
           const alreadyHad = pfpSet.has(cursed.id)
           newPfps.push({ id: cursed.id, name: cursed.name, value: cursed.value, rarity: cursed.rarity })
           pfpSet.add(cursed.id)
           results.push({ won: { id: cursed.id, name: cursed.name, value: cursed.value, rarity: cursed.rarity, type: 'pfp' }, alreadyHad })
-          if (cursed.rarity === 'Unobtainable')
+          if (cursed.rarity === 'Curse')
             postArgs.push([req.userId, 'pfp', cursed.id, cursed.name, cursed.value!, cursed.rarity, undefined])
         }
       }
