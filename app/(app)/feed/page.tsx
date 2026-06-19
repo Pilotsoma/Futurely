@@ -51,16 +51,20 @@ const PFP_GLOW_MAP: Record<string, [string, string]> = {
 function pfpStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
-  if (effect === 'glow-gold')   return {}
-  if (effect === 'frame-black') return {}
+  if (effect === 'glow-gold')          return {}
+  if (effect === 'frame-black')        return {}
+  if (effect === 'fill-white')         return {}
+  if (effect === 'unobtainable-curse') return {}
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
   return {}
 }
 function pfpClass(effect: string | null | undefined): string {
-  if (effect === 'rainbow')      return 'pfp-rainbow'
-  if (effect === 'glow-gold')    return 'pfp-gold-fill'
-  if (effect === 'frame-black')  return 'pfp-void-fill'
+  if (effect === 'rainbow')           return 'pfp-rainbow'
+  if (effect === 'glow-gold')         return 'pfp-gold-fill'
+  if (effect === 'frame-black')       return 'pfp-void-fill'
+  if (effect === 'fill-white')        return 'pfp-white-fill'
+  if (effect === 'unobtainable-curse') return 'pfp-curse'
   return ''
 }
 
