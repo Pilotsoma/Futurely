@@ -95,7 +95,7 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
 
   useEffect(() => {
     if (!items) return
-    const t = setInterval(() => setIdx(i => (i + 1) % items.length), 1800)
+    const t = setInterval(() => setIdx(i => (i + 1) % items.length), 5000)
     return () => clearInterval(t)
   }, [items])
 
