@@ -207,15 +207,7 @@ export default function LoginPage() {
           </div>
 
           <div style={styles.field}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label style={styles.label}>Password</label>
-              {mode === 'login' && (
-                <button type="button" onClick={() => { setShowForgot(true); setForgotEmail(email); setForgotError(null); setForgotSent(false) }}
-                  style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: 0 }}>
-                  Forgot password?
-                </button>
-              )}
-            </div>
+            <label style={styles.label}>Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder={mode !== 'login' ? 'At least 6 characters' : '••••••••'}
               required minLength={mode !== 'login' ? 6 : undefined} style={styles.input} />
@@ -308,6 +300,13 @@ export default function LoginPage() {
           <button type="submit" disabled={isLoading} style={{ ...styles.btn, opacity: isLoading ? 0.6 : 1 }}>
             {btnLabel}
           </button>
+
+          {mode === 'login' && (
+            <button type="button" onClick={() => { setShowForgot(true); setForgotEmail(email); setForgotError(null); setForgotSent(false) }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, padding: 0, marginTop: 2, textAlign: 'center' as const, width: '100%' }}>
+              Forgot password?
+            </button>
+          )}
         </form>
 
         {mode === 'login' && (

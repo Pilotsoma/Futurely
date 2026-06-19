@@ -821,11 +821,20 @@ router.get('/test-email', async (req: Request, res: Response): Promise<void> => 
     APP_URL: process.env.APP_URL ?? '✗ missing',
   }
 
+  // DB diagnostic — find what's breaking login
+  let dbResult: string
+  try {
+    const user = await prisma.user.findFirst({ select: { id: true, email: true, name: true, hacName: true, emailVerified: true, loginStreak: true, lastSeenAt: true, failedLoginAttempts: true, lockedUntil: true } })
+    dbResult = user ? `✓ DB query OK (user id=${user.id})` : '✓ DB query OK (no users found)'
+  } catch (e) {
+    dbResult = `✗ DB error: ${e instanceof Error ? e.message : String(e)}`
+  }
+
   try {
     await sendEmail({ to, subject: 'Futurely email test', html: '<p>If you see this, email delivery works!</p>' })
-    res.json({ data: { status: 'sent', to, env } })
+    res.json({ data: { status: 'sent', to, db: dbResult, env } })
   } catch (e) {
-    res.status(500).json({ data: null, error: { message: e instanceof Error ? e.message : String(e) }, env })
+    res.status(500).json({ data: null, error: { message: e instanceof Error ? e.message : String(e) }, db: dbResult, env })
   }
 })
 
