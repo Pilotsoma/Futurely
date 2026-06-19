@@ -30,11 +30,12 @@ export const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'ap-student',     tag: 'AP Student',      tagColor: '#06B6D4', rarity: 'Uncommon',  weight: 12.5 },
   { id: 'deans-list',     tag: "Dean's List",     tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
   { id: 'top-performer',  tag: 'Top Performer',   tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
-  { id: 'ace',            tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      weight: 1.85 },
+  { id: 'ace',            tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      weight: 1.75 },
   { id: 'genius',         tag: 'Genius',          tagColor: '#EC4899', rarity: 'Epic',      weight: 1.85 },
   { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
-  { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#111111', rarity: 'Legendary', weight: 0.5  },
-  { id: 'god',            tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    weight: 0.3  },
+  { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#111111',        rarity: 'Legendary', weight: 0.5  },
+  { id: 'god',            tag: 'GOD',             tagColor: '#111111',        rarity: 'Mythic',    weight: 0.3  },
+  { id: 'verified',       tag: 'Verified',        tagColor: 'verified-yellow', rarity: 'Mythic',   weight: 0.1  },
 ]
 
 // Special role/staff tags — not in loot boxes, only grantable by DEV/ADMIN
@@ -421,7 +422,8 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
 
     const rawTags = parseTagArr(user.allTags)
     const ownedTags = rawTags.map(t => {
-      const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
+      const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
+             ?? TAG_BOX_ITEMS.find(d => d.tag === t.tag)
       const streakMeta = STREAK_TAG_META[t.tag]
       return { id: def?.id ?? t.tag, tag: t.tag, tagColor: def?.tagColor ?? t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
     })
@@ -861,7 +863,7 @@ router.post('/admin/grant', requireAdmin, async (req: AuthRequest, res: Response
       if (!tagDef) { res.status(400).json({ error: 'Unknown tag id' }); return }
       const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { allTags: true, tag: true } })
       const existing = parseTagArr(user?.allTags)
-      const filtered = existing.filter(t => t.tag !== tagDef.tag)
+      const filtered = existing.filter(t => !(t.tag === tagDef.tag && t.tagColor === tagDef.tagColor))
       const newAllTags = [...filtered, { tag: tagDef.tag, tagColor: tagDef.tagColor }]
       const updated = await prisma.user.update({
         where: { id: req.userId },

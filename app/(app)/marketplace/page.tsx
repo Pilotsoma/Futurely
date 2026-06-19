@@ -73,9 +73,10 @@ type BoxType = 'tag' | 'name-color' | 'pfp' | 'dev-curse'
 
 const BOX_CYCLE_PREVIEWS: Record<string, Array<{ tag?: string; tagColor?: string; name?: string; value?: string; rarity: string }>> = {
   'tag': [
-    { tag: 'Valedictorian', tagColor: '#F8FAFC', rarity: 'Legendary' },
-    { tag: 'Ace',           tagColor: '#F97316', rarity: 'Epic'      },
-    { tag: 'GOD',           tagColor: '#111111', rarity: 'Mythic'    },
+    { tag: 'Valedictorian', tagColor: '#F8FAFC',         rarity: 'Legendary' },
+    { tag: 'Ace',           tagColor: '#F97316',         rarity: 'Epic'      },
+    { tag: 'GOD',           tagColor: '#111111',         rarity: 'Mythic'    },
+    { tag: 'Verified',      tagColor: 'verified-yellow', rarity: 'Mythic'    },
   ],
   'name-color': [
     { name: 'Pure White', value: '#F8FAFC', rarity: 'Legendary' },
@@ -109,19 +110,21 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
       {/* key change remounts the div so the CSS animation replays each cycle */}
       <div key={`${boxType}-${idx}`} style={{ animation: 'boxPreviewFadeIn 0.4s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {boxType === 'tag' && (
-          <span
-            className={item.tag === 'GOD' ? 'tag-mythic' : item.tagColor === 'curse' ? 'tag-curse' : ''}
-            style={item.tag === 'GOD' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : item.tagColor === 'curse' ? { fontSize: 14, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #ff0000' } : {
-              fontSize: 14, fontWeight: 800,
-              color: item.tagColor,
-              textShadow: item.rarity === 'Legendary' ? `0 0 10px ${rarityColor}88` : undefined,
-              padding: '5px 10px', borderRadius: 8,
-              background: `${rarityColor}1A`,
-              border: `1.5px solid ${rarityColor}55`,
-            }}
-          >
-            {item.tag}
-          </span>
+          item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue'
+            ? <span className={item.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'} style={{ width: 26, height: 26, fontSize: 15 }}>✓</span>
+            : <span
+                className={item.tag === 'GOD' ? 'tag-mythic' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+                style={item.tag === 'GOD' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : item.tagColor === 'curse' ? { fontSize: 14, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #ff0000' } : {
+                  fontSize: 14, fontWeight: 800,
+                  color: item.tagColor,
+                  textShadow: item.rarity === 'Legendary' ? `0 0 10px ${rarityColor}88` : undefined,
+                  padding: '5px 10px', borderRadius: 8,
+                  background: `${rarityColor}1A`,
+                  border: `1.5px solid ${rarityColor}55`,
+                }}
+              >
+                {item.tag}
+              </span>
         )}
         {boxType === 'name-color' && (
           <span
@@ -226,6 +229,8 @@ const SIM_ITEMS: Record<BoxType, SimItem[]> = {
     { id: 'mastermind',     label: 'Valedictorian (Legendary)', rarity: 'Legendary', type: 'tag', tag: 'Valedictorian',   tagColor: '#F8FAFC' },
     { id: 'prodigy',        label: 'Prodigy (Legendary)',       rarity: 'Legendary', type: 'tag', tag: 'Prodigy',         tagColor: '#111111' },
     { id: 'god',            label: 'GOD (Mythic)',              rarity: 'Mythic',    type: 'tag', tag: 'GOD',             tagColor: '#111111' },
+    { id: 'verified',      label: 'Verified ✓ Yellow (Mythic)', rarity: 'Mythic',   type: 'tag', tag: 'Verified',         tagColor: 'verified-yellow' },
+    { id: 'verified-blue', label: 'Verified ✓ Blue (Mythic)',   rarity: 'Mythic',   type: 'tag', tag: 'Verified',         tagColor: 'verified-blue' },
   ],
   'name-color': [
     { id: 'forest-green',  label: 'Forest Green (Common)',    rarity: 'Common',    type: 'name-color', name: 'Forest Green',  value: '#15803D' },
@@ -305,8 +310,10 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'genius',         type: 'tag', name: 'Genius',         rarity: 'Epic',      tagColor: '#EC4899' },
   { id: 'mastermind',     type: 'tag', name: 'Valedictorian',  rarity: 'Legendary', tagColor: '#F8FAFC' },
   { id: 'prodigy',        type: 'tag', name: 'Prodigy',        rarity: 'Legendary', tagColor: '#111111' },
-  { id: 'god',            type: 'tag', name: 'GOD',            rarity: 'Mythic',    tagColor: '#111111' },
-  { id: 'GOAT',           type: 'tag', name: 'GOAT',           rarity: 'Mythic',    tagColor: '#EAB308' },
+  { id: 'god',            type: 'tag', name: 'GOD',             rarity: 'Mythic',    tagColor: '#111111' },
+  { id: 'GOAT',           type: 'tag', name: 'GOAT',            rarity: 'Mythic',    tagColor: '#EAB308' },
+  { id: 'verified',       type: 'tag', name: 'Verified',        rarity: 'Mythic',    tagColor: 'verified-yellow' },
+  { id: 'verified-blue',  type: 'tag', name: 'Verified (Blue)', rarity: 'Mythic',    tagColor: 'verified-blue' },
   // ── Name Colors ──
   { id: 'forest-green',  type: 'name-color', name: 'Forest Green',  rarity: 'Common',    value: '#15803D' },
   { id: 'navy-blue',     type: 'name-color', name: 'Navy Blue',      rarity: 'Common',    value: '#1D4ED8' },
@@ -562,7 +569,11 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
                       style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(owner.nameColor && owner.nameColor !== 'rainbow' && owner.nameColor !== 'curse' ? { color: owner.nameColor } : { color: 'var(--text)' }) }}>
                       {owner.name ?? 'Unknown'}
                     </button>
-                    {owner.tag && <span className={owner.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, fontWeight: 700, color: owner.tagColor === 'curse' ? undefined : owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>}
+                    {owner.tag && (
+                      (owner.tagColor === 'verified-yellow' || owner.tagColor === 'verified-blue')
+                        ? <span className={owner.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'} style={{ marginLeft: 2 }}>✓</span>
+                        : <span className={owner.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, fontWeight: 700, color: owner.tagColor === 'curse' ? undefined : owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>
+                    )}
                   </div>
                   {owner.rank === 1 && <span style={{ fontSize: 10, color: '#EAB308', fontWeight: 700, background: '#EAB30818', borderRadius: 99, padding: '2px 6px', flexShrink: 0 }}>First</span>}
                 </div>
@@ -1523,10 +1534,14 @@ export default function MarketplacePage() {
             <div className={pfpClass(item.value)} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...pfpStyle(item.value) }} />
           )}
           {type === 'tag' && (
-            <span
-              className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
-              style={{ fontSize: 13, fontWeight: 700, color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}
-            >{truncateTag(item.tag ?? '')}</span>
+            (item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue')
+              ? <span className={item.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+              : <span
+                  className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+                  style={item.tagColor === 'curse'
+                    ? { fontSize: 11, fontWeight: 800, padding: '1px 3px', borderRadius: 4, border: '1.5px solid #ff0000' }
+                    : { fontSize: 13, fontWeight: 700, color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+                >{truncateTag(item.tag ?? '')}</span>
           )}
         </button>
         {type !== 'tag' && (
@@ -1535,10 +1550,19 @@ export default function MarketplacePage() {
           </span>
         )}
         {type === 'tag' && (
-          <span
-            className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
-            style={{ flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}
-          >{item.tag}</span>
+          (item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue')
+            ? <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span className={item.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: item.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0' }}>
+                  {item.tagColor === 'verified-yellow' ? 'Verified' : 'Verified (Blue)'}
+                </span>
+              </span>
+            : <span
+                className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+                style={item.tagColor === 'curse'
+                  ? { flex: 1, fontSize: 13, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '2px 7px', borderRadius: 4, border: '1.5px solid #ff0000', display: 'inline-block', maxWidth: 'max-content' }
+                  : { flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+              >{item.tag}</span>
         )}
         <RarityBadge rarity={item.rarity} itemId={item.id} />
         {count > 1 && (
@@ -2373,7 +2397,12 @@ export default function MarketplacePage() {
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🏷️ Tags</div>
                   {groupById(byRarity(inv?.ownedTags ?? [])).map(t =>
-                    renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag', inv?.tag === t.tag, t.count)
+                    renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag',
+                      inv?.tag === t.tag && (
+                        (t.tagColor === 'verified-yellow' || t.tagColor === 'verified-blue')
+                          ? inv?.tagColor === t.tagColor
+                          : true
+                      ), t.count)
                   )}
                   {myActiveListings
                     .filter(l => l.itemType === 'tag' && !(inv?.ownedTags ?? []).some(t => t.id === l.itemId))

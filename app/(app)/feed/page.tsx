@@ -248,9 +248,11 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
                     </span>
                   )}
                   {profile.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
-                    <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''} style={isDevTag ? O.tagDev : isMythicTag ? O.tagGod : isGodTag ? O.tagGod : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
-                      {profile.tag}
-                    </span>
+                    profile.tagColor === 'verified-yellow' || profile.tagColor === 'verified-blue'
+                      ? <span className={profile.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+                      : <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''} style={isDevTag ? O.tagDev : isMythicTag ? O.tagGod : isGodTag ? O.tagGod : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
+                          {profile.tag}
+                        </span>
                   )}
                 </div>
               </div>
@@ -582,17 +584,23 @@ function DevAdminPanel({
         <div style={{ marginBottom: 10 }}>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>AWARDED TAGS</p>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
-            {allTags.map(t => (
-              <div key={t.tag} style={{ display: 'flex', alignItems: 'center', gap: 4, background: t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`, border: `1px solid ${t.tagColor === 'grey' ? 'rgba(128,128,128,0.4)' : t.tagColor}`, borderRadius: 4, padding: '2px 6px 2px 8px' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor }}>{t.tag}</span>
-                <button
-                  style={{ background: 'none', border: 'none', padding: '0 0 0 2px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center' }}
-                  onClick={() => void handleRemoveTag(t.tag)}
-                  disabled={!!removingTag}
-                  title={`Remove ${t.tag} tag`}
-                >×</button>
-              </div>
-            ))}
+            {allTags.map(t => {
+              const isVerified = t.tagColor === 'verified-yellow' || t.tagColor === 'verified-blue'
+              return (
+                <div key={`${t.tag}:${t.tagColor}`} style={{ display: 'flex', alignItems: 'center', gap: 4, background: isVerified ? 'rgba(128,128,128,0.12)' : t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`, border: `1px solid ${isVerified ? (t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0') : t.tagColor === 'grey' ? 'rgba(128,128,128,0.4)' : t.tagColor}`, borderRadius: 4, padding: '2px 6px 2px 8px' }}>
+                  {isVerified
+                    ? <span className={t.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'} style={{ width: 16, height: 16, fontSize: 10 }}>✓</span>
+                    : <span style={{ fontSize: 11, fontWeight: 700, color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor }}>{t.tag}</span>
+                  }
+                  <button
+                    style={{ background: 'none', border: 'none', padding: '0 0 0 2px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center' }}
+                    onClick={() => void handleRemoveTag(t.tag)}
+                    disabled={!!removingTag}
+                    title={`Remove ${t.tag} tag`}
+                  >×</button>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -771,11 +779,12 @@ function OwnTagPicker({ profile, onUpdateTag }: {
 }) {
   const [saving, setSaving] = useState<string | null>(null)
   const isBannedOrMuted = profile.chatBanned || (!!profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())
-  const allTags = Array.from(new Map((profile.allTags ?? []).map(t => [t.tag, t])).values())
+  const allTags = Array.from(new Map((profile.allTags ?? []).map(t => [`${t.tag}:${t.tagColor}`, t])).values())
 
   async function handleSelect(tag: string, tagColor: string) {
     if (saving || isBannedOrMuted) return
-    setSaving(tag)
+    const savingKey = `${tag}:${tagColor}`
+    setSaving(savingKey)
     try {
       const updated = await api.feedSetDisplayTag(tag, tagColor)
       onUpdateTag(updated)
@@ -791,13 +800,39 @@ function OwnTagPicker({ profile, onUpdateTag }: {
       ) : (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
           {allTags.map(t => {
-            const isActive = profile.tag === t.tag
+            const savingKey = `${t.tag}:${t.tagColor}`
+            const isVerified = t.tagColor === 'verified-yellow' || t.tagColor === 'verified-blue'
+            const isActive = profile.tag === t.tag && (isVerified ? profile.tagColor === t.tagColor : true)
             const isDev = t.tag === 'DEV'
             const isGod = t.tag === 'GOAT'
             const isMythic = t.tag === 'GOD'
+            if (isVerified) {
+              return (
+                <button
+                  key={savingKey}
+                  disabled={!!saving}
+                  onClick={() => void handleSelect(t.tag, t.tagColor)}
+                  style={{
+                    border: `2px solid ${isActive ? (t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0') : 'transparent'}`,
+                    background: 'var(--surface-2)',
+                    borderRadius: 6, padding: '4px 8px',
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    cursor: saving ? 'default' : 'pointer',
+                    opacity: saving === savingKey ? 0.5 : 1,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span className={t.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'} style={{ width: 16, height: 16, fontSize: 10 }}>✓</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0' }}>
+                    {saving === savingKey ? '…' : (t.tagColor === 'verified-yellow' ? 'Verified' : 'Verified (Blue)')}
+                  </span>
+                  {isActive && <span style={{ fontSize: 10 }}>✓</span>}
+                </button>
+              )
+            }
             return (
               <button
-                key={t.tag}
+                key={savingKey}
                 disabled={!!saving}
                 onClick={() => void handleSelect(t.tag, t.tagColor)}
                 className={isDev && isActive ? 'tag-rainbow' : isMythic && isActive ? 'tag-mythic' : isGod && isActive ? 'tag-god' : ''}
@@ -808,11 +843,11 @@ function OwnTagPicker({ profile, onUpdateTag }: {
                   fontSize: 12, fontWeight: 700,
                   color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor,
                   cursor: saving ? 'default' : 'pointer',
-                  opacity: saving === t.tag ? 0.5 : 1,
+                  opacity: saving === savingKey ? 0.5 : 1,
                   transition: 'all 0.15s',
                 }}
               >
-                {saving === t.tag ? '…' : t.tag}
+                {saving === savingKey ? '…' : t.tag}
                 {isActive && <span style={{ marginLeft: 4, fontSize: 10 }}>✓</span>}
               </button>
             )
@@ -904,9 +939,11 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
             <span className={nameColorClass(post.user.nameColor)} style={{ ...P.authorName, ...nameColorStyle(post.user.nameColor) }} onClick={() => onOpenProfile(post.user.id)}>{displayName(post.user)}</span>
             {post.user.tag && (
-              <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''} style={isDevTag ? P.tagDev : isMythicTag ? P.tagGod : isGodTag ? P.tagGod : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
-                {post.user.tag}
-              </span>
+              tagColor === 'verified-yellow' || tagColor === 'verified-blue'
+                ? <span className={tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+                : <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''} style={isDevTag ? P.tagDev : isMythicTag ? P.tagGod : isGodTag ? P.tagGod : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
+                    {post.user.tag}
+                  </span>
             )}
             {post.userId !== currentUserId && (
               <button
@@ -1405,19 +1442,21 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                     {displayName(c.user)}
                   </button>
                   {c.user.tag && (
-                    <span
-                      className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
-                      style={isDevTag
-                        ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' }
-                        : isMythicTag
-                        ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }
-                        : isGodTag
-                        ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' }
-                        : { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }
-                      }
-                    >
-                      {c.user.tag}
-                    </span>
+                    tagColor === 'verified-yellow' || tagColor === 'verified-blue'
+                      ? <span className={tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'} style={{ width: 16, height: 16, fontSize: 10 }}>✓</span>
+                      : <span
+                          className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
+                          style={isDevTag
+                            ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' }
+                            : isMythicTag
+                            ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }
+                            : isGodTag
+                            ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' }
+                            : { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }
+                          }
+                        >
+                          {c.user.tag}
+                        </span>
                   )}
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{timeAgo(c.createdAt)}</span>
                 </div>
@@ -1503,10 +1542,12 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 14, fontWeight: 600 }}>{displayName(u)}</span>
               {u.tag && (
-                <span
-                  className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'GOD' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : ''}
-                  style={u.tag === 'DEV' ? P.tagDev : u.tag === 'GOD' ? P.tagGod : u.tag === 'GOAT' ? P.tagGod : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
-                >{u.tag}</span>
+                u.tagColor === 'verified-yellow' || u.tagColor === 'verified-blue'
+                  ? <span className={u.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+                  : <span
+                      className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'GOD' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : ''}
+                      style={u.tag === 'DEV' ? P.tagDev : u.tag === 'GOD' ? P.tagGod : u.tag === 'GOAT' ? P.tagGod : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
+                    >{u.tag}</span>
               )}
             </div>
           </div>

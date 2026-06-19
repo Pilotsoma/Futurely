@@ -146,15 +146,17 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
                   {displayName(profile)}
                 </div>
                 {profile.tag && !profile.chatBanned && (
-                  <span
-                    className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
-                    style={isDevTag ? S.tagDev : isMythicTag ? { ...S.tagGod, color: undefined, background: undefined, border: undefined } : isGodTag ? S.tagGod : {
-                      ...S.tag,
-                      color: profile.tagColor || 'var(--text-secondary)',
-                      background: profile.tagColor ? `${profile.tagColor}22` : 'rgba(128,128,128,0.12)',
-                      border: `1px solid ${profile.tagColor || 'rgba(128,128,128,0.4)'}`,
-                    }}
-                  >{profile.tag}</span>
+                  profile.tagColor === 'verified-yellow' || profile.tagColor === 'verified-blue'
+                    ? <span className={profile.tagColor === 'verified-yellow' ? 'tag-verified-yellow' : 'tag-verified-blue'}>✓</span>
+                    : <span
+                        className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
+                        style={isDevTag ? S.tagDev : isMythicTag ? { ...S.tagGod, color: undefined, background: undefined, border: undefined } : isGodTag ? S.tagGod : {
+                          ...S.tag,
+                          color: profile.tagColor || 'var(--text-secondary)',
+                          background: profile.tagColor ? `${profile.tagColor}22` : 'rgba(128,128,128,0.12)',
+                          border: `1px solid ${profile.tagColor || 'rgba(128,128,128,0.4)'}`,
+                        }}
+                      >{profile.tag}</span>
                 )}
               </div>
               <button style={S.closeBtn} onClick={onClose}>

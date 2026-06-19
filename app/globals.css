@@ -371,8 +371,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   18%  { background: #cc00ff22; border-color: #cc00ff; color: #cc00ff; }
   26%  { background: #0a003088; border-color: #6040cc; color: #a080ff; }
   34%  { background: #1a004088; border-color: #a040ff; color: #c080ff; }
-  44%  { background: #05050888; border-color: #1a1a2e; color: #3a2a6e; }
-  50%  { background: #00000088; border-color: #111111; color: #222222; }
+  44%  { background: #1a000088; border-color: #440022; color: #880033; }
+  50%  { background: #00000088; border-color: #220011; color: #660022; }
   56%  { background: #EC489922; border-color: #EC4899; color: #EC4899; }
   66%  { background: #ffffff22; border-color: #e5e5e5; color: #dddddd; }
   76%  { background: #EF444422; border-color: #EF4444; color: #EF4444; }
@@ -380,6 +380,24 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   100% { background: #ff000022; border-color: #ff0000; color: #ff0000; }
 }
 .tag-curse { animation: tagCurse 7s linear infinite; font-weight: 800 !important; }
+
+.tag-verified-yellow,
+.tag-verified-blue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffffff !important;
+  flex-shrink: 0;
+  vertical-align: middle;
+  line-height: 1;
+}
+.tag-verified-yellow { background: #EAB308; }
+.tag-verified-blue   { background: #1D9BF0; }
 
 @keyframes pfpRainbow {
   0%   { filter: hue-rotate(0deg) saturate(1.4) brightness(1.05); }
