@@ -52,7 +52,7 @@ function pfpStyle(effect: string | null | undefined): React.CSSProperties {
   if (effect === 'glow-gold')           return {}
   if (effect === 'frame-black')         return {}
   if (effect === 'fill-white')          return {}
-  if (effect === 'unobtainable-curse')  return {}
+  if (effect === 'unobtainable-curse')  return { background: 'transparent' }
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
   return {}
@@ -688,10 +688,10 @@ function SpinWheelModal({
               <input
                 type="number"
                 min={1}
-                max={1000000}
+                max={100}
                 value={quantity}
                 onChange={e => {
-                  const v = Math.max(1, Math.min(1_000_000, parseInt(e.target.value) || 1))
+                  const v = Math.max(1, Math.min(100, parseInt(e.target.value) || 1))
                   setQuantity(v)
                   setSpinError(null)
                 }}

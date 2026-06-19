@@ -54,7 +54,7 @@ function pfpStyle(effect: string | null | undefined): React.CSSProperties {
   if (effect === 'glow-gold')          return {}
   if (effect === 'frame-black')        return {}
   if (effect === 'fill-white')         return {}
-  if (effect === 'unobtainable-curse') return {}
+  if (effect === 'unobtainable-curse') return { background: 'transparent' }
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
   return {}

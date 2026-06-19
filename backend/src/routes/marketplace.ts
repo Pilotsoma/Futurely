@@ -498,7 +498,7 @@ async function autoPostUnbox(
 router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const { boxType, quantity: rawQty = 1 } = req.body as { boxType?: string; quantity?: number }
-  const quantity = Math.max(1, Math.min(1_000_000, Math.floor(Number(rawQty) || 1)))
+  const quantity = Math.max(1, Math.min(100, Math.floor(Number(rawQty) || 1)))
 
   if (!boxType || !['tag', 'name-color', 'pfp', 'dev-curse'].includes(boxType)) {
     res.status(400).json({ error: 'boxType must be tag, name-color, pfp, or dev-curse' }); return
