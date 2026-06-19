@@ -129,10 +129,12 @@ export const SEED_PRICES: Record<string, number> = {
   'pfp:glow-pink': 267,      'pfp:glow-purple': 267,
   'pfp:glow-gold': 2000,     'pfp:frame-black': 2000,   'pfp:fill-white': 2000,
   'pfp:rainbow': 50000,
+  // Verified badge — 0.1% chance, tag spin cost 10
+  'tag:verified': 10_000,
   // Developer's Curse — 0.001% chance each, estimated market value
-  'pfp:curse': 1_000_000,
-  'tag:curse-tag': 1_000_000,
-  'name-color:curse-name': 1_000_000,
+  'pfp:curse': 250_000,
+  'tag:curse-tag': 250_000,
+  'name-color:curse-name': 250_000,
 }
 
 // Streak tags: fully soulbound — no trade, no list, no quicksell

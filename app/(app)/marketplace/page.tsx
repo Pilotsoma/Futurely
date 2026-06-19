@@ -176,9 +176,9 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
       { rarity: 'Common',    pct: '60%',   items: ['Grinder', 'Focused', 'Scholar'] },
       { rarity: 'Uncommon',  pct: '25%',   items: ['Honors Student', 'AP Student'] },
       { rarity: 'Rare',      pct: '10%',   items: ["Dean's List", 'Top Performer'] },
-      { rarity: 'Epic',      pct: '3.7%',  items: ['Ace', 'Genius'] },
+      { rarity: 'Epic',      pct: '3.6%',  items: ['Ace', 'Genius'] },
       { rarity: 'Legendary', pct: '1%',    items: ['Valedictorian', 'Prodigy'] },
-      { rarity: 'Mythic',    pct: '0.3%',  items: ['GOD'] },
+      { rarity: 'Mythic',    pct: '0.4%',  items: ['GOD', 'Verified ✓'] },
     ],
   },
   {
