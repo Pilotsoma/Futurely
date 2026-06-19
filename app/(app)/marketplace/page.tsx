@@ -846,9 +846,10 @@ function SpinWheelModal({
                 transition: arrowsLanded ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
               }}>
                 <polygon
-                  points={`${CX},${CY - 28} ${CX - 5},${CY - 18} ${CX + 5},${CY - 18}`}
-                  fill={arrow.color}
-                  fillOpacity={multiArrows.length <= 10 ? 0.75 : multiArrows.length <= 50 ? 0.45 : 0.25}
+                  points={`${CX},${CY - 34} ${CX - 8},${CY - 21} ${CX + 8},${CY - 21}`}
+                  fill="#EF4444"
+                  fillOpacity={multiArrows.length <= 10 ? 0.9 : multiArrows.length <= 50 ? 0.6 : 0.4}
+                  style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }}
                 />
               </g>
             ))}
