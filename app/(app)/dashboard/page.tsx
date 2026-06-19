@@ -161,6 +161,14 @@ export default function DashboardPage() {
     const streakKey = `ns_streak_${uid}`
     const visitKey  = `ns_lastVisit_${uid}`
 
+    // One-time migration from the old device-wide keys to user-specific keys
+    if (!localStorage.getItem(streakKey) && localStorage.getItem('ns_streak')) {
+      localStorage.setItem(streakKey, localStorage.getItem('ns_streak')!)
+      localStorage.setItem(visitKey, localStorage.getItem('ns_lastVisit') ?? '')
+      localStorage.removeItem('ns_streak')
+      localStorage.removeItem('ns_lastVisit')
+    }
+
     const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
     const lastVisit = localStorage.getItem(visitKey)
     const streak = parseInt(localStorage.getItem(streakKey) ?? '0', 10)
