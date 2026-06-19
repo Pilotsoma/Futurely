@@ -337,7 +337,7 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 // Bump this number whenever SEED_PRICES changes — forces a one-time DB reset
 // to the new values, after which dynamic pricing takes over again.
-const SEED_VERSION = 7
+const SEED_VERSION = 8
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
