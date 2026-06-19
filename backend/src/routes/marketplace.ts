@@ -31,9 +31,9 @@ export const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'deans-list',     tag: "Dean's List",     tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
   { id: 'top-performer',  tag: 'Top Performer',   tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
   { id: 'ace',            tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      weight: 1.85 },
-  { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#EC4899', rarity: 'Epic',      weight: 1.85 },
-  { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#EAB308', rarity: 'Legendary', weight: 0.5  },
-  { id: 'genius',         tag: 'Genius',          tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
+  { id: 'genius',         tag: 'Genius',          tagColor: '#EC4899', rarity: 'Epic',      weight: 1.85 },
+  { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
+  { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#111111', rarity: 'Legendary', weight: 0.5  },
   { id: 'god',            tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    weight: 0.3  },
 ]
 
@@ -81,46 +81,78 @@ const PFP_EFFECT_BOX_ITEMS: ColorItem[] = [
   { id: 'glow-purple',     name: 'Purple Glow',      value: 'glow-purple',    rarity: 'Epic',      weight: 1.98 },
   { id: 'glow-gold',       name: 'Gold Fill',        value: 'glow-gold',      rarity: 'Legendary', weight: 0.5  },
   { id: 'frame-black',     name: 'Void Fill',        value: 'frame-black',    rarity: 'Legendary', weight: 0.5  },
+  { id: 'fill-white',      name: 'White Fill',       value: 'fill-white',     rarity: 'Legendary', weight: 0.5  },
   { id: 'rainbow',         name: 'Rainbow Animated', value: 'rainbow',        rarity: 'Mythic',    weight: 0.05 },
 ]
 
-export const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
+interface DevCurseItem { id: string; name: string; tag?: string; tagColor?: string; value?: string; rarity: string; itemType: 'tag' | 'pfp'; weight: number }
+// Weights: Common 84000 (84%), Uncommon 15999 (15.999%), Unobtainable 1 (0.001%) — total 100000
+const DEV_CURSE_ITEMS: DevCurseItem[] = [
+  { id: 'grinder',    name: 'Grinder',   tag: 'Grinder',    tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 28000 },
+  { id: 'focused',    name: 'Focused',   tag: 'Focused',     tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 28000 },
+  { id: 'scholar',    name: 'Scholar',   tag: 'Scholar',     tagColor: '#6B7280', rarity: 'Common',      itemType: 'tag', weight: 28000 },
+  { id: 'learner',    name: 'Learner',   tag: 'Learner',     tagColor: '#94A3B8', rarity: 'Uncommon',    itemType: 'tag', weight: 5333  },
+  { id: 'c-student',  name: 'C Student', tag: 'C Student',   tagColor: '#78716C', rarity: 'Uncommon',    itemType: 'tag', weight: 5333  },
+  { id: 'bottom-100', name: 'Bottom 100', tag: 'Bottom 100', tagColor: '#6B7280', rarity: 'Uncommon',    itemType: 'tag', weight: 5333  },
+  { id: 'curse',      name: 'The Curse', value: 'unobtainable-curse',              rarity: 'Unobtainable', itemType: 'pfp', weight: 1    },
+]
+
+export const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Unobtainable']
 const RARITY_RANK: Record<string, number> = {
-  Common: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5,
+  Common: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5, Unobtainable: 6,
 }
 
 // ── Estimated item prices (seed; updated dynamically on each sale) ─────────────
 
 export const SEED_PRICES: Record<string, number> = {
-  // Tags (Common 10, Uncommon 20, Rare 50, Epic 250, Legendary 1k, Mythic GOD 50k)
-  'tag:grinder': 10,         'tag:focused': 10,         'tag:scholar': 10,
-  'tag:honors-student': 20,  'tag:ap-student': 20,
-  'tag:deans-list': 50,      'tag:top-performer': 50,
-  'tag:ace': 250,             'tag:prodigy': 250,
-  'tag:mastermind': 1000,     'tag:genius': 1000,
-  'tag:god': 5000,
-  // GOAT is the day-100 streak tag (non-tradeable, seed only for inventory worth display)
-  'tag:GOAT': 50000,
-  // Name Colors (Common 15, Uncommon 30, Rare 75, Epic 350, Legendary 2k, Mythic RGB 250k)
-  'name-color:forest-green': 15,   'name-color:navy-blue': 15,   'name-color:dark-red': 15,
-  'name-color:slate-blue': 15,     'name-color:teal': 15,
-  'name-color:bright-orange': 30,  'name-color:violet': 30,      'name-color:cyan': 30,
-  'name-color:hot-pink': 75,       'name-color:gold': 75,        'name-color:lime-green': 75,
-  'name-color:electric-blue': 350, 'name-color:magenta': 350,
-  'name-color:pure-white': 2000,   'name-color:black': 2000,
-  'name-color:rainbow': 50000,
-  // PFP Effects (Common 20, Uncommon 40, Rare 100, Epic 400, Legendary 3k, Mythic RGB 300k)
-  'pfp:border-green': 20,    'pfp:border-blue': 20,    'pfp:border-red': 20,
-  'pfp:border-navy': 20,     'pfp:border-teal': 20,
-  'pfp:border-orange': 40,   'pfp:border-violet': 40,  'pfp:border-cyan': 40,
-  'pfp:border-hotpink': 100, 'pfp:border-gold': 100,   'pfp:border-lime': 100,
-  'pfp:glow-pink': 400,      'pfp:glow-purple': 400,
-  'pfp:glow-gold': 3000,     'pfp:frame-black': 3000,
-  'pfp:rainbow': 75000,
+  // Tags — spin cost 10 (was 15, ×2/3): Common 7, Uncommon 13, Rare 33, Epic 167, Legendary 667, GOD 3333, GOAT 33333
+  'tag:grinder': 7,          'tag:focused': 7,          'tag:scholar': 7,
+  'tag:honors-student': 13,  'tag:ap-student': 13,
+  'tag:deans-list': 33,      'tag:top-performer': 33,
+  'tag:ace': 167,            'tag:genius': 167,
+  'tag:mastermind': 667,     'tag:prodigy': 667,
+  'tag:god': 3333,
+  // GOAT is the day-100 streak tag (tradeable — rarest item in the game)
+  'tag:GOAT': 33333,
+  // Name Colors — spin cost 15 (was 25, ×0.6): Common 9, Uncommon 18, Rare 45, Epic 210, Legendary 1200, Mythic 30000
+  'name-color:forest-green': 9,    'name-color:navy-blue': 9,    'name-color:dark-red': 9,
+  'name-color:slate-blue': 9,      'name-color:teal': 9,
+  'name-color:bright-orange': 18,  'name-color:violet': 18,      'name-color:cyan': 18,
+  'name-color:hot-pink': 45,       'name-color:gold': 45,        'name-color:lime-green': 45,
+  'name-color:electric-blue': 210, 'name-color:magenta': 210,
+  'name-color:pure-white': 1200,   'name-color:black': 1200,
+  'name-color:rainbow': 30000,
+  // PFP Effects — spin cost 20 (was 30, ×2/3): Common 13, Uncommon 27, Rare 67, Epic 267, Legendary 2000, Mythic 50000
+  'pfp:border-green': 13,    'pfp:border-blue': 13,    'pfp:border-red': 13,
+  'pfp:border-navy': 13,     'pfp:border-teal': 13,
+  'pfp:border-orange': 27,   'pfp:border-violet': 27,  'pfp:border-cyan': 27,
+  'pfp:border-hotpink': 67,  'pfp:border-gold': 67,    'pfp:border-lime': 67,
+  'pfp:glow-pink': 267,      'pfp:glow-purple': 267,
+  'pfp:glow-gold': 2000,     'pfp:frame-black': 2000,   'pfp:fill-white': 2000,
+  'pfp:rainbow': 50000,
+  // Developer's Curse — 0.001% chance, estimated market value
+  'pfp:curse': 1_000_000,
 }
 
-// Tags that can never be listed or traded (streak-earned exclusives)
-const NON_TRADEABLE_TAGS = new Set(['GOAT'])
+// Soulbound tags: untradeable, unlistable, unquicksellable in all forms
+// Streak milestone tags below GOAT + Developer's Curse exclusive uncommons
+const NON_TRADEABLE_TAGS = new Set([
+  'Novice', 'Pro', 'Veteran', 'Legend',          // streak soulbound
+  'Learner', 'C Student', 'Bottom 100',           // dev-curse exclusive
+])
+
+// Proper metadata for soulbound tags (streak + dev-curse exclusives)
+const STREAK_TAG_META: Record<string, { tagColor: string; rarity: string }> = {
+  Novice:      { tagColor: '#22C55E', rarity: 'Common'    },
+  Pro:         { tagColor: '#3B82F6', rarity: 'Uncommon'  },
+  Veteran:     { tagColor: '#F97316', rarity: 'Rare'      },
+  Legend:      { tagColor: '#EC4899', rarity: 'Epic'      },
+  GOAT:        { tagColor: '#EAB308', rarity: 'Mythic'    },
+  // Developer's Curse exclusives (Uncommon, soulbound)
+  'Learner':    { tagColor: '#94A3B8', rarity: 'Uncommon' },
+  'C Student':  { tagColor: '#78716C', rarity: 'Uncommon' },
+  'Bottom 100': { tagColor: '#6B7280', rarity: 'Uncommon' },
+}
 
 // ── Trade item type ────────────────────────────────────────────────────────────
 
@@ -301,7 +333,7 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 // Bump this number whenever SEED_PRICES changes — forces a one-time DB reset
 // to the new values, after which dynamic pricing takes over again.
-const SEED_VERSION = 3
+const SEED_VERSION = 7
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
@@ -354,18 +386,19 @@ router.post('/daily-coins', requireAuth, async (req: AuthRequest, res: Response)
 
     const todayUTC = new Date().toISOString().slice(0, 10)
     const lastClaimDate = user.lastCoinClaim ? user.lastCoinClaim.toISOString().slice(0, 10) : null
+    const alreadyClaimed = lastClaimDate === todayUTC
 
-    if (lastClaimDate === todayUTC) {
-      res.json({ data: { coins: user.coins, claimed: false, alreadyClaimed: true, coinBonus } })
-      return
-    }
-
+    // Always sync loginStreak so the leaderboard stays accurate.
+    // Only award coins + update lastCoinClaim on the first claim of the day.
     const updated = await prisma.user.update({
       where: { id: req.userId },
-      data: { coins: { increment: coinBonus }, lastCoinClaim: new Date() },
+      data: {
+        ...(alreadyClaimed ? {} : { coins: { increment: coinBonus }, lastCoinClaim: new Date() }),
+        loginStreak: streakDay,
+      },
       select: { coins: true },
     })
-    res.json({ data: { coins: updated.coins, claimed: true, alreadyClaimed: false, coinBonus } })
+    res.json({ data: { coins: updated.coins, claimed: !alreadyClaimed, alreadyClaimed, coinBonus } })
   } catch {
     res.status(500).json({ error: 'Failed to claim daily coins' })
   }
@@ -388,7 +421,8 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
     const rawTags = parseTagArr(user.allTags)
     const ownedTags = rawTags.map(t => {
       const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
-      return { id: def?.id ?? t.tag, tag: t.tag, tagColor: t.tagColor, rarity: def?.rarity ?? 'Common' }
+      const streakMeta = STREAK_TAG_META[t.tag]
+      return { id: def?.id ?? t.tag, tag: t.tag, tagColor: def?.tagColor ?? t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
     })
 
     res.json({
@@ -433,7 +467,7 @@ async function autoPostUnbox(
 
     const newPost = await prisma.post.create({
       data: {
-        body: `${emoji} I just unboxed ${itemName}!`,
+        body: `${emoji} I just spun ${itemName}!`,
         userId,
         type: 'UNBOX',
         unboxItemType: boxType,
@@ -463,77 +497,104 @@ async function autoPostUnbox(
 
 router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
-  const { boxType } = req.body as { boxType?: string }
-  if (!boxType || !['tag', 'name-color', 'pfp'].includes(boxType)) {
-    res.status(400).json({ error: 'boxType must be tag, name-color, or pfp' }); return
+  const { boxType, quantity: rawQty = 1 } = req.body as { boxType?: string; quantity?: number }
+  const quantity = Math.max(1, Math.min(100, Math.floor(Number(rawQty) || 1)))
+
+  if (!boxType || !['tag', 'name-color', 'pfp', 'dev-curse'].includes(boxType)) {
+    res.status(400).json({ error: 'boxType must be tag, name-color, pfp, or dev-curse' }); return
   }
 
-  const BOX_COSTS: Record<string, number> = { tag: 15, 'name-color': 25, pfp: 30 }
+  const BOX_COSTS: Record<string, number> = { tag: 10, 'name-color': 15, pfp: 20, 'dev-curse': 1 }
   const BOX_COST = BOX_COSTS[boxType]
+  const totalCost = BOX_COST * quantity
+
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
       select: { coins: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
-    if (user.coins < BOX_COST) {
-      res.status(402).json({ error: 'Not enough coins', coins: user.coins }); return
+    if (user.coins < totalCost) {
+      const maxAffordable = Math.floor(user.coins / BOX_COST)
+      res.status(402).json({ error: 'Not enough coins', coins: user.coins, maxAffordable }); return
     }
 
-    if (boxType === 'tag') {
-      const won = weightedRandom(TAG_BOX_ITEMS)
-      const existingTags = parseTagArr(user.allTags)
-      const alreadyHas = existingTags.some(t => t.tag === won.tag)
-      const newAllTags = [...existingTags, { tag: won.tag, tagColor: won.tagColor }]
+    const newTags = parseTagArr(user.allTags)
+    const newColors = parseJsonArr(user.ownedNameColors)
+    const newPfps = parseJsonArr(user.ownedPfpEffects)
+    const tagSet   = new Set(newTags.map(t => t.tag))
+    const colorSet = new Set(newColors.map(c => c.id as string))
+    const pfpSet   = new Set(newPfps.map(p => p.id as string))
 
-      const updated = await prisma.user.update({
-        where: { id: req.userId },
-        data: { coins: { decrement: BOX_COST }, allTags: JSON.stringify(newAllTags) },
-        select: { coins: true },
-      })
-      res.json({ data: { coins: updated.coins, won: { ...won, type: 'tag' }, alreadyHad: alreadyHas } })
+    const results: Array<{ won: Record<string, unknown>; alreadyHad: boolean }> = []
+    const postArgs: Parameters<typeof autoPostUnbox>[] = []
 
-      // Auto-post for Legendary/Mythic unboxes
-      if (won.rarity === 'Legendary' || won.rarity === 'Mythic') {
-        autoPostUnbox(req.userId, 'tag', won.id, won.tag, undefined, won.rarity, won.tagColor)
+    for (let i = 0; i < quantity; i++) {
+      if (boxType === 'tag') {
+        const won = weightedRandom(TAG_BOX_ITEMS)
+        const alreadyHad = tagSet.has(won.tag)
+        newTags.push({ tag: won.tag, tagColor: won.tagColor })
+        tagSet.add(won.tag)
+        results.push({ won: { ...won, type: 'tag' }, alreadyHad })
+        if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
+          postArgs.push([req.userId, 'tag', won.id, won.tag, undefined, won.rarity, won.tagColor])
+
+      } else if (boxType === 'name-color') {
+        const won = weightedRandom(NAME_COLOR_BOX_ITEMS)
+        const alreadyHad = colorSet.has(won.id)
+        newColors.push({ id: won.id, name: won.name, value: won.value, rarity: won.rarity })
+        colorSet.add(won.id)
+        results.push({ won: { ...won, type: 'name-color' }, alreadyHad })
+        if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
+          postArgs.push([req.userId, 'name-color', won.id, won.name, won.value, won.rarity, undefined])
+
+      } else if (boxType === 'pfp') {
+        const won = weightedRandom(PFP_EFFECT_BOX_ITEMS)
+        const alreadyHad = pfpSet.has(won.id)
+        newPfps.push({ id: won.id, name: won.name, value: won.value, rarity: won.rarity })
+        pfpSet.add(won.id)
+        results.push({ won: { ...won, type: 'pfp' }, alreadyHad })
+        if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
+          postArgs.push([req.userId, 'pfp', won.id, won.name, won.value, won.rarity, undefined])
+
+      } else { // dev-curse
+        const cursed = weightedRandom(DEV_CURSE_ITEMS)
+        if (cursed.itemType === 'tag') {
+          const alreadyHad = tagSet.has(cursed.tag!)
+          newTags.push({ tag: cursed.tag!, tagColor: cursed.tagColor! })
+          tagSet.add(cursed.tag!)
+          results.push({ won: { id: cursed.id, name: cursed.name, tag: cursed.tag, tagColor: cursed.tagColor, rarity: cursed.rarity, type: 'tag' }, alreadyHad })
+          if (cursed.rarity === 'Unobtainable')
+            postArgs.push([req.userId, 'tag', cursed.id, cursed.tag!, undefined, cursed.rarity, cursed.tagColor])
+        } else {
+          const alreadyHad = pfpSet.has(cursed.id)
+          newPfps.push({ id: cursed.id, name: cursed.name, value: cursed.value, rarity: cursed.rarity })
+          pfpSet.add(cursed.id)
+          results.push({ won: { id: cursed.id, name: cursed.name, value: cursed.value, rarity: cursed.rarity, type: 'pfp' }, alreadyHad })
+          if (cursed.rarity === 'Unobtainable')
+            postArgs.push([req.userId, 'pfp', cursed.id, cursed.name, cursed.value!, cursed.rarity, undefined])
+        }
       }
+    }
 
-    } else if (boxType === 'name-color') {
-      const won = weightedRandom(NAME_COLOR_BOX_ITEMS)
-      const owned = parseJsonArr(user.ownedNameColors)
-      const alreadyHas = owned.some(i => i.id === won.id)
-      const newOwned = [...owned, { id: won.id, name: won.name, value: won.value, rarity: won.rarity }]
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: {
+        coins: { decrement: totalCost },
+        allTags: JSON.stringify(newTags),
+        ownedNameColors: JSON.stringify(newColors),
+        ownedPfpEffects: JSON.stringify(newPfps),
+      },
+      select: { coins: true },
+    })
 
-      const updated = await prisma.user.update({
-        where: { id: req.userId },
-        data: { coins: { decrement: BOX_COST }, ownedNameColors: JSON.stringify(newOwned) },
-        select: { coins: true },
-      })
-      res.json({ data: { coins: updated.coins, won: { ...won, type: 'name-color' }, alreadyHad: alreadyHas } })
-
-      // Auto-post for Legendary/Mythic unboxes
-      if (won.rarity === 'Legendary' || won.rarity === 'Mythic') {
-        autoPostUnbox(req.userId, 'name-color', won.id, won.name, won.value, won.rarity, undefined)
-      }
-
+    if (quantity === 1) {
+      res.json({ data: { coins: updated.coins, won: results[0].won, alreadyHad: results[0].alreadyHad } })
     } else {
-      const won = weightedRandom(PFP_EFFECT_BOX_ITEMS)
-      const owned = parseJsonArr(user.ownedPfpEffects)
-      const alreadyHas = owned.some(i => i.id === won.id)
-      const newOwned = [...owned, { id: won.id, name: won.name, value: won.value, rarity: won.rarity }]
-
-      const updated = await prisma.user.update({
-        where: { id: req.userId },
-        data: { coins: { decrement: BOX_COST }, ownedPfpEffects: JSON.stringify(newOwned) },
-        select: { coins: true },
-      })
-      res.json({ data: { coins: updated.coins, won: { ...won, type: 'pfp' }, alreadyHad: alreadyHas } })
-
-      // Auto-post for Legendary/Mythic unboxes
-      if (won.rarity === 'Legendary' || won.rarity === 'Mythic') {
-        autoPostUnbox(req.userId, 'pfp', won.id, won.name, won.value, won.rarity, undefined)
-      }
+      res.json({ data: { coins: updated.coins, results } })
     }
+
+    for (const args of postArgs) autoPostUnbox(...args)
   } catch {
     res.status(500).json({ error: 'Failed to open box' })
   }
@@ -542,7 +603,7 @@ router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: R
 // ── Quicksell ─────────────────────────────────────────────────────────────────
 
 const QUICKSELL_PRICES: Record<string, number> = {
-  Common: 4, Uncommon: 10, Rare: 20, Epic: 40, Legendary: 150, Mythic: 1000,
+  Common: 3, Uncommon: 7, Rare: 13, Epic: 27, Legendary: 100, Mythic: 667, Unobtainable: 5000,
 }
 
 router.post('/quicksell/duplicates', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
@@ -563,12 +624,12 @@ router.post('/quicksell/duplicates', requireAuth, txLimiter, async (req: AuthReq
 
     let totalPayout = 0
 
-    // Keep first occurrence of each tag; sell remaining duplicates (unless excluded)
+    // Keep first occurrence of each tag; sell remaining duplicates (unless excluded or soulbound)
     const finalTags: typeof rawTags = []
     const tagKept = new Set<string>()
     for (const t of rawTags) {
       const key = `tag:${t.tag}`
-      if (exclude.has(key) || !tagKept.has(t.tag)) { finalTags.push(t); tagKept.add(t.tag) }
+      if (NON_TRADEABLE_TAGS.has(t.tag) || exclude.has(key) || !tagKept.has(t.tag)) { finalTags.push(t); tagKept.add(t.tag) }
       else {
         const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
         totalPayout += QUICKSELL_PRICES[def?.rarity ?? 'Common'] ?? 5
@@ -634,6 +695,11 @@ router.post('/quicksell', requireAuth, txLimiter, async (req: AuthRequest, res: 
     if (itemType === 'tag') {
       const tags = parseTagArr(user.allTags)
       const def = TAG_BOX_ITEMS.find(t => t.id === itemId)
+      // Block soulbound tags from quicksell
+      const tagName = def?.tag ?? itemId
+      if (NON_TRADEABLE_TAGS.has(tagName)) {
+        res.status(403).json({ error: 'This tag cannot be quicksold' }); return
+      }
       if (def) {
         // Box tag — match by tag name from definition
         rarity = def.rarity
@@ -886,8 +952,10 @@ router.post('/listings', requireAuth, txLimiter, async (req: AuthRequest, res: R
         // Awarded/admin-granted tag — itemId is the tag string itself
         const owned = ownedTags.find(t => t.tag === itemId)
         if (!owned) { res.status(403).json({ error: 'You do not own this tag' }); return }
-        itemName = owned.tag; itemValue = owned.tagColor; itemRarity = 'Common'
-        tradeItem.tag = owned.tag; tradeItem.tagColor = owned.tagColor; tradeItem.rarity = 'Common'
+        const streakMeta = STREAK_TAG_META[owned.tag]
+        const fallbackRarity = streakMeta?.rarity ?? 'Common'
+        itemName = owned.tag; itemValue = owned.tagColor; itemRarity = fallbackRarity
+        tradeItem.tag = owned.tag; tradeItem.tagColor = owned.tagColor; tradeItem.rarity = fallbackRarity
       }
     } else if (itemType === 'name-color') {
       const owned = parseJsonArr(user.ownedNameColors)
@@ -1077,7 +1145,8 @@ router.get('/users/:userId/inventory', requireAuth, async (req: AuthRequest, res
       .filter(t => !NON_TRADEABLE_TAGS.has(t.tag))
       .map(t => {
         const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
-        return { id: def?.id ?? t.tag, tag: t.tag, tagColor: t.tagColor, rarity: def?.rarity ?? 'Common' }
+        const streakMeta = STREAK_TAG_META[t.tag]
+        return { id: def?.id ?? t.tag, tag: t.tag, tagColor: def?.tagColor ?? t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
       })
 
     res.json({
@@ -1116,7 +1185,7 @@ router.get('/trades/sent', requireAuth, async (req: AuthRequest, res: Response):
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   try {
     const trades = await prisma.tradeOffer.findMany({
-      where: { senderId: req.userId },
+      where: { senderId: req.userId, status: 'PENDING' },
       include: {
         sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
         receiver: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
@@ -1126,6 +1195,27 @@ router.get('/trades/sent', requireAuth, async (req: AuthRequest, res: Response):
     res.json({ data: trades })
   } catch {
     res.status(500).json({ error: 'Failed to fetch sent trades' })
+  }
+})
+
+router.get('/trades/history', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  try {
+    const trades = await prisma.tradeOffer.findMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [{ senderId: req.userId }, { receiverId: req.userId }],
+      },
+      include: {
+        sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
+        receiver: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+    })
+    res.json({ data: trades })
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch trade history' })
   }
 })
 
@@ -1347,6 +1437,135 @@ router.get('/admin/stats', requireAdmin, async (req: AuthRequest, res: Response)
   } catch (err) {
     console.error('[ADMIN STATS]', err)
     res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ── Item Price History ────────────────────────────────────────────────────────
+
+router.get('/item/:itemType/:itemId/history', async (req: Request, res: Response): Promise<void> => {
+  const { itemType, itemId } = req.params
+  if (!['tag', 'name-color', 'pfp'].includes(itemType)) {
+    res.status(400).json({ error: 'Invalid itemType' }); return
+  }
+  try {
+    const sales = await prisma.marketplaceListing.findMany({
+      where: { itemType, itemId, status: 'SOLD' },
+      select: { price: true, updatedAt: true },
+      orderBy: { updatedAt: 'asc' },
+      take: 100,
+    })
+    res.json({ data: sales.map(s => ({ price: s.price, soldAt: s.updatedAt.toISOString() })) })
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch item history' })
+  }
+})
+
+// ── Item Owners ───────────────────────────────────────────────────────────────
+
+router.get('/item/:itemType/:itemId/owners', async (req: Request, res: Response): Promise<void> => {
+  const { itemType, itemId } = req.params
+  if (!['tag', 'name-color', 'pfp'].includes(itemType)) {
+    res.status(400).json({ error: 'Invalid itemType' }); return
+  }
+  try {
+    type OwnerRow = { id: number; name: string | null; tag: string; tagColor: string | null; nameColor: string | null; pfpEffect: string | null }
+    let owners: OwnerRow[] = []
+
+    // ownedNameColors / ownedPfpEffects / allTags are stored as double-encoded JSON
+    // (JSON.stringify was called before writing to the Json field), so the Postgres
+    // column holds a JSON *string* rather than a JSON array.  #>> '{}' extracts the
+    // raw string content, then LIKE does a text scan for the target id/tag.
+    const idPattern = `%"id":"${itemId}"%`
+    if (itemType === 'name-color') {
+      owners = await prisma.$queryRaw<OwnerRow[]>`
+        SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"
+        FROM "User" u
+        WHERE (u."ownedNameColors" #>> '{}') LIKE ${idPattern}
+        AND u."deletedAt" IS NULL
+        ORDER BY u.id ASC LIMIT 50`
+    } else if (itemType === 'pfp') {
+      owners = await prisma.$queryRaw<OwnerRow[]>`
+        SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"
+        FROM "User" u
+        WHERE (u."ownedPfpEffects" #>> '{}') LIKE ${idPattern}
+        AND u."deletedAt" IS NULL
+        ORDER BY u.id ASC LIMIT 50`
+    } else {
+      const spinDef    = TAG_BOX_ITEMS.find(t => t.id === itemId)
+      const specialDef = SPECIAL_TAGS.find(t => t.tag === itemId || t.id === itemId || t.id === itemId.toLowerCase())
+      // Fall back to itemId itself — works when itemId IS the tag name (DEV, VIP, GOAT, Novice …)
+      const tagName = spinDef?.tag ?? specialDef?.tag ?? itemId
+      const tagPattern = `%"tag":"${tagName}"%`
+      owners = await prisma.$queryRaw<OwnerRow[]>`
+        SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"
+        FROM "User" u
+        WHERE (u."allTags" #>> '{}') LIKE ${tagPattern}
+        AND u."deletedAt" IS NULL
+        ORDER BY u.id ASC LIMIT 50`
+    }
+
+    res.json({ data: owners.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect })) })
+  } catch (err) {
+    console.error('[ITEM OWNERS]', err)
+    res.status(500).json({ error: 'Failed to fetch item owners' })
+  }
+})
+
+// ── Leaderboards ──────────────────────────────────────────────────────────────
+
+router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userSelect = { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true }
+
+    const [coinsRows, streakRows] = await Promise.all([
+      prisma.user.findMany({
+        where: { deletedAt: null },
+        select: { ...userSelect, coins: true },
+        orderBy: { coins: 'desc' },
+        take: 15,
+      }),
+      prisma.user.findMany({
+        where: { deletedAt: null },
+        select: { ...userSelect, loginStreak: true },
+        orderBy: { loginStreak: 'desc' },
+        take: 15,
+      }),
+    ])
+
+    // Inventory value: scan recently active users, compute value from item prices
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const [activeUsers, allPrices] = await Promise.all([
+      prisma.user.findMany({
+        where: { deletedAt: null, lastSeenAt: { gte: thirtyDaysAgo } },
+        select: { ...userSelect, coins: true, ownedNameColors: true, ownedPfpEffects: true, allTags: true },
+        take: 500,
+        orderBy: { lastSeenAt: 'desc' },
+      }),
+      prisma.itemPrice.findMany({ where: { itemType: { not: 'meta' } } }),
+    ])
+
+    const priceMap = new Map(allPrices.map(p => [`${p.itemType}:${p.itemId}`, p.price]))
+    const withValue = activeUsers.map(u => {
+      let value = u.coins
+      for (const item of parseJsonArr(u.ownedNameColors)) value += priceMap.get(`name-color:${(item as { id: string }).id}`) ?? 0
+      for (const item of parseJsonArr(u.ownedPfpEffects)) value += priceMap.get(`pfp:${(item as { id: string }).id}`) ?? 0
+      for (const t of parseTagArr(u.allTags)) {
+        const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
+        if (def) value += priceMap.get(`tag:${def.id}`) ?? 0
+      }
+      return { id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, inventoryValue: value }
+    }).sort((a, b) => b.inventoryValue - a.inventoryValue).slice(0, 15)
+
+    res.json({
+      data: {
+        coins: coinsRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, value: u.coins })),
+        streak: streakRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, value: u.loginStreak })),
+        inventory: withValue.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, value: u.inventoryValue })),
+      },
+    })
+  } catch (err) {
+    console.error('[LEADERBOARD]', err)
+    res.status(500).json({ error: 'Failed to fetch leaderboard' })
   }
 })
 

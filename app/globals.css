@@ -372,6 +372,70 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   animation: pfpVoidPulse 3s ease-in-out infinite;
 }
 
+@keyframes pfpWhiteGlow {
+  0%, 100% { box-shadow: 0 0 8px #FFFFFF88,  0 0 0px  #FFFFFF00; border-color: #e5e5e5; }
+  50%       { box-shadow: 0 0 22px #FFFFFFdd, 0 0 44px #FFFFFF66; border-color: #FFFFFF; }
+}
+.pfp-white-fill {
+  background: #FFFFFF !important;
+  border: 2px solid #e5e5e5 !important;
+  color: #111111 !important;
+  animation: pfpWhiteGlow 2.5s ease-in-out infinite;
+}
+
+/* ── Unobtainable: The Curse ── */
+@keyframes pfpCurse {
+  /* Rainbow RGB */
+  0%    { background: #ff0000; box-shadow: 0 0 18px #ff000099, 0 0 36px #ff000033; border-color: #ff0000; color: #fff; }
+  3%    { background: #ff8800; box-shadow: 0 0 18px #ff880099; border-color: #ff8800; }
+  6%    { background: #ffdd00; box-shadow: 0 0 18px #ffdd0099; border-color: #ffdd00; color: #111; }
+  9%    { background: #00ee00; box-shadow: 0 0 18px #00ee0099; border-color: #00ee00; color: #111; }
+  12%   { background: #00ddff; box-shadow: 0 0 18px #00ddff99; border-color: #00ddff; color: #111; }
+  15%   { background: #0044ff; box-shadow: 0 0 18px #0044ff99; border-color: #0044ff; color: #fff; }
+  18%   { background: #cc00ff; box-shadow: 0 0 18px #cc00ff99; border-color: #cc00ff; color: #fff; }
+  /* Galaxy */
+  22%   { background: #0a0030; box-shadow: 0 0 30px #6040cc, 0 0 60px #8040ff55; border-color: #6040cc; color: #fff; }
+  26%   { background: #000820; box-shadow: 0 0 40px #4080ffcc, 0 0 80px #ff40ff33; border-color: #4080ff; }
+  30%   { background: #1a0040; box-shadow: 0 0 50px #a040ffcc, 0 0 100px #8000ff22; border-color: #a040ff; }
+  34%   { background: #000a28; box-shadow: 0 0 35px #5050eecc, 0 0 70px #6080ff33; border-color: #5050ee; }
+  /* Black Void */
+  38%   { background: #050508; box-shadow: 0 0 20px #7c3aed66, 0 0 40px #7c3aed22; border-color: #1a1a2e; color: #1a1a2e; }
+  44%   { background: #000000; box-shadow: 0 0 6px #7c3aed33; border-color: #0a0a0a; color: #000; }
+  /* Black */
+  50%   { background: #000000; box-shadow: 0 0 0px transparent; border-color: #111111; color: #111; }
+  /* Pink */
+  56%   { background: #EC4899; box-shadow: 0 0 20px #EC4899cc, 0 0 40px #EC489955; border-color: #EC4899; color: #fff; }
+  60%   { background: #f472b6; box-shadow: 0 0 28px #EC4899dd, 0 0 56px #EC489966; border-color: #f472b6; color: #fff; }
+  /* White */
+  66%   { background: #ffffff; box-shadow: 0 0 26px #ffffffcc, 0 0 52px #ffffff88; border-color: #e5e5e5; color: #111; }
+  70%   { background: #f0f0ff; box-shadow: 0 0 38px #ffffffee, 0 0 76px #ffffff66; border-color: #ffffff; color: #111; }
+  /* Red */
+  76%   { background: #EF4444; box-shadow: 0 0 20px #EF4444cc, 0 0 40px #EF444455; border-color: #EF4444; color: #fff; }
+  82%   { background: #dc2626; box-shadow: 0 0 30px #EF4444dd, 0 0 60px #EF444466; border-color: #dc2626; color: #fff; }
+  /* Back to RGB */
+  90%   { background: #ff0000; box-shadow: 0 0 18px #ff000099, 0 0 36px #ff000033; border-color: #ff0000; color: #fff; }
+  100%  { background: #ff0000; box-shadow: 0 0 18px #ff000099, 0 0 36px #ff000033; border-color: #ff0000; color: #fff; }
+}
+.pfp-curse {
+  border: 2px solid #ff0000 !important;
+  animation: pfpCurse 7s linear infinite !important;
+}
+
+/* Small indicator (legend dot, badge) cycling through the curse palette */
+@keyframes unobtainableHue {
+  0%   { color: #ff0000; background: #ff0000; fill: #ff0000; }
+  18%  { color: #cc00ff; background: #cc00ff; fill: #cc00ff; }
+  38%  { color: #1a0040; background: #1a0040; fill: #1a0040; }
+  50%  { color: #000000; background: #000000; fill: #000000; }
+  60%  { color: #EC4899; background: #EC4899; fill: #EC4899; }
+  70%  { color: #ffffff;  background: #ffffff;  fill: #ffffff;  }
+  82%  { color: #dc2626; background: #dc2626; fill: #dc2626; }
+  100% { color: #ff0000; background: #ff0000; fill: #ff0000; }
+}
+.unobtainable-hue {
+  animation: unobtainableHue 7s linear infinite;
+}
+
 @keyframes boxPop {
   0%   { transform: scale(0.7); opacity: 0; }
   70%  { transform: scale(1.08); opacity: 1; }
@@ -463,6 +527,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   50%       { color: #F9A8D4; }
 }
 .mythic-text { animation: mythicText 1.5s ease-in-out infinite; }
+
+@keyframes mythicHue {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+.mythic-hue { animation: mythicHue 2s linear infinite; }
 
 /* ── Spinner ──────────────────────────────────────────────────────────────── */
 @keyframes spin {

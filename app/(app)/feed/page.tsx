@@ -51,16 +51,20 @@ const PFP_GLOW_MAP: Record<string, [string, string]> = {
 function pfpStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
-  if (effect === 'glow-gold')   return {}
-  if (effect === 'frame-black') return {}
+  if (effect === 'glow-gold')          return {}
+  if (effect === 'frame-black')        return {}
+  if (effect === 'fill-white')         return {}
+  if (effect === 'unobtainable-curse') return { background: 'transparent' }
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
   return {}
 }
 function pfpClass(effect: string | null | undefined): string {
-  if (effect === 'rainbow')      return 'pfp-rainbow'
-  if (effect === 'glow-gold')    return 'pfp-gold-fill'
-  if (effect === 'frame-black')  return 'pfp-void-fill'
+  if (effect === 'rainbow')           return 'pfp-rainbow'
+  if (effect === 'glow-gold')         return 'pfp-gold-fill'
+  if (effect === 'frame-black')       return 'pfp-void-fill'
+  if (effect === 'fill-white')        return 'pfp-white-fill'
+  if (effect === 'unobtainable-curse') return 'pfp-curse'
   return ''
 }
 
@@ -919,15 +923,22 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
       {/* Unbox section */}
       {isUnbox && post.unboxItemName && (
-        <div style={{ border: `1px solid ${post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'}0d` }}>
+        (() => {
+          const unboxAccent = post.unboxItemType === 'tag' && post.unboxItemTagColor
+            ? post.unboxItemTagColor
+            : post.unboxItemType === 'name-color' && post.unboxItemValue && post.unboxItemValue !== 'rainbow'
+              ? post.unboxItemValue
+              : post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'
+          return (
+        <div style={{ border: `1px solid ${unboxAccent}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${unboxAccent}0d` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <span style={{ fontSize: 20 }}>{post.unboxItemRarity === 'Mythic' ? '👑' : '🌟'}</span>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308', letterSpacing: '0.5px' }}>
-                {post.unboxItemType === 'tag' ? 'TAG UNBOX' : post.unboxItemType === 'name-color' ? 'NAME COLOR UNBOX' : 'PFP UNBOX'}
+              <div style={{ fontSize: 12, fontWeight: 800, color: unboxAccent, letterSpacing: '0.5px' }}>
+                {post.unboxItemType === 'tag' ? 'TAG SPIN' : post.unboxItemType === 'name-color' ? 'NAME COLOR SPIN' : 'PFP SPIN'}
               </div>
             </div>
-            <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, color: post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308', background: `${post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'}18`, border: `1px solid ${post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'}44` }}>
+            <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, color: unboxAccent, background: `${unboxAccent}18`, border: `1px solid ${unboxAccent}44` }}>
               {post.unboxItemRarity}
             </span>
           </div>
@@ -967,10 +978,12 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           {post.unboxItemEstValue != null && post.unboxItemEstValue > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
               <span style={{ fontSize: 13 }}>💰</span>
-              <span>Est. value: <strong style={{ color: '#EAB308' }}><CoinIcon size={13} style={{ marginRight: 2 }} />{post.unboxItemEstValue?.toLocaleString()}</strong></span>
+              <span>Est. value: <strong style={{ color: unboxAccent }}><CoinIcon size={13} style={{ marginRight: 2 }} />{post.unboxItemEstValue?.toLocaleString()}</strong></span>
             </div>
           )}
         </div>
+          )
+        })()
       )}
 
       {/* Giveaway section */}

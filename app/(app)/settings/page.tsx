@@ -798,7 +798,7 @@ export default function SettingsPage() {
           <div className="ns-card" style={S.card}>
             <p style={S.cardLabel}>Support</p>
             <InfoRow label="Contact" value="support@nextstep.ai" />
-            <InfoRow label="Version" value="v1.0 MVP" />
+            <InfoRow label="Version" value="v1.0.3" />
           </div>
 
           <button style={S.logoutBtn} onClick={handleLogout}>

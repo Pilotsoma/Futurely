@@ -607,8 +607,8 @@ export const api = {
   marketplaceInventory: () =>
     request<InventoryData>('/api/marketplace/inventory'),
 
-  marketplaceOpenBox: (boxType: 'tag' | 'name-color' | 'pfp') =>
-    request<BoxResult>('/api/marketplace/open-box', { method: 'POST', body: JSON.stringify({ boxType }) }),
+  marketplaceOpenBox: (boxType: string, quantity = 1) =>
+    request<BoxResult & { results?: Array<{ won: BoxResult['won']; alreadyHad: boolean }> }>('/api/marketplace/open-box', { method: 'POST', body: JSON.stringify({ boxType, quantity }) }),
 
   marketplaceQuicksell: (itemType: 'tag' | 'name-color' | 'pfp', itemId: string) =>
     request<{ coins: number; payout: number }>('/api/marketplace/quicksell', {
@@ -661,6 +661,9 @@ export const api = {
   marketplaceGetSentTrades: () =>
     request<TradeOffer[]>('/api/marketplace/trades/sent'),
 
+  marketplaceGetTradesHistory: () =>
+    request<TradeOffer[]>('/api/marketplace/trades/history'),
+
   marketplaceAcceptTrade: (tradeId: number) =>
     request<{ ok: boolean }>(`/api/marketplace/trades/${tradeId}/accept`, { method: 'POST' }),
 
@@ -672,6 +675,15 @@ export const api = {
 
   getItemPrices: () =>
     request<Record<string, number>>('/api/marketplace/prices'),
+
+  marketplaceItemHistory: (itemType: string, itemId: string) =>
+    request<ItemSalePoint[]>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/history`),
+
+  marketplaceItemOwners: (itemType: string, itemId: string) =>
+    request<ItemOwner[]>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/owners`),
+
+  marketplaceLeaderboard: () =>
+    request<LeaderboardData>('/api/marketplace/leaderboard'),
 
   // ── Parent API ────────────────────────────────────────────────────────────────
 
@@ -1099,6 +1111,24 @@ export interface UserPublicInventory {
   tags: TagInventoryItem[]
   nameColors: MarketplaceItem[]
   pfpEffects: MarketplaceItem[]
+}
+
+export interface ItemSalePoint { price: number; soldAt: string }
+
+export interface ItemOwner {
+  rank: number; id: number; name: string | null
+  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null
+}
+
+export interface LeaderboardEntry {
+  rank: number; id: number; name: string | null
+  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; value: number
+}
+
+export interface LeaderboardData {
+  coins: LeaderboardEntry[]
+  streak: LeaderboardEntry[]
+  inventory: LeaderboardEntry[]
 }
 
 // ── Parent API ─────────────────────────────────────────────────────────────────
