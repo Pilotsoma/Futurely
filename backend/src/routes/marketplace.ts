@@ -1131,7 +1131,7 @@ router.get('/trades/sent', requireAuth, async (req: AuthRequest, res: Response):
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   try {
     const trades = await prisma.tradeOffer.findMany({
-      where: { senderId: req.userId },
+      where: { senderId: req.userId, status: 'PENDING' },
       include: {
         sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
         receiver: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
@@ -1141,6 +1141,27 @@ router.get('/trades/sent', requireAuth, async (req: AuthRequest, res: Response):
     res.json({ data: trades })
   } catch {
     res.status(500).json({ error: 'Failed to fetch sent trades' })
+  }
+})
+
+router.get('/trades/history', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  try {
+    const trades = await prisma.tradeOffer.findMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [{ senderId: req.userId }, { receiverId: req.userId }],
+      },
+      include: {
+        sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
+        receiver: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+    })
+    res.json({ data: trades })
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch trade history' })
   }
 })
 

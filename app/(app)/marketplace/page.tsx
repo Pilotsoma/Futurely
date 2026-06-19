@@ -216,7 +216,7 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
 ]
 
 type Tab = 'boxes' | 'shop' | 'trade' | 'inventory' | 'leaderboard' | 'catalog'
-type TradeSubTab = 'new' | 'incoming' | 'sent'
+type TradeSubTab = 'new' | 'incoming' | 'sent' | 'history'
 
 function PriceTooltip({ children, price }: { children: React.ReactNode; price?: number }) {
   const [show, setShow] = useState(false)
@@ -684,6 +684,7 @@ export default function MarketplacePage() {
   // Trade — lists
   const [incomingTrades, setIncomingTrades] = useState<TradeOffer[]>([])
   const [sentTrades, setSentTrades] = useState<TradeOffer[]>([])
+  const [historyTrades, setHistoryTrades] = useState<TradeOffer[]>([])
   const [tradesLoading, setTradesLoading] = useState(false)
   const [tradeBusy, setTradeBusy] = useState<number | null>(null)
   const [tradeActionMsg, setTradeActionMsg] = useState<{ id: number; msg: string } | null>(null)
@@ -748,9 +749,11 @@ export default function MarketplacePage() {
     Promise.all([
       api.marketplaceGetIncomingTrades(),
       api.marketplaceGetSentTrades(),
-    ]).then(([inc, sent]) => {
+      api.marketplaceGetTradesHistory(),
+    ]).then(([inc, sent, hist]) => {
       setIncomingTrades(inc)
       setSentTrades(sent)
+      setHistoryTrades(hist)
     }).catch(() => {})
       .finally(() => setTradesLoading(false))
   }, [])
@@ -1595,12 +1598,13 @@ export default function MarketplacePage() {
         <>
           {/* Trade sub-tabs */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            {(['new', 'incoming', 'sent'] as TradeSubTab[]).map(st => (
+            {(['new', 'incoming', 'sent', 'history'] as TradeSubTab[]).map(st => (
               <button key={st} onClick={() => { setTradeSubTab(st); if (st !== 'new') fetchTrades() }}
                 style={{ padding: '7px 16px', borderRadius: 8, border: `1px solid ${tradeSubTab === st ? 'var(--primary)' : 'var(--border)'}`, background: tradeSubTab === st ? 'var(--primary)18' : 'transparent', color: tradeSubTab === st ? 'var(--primary)' : 'var(--text-muted)', fontWeight: tradeSubTab === st ? 700 : 500, fontSize: 13, cursor: 'pointer' }}>
                 {st === 'new' && '+ New Trade'}
                 {st === 'incoming' && `📥 Incoming${pendingIncoming > 0 ? ` (${pendingIncoming})` : ''}`}
                 {st === 'sent' && '📤 Sent'}
+                {st === 'history' && '📋 History'}
               </button>
             ))}
           </div>
@@ -1870,12 +1874,11 @@ export default function MarketplacePage() {
               {tradesLoading ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
               ) : sentTrades.length === 0 ? (
-                <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No sent trades yet</div>
+                <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No pending sent trades</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {sentTrades.map(trade => {
                     const msg = tradeActionMsg?.id === trade.id ? tradeActionMsg.msg : null
-                    const statusColor: Record<string, string> = { PENDING: '#EAB308', ACCEPTED: '#22C55E', DECLINED: '#EF4444', CANCELLED: '#6B7280' }
                     return (
                       <div key={trade.id} className="ns-card" style={{ padding: 16 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -1884,8 +1887,8 @@ export default function MarketplacePage() {
                             <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.receiver.nameColor && trade.receiver.nameColor !== 'rainbow' ? { color: trade.receiver.nameColor } : {}) }}>{trade.receiver.name ?? 'User'}</span>
                             {trade.receiver.tag && <span className={trade.receiver.tag === 'DEV' ? 'tag-rainbow' : trade.receiver.tag === 'GOD' ? 'tag-mythic' : trade.receiver.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.receiver.tag === 'DEV' || trade.receiver.tag === 'GOAT' || trade.receiver.tag === 'GOD') ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
                           </div>
-                          <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: statusColor[trade.status] ?? '#6B7280', background: `${statusColor[trade.status] ?? '#6B7280'}18`, padding: '2px 8px', borderRadius: 99 }}>
-                            {trade.status}
+                          <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#EAB308', background: '#EAB30818', padding: '2px 8px', borderRadius: 99 }}>
+                            PENDING
                           </span>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center', marginBottom: 14 }}>
@@ -1901,7 +1904,7 @@ export default function MarketplacePage() {
                         </div>
                         {msg ? (
                           <div style={{ fontSize: 12, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600 }}>{msg}</div>
-                        ) : trade.status === 'PENDING' && (
+                        ) : (
                           <button onClick={() => void handleCancelTrade(trade.id)} disabled={tradeBusy === trade.id}
                             style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
                             {tradeBusy === trade.id ? '…' : 'Cancel Trade'}
@@ -1910,6 +1913,45 @@ export default function MarketplacePage() {
                       </div>
                     )
                   })}
+                </div>
+              )}
+            </>
+          )}
+
+          {tradeSubTab === 'history' && (
+            <>
+              {tradesLoading ? (
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
+              ) : historyTrades.length === 0 ? (
+                <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No completed trades yet</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {historyTrades.map(trade => (
+                    <div key={trade.id} className="ns-card" style={{ padding: 16, borderLeft: '3px solid #22C55E' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                        <span style={{ fontSize: 16 }}>✅</span>
+                        <span style={{ flex: 1, fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+                          {trade.sender.name ?? 'User'}
+                          <span style={{ margin: '0 6px' }}>⇄</span>
+                          {trade.receiver.name ?? 'User'}
+                        </span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                          {new Date(trade.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>{trade.sender.name ?? 'User'} gave</div>
+                          {renderTradeItems(parseTradeItemsClient(trade.senderItems))}
+                        </div>
+                        <div style={{ fontSize: 16 }}>⇄</div>
+                        <div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>{trade.receiver.name ?? 'User'} gave</div>
+                          {renderTradeItems(parseTradeItemsClient(trade.receiverItems))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </>

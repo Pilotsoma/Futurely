@@ -661,6 +661,9 @@ export const api = {
   marketplaceGetSentTrades: () =>
     request<TradeOffer[]>('/api/marketplace/trades/sent'),
 
+  marketplaceGetTradesHistory: () =>
+    request<TradeOffer[]>('/api/marketplace/trades/history'),
+
   marketplaceAcceptTrade: (tradeId: number) =>
     request<{ ok: boolean }>(`/api/marketplace/trades/${tradeId}/accept`, { method: 'POST' }),
 
