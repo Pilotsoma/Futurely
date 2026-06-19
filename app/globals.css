@@ -417,7 +417,6 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   100%  { background: #ff0000; box-shadow: 0 0 18px #ff000099, 0 0 36px #ff000033; border-color: #ff0000; color: #fff; }
 }
 .pfp-curse {
-  border: 2px solid #ff0000 !important;
   animation: pfpCurse 7s linear infinite !important;
 }
 

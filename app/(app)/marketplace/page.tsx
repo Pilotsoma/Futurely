@@ -52,7 +52,7 @@ function pfpStyle(effect: string | null | undefined): React.CSSProperties {
   if (effect === 'glow-gold')           return {}
   if (effect === 'frame-black')         return {}
   if (effect === 'fill-white')          return {}
-  if (effect === 'unobtainable-curse')  return { background: 'transparent' }
+  if (effect === 'unobtainable-curse')  return {}
   if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
   if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
   return {}
@@ -201,10 +201,10 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
     ],
   },
   {
-    type: 'dev-curse', icon: '💀', label: "Developer's Curse", desc: '1 coin · mostly Common · soulbound Uncommons · 0.001% Unobtainable', cost: 1,
+    type: 'dev-curse', icon: '💀', label: "Developer's Curse", desc: '1 coin · mostly Common · 0.001% Curse rarity', cost: 1,
     drops: [
       { rarity: 'Common',       pct: '99.999%', items: ['Learner', 'C Student', 'Bottom 100'] },
-      { rarity: 'Unobtainable', pct: '0.001%',  items: ['The Curse'] },
+      { rarity: 'Curse', pct: '0.001%',  items: ['The Curse'] },
     ],
   },
 ]
@@ -248,7 +248,7 @@ const SIM_ITEMS: Record<BoxType, SimItem[]> = {
     { id: 'learner',    label: 'Learner (Common)',           rarity: 'Common',       type: 'tag', tag: 'Learner',    tagColor: '#94A3B8' },
     { id: 'c-student',  label: 'C Student (Common)',         rarity: 'Common',       type: 'tag', tag: 'C Student',  tagColor: '#78716C' },
     { id: 'bottom-100', label: 'Bottom 100 (Common)',        rarity: 'Common',       type: 'tag', tag: 'Bottom 100', tagColor: '#6B7280' },
-    { id: 'curse',      label: 'The Curse (Unobtainable)',  rarity: 'Unobtainable', type: 'pfp', name: 'The Curse', value: 'unobtainable-curse' },
+    { id: 'curse',      label: 'The Curse',  rarity: 'Curse', type: 'pfp', name: 'The Curse', value: 'unobtainable-curse' },
   ],
 }
 
