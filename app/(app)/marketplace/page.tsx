@@ -981,6 +981,7 @@ export default function MarketplacePage() {
   const [hoveredBox, setHoveredBox] = useState<BoxType | null>(null)
   const [result, setResult] = useState<(BoxResult & { dismissed?: boolean }) | null>(null)
   const [resultId, setResultId] = useState(0)
+  const resultCardRef = useRef<HTMLDivElement>(null)
   const [dismissCountdown, setDismissCountdown] = useState(0)
   const [equipping, setEquipping] = useState<string | null>(null)
   const [quickselling, setQuickselling] = useState<string | null>(null)
@@ -1142,6 +1143,13 @@ export default function MarketplacePage() {
         .finally(() => setLeaderboardLoading(false))
     }
   }, [tab, fetchListings, fetchMyActiveListings, fetchTrades])
+
+  // Scroll result card into view when a new single result appears
+  useEffect(() => {
+    if (result && !result.dismissed) {
+      setTimeout(() => resultCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
+    }
+  }, [resultId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 3-second mandatory hold for Legendary/Mythic unbox results
   useEffect(() => {
@@ -1857,7 +1865,7 @@ export default function MarketplacePage() {
             const wonPrice = prices[`${result.won.type}:${result.won.id}`]
             return (
             <PriceTooltip price={wonPrice}>
-            <div className={cardClass} onClick={() => { if (dismissCountdown === 0) setResult(r => r ? { ...r, dismissed: true } : r) }} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${borderColor}08`, cursor: dismissCountdown > 0 ? 'default' : 'pointer' }}>
+            <div ref={resultCardRef} className={cardClass} onClick={() => { if (dismissCountdown === 0) setResult(r => r ? { ...r, dismissed: true } : r) }} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${borderColor}08`, cursor: dismissCountdown > 0 ? 'default' : 'pointer' }}>
               <div style={{ fontSize: 48, marginBottom: 10 }}>{emoji}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
               {itemPreview}
