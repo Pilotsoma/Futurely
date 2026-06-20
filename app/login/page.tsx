@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { api, ApiError } from '../../lib/api'
@@ -12,7 +12,7 @@ type RegisterStep = 'form' | 'otp'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
@@ -689,4 +689,12 @@ const styles: Record<string, React.CSSProperties> = {
   checkRow:       { display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' },
   checkbox:       { width: 16, height: 16, marginTop: 1, flexShrink: 0, accentColor: 'var(--primary)', cursor: 'pointer' },
   checkLabel:     { fontSize: 13.5, color: 'var(--text)', lineHeight: 1.4 },
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
+  )
 }
