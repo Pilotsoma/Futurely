@@ -1590,6 +1590,8 @@ export default function StudyFeedPage() {
   const [posting, setPosting] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const sentinelRef = useRef<HTMLDivElement>(null)
   const [followingPosts, setFollowingPosts] = useState<FeedPost[]>([])
   const [followingPage, setFollowingPage] = useState(1)
   const [followingHasMore, setFollowingHasMore] = useState(false)
@@ -1656,6 +1658,7 @@ export default function StudyFeedPage() {
   }, [searchParams])
 
   const loadPosts = useCallback(async (p: number) => {
+    if (p > 1) setLoadingMore(true)
     try {
       const data = await api.feedPosts(p, 20)
       setFeedError(false)
@@ -1666,7 +1669,7 @@ export default function StudyFeedPage() {
       console.error('[feed] loadPosts error:', err)
       if (p === 1) setFeedError(err instanceof Error ? err.message : String(err))
     }
-    finally { setLoading(false) }
+    finally { setLoading(false); setLoadingMore(false) }
   }, [])
 
   const loadFollowingPosts = useCallback(async (p: number) => {
@@ -1732,6 +1735,24 @@ export default function StudyFeedPage() {
     connect()
     return () => { dead = true; ws?.close() }
   }, [])
+
+  // Infinite scroll — trigger next page when sentinel enters viewport
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore && !loadingMore && !loading) {
+          const next = page + 1
+          setPage(next)
+          void loadPosts(next)
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, loadingMore, loading, page, loadPosts])
 
   async function handleCreatePost() {
     if (!newPostBody.trim() || posting) return
@@ -2079,11 +2100,9 @@ export default function StudyFeedPage() {
                     onDrawGiveaway={handleDrawGiveaway} onPin={handlePin}
                     currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} isModUser={isModUser} />
                 ))}
-                {hasMore && (
-                  <button className="ns-btn-ghost" style={{ width: '100%', height: 42, marginTop: 8 }}
-                    onClick={() => { setPage(p => p + 1); void loadPosts(page + 1) }}>
-                    Load more
-                  </button>
+                <div ref={sentinelRef} style={{ height: 1 }} />
+                {loadingMore && (
+                  <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '12px 0' }}>Loading…</div>
                 )}
               </>
             )

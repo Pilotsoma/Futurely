@@ -179,7 +179,7 @@ router.get('/posts', async (req: Request, res: Response) => {
           { pinnedUntil: { gt: now } },
         ],
       },
-      take: 1000,
+      take: 200,
       include: {
         user: {
           select: {
