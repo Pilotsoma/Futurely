@@ -372,7 +372,9 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
     // Always run bcrypt regardless of whether user exists — prevents timing-based
     // user enumeration (attacker can't tell if email is registered from response time)
     const passwordValid = user
-      ? await bcrypt.compare(password, user.passwordHash)
+      ? user.passwordHash
+        ? await bcrypt.compare(password, user.passwordHash)
+        : await bcrypt.compare(password, DUMMY_HASH).then(() => false) // OAuth-only account
       : await bcrypt.compare(password, DUMMY_HASH).then(() => false)
 
     if (!user) {
@@ -818,6 +820,10 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
       return
     }
 
+    if (!user.passwordHash) {
+      res.status(400).json({ data: null, error: { code: 'NO_PASSWORD', message: 'This account uses social sign-in. Use "Forgot password" to set a password.' } })
+      return
+    }
     const valid = await bcrypt.compare(password, user.passwordHash)
     if (!valid) {
       res.status(401).json({ data: null, error: { code: 'INVALID_CREDENTIALS', message: 'Incorrect password' } })
