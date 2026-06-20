@@ -351,7 +351,7 @@ export default function LoginPage() {
                   <div style={{ fontSize: 44 }}>📬</div>
                   <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Check your email</p>
                   <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, maxWidth: 300 }}>
-                    If an account exists for <strong>{forgotEmail}</strong>, a password reset link is on its way. Check your spam folder if you don&apos;t see it.
+                    A password reset link has been sent to <strong>{forgotEmail}</strong>. Check your spam folder if you don&apos;t see it.
                   </p>
                   <button type="button" onClick={() => setShowForgot(false)} style={{ ...styles.btn, marginTop: 8 }}>
                     Back to login

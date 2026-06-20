@@ -551,29 +551,33 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: 
   try {
     const user = await prisma.user.findUnique({ where: { email } })
 
-    if (user && !user.deletedAt) {
-      // Invalidate any existing unused tokens
-      await prisma.passwordResetToken.updateMany({
-        where: { userId: user.id, usedAt: null },
-        data: { usedAt: new Date() },
-      })
-
-      const rawToken = crypto.randomBytes(32).toString('hex')
-      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
-      const expiresAt = new Date()
-      expiresAt.setMinutes(expiresAt.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES)
-
-      await prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt } })
-      logger.info('auth.password_reset_requested', { userId: user.id })
-
-      await sendPasswordResetEmail(email, rawToken)
+    if (!user || user.deletedAt) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'No account found with that email address.' } })
+      return
     }
+
+    // Invalidate any existing unused tokens
+    await prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    })
+
+    const rawToken = crypto.randomBytes(32).toString('hex')
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
+    const expiresAt = new Date()
+    expiresAt.setMinutes(expiresAt.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES)
+
+    await prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt } })
+    logger.info('auth.password_reset_requested', { userId: user.id })
+
+    await sendPasswordResetEmail(email, rawToken)
   } catch (e) {
     logger.error('auth.error', { event: 'forgot_password', error: e instanceof Error ? e.message : String(e) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong. Please try again.' } })
+    return
   }
 
-  // Always respond with the same message — never reveal whether the email exists
-  res.json({ data: { message: 'If an account exists for that email, a reset link has been sent.' } })
+  res.json({ data: { message: 'Reset link sent.' } })
 })
 
 // ── POST /auth/reset-password ─────────────────────────────────────────────────
