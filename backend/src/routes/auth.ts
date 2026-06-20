@@ -886,7 +886,10 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
   const accessToken = issueAccessToken(userId)
   const refreshToken = await issueRefreshToken(userId)
   setAuthCookies(res, accessToken, refreshToken)
-  res.redirect(`${appUrl}/login?oauth=success${isNew ? '&new=1' : ''}`)
+
+  const hasSchool = await prisma.schoolConnection.findUnique({ where: { userId } })
+  const needsConnect = !hasSchool
+  res.redirect(`${appUrl}/login?oauth=success${needsConnect ? '&connect=1' : ''}`)
 }
 
 // ── GET /auth/oauth/google ───────────────────────────────────────────────────

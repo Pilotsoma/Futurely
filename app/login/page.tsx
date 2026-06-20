@@ -73,7 +73,7 @@ function LoginPageInner() {
       setError(oauthError === 'oauth_cancelled' ? 'Sign-in cancelled.' : 'Sign-in failed. Please try again.')
     }
     if (oauthResult === 'success') {
-      if (searchParams.get('new') === '1') {
+      if (searchParams.get('connect') === '1') {
         setShowConnectModal(true)
       } else {
         router.push('/dashboard')
