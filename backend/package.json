@@ -5,7 +5,7 @@
   "main": "api/index.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "npx prisma db execute --file scripts/ensure-schema.sql && prisma generate && tsc",
+    "build": "prisma db push --skip-generate --accept-data-loss && prisma generate && tsc",
     "postinstall": "prisma generate",
     "start": "node dist/src/index.js",
     "db:migrate": "prisma migrate dev",
