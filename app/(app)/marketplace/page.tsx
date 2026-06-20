@@ -2509,7 +2509,7 @@ export default function MarketplacePage() {
                       <button onClick={() => openProfile(entry.id)}
                         className={entry.nameColor === 'rainbow' ? 'name-rainbow' : ''}
                         style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(entry.nameColor && entry.nameColor !== 'rainbow' ? { color: entry.nameColor } : { color: 'var(--text)' }) }}>
-                        {entry.name ?? 'Unknown'}
+                        {entry.name ?? `User #${entry.id}`}
                       </button>
                       {entry.tag && <span style={{ fontSize: 11, fontWeight: 700, color: entry.tagColor ?? '#6B7280' }}>[{entry.tag}]</span>}
                     </div>

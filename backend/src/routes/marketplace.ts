@@ -1549,14 +1549,12 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
       }),
     ])
 
-    // Inventory value: scan recently active users, compute value from item prices
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    // Inventory value: scan all active users, compute value from item prices
     const [activeUsers, allPrices] = await Promise.all([
       prisma.user.findMany({
-        where: { deletedAt: null, lastSeenAt: { gte: thirtyDaysAgo } },
+        where: { deletedAt: null },
         select: { ...userSelect, coins: true, ownedNameColors: true, ownedPfpEffects: true, allTags: true },
         take: 500,
-        orderBy: { lastSeenAt: 'desc' },
       }),
       prisma.itemPrice.findMany({ where: { itemType: { not: 'meta' } } }),
     ])
