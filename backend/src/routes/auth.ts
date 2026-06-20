@@ -276,11 +276,16 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
       displayName ? prisma.user.findFirst({ where: { name: displayName } }) : Promise.resolve(null),
     ])
     if (emailTaken) {
-      res.status(409).json({
-        data: null,
-        error: { code: 'CONFLICT', message: 'An account with this email already exists' },
-      })
-      return
+      if (emailTaken.deletedAt) {
+        // Soft-deleted account — purge it so the email can be reused
+        await prisma.user.delete({ where: { id: emailTaken.id } })
+      } else {
+        res.status(409).json({
+          data: null,
+          error: { code: 'CONFLICT', message: 'An account with this email already exists' },
+        })
+        return
+      }
     }
     if (nameTaken) {
       res.status(409).json({
@@ -872,6 +877,11 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
   } else {
     // Check if a user with this email already exists — link accounts
     let user = await prisma.user.findUnique({ where: { email } })
+    if (user?.deletedAt) {
+      // Soft-deleted account — purge it so OAuth can create fresh
+      await prisma.user.delete({ where: { id: user.id } })
+      user = null
+    }
     if (!user) {
       user = await prisma.user.create({
         data: { email, passwordHash: null, name: name ?? null, emailVerified: true },
