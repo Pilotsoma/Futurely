@@ -8,7 +8,7 @@ AI-powered academic companion for high school students.
 - Node.js 18+
 - Expo Go app on your phone
 
-### 1. Start the backendd
+### 1. Start the backend
 ```bash
 cd backend
 npm install
