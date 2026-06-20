@@ -219,8 +219,8 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
 // ── POST /auth/register ───────────────────────────────────────────────────────
 
 router.post('/register', registerLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email, password, name, role: roleInput } = req.body as {
-    email?: string; password?: string; name?: string; role?: string
+  const { email, password, name, role: roleInput, otp } = req.body as {
+    email?: string; password?: string; name?: string; role?: string; otp?: string
   }
 
   if (!email || !password) {
@@ -290,6 +290,22 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
       return
     }
 
+    // Verify OTP
+    if (!otp) {
+      res.status(400).json({ data: null, error: { code: 'OTP_REQUIRED', message: 'Verification code required.' } })
+      return
+    }
+    const codeHash = crypto.createHash('sha256').update(otp.trim()).digest('hex')
+    const otpRecord = await prisma.emailOTP.findFirst({
+      where: { email, codeHash, usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (!otpRecord) {
+      res.status(400).json({ data: null, error: { code: 'INVALID_OTP', message: 'Invalid or expired verification code.' } })
+      return
+    }
+    await prisma.emailOTP.update({ where: { id: otpRecord.id }, data: { usedAt: new Date() } })
+
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
     const userRole = roleInput === 'PARENT' ? 'PARENT' : 'STUDENT'
     const defaultTag = userRole === 'PARENT' ? 'Parent' : 'Student'
@@ -302,13 +318,11 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
       data: {
         email,
         passwordHash,
-        name: displayName,   // null if not provided — hacName will be populated from HAC sync
+        name: displayName,
         role: userRole,
         tag: defaultTag,
         tagColor: 'grey',
-        emailVerified: false,
-        emailVerificationToken: verificationToken,
-        emailVerificationExpiry: verificationExpiry,
+        emailVerified: true,
       },
     })
 
@@ -827,6 +841,176 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
     })
   }
+})
+
+// ── OAuth helpers ────────────────────────────────────────────────────────────
+
+const OTP_EXPIRY_MINUTES = 10
+
+const otpLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many OTP requests. Try again in 1 hour.' } },
+})
+
+async function finishOAuth(res: Response, provider: string, providerId: string, email: string, name?: string): Promise<void> {
+  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
+
+  let existing = await prisma.oAuthAccount.findUnique({ where: { provider_providerId: { provider, providerId } } })
+  let userId: number
+  let isNew = false
+
+  if (existing) {
+    userId = existing.userId
+  } else {
+    // Check if a user with this email already exists — link accounts
+    let user = await prisma.user.findUnique({ where: { email } })
+    if (!user) {
+      user = await prisma.user.create({
+        data: { email, passwordHash: null, name: name ?? null, emailVerified: true },
+      })
+      isNew = true
+    }
+    await prisma.oAuthAccount.create({ data: { userId: user.id, provider, providerId, email } })
+    userId = user.id
+  }
+
+  const accessToken = issueAccessToken(userId)
+  const refreshToken = await issueRefreshToken(userId)
+  setAuthCookies(res, accessToken, refreshToken)
+  res.redirect(`${appUrl}/?oauth=success${isNew ? '&new=1' : ''}`)
+}
+
+// ── GET /auth/oauth/google ───────────────────────────────────────────────────
+router.get('/oauth/google', (_req: Request, res: Response): void => {
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  if (!clientId) { res.status(500).json({ error: 'Google OAuth not configured' }); return }
+  const redirect = encodeURIComponent(`${process.env.APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/google/callback`)
+  const state = jwt.sign({ ts: Date.now() }, process.env.JWT_SECRET!, { expiresIn: '10m' })
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=openid%20email%20profile&state=${state}`
+  res.redirect(url)
+})
+
+router.get('/oauth/google/callback', async (req: Request, res: Response): Promise<void> => {
+  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
+  try {
+    const { code, state } = req.query as { code?: string; state?: string }
+    if (!code || !state) { res.redirect(`${appUrl}/login?error=oauth_cancelled`); return }
+    jwt.verify(state, process.env.JWT_SECRET!)
+
+    const redirect = encodeURIComponent(`${appUrl}/api/auth/oauth/google/callback`)
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        redirect_uri: decodeURIComponent(redirect), grant_type: 'authorization_code',
+      }),
+    })
+    const tokens = await tokenRes.json() as { access_token?: string; id_token?: string }
+    if (!tokens.access_token) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
+
+    const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    })
+    const info = await userRes.json() as { sub?: string; email?: string; name?: string }
+    if (!info.sub || !info.email) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
+
+    await finishOAuth(res, 'google', info.sub, info.email, info.name)
+  } catch (e) {
+    logger.error('auth.error', { event: 'oauth_google_callback', error: e instanceof Error ? e.message : String(e) })
+    res.redirect(`${appUrl}/login?error=oauth_failed`)
+  }
+})
+
+// ── GET /auth/oauth/microsoft ────────────────────────────────────────────────
+router.get('/oauth/microsoft', (_req: Request, res: Response): void => {
+  const clientId = process.env.MICROSOFT_CLIENT_ID
+  if (!clientId) { res.status(500).json({ error: 'Microsoft OAuth not configured' }); return }
+  const redirect = encodeURIComponent(`${process.env.APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/microsoft/callback`)
+  const state = jwt.sign({ ts: Date.now() }, process.env.JWT_SECRET!, { expiresIn: '10m' })
+  const url = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=openid%20email%20profile&state=${state}`
+  res.redirect(url)
+})
+
+router.get('/oauth/microsoft/callback', async (req: Request, res: Response): Promise<void> => {
+  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
+  try {
+    const { code, state } = req.query as { code?: string; state?: string }
+    if (!code || !state) { res.redirect(`${appUrl}/login?error=oauth_cancelled`); return }
+    jwt.verify(state, process.env.JWT_SECRET!)
+
+    const redirect = encodeURIComponent(`${appUrl}/api/auth/oauth/microsoft/callback`)
+    const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code, client_id: process.env.MICROSOFT_CLIENT_ID!, client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+        redirect_uri: decodeURIComponent(redirect), grant_type: 'authorization_code',
+      }),
+    })
+    const tokens = await tokenRes.json() as { access_token?: string }
+    if (!tokens.access_token) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
+
+    const userRes = await fetch('https://graph.microsoft.com/v1.0/me?$select=id,mail,displayName,userPrincipalName', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    })
+    const info = await userRes.json() as { id?: string; mail?: string; userPrincipalName?: string; displayName?: string }
+    const email = info.mail ?? info.userPrincipalName
+    if (!info.id || !email) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
+
+    await finishOAuth(res, 'microsoft', info.id, email, info.displayName)
+  } catch (e) {
+    logger.error('auth.error', { event: 'oauth_microsoft_callback', error: e instanceof Error ? e.message : String(e) })
+    res.redirect(`${appUrl}/login?error=oauth_failed`)
+  }
+})
+
+// ── POST /auth/send-otp ──────────────────────────────────────────────────────
+router.post('/send-otp', otpLimiter, async (req: Request, res: Response): Promise<void> => {
+  const { email } = req.body as { email?: string }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Valid email required.' } })
+    return
+  }
+
+  const domainValid = await hasValidMailDomain(email)
+  if (!domainValid) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'That email domain doesn\'t appear to be valid.' } })
+    return
+  }
+
+  const existing = await prisma.user.findUnique({ where: { email } })
+  if (existing) {
+    res.status(409).json({ data: null, error: { code: 'CONFLICT', message: 'An account with this email already exists.' } })
+    return
+  }
+
+  const code = String(Math.floor(100000 + Math.random() * 900000))
+  const codeHash = crypto.createHash('sha256').update(code).digest('hex')
+  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000)
+
+  await prisma.emailOTP.updateMany({ where: { email, usedAt: null }, data: { usedAt: new Date() } })
+  await prisma.emailOTP.create({ data: { email, codeHash, expiresAt } })
+
+  await sendEmail({
+    to: email,
+    subject: 'Your Futurely verification code',
+    html: `
+      <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:40px 20px;background:#F0F4FF;">
+        <div style="background:#fff;border-radius:16px;border:1px solid #C0CCE8;padding:36px 40px;text-align:center;">
+          <div style="font-size:26px;font-weight:800;color:#050B18;margin-bottom:24px;">Futurely</div>
+          <div style="font-size:16px;font-weight:600;color:#050B18;margin-bottom:8px;">Your verification code</div>
+          <div style="font-size:42px;font-weight:800;letter-spacing:10px;color:#2979FF;margin:24px 0;">${code}</div>
+          <div style="font-size:13px;color:#7B8DB0;">This code expires in ${OTP_EXPIRY_MINUTES} minutes.<br>If you didn't request this, ignore this email.</div>
+        </div>
+      </div>
+    `,
+  })
+
+  res.json({ data: { sent: true } })
 })
 
 // ── GET /auth/test-email ─────────────────────────────────────────────────────

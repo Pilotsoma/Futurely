@@ -1,9 +1,7 @@
--- Idempotent schema patches — safe to run on every deployment.
--- Use IF NOT EXISTS so re-runs are no-ops.
-
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "hacName" TEXT;
+-- Make passwordHash nullable for OAuth users
 ALTER TABLE "User" ALTER COLUMN "passwordHash" DROP NOT NULL;
 
+-- OAuth accounts table
 CREATE TABLE IF NOT EXISTS "OAuthAccount" (
   "id"         SERIAL PRIMARY KEY,
   "userId"     INTEGER NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
@@ -14,6 +12,7 @@ CREATE TABLE IF NOT EXISTS "OAuthAccount" (
   CONSTRAINT "OAuthAccount_provider_providerId_key" UNIQUE ("provider", "providerId")
 );
 
+-- Email OTP table
 CREATE TABLE IF NOT EXISTS "EmailOTP" (
   "id"        SERIAL PRIMARY KEY,
   "email"     TEXT NOT NULL,

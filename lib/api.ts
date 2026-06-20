@@ -101,10 +101,10 @@ interface StudentData {
 }
 
 export const api = {
-  register: (email: string, password: string, name?: string, role?: string) =>
+  register: (email: string, password: string, otp: string, name?: string, role?: string) =>
     request<LoginResult>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, name, role }),
+      body: JSON.stringify({ email, password, otp, name, role }),
     }),
   login: (email: string, password: string) =>
     request<LoginResult>('/api/auth/login', {
@@ -113,6 +113,11 @@ export const api = {
     }),
   logout: () =>
     request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
+  sendOtp: (email: string) =>
+    request<{ sent: boolean }>('/api/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
   forgotPassword: (email: string) =>
     request<{ message: string }>('/api/auth/forgot-password', {
       method: 'POST',

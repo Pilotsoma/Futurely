@@ -1,17 +1,22 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { api, ApiError } from '../../lib/api'
 import { setWebLogin } from '../../lib/authState'
 import { SORTED_ISD_LIST, type ISDEntry } from '../../lib/isds'
 
 type Mode = 'login' | 'register-student' | 'register-parent'
+type RegisterStep = 'form' | 'otp'
+
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
+  const [registerStep, setRegisterStep] = useState<RegisterStep>('form')
 
   const [email, setEmail]                     = useState('')
   const [password, setPassword]               = useState('')
@@ -44,6 +49,12 @@ export default function LoginPage() {
   const [forgotError, setForgotError]     = useState<string | null>(null)
   const [forgotSent, setForgotSent]       = useState(false)
 
+  const [otpCode, setOtpCode]       = useState('')
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpError, setOtpError]     = useState<string | null>(null)
+
+  const [showConnectModal, setShowConnectModal] = useState(false)
+
   useEffect(() => {
     function onOutsideClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -53,6 +64,22 @@ export default function LoginPage() {
     document.addEventListener('mousedown', onOutsideClick)
     return () => document.removeEventListener('mousedown', onOutsideClick)
   }, [])
+
+  // Handle OAuth redirect back
+  useEffect(() => {
+    const oauthResult = searchParams.get('oauth')
+    const oauthError = searchParams.get('error')
+    if (oauthError) {
+      setError(oauthError === 'oauth_cancelled' ? 'Sign-in cancelled.' : 'Sign-in failed. Please try again.')
+    }
+    if (oauthResult === 'success') {
+      if (searchParams.get('new') === '1') {
+        setShowConnectModal(true)
+      } else {
+        router.push('/dashboard')
+      }
+    }
+  }, [searchParams, router])
 
   const filteredIsds = SORTED_ISD_LIST.filter(isd =>
     isd.hacUrl && (
@@ -67,7 +94,7 @@ export default function LoginPage() {
   function selectOther() {
     setSelectedIsd(null); setHacUrl(''); setUseCustomUrl(true); setIsdSearch(''); setIsdOpen(false)
   }
-  function reset() { setError(null); setHacError(null); setPortalDisconnected(false) }
+  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -76,12 +103,33 @@ export default function LoginPage() {
       await doRegisterOrLogin()
       return
     }
-    // Registration — validate then show privacy modal
+    // Registration — validate first
     if (password !== confirmPassword) { setError('Passwords do not match'); return }
     if (password.length < 6)          { setError('Password must be at least 6 characters'); return }
     if (mode === 'register-student') {
       if (!hacUsername.trim() || !hacPassword.trim()) { setError('School portal credentials are required'); return }
       if (!hacUrl.trim()) { setError('Please select your school district'); return }
+    }
+    // Send OTP before showing privacy modal
+    setOtpLoading(true)
+    setOtpError(null)
+    try {
+      await api.sendOtp(email.trim())
+      setOtpCode('')
+      setRegisterStep('otp')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send verification code.')
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault()
+    setOtpError(null)
+    if (!otpCode.trim() || otpCode.trim().length !== 6) {
+      setOtpError('Enter the 6-digit code we sent to your email.')
+      return
     }
     setAgreedPrivacy(false)
     setAgreedAge(false)
@@ -95,9 +143,9 @@ export default function LoginPage() {
       if (mode === 'login') {
         result = await api.login(email, password)
       } else if (mode === 'register-student') {
-        result = await api.register(email, password, name.trim() || undefined)
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined)
       } else {
-        result = await api.register(email, password, name.trim() || undefined, 'PARENT')
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'PARENT')
       }
       setWebLogin(result.token)
       localStorage.setItem('ns_user', JSON.stringify(result.user))
@@ -157,13 +205,15 @@ export default function LoginPage() {
     }
   }
 
-  const btnLabel = isLoading
+  const btnLabel = otpLoading
+    ? 'Sending code...'
+    : isLoading
     ? step === 'connecting' ? 'Connecting to school portal...'
     : step === 'syncing'    ? 'Syncing grades...'
     : mode === 'login'      ? 'Logging in...'
     : 'Creating account...'
     : mode === 'login'      ? 'Log In'
-    : 'Create Account'
+    : 'Send verification code'
 
   const headingText =
     mode === 'login'           ? 'Your academic companion' :
@@ -187,7 +237,63 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={e => void handleSubmit(e)} style={styles.form}>
+        {/* ── OAuth buttons (login + register screens, not OTP step) ── */}
+        {(mode === 'login' || registerStep === 'form') && (
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 4 }}>
+            <a href={`${BASE}/api/auth/oauth/google`} style={styles.oauthBtn}>
+              <svg width="18" height="18" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+              Continue with Google
+            </a>
+            <a href={`${BASE}/api/auth/oauth/microsoft`} style={styles.oauthBtn}>
+              <svg width="18" height="18" viewBox="0 0 21 21" style={{ flexShrink: 0 }}>
+                <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+                <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+                <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+                <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+              </svg>
+              Continue with Microsoft
+            </a>
+            <div style={styles.dividerRow}>
+              <div style={styles.dividerLine}/>
+              <span style={styles.dividerText}>{mode === 'login' ? 'or sign in with email' : 'or use email'}</span>
+              <div style={styles.dividerLine}/>
+            </div>
+          </div>
+        )}
+
+        {/* ── OTP verification step ── */}
+        {registerStep === 'otp' && (
+          <form onSubmit={e => void handleVerifyOtp(e)} style={{ ...styles.form, marginBottom: 8 }}>
+            <div style={{ textAlign: 'center', marginBottom: 4 }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>📨</div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>Check your email</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                We sent a 6-digit code to <strong>{email}</strong>
+              </p>
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>Verification code</label>
+              <input
+                type="text" inputMode="numeric" maxLength={6} autoFocus
+                value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000" style={{ ...styles.input, textAlign: 'center', fontSize: 22, fontWeight: 700, letterSpacing: 8 }}
+              />
+            </div>
+            {otpError && <p style={styles.error}>{otpError}</p>}
+            <button type="submit" style={styles.btn}>Verify code</button>
+            <button type="button" onClick={() => setRegisterStep('form')}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, textAlign: 'center' as const }}>
+              ← Back / change email
+            </button>
+          </form>
+        )}
+
+        {registerStep === 'form' && <form onSubmit={e => void handleSubmit(e)} style={styles.form}>
           {mode !== 'login' && (
             <div style={styles.field}>
               <label style={styles.label}>
@@ -307,7 +413,7 @@ export default function LoginPage() {
               Forgot password?
             </button>
           )}
-        </form>
+        </form>}
 
         {mode === 'login' && (
           <>
@@ -380,6 +486,42 @@ export default function LoginPage() {
                   </button>
                 </form>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── OAuth New User — Connect Integrations Modal ── */}
+      {showConnectModal && (
+        <div style={styles.modalBackdrop}>
+          <div style={{ ...styles.modalCard, maxWidth: 420 }}>
+            <div style={styles.modalHeader}>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Connect your accounts</span>
+            </div>
+            <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <div style={{ fontSize: 44 }}>🎓</div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0, textAlign: 'center' }}>
+                You haven&apos;t connected your HAC or Canvas accounts
+              </p>
+              <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, textAlign: 'center', maxWidth: 320 }}>
+                Connect these for access to your grades, assignments, AI study tools, and much more. You can always do this later in Settings.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowConnectModal(false); router.push('/dashboard?connect=hac') }}
+                  style={styles.btn}
+                >
+                  Connect my school account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowConnectModal(false); router.push('/dashboard') }}
+                  style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 10, height: 44, fontWeight: 600, fontSize: 14, width: '100%', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                >
+                  Skip for now
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -524,6 +666,7 @@ const styles: Record<string, React.CSSProperties> = {
   error:           { color: 'var(--error)', fontSize: 13.5, lineHeight: 1.4 },
   hacError:        { color: 'var(--warning)', fontSize: 12, lineHeight: 1.5 },
   btn:             { background: 'var(--primary)', color: '#FFFFFF', border: 'none', borderRadius: 10, height: 48, fontWeight: 600, fontSize: 15, width: '100%', cursor: 'pointer', marginTop: 4, letterSpacing: '0.1px', transition: 'background 0.15s, box-shadow 0.15s' },
+  oauthBtn:        { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', height: 46, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, fontWeight: 600, textDecoration: 'none', cursor: 'pointer', transition: 'background 0.15s' },
   testHint:        { marginTop: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' as const },
   switchText:      { marginTop: 12, fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' as const },
   switchLink:      { background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: 0 },

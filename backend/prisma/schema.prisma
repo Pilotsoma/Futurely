@@ -12,7 +12,7 @@ generator client {
 model User {
   id                       Int                      @id @default(autoincrement())
   email                    String                   @unique
-  passwordHash             String
+  passwordHash             String?
   name                     String?                  @unique
   hacName                  String?
   tag                      String                   @default("Student")
@@ -65,6 +65,28 @@ model User {
   canvasConnections        CanvasConnection[]
   refreshTokens            RefreshToken[]
   passwordResetTokens      PasswordResetToken[]
+  oauthAccounts            OAuthAccount[]
+}
+
+model OAuthAccount {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  provider   String
+  providerId String
+  email      String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+}
+
+model EmailOTP {
+  id        Int       @id @default(autoincrement())
+  email     String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }
 
 model Profile {
