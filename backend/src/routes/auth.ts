@@ -808,11 +808,6 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
   const userId = req.userId!
   const { password } = req.body as { password?: string }
 
-  if (!password) {
-    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Password required' } })
-    return
-  }
-
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) {
@@ -820,15 +815,19 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
       return
     }
 
-    if (!user.passwordHash) {
-      res.status(400).json({ data: null, error: { code: 'NO_PASSWORD', message: 'This account uses social sign-in. Use "Forgot password" to set a password.' } })
-      return
+    if (user.passwordHash) {
+      // Password account — require password verification
+      if (!password) {
+        res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Password required' } })
+        return
+      }
+      const valid = await bcrypt.compare(password, user.passwordHash)
+      if (!valid) {
+        res.status(401).json({ data: null, error: { code: 'INVALID_CREDENTIALS', message: 'Incorrect password' } })
+        return
+      }
     }
-    const valid = await bcrypt.compare(password, user.passwordHash)
-    if (!valid) {
-      res.status(401).json({ data: null, error: { code: 'INVALID_CREDENTIALS', message: 'Incorrect password' } })
-      return
-    }
+    // OAuth-only account — no password needed, just the DELETE confirmation from the frontend
 
     await prisma.$transaction([
       prisma.user.update({ where: { id: userId }, data: { deletedAt: new Date() } }),
@@ -888,8 +887,7 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
   setAuthCookies(res, accessToken, refreshToken)
 
   const hasSchool = await prisma.schoolConnection.findUnique({ where: { userId } })
-  const needsConnect = !hasSchool
-  res.redirect(`${appUrl}/login?oauth=success${needsConnect ? '&connect=1' : ''}`)
+  res.redirect(`${appUrl}/dashboard${!hasSchool ? '?connect=1' : ''}`)
 }
 
 // ── GET /auth/oauth/google ───────────────────────────────────────────────────

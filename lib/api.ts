@@ -49,6 +49,7 @@ interface StudentData {
   name: string | null
   email: string
   role: string
+  hasPassword: boolean
   profile: {
     weightedGpa: number
     unweightedGpa: number
@@ -597,7 +598,7 @@ export const api = {
   collegeRemove: (id: number) =>
     request<{ deleted: boolean }>(`/api/colleges/${id}`, { method: 'DELETE' }),
 
-  deleteAccount: (password: string) =>
+  deleteAccount: (password?: string) =>
     request<{ deleted: boolean }>('/api/auth/account', {
       method: 'DELETE',
       body: JSON.stringify({ password }),

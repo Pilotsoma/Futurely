@@ -149,10 +149,18 @@ export default function DashboardPage() {
   const [needsReconnect, setNeedsReconnect] = useState(false)
   const [showGpaWelcome, setShowGpaWelcome] = useState(false)
   const [hideGpa, setHideGpa] = useState(false)
+  const [showConnectModal, setShowConnectModal] = useState(false)
   const gpaNeedsResync = useRef(false)
 
   useEffect(() => {
     setHideGpa(localStorage.getItem('ns_hide_gpa') === '1')
+  }, [])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('connect') === '1') {
+      setShowConnectModal(true)
+      window.history.replaceState({}, '', '/dashboard')
+    }
   }, [])
 
   useEffect(() => {
@@ -660,6 +668,35 @@ export default function DashboardPage() {
             )}
             <button onClick={() => setShowResyncPopup(false)} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginTop: 8 }}>
               Dismiss
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Connect school account modal (shown after OAuth sign-up) ── */}
+      {showConnectModal && createPortal(
+        <div style={S.popupOverlay} onClick={() => setShowConnectModal(false)}>
+          <div style={S.popupCard} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowConnectModal(false)} style={S.popupClose}>×</button>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🎓</div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+              Connect your school account
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+              You haven&apos;t connected your HAC or Canvas accounts yet. Connect them to unlock your grades, assignments, AI study tools, and much more.
+            </p>
+            <button
+              onClick={() => { setShowConnectModal(false); router.push('/settings') }}
+              style={S.popupButton}
+            >
+              Connect my school account
+            </button>
+            <button
+              onClick={() => setShowConnectModal(false)}
+              style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginTop: 8 }}
+            >
+              Skip for now
             </button>
           </div>
         </div>,

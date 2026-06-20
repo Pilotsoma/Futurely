@@ -53,8 +53,6 @@ function LoginPageInner() {
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpError, setOtpError]     = useState<string | null>(null)
 
-  const [showConnectModal, setShowConnectModal] = useState(false)
-
   useEffect(() => {
     function onOutsideClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -73,11 +71,7 @@ function LoginPageInner() {
       setError(oauthError === 'oauth_cancelled' ? 'Sign-in cancelled.' : 'Sign-in failed. Please try again.')
     }
     if (oauthResult === 'success') {
-      if (searchParams.get('connect') === '1') {
-        setShowConnectModal(true)
-      } else {
-        router.push('/dashboard')
-      }
+      router.push('/dashboard')
     }
   }, [searchParams, router])
 
@@ -477,42 +471,6 @@ function LoginPageInner() {
                   </button>
                 </form>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── OAuth New User — Connect Integrations Modal ── */}
-      {showConnectModal && (
-        <div style={styles.modalBackdrop}>
-          <div style={{ ...styles.modalCard, maxWidth: 420 }}>
-            <div style={styles.modalHeader}>
-              <span style={{ fontWeight: 700, fontSize: 16 }}>Connect your accounts</span>
-            </div>
-            <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-              <div style={{ fontSize: 44 }}>🎓</div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0, textAlign: 'center' }}>
-                You haven&apos;t connected your HAC or Canvas accounts
-              </p>
-              <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, textAlign: 'center', maxWidth: 320 }}>
-                Connect these for access to your grades, assignments, AI study tools, and much more. You can always do this later in Settings.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', marginTop: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => { setShowConnectModal(false); router.push('/dashboard?connect=hac') }}
-                  style={styles.btn}
-                >
-                  Connect my school account
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowConnectModal(false); router.push('/dashboard') }}
-                  style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 10, height: 44, fontWeight: 600, fontSize: 14, width: '100%', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                >
-                  Skip for now
-                </button>
-              </div>
             </div>
           </div>
         </div>

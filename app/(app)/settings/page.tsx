@@ -7,7 +7,7 @@ import { clearWebAuth } from '../../../lib/authState'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import { CHANGELOG } from '../../../lib/changelog'
 
-function DeleteAccountModal({ onClose }: { onClose: () => void }) {
+function DeleteAccountModal({ onClose, hasPassword }: { onClose: () => void; hasPassword: boolean }) {
   const router = useRouter()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -16,10 +16,10 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
 
   async function handleDelete() {
     if (confirm !== 'DELETE') { setError('Type DELETE to confirm'); return }
-    if (!password) { setError('Password required'); return }
+    if (hasPassword && !password) { setError('Password required'); return }
     setLoading(true); setError(null)
     try {
-      await api.deleteAccount(password)
+      await api.deleteAccount(hasPassword ? password : undefined)
       clearWebAuth()
       localStorage.removeItem('ns_user')
       router.push('/login')
@@ -37,10 +37,12 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
           This permanently deletes your account, posts, grades, and all data. There is no undo — the only way to get access back is to create a new account.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Current Password</label>
-            <input type="password" className="ns-input" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
-          </div>
+          {hasPassword && (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Current Password</label>
+              <input type="password" className="ns-input" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+            </div>
+          )}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Type <strong>DELETE</strong> to confirm</label>
             <input type="text" className="ns-input" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="DELETE" />
@@ -953,7 +955,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {showDeleteModal && <DeleteAccountModal onClose={() => setShowDeleteModal(false)} />}
+      {showDeleteModal && <DeleteAccountModal onClose={() => setShowDeleteModal(false)} hasPassword={data?.hasPassword ?? true} />}
     </div>
   )
 }
