@@ -71,7 +71,7 @@ const USER_SELECT = {
   tag: true, tagColor: true,
   nameColor: true, pfpEffect: true, avatarUrl: true,
   chatBanned: true, chatMutedUntil: true,
-  deletedAt: true, role: true, allTags: true,
+  role: true, allTags: true,
 } as const;
 
 type RawUser = {
@@ -79,11 +79,10 @@ type RawUser = {
   tag: string | null; tagColor: string | null;
   nameColor: string | null; pfpEffect: string | null; avatarUrl: string | null;
   chatBanned: boolean; chatMutedUntil: Date | null;
-  deletedAt: Date | null; role: string; allTags: unknown;
+  role: string; allTags: unknown;
 };
 
 function toFeedUser(u: RawUser) {
-  if (u.deletedAt) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'DELETED', tagColor: '#6B7280', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
   if (u.chatBanned) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
   if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
   return { id: u.id, name: u.name, hacName: u.hacName, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
@@ -173,7 +172,6 @@ router.get('/posts', async (req: Request, res: Response) => {
     // Social feed: last 24h posts + currently-pinned posts (all types expire after 24h)
     const allPosts = await prisma.post.findMany({
       where: {
-        user: { deletedAt: null },
         OR: [
           { createdAt: { gte: cutoff } },
           { pinnedUntil: { gt: now } },
@@ -185,7 +183,7 @@ router.get('/posts', async (req: Request, res: Response) => {
           select: {
             id: true, name: true,
             tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true,
-            chatBanned: true, chatMutedUntil: true, deletedAt: true,
+            chatBanned: true, chatMutedUntil: true,
             role: true, allTags: true,
             _count: { select: { followers: true } },
           },
@@ -362,7 +360,7 @@ router.get('/posts/following', async (req: Request, res: Response) => {
 
     const [posts, total] = await Promise.all([
       prisma.post.findMany({
-        where: { userId: { in: followingIds }, user: { deletedAt: null } },
+        where: { userId: { in: followingIds } },
         orderBy: { createdAt: 'desc' },
         skip, take: limit,
         include: {
@@ -371,7 +369,7 @@ router.get('/posts/following', async (req: Request, res: Response) => {
           _count: { select: { likes: true, comments: true } },
         },
       }),
-      prisma.post.count({ where: { userId: { in: followingIds }, user: { deletedAt: null } } }),
+      prisma.post.count({ where: { userId: { in: followingIds } } }),
     ]);
 
     const postsOut = posts.map(p => ({
@@ -768,11 +766,10 @@ router.get('/search', async (req: Request, res: Response) => {
     const userId = (req as any).userId as number;
     const q = (req.query.q as string || '').trim();
     if (!q) return res.json({ data: [] });
-    const isDev = await hasDevPowers(userId);
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
+      where: { AND: [{ id: { not: userId } }, { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
-      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
+      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -813,11 +810,10 @@ router.get('/users/search', async (req: Request, res: Response) => {
     const userId = (req as any).userId as number;
     const q = (req.query.q as string || '').trim();
     if (!q) return res.json({ data: [] });
-    const isDev = await hasDevPowers(userId);
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
+      where: { AND: [{ id: { not: userId } }, { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
-      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
+      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -838,9 +834,6 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
       hasDevPowers(userId),
     ]);
     if (!profile) return res.status(404).json({ error: 'User not found' });
-    if (profile.deletedAt && !requesterIsDev && userId !== targetId) {
-      return res.status(404).json({ error: 'User not found' });
-    }
 
     const [totalLikes, isFollowingRow] = await Promise.all([
       prisma.like.count({ where: { post: { userId: targetId } } }),
@@ -850,8 +843,7 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
     // Compute effective tag for display
     let effectiveTag = profile.tag;
     let effectiveTagColor = profile.tagColor;
-    if (profile.deletedAt) { effectiveTag = 'DELETED'; effectiveTagColor = '#6B7280'; }
-    else if (profile.chatBanned) { effectiveTag = 'BANNED'; effectiveTagColor = '#EF4444'; }
+    if (profile.chatBanned) { effectiveTag = 'BANNED'; effectiveTagColor = '#EF4444'; }
     else if (profile.chatMutedUntil && profile.chatMutedUntil > new Date()) { effectiveTag = 'MUTED'; effectiveTagColor = '#f97316'; }
 
     const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, allTags: rawAllTags, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; allTags: string };
@@ -1094,9 +1086,9 @@ router.put('/users/:id/role', requireAdmin, async (req: AuthRequest, res: Respon
 router.get('/dev-stats', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const [coinsAgg, allUsers, itemPrices] = await Promise.all([
-      prisma.user.aggregate({ _sum: { coins: true }, where: { deletedAt: null } }),
+      prisma.user.aggregate({ _sum: { coins: true }, where: {} }),
       prisma.user.findMany({
-        where: { deletedAt: null },
+        where: {},
         select: { allTags: true, ownedNameColors: true, ownedPfpEffects: true },
       }),
       prisma.itemPrice.findMany({ where: { itemType: { not: 'meta' } } }),

@@ -273,19 +273,14 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
   try {
     const [emailTaken, nameTaken] = await Promise.all([
       prisma.user.findUnique({ where: { email } }),
-      displayName ? prisma.user.findFirst({ where: { name: displayName, deletedAt: null } }) : Promise.resolve(null),
+      displayName ? prisma.user.findFirst({ where: { name: displayName } }) : Promise.resolve(null),
     ])
     if (emailTaken) {
-      if (emailTaken.deletedAt) {
-        // Soft-deleted account — purge it so the email and name can be reused
-        await prisma.user.delete({ where: { id: emailTaken.id } })
-      } else {
-        res.status(409).json({
-          data: null,
-          error: { code: 'CONFLICT', message: 'An account with this email already exists' },
-        })
-        return
-      }
+      res.status(409).json({
+        data: null,
+        error: { code: 'CONFLICT', message: 'An account with this email already exists' },
+      })
+      return
     }
     if (nameTaken) {
       res.status(409).json({
@@ -390,13 +385,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
       return
     }
 
-    if (user.deletedAt) {
-      res.status(401).json({
-        data: null,
-        error: { code: 'ACCOUNT_DELETED', message: 'This account has been deleted' },
-      })
-      return
-    }
+
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       logger.warn('auth.login_rejected_locked', { userId: user.id, ip: req.ip })
@@ -589,7 +578,7 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: 
   try {
     const user = await prisma.user.findUnique({ where: { email } })
 
-    if (!user || user.deletedAt) {
+    if (!user) {
       res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'No account found with that email address.' } })
       return
     }
@@ -834,13 +823,8 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
     }
     // OAuth-only account — no password needed, just the DELETE confirmation from the frontend
 
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: userId }, data: { deletedAt: new Date() } }),
-      prisma.refreshToken.updateMany({
-        where: { userId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      }),
-    ])
+    // Hard delete — cascades to all related records (posts, likes, comments, etc.)
+    await prisma.user.delete({ where: { id: userId } })
 
     logger.info('auth.account_deleted', { userId })
     res.json({ data: { deleted: true } })
@@ -877,11 +861,6 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
   } else {
     // Check if a user with this email already exists — link accounts
     let user = await prisma.user.findUnique({ where: { email } })
-    if (user?.deletedAt) {
-      // Soft-deleted account — purge it so OAuth can create fresh
-      await prisma.user.delete({ where: { id: user.id } })
-      user = null
-    }
     if (!user) {
       user = await prisma.user.create({
         data: { email, passwordHash: null, name: name ?? null, emailVerified: true },
