@@ -196,8 +196,17 @@ app.use((req, res, next) => {
   next()
 })
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' })
+app.get('/health', async (_req, res) => {
+  const dbUrl = process.env.DATABASE_URL ?? ''
+  const dbHost = dbUrl.match(/@([^/]+)\//)?.[1] ?? 'unknown'
+  try {
+    const { prisma } = await import('./lib/prisma')
+    await prisma.$queryRaw`SELECT 1`
+    res.json({ status: 'ok', db: 'connected', dbHost })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    res.status(503).json({ status: 'error', db: 'unreachable', dbHost, error: msg })
+  }
 })
 
 app.get('/health/connectivity', async (_req, res) => {
