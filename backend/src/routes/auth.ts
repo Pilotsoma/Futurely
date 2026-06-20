@@ -273,11 +273,11 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
   try {
     const [emailTaken, nameTaken] = await Promise.all([
       prisma.user.findUnique({ where: { email } }),
-      displayName ? prisma.user.findFirst({ where: { name: displayName } }) : Promise.resolve(null),
+      displayName ? prisma.user.findFirst({ where: { name: displayName, deletedAt: null } }) : Promise.resolve(null),
     ])
     if (emailTaken) {
       if (emailTaken.deletedAt) {
-        // Soft-deleted account — purge it so the email can be reused
+        // Soft-deleted account — purge it so the email and name can be reused
         await prisma.user.delete({ where: { id: emailTaken.id } })
       } else {
         res.status(409).json({
