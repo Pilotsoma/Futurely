@@ -206,15 +206,17 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
   const [loading, setLoading] = useState(true)
   const [following, setFollowing] = useState(false)
   const [postsLoading, setPostsLoading] = useState(true)
+  const [postsError, setPostsError] = useState(false)
 
   useEffect(() => {
     let cancelled = false
+    setProfile(null); setLoading(true); setUserPosts([]); setPostsLoading(true); setPostsError(false)
     api.feedUserProfile(userId).then((data) => {
       if (!cancelled) { setProfile(data); setFollowing(data.isFollowing); setLoading(false) }
     }).catch(() => { if (!cancelled) setLoading(false) })
     api.feedUserPosts(userId).then((data) => {
       if (!cancelled) { setUserPosts(data.posts); setPostsLoading(false) }
-    }).catch(() => { if (!cancelled) setPostsLoading(false) })
+    }).catch(() => { if (!cancelled) { setPostsLoading(false); setPostsError(true) } })
     return () => { cancelled = true }
   }, [userId])
 
@@ -319,6 +321,8 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
               <p style={O.postsTitle}>Posts</p>
               {postsLoading ? (
                 <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading posts…</div>
+              ) : postsError ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Could not load posts.</div>
               ) : userPosts.length === 0 ? (
                 <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No posts yet.</div>
               ) : userPosts.map(post => (
@@ -366,6 +370,7 @@ function DevAdminPanel({
   const [deleting, setDeleting] = useState(false)
   const [myTag, setMyTag] = useState<string | null>(null)
   const [myRole, setMyRole] = useState<string | null>(null)
+  const [myAllTags, setMyAllTags] = useState<Array<{ tag: string; tagColor: string }>>([])
   const [devStats, setDevStats] = useState<{ totalCoins: number; totalInventoryValue: number; userCount: number } | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
   const [coinAmount, setCoinAmount] = useState('')
@@ -373,10 +378,10 @@ function DevAdminPanel({
   const [targetCoins, setTargetCoins] = useState<number | null>(profile.coins ?? null)
 
   useEffect(() => {
-    api.feedUserProfile(currentUserId).then((p) => { setMyRole(p.role); setMyTag(p.tag) }).catch(() => {})
+    api.feedUserProfile(currentUserId).then((p) => { setMyRole(p.role); setMyTag(p.tag); setMyAllTags(p.allTags ?? []) }).catch(() => {})
   }, [currentUserId])
 
-  const canManage = myRole === 'ADMIN' || myTag === 'DEV'
+  const canManage = myRole === 'ADMIN' || myTag === 'DEV' || myAllTags.some(t => t.tag === 'DEV')
   const isOwnProfile = userId === currentUserId
 
   useEffect(() => {
