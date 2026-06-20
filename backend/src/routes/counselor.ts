@@ -37,9 +37,9 @@ router.post('/students', async (req: AuthRequest, res: Response): Promise<void> 
       return
     }
     const link = await prisma.counselorStudentLink.create({
-      data: { counselorId: req.userId!, studentId, status: 'PENDING' },
+      data: { counselorId: req.userId!, studentId, status: 'ACTIVE' },
     })
-    logger.info('counselor_student_link_pending', { counselorId: req.userId, studentId })
+    logger.info('counselor_student_link_created', { counselorId: req.userId, studentId })
     res.status(201).json({ data: link, error: null })
   } catch (err: unknown) {
     const e = err as { code?: string }

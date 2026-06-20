@@ -6,15 +6,12 @@ import { api, getApiToken, CounselorLink, StudentClassroom, StudentActionItem, C
 export default function ClassroomPage() {
   const [classrooms, setClassrooms] = useState<StudentClassroom[]>([])
   const [actionItems, setActionItems] = useState<StudentActionItem[]>([])
-  const [pendingLinks, setPendingLinks] = useState<CounselorLink[]>([])
   const [activeLinks, setActiveLinks] = useState<CounselorLink[]>([])
   const [loading, setLoading] = useState(true)
 
   const [joinCode, setJoinCode] = useState('')
   const [joining, setJoining] = useState(false)
   const [joinMsg, setJoinMsg] = useState<{ ok: boolean; text: string } | null>(null)
-
-  const [linkBusy, setLinkBusy] = useState<number | null>(null)
 
   const [chatCounselorId, setChatCounselorId] = useState<number | null>(null)
   const [chatMessages, setChatMessages] = useState<CounselorChatMessage[]>([])
@@ -35,15 +32,13 @@ export default function ClassroomPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [cls, ai, pending, active] = await Promise.all([
+      const [cls, ai, active] = await Promise.all([
         api.studentClassrooms(),
         api.studentActionItems(),
-        api.studentPendingCounselorLinks(),
         api.studentActiveCounselorLinks(),
       ])
       setClassrooms(cls)
       setActionItems(ai)
-      setPendingLinks(pending)
       setActiveLinks(active)
     } catch { /* ignore */ }
     finally { setLoading(false) }
@@ -64,24 +59,6 @@ export default function ClassroomPage() {
     } catch (err) {
       setJoinMsg({ ok: false, text: err instanceof Error ? err.message : 'Invalid code or already joined.' })
     } finally { setJoining(false) }
-  }
-
-  async function handleAccept(counselorId: number) {
-    setLinkBusy(counselorId)
-    try {
-      await api.studentAcceptCounselorLink(counselorId)
-      void load()
-    } catch { /* ignore */ }
-    finally { setLinkBusy(null) }
-  }
-
-  async function handleDecline(counselorId: number) {
-    setLinkBusy(counselorId)
-    try {
-      await api.studentDeclineCounselorLink(counselorId)
-      void load()
-    } catch { /* ignore */ }
-    finally { setLinkBusy(null) }
   }
 
   async function openChat(counselorId: number) {
@@ -113,41 +90,6 @@ export default function ClassroomPage() {
   return (
     <div style={{ padding: '24px 28px', maxWidth: 760, margin: '0 auto' }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 24 }}>Classroom</h1>
-
-      {/* ── Pending counselor requests ── */}
-      {pendingLinks.length > 0 && (
-        <div style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
-            Counselor Requests
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {pendingLinks.map(link => (
-              <div key={link.id} className="ns-card" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px' }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', margin: 0 }}>
-                    {link.counselor.name ?? link.counselor.email}
-                  </p>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                    wants to be your counselor
-                  </p>
-                </div>
-                <button
-                  disabled={linkBusy === link.counselorId}
-                  onClick={() => void handleDecline(link.counselorId)}
-                  style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', opacity: linkBusy === link.counselorId ? 0.5 : 1 }}>
-                  Decline
-                </button>
-                <button
-                  disabled={linkBusy === link.counselorId}
-                  onClick={() => void handleAccept(link.counselorId)}
-                  style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: linkBusy === link.counselorId ? 0.5 : 1 }}>
-                  Accept
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── Join classroom ── */}
       <div style={{ marginBottom: 28 }}>
