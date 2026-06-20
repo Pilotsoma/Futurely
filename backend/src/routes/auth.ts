@@ -231,6 +231,23 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     return
   }
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'Please enter a valid email address.' },
+    })
+    return
+  }
+
+  const domainValid = await hasValidMailDomain(email)
+  if (!domainValid) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'That email domain doesn\'t appear to be valid. Please check for typos.' },
+    })
+    return
+  }
+
   const passError = validatePassword(password)
   if (passError) {
     res.status(400).json({
