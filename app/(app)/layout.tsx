@@ -66,6 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isDeleted, setIsDeleted] = useState(false)
   const [userName, setUserName] = useState<string>('Student')
   const [collapsed, setCollapsed] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   // Floating active pill
   const navRef  = useRef<HTMLElement>(null)
@@ -92,7 +93,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       const ok = await initWebAuth()
       if (!ok) { router.replace('/login'); return }
 
-      const user = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { name?: string | null } | null
+      const user = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { name?: string | null; role?: string } | null
+      if (user?.role === 'DEV' || user?.role === 'ADMIN') setIsAdmin(true)
       if (user?.name) {
         const n = user.name
         if (n.includes(',')) {
@@ -244,6 +246,45 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             )
           })}
+
+          {isAdmin && (() => {
+            const active = pathname.startsWith('/admin')
+            return (
+              <>
+                {!collapsed && <div style={{ height: 1, background: 'var(--border)', margin: '6px 8px' }} />}
+                <Link href="/admin/educator-requests" style={{ textDecoration: 'none' }} title={collapsed ? 'Educator Requests' : undefined}>
+                  <motion.div
+                    className={`ns-nav-link${active ? ' active' : ''}`}
+                    style={{ justifyContent: collapsed ? 'center' : undefined, gap: collapsed ? 0 : undefined }}
+                    whileHover={{ x: collapsed ? 0 : 2 }}
+                    transition={fastSpring}
+                  >
+                    <motion.span
+                      style={{ flexShrink: 0 }}
+                      animate={{ opacity: active ? 1 : 0.55, color: active ? '#EF4444' : '#EF4444' }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                    </motion.span>
+                    <AnimatePresence>
+                      {!collapsed && (
+                        <motion.span
+                          key="label-admin"
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -6 }}
+                          transition={fastSpring}
+                          style={{ whiteSpace: 'nowrap', overflow: 'hidden', color: '#EF4444', fontWeight: 700 }}
+                        >
+                          Educator Requests
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                </Link>
+              </>
+            )
+          })()}
         </nav>
 
         {/* Bottom */}
