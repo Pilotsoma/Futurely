@@ -1,5 +1,5 @@
 -- Idempotent schema patches — safe to run on every deployment.
--- Use IF NOT EXISTS so re-runs are no-ops.
+-- All ADD COLUMN / CREATE TABLE use IF NOT EXISTS so re-runs are no-ops.
 
 -- ── User table patches ───────────────────────────────────────────────────────
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "hacName" TEXT;
@@ -21,6 +21,22 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lockedUntil" TIMESTAMP(3);
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerified" BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerificationToken" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerificationExpiry" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);
+
+-- Deduplicate name values before adding unique constraint.
+-- Keeps the first occurrence (lowest id) and nulls out any later duplicates.
+-- This is safe to re-run: if no duplicates exist it's a no-op.
+WITH ranked AS (
+  SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY id) AS rn
+  FROM "User"
+  WHERE name IS NOT NULL
+)
+UPDATE "User" SET name = NULL
+FROM ranked
+WHERE "User".id = ranked.id AND ranked.rn > 1;
+
+-- Unique constraint on name (NULLs are never considered duplicates in PostgreSQL)
+ALTER TABLE "User" ADD CONSTRAINT IF NOT EXISTS "User_name_key" UNIQUE ("name");
 
 -- ── Post table patches ───────────────────────────────────────────────────────
 ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "type" TEXT NOT NULL DEFAULT 'NORMAL';
@@ -40,17 +56,6 @@ ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "unboxItemRarity" TEXT;
 ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "unboxItemEstValue" INTEGER;
 ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "unboxItemTagColor" TEXT;
 ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "pinnedUntil" TIMESTAMP(3);
-
--- Foreign key for giveawayWinnerId (safe — only adds if constraint missing)
-DO $$ BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'Post_giveawayWinnerId_fkey'
-  ) THEN
-    ALTER TABLE "Post" ADD CONSTRAINT "Post_giveawayWinnerId_fkey"
-      FOREIGN KEY ("giveawayWinnerId") REFERENCES "User"("id");
-  END IF;
-END $$;
 
 -- ── GiveawayEntry table ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS "GiveawayEntry" (
