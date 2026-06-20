@@ -77,15 +77,22 @@ router.use(requireEducator)
 // ── GET /educator/me ──
 router.get('/me', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.userId! },
-      select: { role: true, name: true, email: true },
-    })
+    const [user, request] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: req.userId! },
+        select: { role: true, name: true, email: true },
+      }),
+      prisma.educatorRoleRequest.findFirst({
+        where: { userId: req.userId! },
+        orderBy: { createdAt: 'desc' },
+        select: { status: true, requestedRole: true },
+      }),
+    ])
     if (!user) {
       res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
       return
     }
-    res.json({ data: { role: user.role, name: user.name, email: user.email }, error: null })
+    res.json({ data: { role: user.role, name: user.name, email: user.email, requestStatus: request?.status ?? null, requestedRole: request?.requestedRole ?? null }, error: null })
   } catch (err: unknown) {
     logger.error('educator_me_error', { userId: req.userId, error: err instanceof Error ? err.message : String(err) })
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch educator profile' } })

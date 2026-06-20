@@ -142,7 +142,7 @@ function LoginPageInner() {
       } else if (mode === 'register-student') {
         result = await api.register(email, password, otpCode.trim(), name.trim() || undefined)
       } else if (mode === 'register-teacher') {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined)
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'TEACHER')
       } else {
         result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'PARENT')
       }

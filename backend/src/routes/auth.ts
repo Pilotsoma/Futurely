@@ -307,8 +307,8 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     await prisma.emailOTP.update({ where: { id: otpRecord.id }, data: { usedAt: new Date() } })
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
-    const userRole = roleInput === 'PARENT' ? 'PARENT' : 'STUDENT'
-    const defaultTag = userRole === 'PARENT' ? 'Parent' : 'Student'
+    const userRole = roleInput === 'PARENT' ? 'PARENT' : roleInput === 'TEACHER' ? 'TEACHER' : roleInput === 'COUNSELOR' ? 'COUNSELOR' : 'STUDENT'
+    const defaultTag = userRole === 'PARENT' ? 'Parent' : userRole === 'TEACHER' || userRole === 'COUNSELOR' ? 'Teacher' : 'Student'
 
     const verificationToken = crypto.randomBytes(32).toString('hex')
     const verificationExpiry = new Date()

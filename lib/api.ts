@@ -734,6 +734,9 @@ export const api = {
 
   // ── Educator (Teacher + Counselor shared) ─────────────────────────────────
 
+  educatorMe: () =>
+    request<{ role: string; name: string | null; email: string; requestStatus: string | null; requestedRole: string | null }>('/api/educator/me'),
+
   educatorRequestRole: (requestedRole: 'TEACHER' | 'COUNSELOR', institution: string) =>
     request<{ id: number }>('/api/educator/request-role', {
       method: 'POST',
