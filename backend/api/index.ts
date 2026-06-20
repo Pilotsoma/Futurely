@@ -4,13 +4,13 @@ import { ensureSchema } from '../src/lib/startup'
 // Vercel routes /api/* requests to this function.
 // Express routes are mounted without the /api prefix, so strip it here.
 
-// Fire schema patches on cold start. The module-level promise is shared
-// across all warm invocations — after the first request resolves it,
-// subsequent requests await an already-resolved promise (free).
-const ready = ensureSchema()
+// Fire schema patches on cold start without blocking requests.
+// The patches are idempotent and fast — the feed may fail on the very
+// first cold-start request if columns aren't patched yet, but login
+// and other routes are never blocked.
+void ensureSchema()
 
-export default async function handler(req: any, res: any): Promise<void> {
-  await ready
+export default function handler(req: any, res: any): void {
   req.url = (req.url ?? '/').replace(/^\/api/, '') || '/'
   app(req, res)
 }
