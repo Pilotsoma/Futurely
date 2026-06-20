@@ -1579,7 +1579,7 @@ interface Toast { id: string; notif: AppNotification }
 export default function StudyFeedPage() {
   const searchParams = useSearchParams()
   const [posts, setPosts] = useState<FeedPost[]>([])
-  const [feedError, setFeedError] = useState(false)
+  const [feedError, setFeedError] = useState<string | false>(false)
   const [loading, setLoading] = useState(true)
   const [newPostBody, setNewPostBody] = useState('')
   const [posting, setPosting] = useState(false)
@@ -1659,7 +1659,7 @@ export default function StudyFeedPage() {
       setHasMore(data.hasMore)
     } catch (err) {
       console.error('[feed] loadPosts error:', err)
-      if (p === 1) setFeedError(true)
+      if (p === 1) setFeedError(err instanceof Error ? err.message : String(err))
     }
     finally { setLoading(false) }
   }, [])
@@ -2053,7 +2053,8 @@ export default function StudyFeedPage() {
             ) : feedError ? (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <p style={{ fontSize: 14, fontWeight: 700, color: '#EF4444', marginBottom: 6 }}>Failed to load feed</p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>Something went wrong on the server. Try refreshing.</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Something went wrong on the server. Try refreshing.</p>
+                {feedError && typeof feedError === 'string' && <p style={{ fontSize: 11, color: '#EF4444', marginBottom: 16, fontFamily: 'monospace', background: 'var(--surface-2)', padding: '6px 10px', borderRadius: 6, wordBreak: 'break-all' }}>{feedError}</p>}
                 <button className="ns-btn-ghost" style={{ fontSize: 13 }} onClick={() => { setLoading(true); void loadPosts(1) }}>Retry</button>
               </div>
             ) : posts.length === 0 ? (
