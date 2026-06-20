@@ -7,7 +7,7 @@ import { api, ApiError } from '../../lib/api'
 import { setWebLogin } from '../../lib/authState'
 import { SORTED_ISD_LIST, type ISDEntry } from '../../lib/isds'
 
-type Mode = 'login' | 'register-student' | 'register-parent'
+type Mode = 'login' | 'register-student' | 'register-parent' | 'register-teacher'
 type RegisterStep = 'form' | 'otp'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
@@ -42,6 +42,9 @@ function LoginPageInner() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [agreedPrivacy, setAgreedPrivacy]       = useState(false)
   const [agreedAge, setAgreedAge]               = useState(false)
+
+  const [institution, setInstitution] = useState('')
+  const [applyAsCounselor, setApplyAsCounselor] = useState(false)
 
   const [showForgot, setShowForgot]       = useState(false)
   const [forgotEmail, setForgotEmail]     = useState('')
@@ -88,7 +91,7 @@ function LoginPageInner() {
   function selectOther() {
     setSelectedIsd(null); setHacUrl(''); setUseCustomUrl(true); setIsdSearch(''); setIsdOpen(false)
   }
-  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null) }
+  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setInstitution(''); setApplyAsCounselor(false) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -138,11 +141,19 @@ function LoginPageInner() {
         result = await api.login(email, password)
       } else if (mode === 'register-student') {
         result = await api.register(email, password, otpCode.trim(), name.trim() || undefined)
+      } else if (mode === 'register-teacher') {
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined)
       } else {
         result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'PARENT')
       }
       setWebLogin(result.token)
       localStorage.setItem('ns_user', JSON.stringify(result.user))
+      if (mode === 'register-teacher') {
+        const requestedRole = applyAsCounselor ? 'COUNSELOR' : 'TEACHER'
+        await api.educatorRequestRole(requestedRole, institution.trim())
+        router.push('/teacher/dashboard')
+        return
+      }
       if (mode === 'register-student') {
         setStep('connecting')
         try {
@@ -210,9 +221,10 @@ function LoginPageInner() {
     : 'Send verification code'
 
   const headingText =
-    mode === 'login'           ? 'Your academic companion' :
-    mode === 'register-parent' ? 'Create a parent account' :
-                                 'Create your student account'
+    mode === 'login'            ? 'Your academic companion' :
+    mode === 'register-parent'  ? 'Create a parent account' :
+    mode === 'register-teacher' ? 'Create a teacher account' :
+                                  'Create your student account'
 
   const isdDisplayLabel = useCustomUrl ? 'Other / Not Listed' : selectedIsd ? `${selectedIsd.name} (${selectedIsd.state})` : ''
 
@@ -282,12 +294,12 @@ function LoginPageInner() {
           {mode !== 'login' && (
             <div style={styles.field}>
               <label style={styles.label}>
-                {mode === 'register-parent' ? 'Your Name' : 'Display Name'}{' '}
+                {mode === 'register-parent' || mode === 'register-teacher' ? 'Your Name' : 'Display Name'}{' '}
                 {mode === 'register-student' && <span style={{ color: 'var(--text-muted)' }}>(optional)</span>}
               </label>
               <input type="text" value={name} onChange={e => setName(e.target.value)}
-                placeholder={mode === 'register-parent' ? 'Jane Smith' : 'Jane Doe'}
-                required={mode === 'register-parent'} style={styles.input} />
+                placeholder={mode === 'register-parent' || mode === 'register-teacher' ? 'Jane Smith' : 'Jane Doe'}
+                required={mode === 'register-parent' || mode === 'register-teacher'} style={styles.input} />
             </div>
           )}
 
@@ -386,6 +398,24 @@ function LoginPageInner() {
             </>
           )}
 
+          {mode === 'register-teacher' && (
+            <>
+              <div style={styles.field}>
+                <label style={styles.label}>School / Organization</label>
+                <input type="text" value={institution} onChange={e => setInstitution(e.target.value)}
+                  placeholder="Lincoln High School" required style={styles.input} />
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                <input type="checkbox" checked={applyAsCounselor} onChange={e => setApplyAsCounselor(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--primary)' }} />
+                I am applying as a <strong style={{ color: 'var(--text)' }}>counselor</strong> (includes all teacher features + student chat &amp; guidance tools)
+              </label>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, lineHeight: 1.5 }}>
+                Your request will be reviewed by an admin before educator features are unlocked. You&apos;ll receive a Teacher tag immediately.
+              </p>
+            </>
+          )}
+
           {error && <p style={styles.error}>{error}</p>}
 
           <button type="submit" disabled={isLoading} style={{ ...styles.btn, opacity: isLoading ? 0.6 : 1 }}>
@@ -410,6 +440,10 @@ function LoginPageInner() {
               Parent or guardian?{' '}
               <button type="button" onClick={() => { setMode('register-parent'); reset() }} style={styles.switchLink}>Create a parent account</button>
             </p>
+            <p style={{ ...styles.switchText, marginTop: 4 }}>
+              Teacher or counselor?{' '}
+              <button type="button" onClick={() => { setMode('register-teacher'); reset() }} style={styles.switchLink}>Create a teacher account</button>
+            </p>
           </>
         )}
 
@@ -421,6 +455,13 @@ function LoginPageInner() {
         )}
 
         {mode === 'register-parent' && (
+          <p style={styles.switchText}>
+            Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); reset() }} style={styles.switchLink}>Log In</button>
+            {' · '}<button type="button" onClick={() => { setMode('register-student'); reset() }} style={styles.switchLink}>Student account</button>
+          </p>
+        )}
+
+        {mode === 'register-teacher' && (
           <p style={styles.switchText}>
             Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); reset() }} style={styles.switchLink}>Log In</button>
             {' · '}<button type="button" onClick={() => { setMode('register-student'); reset() }} style={styles.switchLink}>Student account</button>
