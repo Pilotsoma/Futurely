@@ -167,8 +167,8 @@ router.get('/posts', async (req: Request, res: Response) => {
     const now = new Date();
     const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    // Auto-draw any giveaways that have expired
-    await autoDrawExpiredGiveaways();
+    // Auto-draw any giveaways that have expired (isolated — must not crash the feed)
+    await autoDrawExpiredGiveaways().catch(err => console.error('[feed] autoDrawExpiredGiveaways failed:', err));
 
     // Social feed: last 24h posts + currently-pinned posts (all types expire after 24h)
     const allPosts = await prisma.post.findMany({
@@ -235,6 +235,7 @@ router.get('/posts', async (req: Request, res: Response) => {
 
     res.json({ data: { posts: postsOut, total, page, pageSize: limit, hasMore: skip + limit < total } });
   } catch (err) {
+    console.error('[feed] GET /posts error:', err);
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
 });

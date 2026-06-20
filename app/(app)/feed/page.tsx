@@ -1579,6 +1579,7 @@ interface Toast { id: string; notif: AppNotification }
 export default function StudyFeedPage() {
   const searchParams = useSearchParams()
   const [posts, setPosts] = useState<FeedPost[]>([])
+  const [feedError, setFeedError] = useState(false)
   const [loading, setLoading] = useState(true)
   const [newPostBody, setNewPostBody] = useState('')
   const [posting, setPosting] = useState(false)
@@ -1652,10 +1653,13 @@ export default function StudyFeedPage() {
   const loadPosts = useCallback(async (p: number) => {
     try {
       const data = await api.feedPosts(p, 20)
+      setFeedError(false)
       if (p === 1) setPosts(data.posts)
       else setPosts((prev) => [...prev, ...data.posts])
       setHasMore(data.hasMore)
-    } catch { /* ignore */ }
+    } catch {
+      if (p === 1) setFeedError(true)
+    }
     finally { setLoading(false) }
   }, [])
 
@@ -2045,6 +2049,12 @@ export default function StudyFeedPage() {
           {tab === 'social' ? (
             loading ? (
               <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading feed…</div>
+            ) : feedError ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: '#EF4444', marginBottom: 6 }}>Failed to load feed</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>Something went wrong on the server. Try refreshing.</p>
+                <button className="ns-btn-ghost" style={{ fontSize: 13 }} onClick={() => { setLoading(true); void loadPosts(1) }}>Retry</button>
+              </div>
             ) : posts.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px' }}>
                 <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
