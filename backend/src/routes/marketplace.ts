@@ -1509,8 +1509,9 @@ router.get('/item/:itemType/:itemId/owners', async (req: Request, res: Response)
     } else {
       const spinDef    = TAG_BOX_ITEMS.find(t => t.id === itemId)
       const specialDef = SPECIAL_TAGS.find(t => t.tag === itemId || t.id === itemId || t.id === itemId.toLowerCase())
+      const curseDef   = DEV_CURSE_ITEMS.find(t => t.id === itemId && t.tag)
       // Fall back to itemId itself — works when itemId IS the tag name (DEV, VIP, GOAT, Novice …)
-      const tagName = spinDef?.tag ?? specialDef?.tag ?? itemId
+      const tagName = spinDef?.tag ?? specialDef?.tag ?? curseDef?.tag ?? itemId
       const tagPattern = `%"tag":"${tagName}"%`
       owners = await prisma.$queryRaw<OwnerRow[]>`
         SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"

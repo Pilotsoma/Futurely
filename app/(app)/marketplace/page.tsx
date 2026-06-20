@@ -309,7 +309,7 @@ const NON_TRADEABLE_TAG_IDS = new Set([
 const ZERO_QUICKSELL_TAG_IDS = new Set(['Learner', 'C Student', 'Bottom 100'])
 
 // Every item that exists in the app — mirrors backend TAG_BOX_ITEMS / NAME_COLOR_BOX_ITEMS / PFP_EFFECT_BOX_ITEMS
-type CatalogItem = { id: string; type: 'tag' | 'name-color' | 'pfp'; name: string; rarity: string; value?: string; tagColor?: string }
+type CatalogItem = { id: string; type: 'tag' | 'name-color' | 'pfp'; name: string; rarity: string; value?: string; tagColor?: string; tag?: string }
 const CATALOG_ALL_ITEMS: CatalogItem[] = [
   // ── Tags ──
   { id: 'grinder',        type: 'tag', name: 'Grinder',       rarity: 'Common',    tagColor: '#6B7280' },
@@ -2554,10 +2554,15 @@ export default function MarketplacePage() {
                               <div className={pfpClass(item.value)} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...pfpStyle(item.value) }} />
                             )}
                             {item.type === 'tag' && (
-                              <span
-                                className={item.name === 'GOD' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : ''}
-                                style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'GOD' || item.name === 'GOAT') ? undefined : item.tagColor ?? '#6B7280' }}
-                              >{truncateTag(item.name ?? '')}</span>
+                              item.tagColor === 'curse'
+                                ? <span
+                                    className="tag-curse"
+                                    style={{ fontSize: 11, fontWeight: 800, padding: '1px 3px', borderRadius: 4, border: '1.5px solid #ff0000' }}
+                                  >CURSE</span>
+                                : <span
+                                    className={item.name === 'GOD' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : ''}
+                                    style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'GOD' || item.name === 'GOAT') ? undefined : item.tagColor ?? '#6B7280' }}
+                                  >{truncateTag(item.name ?? '')}</span>
                             )}
                           </div>
                           {/* Name */}

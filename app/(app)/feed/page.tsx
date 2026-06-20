@@ -1657,7 +1657,8 @@ export default function StudyFeedPage() {
       if (p === 1) setPosts(data.posts)
       else setPosts((prev) => [...prev, ...data.posts])
       setHasMore(data.hasMore)
-    } catch {
+    } catch (err) {
+      console.error('[feed] loadPosts error:', err)
       if (p === 1) setFeedError(true)
     }
     finally { setLoading(false) }
