@@ -886,7 +886,7 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
   const accessToken = issueAccessToken(userId)
   const refreshToken = await issueRefreshToken(userId)
   setAuthCookies(res, accessToken, refreshToken)
-  res.redirect(`${appUrl}/?oauth=success${isNew ? '&new=1' : ''}`)
+  res.redirect(`${appUrl}/login?oauth=success${isNew ? '&new=1' : ''}`)
 }
 
 // ── GET /auth/oauth/google ───────────────────────────────────────────────────
