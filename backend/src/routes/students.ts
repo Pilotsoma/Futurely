@@ -485,6 +485,25 @@ router.delete('/counselor-links/:counselorId/decline', requireAuth, async (req: 
   }
 })
 
+// ── GET /students/counselor-links/active ── Student sees their active counselors
+router.get('/counselor-links/active', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  try {
+    const activeLinks = await prisma.counselorStudentLink.findMany({
+      where: { studentId: req.userId, status: 'ACTIVE' },
+      include: { counselor: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'asc' },
+    })
+    res.json({ data: activeLinks, error: null })
+  } catch (err: unknown) {
+    logger.error('counselor_active_links_error', { studentId: req.userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch active counselor links' } })
+  }
+})
+
 // ── GET /students/counselor-links/pending ── Student sees pending counselor link requests
 router.get('/counselor-links/pending', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) {

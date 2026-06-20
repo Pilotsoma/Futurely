@@ -866,6 +866,41 @@ export const api = {
 
   adminDenyEducatorRequest: (id: number) =>
     request<{ ok: boolean }>(`/api/admin/educator-requests/${id}/deny`, { method: 'POST' }),
+
+  // ── Student classroom + counselor ────────────────────────────────────────
+
+  studentClassrooms: () =>
+    request<StudentClassroom[]>('/api/students/classrooms'),
+
+  studentJoinClassroom: (inviteCode: string) =>
+    request<{ id: number }>('/api/students/classrooms/join', {
+      method: 'POST',
+      body: JSON.stringify({ inviteCode: inviteCode.toUpperCase() }),
+    }),
+
+  studentActionItems: () =>
+    request<StudentActionItem[]>('/api/students/action-items'),
+
+  studentPendingCounselorLinks: () =>
+    request<CounselorLink[]>('/api/students/counselor-links/pending'),
+
+  studentActiveCounselorLinks: () =>
+    request<CounselorLink[]>('/api/students/counselor-links/active'),
+
+  studentAcceptCounselorLink: (counselorId: number) =>
+    request<{ ok: boolean }>(`/api/students/counselor-links/${counselorId}/accept`, { method: 'POST' }),
+
+  studentDeclineCounselorLink: (counselorId: number) =>
+    request<{ deleted: boolean }>(`/api/students/counselor-links/${counselorId}/decline`, { method: 'DELETE' }),
+
+  studentSendCounselorMessage: (counselorId: number, body: string) =>
+    request<CounselorChatMessage>(`/api/students/counselor-chat/${counselorId}`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+
+  studentGetCounselorChat: (counselorId: number) =>
+    request<{ messages: CounselorChatMessage[]; nextCursor: string | null }>(`/api/students/counselor-chat/${counselorId}`),
 }
 
 // ── Planner types ─────────────────────────────────────────────────────────
@@ -1459,6 +1494,34 @@ export interface CounselorChatMessage {
 export interface CounselorChatPage {
   messages: CounselorChatMessage[]
   nextCursor: string | null
+}
+
+// ── Student classroom + counselor types ────────────────────────────────────
+
+export interface StudentClassroom {
+  id: number
+  name: string
+  description: string | null
+  inviteCode: string
+  educator: { id: number; name: string | null; email: string }
+}
+
+export interface StudentActionItem {
+  id: number
+  title: string
+  description: string | null
+  dueDate: string | null
+  completed: boolean
+  createdAt: string
+}
+
+export interface CounselorLink {
+  id: number
+  counselorId: number
+  studentId: number
+  status: string
+  createdAt: string
+  counselor: { id: number; name: string | null; email: string }
 }
 
 // ── Admin educator-request types ───────────────────────────────────────────
