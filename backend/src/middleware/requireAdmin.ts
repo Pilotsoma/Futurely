@@ -62,3 +62,42 @@ export async function requireParent(req: AuthRequest, res: Response, next: NextF
   }
   next()
 }
+
+export async function requireTeacher(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true } })
+  if (!user || user.role !== 'TEACHER') {
+    res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'Teacher account required' } })
+    return
+  }
+  next()
+}
+
+export async function requireCounselor(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true } })
+  if (!user || user.role !== 'COUNSELOR') {
+    res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'Counselor account required' } })
+    return
+  }
+  next()
+}
+
+export async function requireEducator(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { role: true } })
+  if (!user || (user.role !== 'TEACHER' && user.role !== 'COUNSELOR')) {
+    res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'Educator account required' } })
+    return
+  }
+  next()
+}

@@ -1006,6 +1006,8 @@ export default function MarketplacePage() {
   const [sellingDups, setSellingDups] = useState(false)
   const [dupExcluded, setDupExcluded] = useState<Set<string>>(new Set())
 
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+
   // DEV panel
   const [isDevUser, setIsDevUser] = useState(false)
   const [devCoins, setDevCoins] = useState('500')
@@ -1073,7 +1075,9 @@ export default function MarketplacePage() {
   }, [])
 
   useEffect(() => {
-    const uid = (() => { try { return (JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { id?: number } | null)?.id ?? 'anon' } catch { return 'anon' } })()
+    const nsUser = (() => { try { return JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { id?: number } | null } catch { return null } })()
+    const uid = nsUser?.id ?? 'anon'
+    setCurrentUserId(nsUser?.id ?? null)
     setStreak(parseInt(localStorage.getItem(`ns_streak_${uid}`) ?? '0', 10))
 
     api.marketplaceInventory()
@@ -2499,18 +2503,23 @@ export default function MarketplacePage() {
             )
             return (
               <div className="ns-card" style={{ padding: 0, overflow: 'hidden' }}>
-                {rows.map((entry, i) => (
-                  <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none', background: i === 0 ? '#EAB30808' : 'transparent' }}>
+                {rows.map((entry, i) => {
+                  const isMe = currentUserId !== null && entry.id === currentUserId
+                  return (
+                  <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none', background: isMe ? 'rgba(59,130,246,0.08)' : i === 0 ? '#EAB30808' : 'transparent' }}>
                     <span style={{ width: 32, textAlign: 'center', fontSize: i < 3 ? 18 : 12, fontWeight: 700, color: i === 0 ? '#EAB308' : i === 1 ? '#94A3B8' : i === 2 ? '#CD7F32' : 'var(--text-muted)', flexShrink: 0 }}>
                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.rank}`}
                     </span>
                     <div className={pfpClass(entry.pfpEffect)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...pfpStyle(entry.pfpEffect) }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <button onClick={() => openProfile(entry.id)}
-                        className={entry.nameColor === 'rainbow' ? 'name-rainbow' : ''}
-                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(entry.nameColor && entry.nameColor !== 'rainbow' ? { color: entry.nameColor } : { color: 'var(--text)' }) }}>
-                        {entry.name ?? `User #${entry.id}`}
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <button onClick={() => openProfile(entry.id)}
+                          className={entry.nameColor === 'rainbow' ? 'name-rainbow' : ''}
+                          style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(entry.nameColor && entry.nameColor !== 'rainbow' ? { color: entry.nameColor } : { color: 'var(--text)' }) }}>
+                          {entry.name ?? `User #${entry.id}`}
+                        </button>
+                        {isMe && <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: 'rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>YOU</span>}
+                      </div>
                       {entry.tag && <span style={{ fontSize: 11, fontWeight: 700, color: entry.tagColor ?? '#6B7280' }}>[{entry.tag}]</span>}
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -2519,7 +2528,8 @@ export default function MarketplacePage() {
                       {leaderboardSub === 'inventory' && <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#A855F7', fontWeight: 700, fontSize: 14 }}><CoinIcon size={14} />{entry.value.toLocaleString()}</div>}
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )
           })()}

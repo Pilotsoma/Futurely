@@ -67,6 +67,26 @@ model User {
   refreshTokens            RefreshToken[]
   passwordResetTokens      PasswordResetToken[]
   oauthAccounts            OAuthAccount[]
+  educatorRoleRequest       EducatorRoleRequest?        @relation("EducatorRoleRequestUser")
+  educatorRoleRequestReview EducatorRoleRequest[]       @relation("EducatorRoleRequestReviewer")
+  classroomsAsEducator      Classroom[]                 @relation("ClassroomEducator")
+  classroomMemberships      ClassroomMembership[]       @relation("StudentMemberships")
+  educatorAssignmentsCreated EducatorAssignment[]       @relation("EducatorAssignmentCreator")
+  coinGrantsGiven           EducatorCoinGrant[]         @relation("CoinGrantEducator")
+  coinGrantsReceived        EducatorCoinGrant[]         @relation("CoinGrantStudent")
+  counselorLinks            CounselorStudentLink[]      @relation("CounselorLinks")
+  counseledBy               CounselorStudentLink[]      @relation("CounseledStudents")
+  counselorRecommendations  CounselorCourseRecommendation[] @relation("CounselorRecommendations")
+  recommendationsReceived   CounselorCourseRecommendation[] @relation("StudentRecommendations")
+  counselorNotes            CounselorNote[]             @relation("CounselorNotes")
+  notesReceived             CounselorNote[]             @relation("StudentNotes")
+  counselorActionItems      CounselorActionItem[]       @relation("CounselorActionItems")
+  actionItemsReceived       CounselorActionItem[]       @relation("StudentActionItems")
+  counselorCourseComments   CounselorCourseComment[]    @relation("CounselorCourseComments")
+  courseCommentsReceived    CounselorCourseComment[]    @relation("StudentCourseComments")
+  counselorChatsSent        CounselorChatMessage[]      @relation("CounselorChatCounselor")
+  counselorChatsReceived    CounselorChatMessage[]      @relation("CounselorChatStudent")
+  counselorChatMessagesSent CounselorChatMessage[]      @relation("CounselorChatSender")
 }
 
 model OAuthAccount {
@@ -118,18 +138,19 @@ model Notification {
 }
 
 model Course {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  name        String
-  teacher     String
-  period      Int
-  semester    String
-  courseType  String   @default("STANDARD")
-  creditHours Float    @default(1.0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  grades      Grade[]
+  id               Int                      @id @default(autoincrement())
+  userId           Int
+  name             String
+  teacher          String
+  period           Int
+  semester         String
+  courseType       String                   @default("STANDARD")
+  creditHours      Float                    @default(1.0)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grades           Grade[]
+  counselorComments CounselorCourseComment[]
 }
 
 model Grade {
@@ -419,4 +440,161 @@ model PasswordResetToken {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model EducatorRoleRequest {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @unique
+  requestedRole String
+  institution   String
+  status        String    @default("PENDING")
+  reviewedBy    Int?
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation("EducatorRoleRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer      User?     @relation("EducatorRoleRequestReviewer", fields: [reviewedBy], references: [id])
+}
+
+model Classroom {
+  id          Int                   @id @default(autoincrement())
+  educatorId  Int
+  name        String
+  inviteCode  String                @unique
+  description String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  educator    User                  @relation("ClassroomEducator", fields: [educatorId], references: [id], onDelete: Cascade)
+  memberships ClassroomMembership[]
+  assignments EducatorAssignment[]
+}
+
+model ClassroomMembership {
+  id          Int       @id @default(autoincrement())
+  classroomId Int
+  studentId   Int
+  joinedAt    DateTime  @default(now())
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  student     User      @relation("StudentMemberships", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, studentId])
+  @@index([studentId])
+}
+
+model EducatorAssignment {
+  id          Int       @id @default(autoincrement())
+  classroomId Int
+  creatorId   Int
+  title       String
+  description String?
+  subject     String
+  dueDate     DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  creator     User      @relation("EducatorAssignmentCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+}
+
+model EducatorCoinGrant {
+  id         Int      @id @default(autoincrement())
+  educatorId Int
+  studentId  Int
+  coins      Int
+  grantDate  String
+  createdAt  DateTime @default(now())
+  educator   User     @relation("CoinGrantEducator", fields: [educatorId], references: [id], onDelete: Cascade)
+  student    User     @relation("CoinGrantStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, grantDate])
+  @@index([educatorId])
+}
+
+model CounselorStudentLink {
+  id          Int      @id @default(autoincrement())
+  counselorId Int
+  studentId   Int
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  counselor   User     @relation("CounselorLinks", fields: [counselorId], references: [id], onDelete: Cascade)
+  student     User     @relation("CounseledStudents", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([counselorId, studentId])
+  @@index([studentId])
+  @@index([studentId, status])
+}
+
+model CounselorCourseRecommendation {
+  id          Int      @id @default(autoincrement())
+  counselorId Int
+  studentId   Int
+  courseName  String
+  courseCode  String?
+  rationale   String?
+  semester    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  counselor   User     @relation("CounselorRecommendations", fields: [counselorId], references: [id], onDelete: Cascade)
+  student     User     @relation("StudentRecommendations", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+}
+
+model CounselorNote {
+  id          Int      @id @default(autoincrement())
+  counselorId Int
+  studentId   Int
+  body        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  counselor   User     @relation("CounselorNotes", fields: [counselorId], references: [id], onDelete: Cascade)
+  student     User     @relation("StudentNotes", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+}
+
+model CounselorActionItem {
+  id          Int       @id @default(autoincrement())
+  counselorId Int
+  studentId   Int
+  title       String
+  description String?
+  dueDate     DateTime?
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  counselor   User      @relation("CounselorActionItems", fields: [counselorId], references: [id], onDelete: Cascade)
+  student     User      @relation("StudentActionItems", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, completed])
+}
+
+model CounselorCourseComment {
+  id          Int      @id @default(autoincrement())
+  counselorId Int
+  studentId   Int
+  courseId    Int
+  body        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  counselor   User     @relation("CounselorCourseComments", fields: [counselorId], references: [id], onDelete: Cascade)
+  student     User     @relation("StudentCourseComments", fields: [studentId], references: [id], onDelete: Cascade)
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@index([studentId])
+}
+
+model CounselorChatMessage {
+  id          Int      @id @default(autoincrement())
+  counselorId Int
+  studentId   Int
+  senderId    Int?
+  body        String
+  createdAt   DateTime @default(now())
+  counselor   User     @relation("CounselorChatCounselor", fields: [counselorId], references: [id], onDelete: Cascade)
+  student     User     @relation("CounselorChatStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  sender      User?    @relation("CounselorChatSender", fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([counselorId, studentId, createdAt])
 }

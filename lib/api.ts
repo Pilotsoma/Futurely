@@ -731,6 +731,141 @@ export const api = {
 
   adminStats: () =>
     request<{ totalUsers: number; activeUsers: number; liveUsers: number }>('/api/marketplace/admin/stats'),
+
+  // ── Educator (Teacher + Counselor shared) ─────────────────────────────────
+
+  educatorRequestRole: (requestedRole: 'TEACHER' | 'COUNSELOR', institution: string) =>
+    request<{ id: number }>('/api/educator/request-role', {
+      method: 'POST',
+      body: JSON.stringify({ requestedRole, institution }),
+    }),
+
+  educatorClassrooms: () =>
+    request<EducatorClassroom[]>('/api/educator/classrooms'),
+
+  educatorCreateClassroom: (name: string, description?: string) =>
+    request<EducatorClassroom>('/api/educator/classrooms', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    }),
+
+  educatorClassroomDetail: (classroomId: number) =>
+    request<EducatorClassroomDetail>(`/api/educator/classrooms/${classroomId}`),
+
+  educatorDeleteClassroom: (classroomId: number) =>
+    request<{ deleted: boolean }>(`/api/educator/classrooms/${classroomId}`, { method: 'DELETE' }),
+
+  educatorCreateAssignment: (classroomId: number, payload: { title: string; description?: string; subject: string; dueDate: string }) =>
+    request<EducatorAssignment>(`/api/educator/classrooms/${classroomId}/assignments`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  educatorGrantCoins: (classroomId: number, studentId: number, coins: number, reason?: string) =>
+    request<{ ok: boolean }>(`/api/educator/classrooms/${classroomId}/coins`, {
+      method: 'POST',
+      body: JSON.stringify({ studentId, coins, reason }),
+    }),
+
+  educatorStudentDetail: (classroomId: number, studentId: number) =>
+    request<EducatorStudentProfile>(`/api/educator/classrooms/${classroomId}/students/${studentId}`),
+
+  // ── Counselor ─────────────────────────────────────────────────────────────
+
+  counselorAddStudent: (studentId: number) =>
+    request<{ id: number }>('/api/counselor/students', {
+      method: 'POST',
+      body: JSON.stringify({ studentId }),
+    }),
+
+  counselorStudents: () =>
+    request<CounselorStudentSummary[]>('/api/counselor/students'),
+
+  counselorRemoveStudent: (studentId: number) =>
+    request<{ removed: boolean }>(`/api/counselor/students/${studentId}`, { method: 'DELETE' }),
+
+  counselorStudentDetail: (studentId: number) =>
+    request<CounselorStudentDetail>(`/api/counselor/students/${studentId}`),
+
+  counselorStudentCourses: (studentId: number) =>
+    request<CounselorStudentCourse[]>(`/api/counselor/students/${studentId}/courses`),
+
+  counselorAddCourseComment: (studentId: number, courseId: number, body: string) =>
+    request<CounselorComment>(`/api/counselor/students/${studentId}/courses/${courseId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+
+  counselorGetCourseComments: (studentId: number, courseId: number) =>
+    request<CounselorComment[]>(`/api/counselor/students/${studentId}/courses/${courseId}/comments`),
+
+  counselorAddRecommendation: (studentId: number, payload: { courseName: string; courseCode?: string; rationale?: string; semester: string }) =>
+    request<CounselorRecommendation>(`/api/counselor/students/${studentId}/recommendations`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  counselorGetRecommendations: (studentId: number) =>
+    request<CounselorRecommendation[]>(`/api/counselor/students/${studentId}/recommendations`),
+
+  counselorDeleteRecommendation: (id: number) =>
+    request<{ deleted: boolean }>(`/api/counselor/recommendations/${id}`, { method: 'DELETE' }),
+
+  counselorAddNote: (studentId: number, body: string) =>
+    request<CounselorNote>(`/api/counselor/students/${studentId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+
+  counselorGetNotes: (studentId: number) =>
+    request<CounselorNote[]>(`/api/counselor/students/${studentId}/notes`),
+
+  counselorUpdateNote: (id: number, body: string) =>
+    request<CounselorNote>(`/api/counselor/notes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ body }),
+    }),
+
+  counselorDeleteNote: (id: number) =>
+    request<{ deleted: boolean }>(`/api/counselor/notes/${id}`, { method: 'DELETE' }),
+
+  counselorAddActionItem: (studentId: number, payload: { title: string; description?: string; dueDate?: string }) =>
+    request<CounselorActionItem>(`/api/counselor/students/${studentId}/action-items`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  counselorGetActionItems: (studentId: number) =>
+    request<CounselorActionItem[]>(`/api/counselor/students/${studentId}/action-items`),
+
+  counselorUpdateActionItem: (id: number, payload: { title?: string; description?: string; dueDate?: string; completed?: boolean }) =>
+    request<CounselorActionItem>(`/api/counselor/action-items/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  counselorDeleteActionItem: (id: number) =>
+    request<{ deleted: boolean }>(`/api/counselor/action-items/${id}`, { method: 'DELETE' }),
+
+  counselorSendChat: (studentId: number, body: string) =>
+    request<CounselorChatMessage>(`/api/counselor/students/${studentId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+
+  counselorGetChat: (studentId: number, cursor?: string, limit = 50) =>
+    request<CounselorChatPage>(`/api/counselor/students/${studentId}/chat?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+
+  adminEducatorRequests: (status: 'PENDING' | 'APPROVED' | 'DENIED' = 'PENDING') =>
+    request<EducatorRequest[]>(`/api/admin/educator-requests?status=${status}`),
+
+  adminApproveEducatorRequest: (id: number) =>
+    request<{ ok: boolean }>(`/api/admin/educator-requests/${id}/approve`, { method: 'POST' }),
+
+  adminDenyEducatorRequest: (id: number) =>
+    request<{ ok: boolean }>(`/api/admin/educator-requests/${id}/deny`, { method: 'POST' }),
 }
 
 // ── Planner types ─────────────────────────────────────────────────────────
@@ -1210,4 +1345,129 @@ export interface AppNotification {
   read: boolean
   createdAt: string
   sender: FeedUser
+}
+
+// ── Educator types ─────────────────────────────────────────────────────────
+
+export interface EducatorClassroom {
+  id: number
+  name: string
+  inviteCode: string
+  description: string | null
+  _count: { memberships: number }
+}
+
+export interface EducatorAssignment {
+  id: number
+  title: string
+  subject: string
+  description: string | null
+  dueDate: string
+}
+
+export interface EducatorClassroomDetail {
+  id: number
+  name: string
+  inviteCode: string
+  description: string | null
+  memberships: Array<{
+    student: { id: number; name: string | null; email: string }
+  }>
+  assignments: EducatorAssignment[]
+}
+
+export interface EducatorStudentProfile {
+  id: number
+  name: string | null
+  email: string
+  courses: Array<{ id: number; name: string; grade: { letterGrade: string; percentage: number } | null }>
+}
+
+// ── Counselor types ─────────────────────────────────────────────────────────
+
+export interface CounselorStudentProfile {
+  gradeLevel: number | null
+  graduationYear: number | null
+  weightedGpa: number | null
+  unweightedGpa: number | null
+  satScore: number | null
+  actScore: number | null
+}
+
+export interface CounselorStudentSummary {
+  id: number
+  name: string | null
+  email: string
+  profile: CounselorStudentProfile | null
+}
+
+export interface CounselorStudentDetail {
+  id: number
+  name: string | null
+  email: string
+  profile: CounselorStudentProfile | null
+}
+
+export interface CounselorStudentCourse {
+  id: number
+  name: string
+  teacher: string
+  period: number | string
+  grade: { letterGrade: string; percentage: number } | null
+}
+
+export interface CounselorComment {
+  id: number
+  body: string
+  createdAt: string
+  author?: { id: number; name: string | null }
+}
+
+export interface CounselorRecommendation {
+  id: number
+  courseName: string
+  courseCode: string | null
+  rationale: string | null
+  semester: string
+  createdAt: string
+}
+
+export interface CounselorNote {
+  id: number
+  body: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CounselorActionItem {
+  id: number
+  title: string
+  description: string | null
+  dueDate: string | null
+  completed: boolean
+  createdAt: string
+}
+
+export interface CounselorChatMessage {
+  id: number
+  body: string
+  senderId: number | null
+  senderName: string | null
+  createdAt: string
+}
+
+export interface CounselorChatPage {
+  messages: CounselorChatMessage[]
+  nextCursor: string | null
+}
+
+// ── Admin educator-request types ───────────────────────────────────────────
+
+export interface EducatorRequest {
+  id: number
+  requestedRole: 'TEACHER' | 'COUNSELOR'
+  institution: string
+  status: 'PENDING' | 'APPROVED' | 'DENIED'
+  createdAt: string
+  user: { id: number; name: string | null; email: string }
 }

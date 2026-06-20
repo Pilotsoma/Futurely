@@ -38,6 +38,9 @@ import parentRouter from './routes/parent'
 import notificationsRouter from './routes/notifications'
 import collegesRouter from './routes/colleges'
 import marketplaceRouter from './routes/marketplace'
+import educatorRouter from './routes/educator'
+import counselorRouter from './routes/counselor'
+import adminRouter from './routes/admin'
 import { requireAuth } from './middleware/auth'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
@@ -290,6 +293,9 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/integrations/canvas', devBypass, canvasRouter)
   app.use('/colleges', devBypass, collegesRouter)
   app.use('/marketplace', devBypass, marketplaceRouter)
+  app.use('/educator', devBypass, educatorRouter)
+  app.use('/counselor', devBypass, counselorRouter)
+  app.use('/admin', devBypass, adminRouter)
 } else {
   app.use('/assignments', requireAuth, assignmentsRouter)
   app.use('/students', requireAuth, studentsRouter)
@@ -301,6 +307,9 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/integrations/canvas', requireAuth, canvasRouter)
   app.use('/colleges', requireAuth, collegesRouter)
   app.use('/marketplace', requireAuth, marketplaceRouter)
+  app.use('/educator', requireAuth, educatorRouter)
+  app.use('/counselor', requireAuth, counselorRouter)
+  app.use('/admin', requireAuth, adminRouter)
 }
 
 app.use('/parent', authLimiter, parentRouter)
