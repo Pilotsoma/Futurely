@@ -453,13 +453,15 @@ router.post('/daily-coins', requireAuth, async (req: AuthRequest, res: Response)
 
     const ugpa = user.profile?.unweightedGpa ?? null
     const wgpa = user.profile?.weightedGpa ?? null
-    const gpaBonus = (() => {
-      const fromU = (g: number) => g >= 4.0 ? 100 : g >= 3.7 ? 50 : g >= 3.3 ? 15 : g >= 2.7 ? 5 : 0
-      const fromW = (g: number) => g >= 5.0 ? 100 : g >= 4.5 ? 50 : g >= 4.0 ? 15 : g >= 3.5 ? 5 : 0
+    const gpaBonusPct = (() => {
+      const fromU = (g: number) => Math.max(0, Math.min(50, (g - 2.0) / 2.0 * 50))
+      const fromW = (g: number) => Math.max(0, Math.min(50, (g - 2.5) / 2.5 * 50))
       if (ugpa === null && wgpa === null) return 0
-      return Math.max(fromU(ugpa ?? 0), fromW(wgpa ?? 0))
+      if (ugpa !== null && wgpa !== null) return (fromU(ugpa) + fromW(wgpa)) / 2
+      if (ugpa !== null) return fromU(ugpa)
+      return fromW(wgpa!)
     })()
-    const coinBonus = streakBonus + gpaBonus
+    const coinBonus = Math.round(streakBonus * (1 + gpaBonusPct / 100))
 
     const todayUTC = new Date().toISOString().slice(0, 10)
     const lastClaimDate = user.lastCoinClaim ? user.lastCoinClaim.toISOString().slice(0, 10) : null

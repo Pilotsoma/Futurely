@@ -88,19 +88,14 @@ function computeGpaPercentile(ugpa: number | null, wgpa: number | null): number 
   return Math.min(99.99, Math.max(50.01, normalCdf(z) * 100))
 }
 
-function getGpaTierBonus(ugpa: number | null, wgpa: number | null): number {
-  const fromU = (g: number) => g >= 4.0 ? 100 : g >= 3.7 ? 50 : g >= 3.3 ? 15 : g >= 2.7 ? 5 : 0
-  const fromW = (g: number) => g >= 5.0 ? 100 : g >= 4.5 ? 50 : g >= 4.0 ? 15 : g >= 3.5 ? 5 : 0
+// Returns 0–50 (percent). Averages unweighted (floor 2.0/max 4.0) and weighted (floor 2.5/max 5.0).
+function getGpaBonusPct(ugpa: number | null, wgpa: number | null): number {
+  const fromU = (g: number) => Math.max(0, Math.min(50, (g - 2.0) / 2.0 * 50))
+  const fromW = (g: number) => Math.max(0, Math.min(50, (g - 2.5) / 2.5 * 50))
   if (ugpa === null && wgpa === null) return 0
-  return Math.max(fromU(ugpa ?? 0), fromW(wgpa ?? 0))
-}
-
-function gpaTierLabel(bonus: number): string {
-  if (bonus >= 100) return 'Top 1%'
-  if (bonus >= 50) return 'Q1'
-  if (bonus >= 15) return 'Q2'
-  if (bonus >= 5) return 'Q3'
-  return 'Q4'
+  if (ugpa !== null && wgpa !== null) return (fromU(ugpa) + fromW(wgpa)) / 2
+  if (ugpa !== null) return fromU(ugpa)
+  return fromW(wgpa!)
 }
 
 function percentileStr(p: number): string {
@@ -334,7 +329,8 @@ export default function DashboardPage() {
   const effectiveUGpa = portalUGpa ?? data.profile?.unweightedGpa ?? null
   const effectiveWGpa = portalWGpa ?? data.profile?.weightedGpa ?? null
   const gpaPercentile = computeGpaPercentile(effectiveUGpa, effectiveWGpa)
-  const gpaTierBonus = getGpaTierBonus(effectiveUGpa, effectiveWGpa)
+  const gpaBonusPct = getGpaBonusPct(effectiveUGpa, effectiveWGpa)
+  const totalDailyCoins = Math.round(streakCoinBonus(dayStreak) * (1 + gpaBonusPct / 100))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
@@ -427,7 +423,7 @@ export default function DashboardPage() {
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)} {...staggerItem(4)}>
           <div style={S.statNum}>{animStreak}</div>
           <div style={S.statLabel}>Day Streak 🔥</div>
-          <div style={{ ...S.statSub, color: '#EAB308' }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{streakCoinBonus(dayStreak) + gpaTierBonus} today{gpaTierBonus > 0 ? ' ✦' : ''}</div>
+          <div style={{ ...S.statSub, color: '#EAB308' }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{totalDailyCoins} today{gpaBonusPct > 0 ? ' ✦' : ''}</div>
           {(() => {
             const next = getNextMilestone(dayStreak)
             if (!next) return <div style={S.statSub} title="All streak rewards earned">👑 GOAT</div>
@@ -507,18 +503,18 @@ export default function DashboardPage() {
               {dayStreak} Day Streak!
             </h3>
             <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#EAB308', fontWeight: 600, textAlign: 'center' as const }}>
-              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{streakCoinBonus(dayStreak) + gpaTierBonus} coins today
+              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{totalDailyCoins} coins today
             </div>
 
-            {/* GPA Rank Section */}
-            {gpaTierBonus > 0 ? (
+            {/* GPA Bonus Section */}
+            {gpaBonusPct > 0 ? (
               <div style={{ background: 'rgba(43,74,142,0.08)', border: '1px solid rgba(43,74,142,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 5 }}>GPA Bonus</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>
-                    {gpaPercentile !== null ? `${percentileStr(gpaPercentile)} Percentile` : gpaTierLabel(gpaTierBonus)}
+                    {gpaPercentile !== null ? `${percentileStr(gpaPercentile)} Percentile` : `${gpaBonusPct.toFixed(1)}% boost`}
                   </span>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>+{gpaTierBonus} coins/day</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>+{gpaBonusPct.toFixed(1)}% on streak</span>
                 </div>
               </div>
             ) : (effectiveUGpa !== null || effectiveWGpa !== null) ? (
@@ -609,10 +605,10 @@ export default function DashboardPage() {
                     Your Daily Streak Bonus
                   </p>
                   <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-blue)', marginBottom: 4 }}>
-                    +{gpaTierBonus} coins/day bonus
+                    +{gpaBonusPct.toFixed(1)}% daily boost
                   </p>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {gpaTierLabel(gpaTierBonus)} tier · stacks on top of your streak earnings
+                    Applied to your streak coins · perfect GPA = +50%
                   </p>
                 </div>
               </>
@@ -623,7 +619,7 @@ export default function DashboardPage() {
                 </p>
                 <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: '#EAB308', lineHeight: 1.5 }}>
-                    Perfect GPA (4.0/5.0) → +100/day<br />Q1 (3.7+/4.5+) → +50/day<br />Q2 (3.3+/4.0+) → +15/day
+                    Perfect GPA (4.0/5.0) → +50% on daily coins<br />Scales smoothly with both your GPAs
                   </p>
                 </div>
               </>
