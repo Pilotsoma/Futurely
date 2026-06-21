@@ -1,6 +1,5 @@
 import app from './app'
 import { logger } from './common/logger'
-import { ensureSchema } from './lib/startup'
 import { WebSocketServer } from 'ws'
 import http from 'http'
 import jwt from 'jsonwebtoken'
@@ -46,11 +45,9 @@ wss.on('connection', (ws) => {
   })
 })
 
-ensureSchema().then(() => {
-  server.listen(PORT, '0.0.0.0', () => {
-    logger.info('NextStep API started', {
-      port: PORT,
-      url: `http://0.0.0.0:${PORT}`,
-    })
+server.listen(PORT, '0.0.0.0', () => {
+  logger.info('NextStep API started', {
+    port: PORT,
+    url: `http://0.0.0.0:${PORT}`,
   })
 })

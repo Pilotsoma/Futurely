@@ -1,8 +1,11 @@
 import app from '../src/app'
+import { ensureSchema } from '../src/lib/startup'
 
-// Vercel routes /api/* requests to this function.
-// Express routes are mounted without the /api prefix, so strip it here.
-export default function handler(req: any, res: any): void {
+// Module-level promise: resolves once per cold start, instant on warm requests.
+const schemaReady = ensureSchema()
+
+export default async function handler(req: any, res: any): Promise<void> {
+  await schemaReady
   req.url = (req.url ?? '/').replace(/^\/api/, '') || '/'
   app(req, res)
 }
