@@ -168,7 +168,7 @@ export const SEED_PRICES: Record<string, number> = {
   'tag:honors-student': 13,  'tag:ap-student': 13,
   'tag:deans-list': 33,      'tag:top-performer': 33,
   'tag:ace': 167,            'tag:genius': 167,
-  'tag:mastermind': 667,     'tag:prodigy': 667,
+  'tag:mastermind': 1000,    'tag:prodigy': 1000,
   'tag:god': 3333,
   // GOAT is the day-100 streak tag (tradeable — rarest item in the game)
   'tag:GOAT': 33333,
