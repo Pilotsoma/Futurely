@@ -510,13 +510,14 @@ model EducatorCoinGrant {
 }
 
 model CounselorStudentLink {
-  id          Int      @id @default(autoincrement())
-  counselorId Int
-  studentId   Int
-  status      String   @default("PENDING")
-  createdAt   DateTime @default(now())
-  counselor   User     @relation("CounselorLinks", fields: [counselorId], references: [id], onDelete: Cascade)
-  student     User     @relation("CounseledStudents", fields: [studentId], references: [id], onDelete: Cascade)
+  id                  Int       @id @default(autoincrement())
+  counselorId         Int
+  studentId           Int
+  status              String    @default("PENDING")
+  createdAt           DateTime  @default(now())
+  counselorLastReadAt DateTime?
+  counselor           User      @relation("CounselorLinks", fields: [counselorId], references: [id], onDelete: Cascade)
+  student             User      @relation("CounseledStudents", fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([counselorId, studentId])
   @@index([studentId])

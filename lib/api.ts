@@ -866,6 +866,12 @@ export const api = {
   counselorGetChat: (studentId: number, cursor?: string, limit = 50) =>
     request<CounselorChatPage>(`/api/counselor/students/${studentId}/chat?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
 
+  counselorMarkChatRead: (studentId: number) =>
+    request<{ ok: boolean }>(`/api/counselor/students/${studentId}/chat/read`, { method: 'PUT' }),
+
+  counselorUnreadTotal: () =>
+    request<{ total: number }>('/api/counselor/unread-total'),
+
   // ── Admin ─────────────────────────────────────────────────────────────────
 
   adminEducatorRequests: (status: 'PENDING' | 'APPROVED' | 'DENIED' = 'PENDING') =>
@@ -1453,6 +1459,7 @@ export interface CounselorStudentSummary {
   name: string | null
   email: string
   profile: CounselorStudentProfile | null
+  unreadCount: number
 }
 
 export interface CounselorStudentDetail {

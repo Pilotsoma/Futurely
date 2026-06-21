@@ -83,9 +83,10 @@ router.post('/students', async (req: AuthRequest, res: Response): Promise<void> 
 
 // ── GET /counselor/students ── List all linked students
 router.get('/students', async (req: AuthRequest, res: Response): Promise<void> => {
+  const counselorId = req.userId!
   try {
     const links = await prisma.counselorStudentLink.findMany({
-      where: { counselorId: req.userId!, status: 'ACTIVE' },
+      where: { counselorId, status: 'ACTIVE' },
       include: {
         student: {
           select: { id: true, name: true, email: true, role: true, profile: true },
@@ -93,10 +94,73 @@ router.get('/students', async (req: AuthRequest, res: Response): Promise<void> =
       },
       orderBy: { createdAt: 'asc' },
     })
-    res.json({ data: links.map(l => l.student), error: null })
+    const unreadCounts = await Promise.all(
+      links.map(async l => {
+        const count = await prisma.counselorChatMessage.count({
+          where: {
+            counselorId,
+            studentId: l.studentId,
+            senderId: l.studentId,
+            ...(l.counselorLastReadAt ? { createdAt: { gt: l.counselorLastReadAt } } : {}),
+          },
+        })
+        return { studentId: l.studentId, count }
+      })
+    )
+    const unreadMap = Object.fromEntries(unreadCounts.map(u => [u.studentId, u.count]))
+    const data = links.map(l => ({ ...l.student, unreadCount: unreadMap[l.studentId] ?? 0 }))
+    res.json({ data, error: null })
   } catch (err: unknown) {
-    logger.error('counselor_list_students_error', { counselorId: req.userId, error: err instanceof Error ? err.message : String(err) })
+    logger.error('counselor_list_students_error', { counselorId, error: err instanceof Error ? err.message : String(err) })
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch students' } })
+  }
+})
+
+// ── PUT /counselor/students/:studentId/chat/read ── Mark chat as read
+router.put('/students/:studentId/chat/read', async (req: AuthRequest, res: Response): Promise<void> => {
+  const studentId = parseInt(req.params.studentId)
+  if (isNaN(studentId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid studentId' } })
+    return
+  }
+  const counselorId = req.userId!
+  try {
+    await prisma.counselorStudentLink.update({
+      where: { counselorId_studentId: { counselorId, studentId } },
+      data: { counselorLastReadAt: new Date() },
+    })
+    res.json({ data: { ok: true }, error: null })
+  } catch (err: unknown) {
+    logger.error('counselor_mark_read_error', { counselorId, studentId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to mark chat as read' } })
+  }
+})
+
+// ── GET /counselor/unread-total ── Total unread count across all students
+router.get('/unread-total', async (req: AuthRequest, res: Response): Promise<void> => {
+  const counselorId = req.userId!
+  try {
+    const links = await prisma.counselorStudentLink.findMany({
+      where: { counselorId, status: 'ACTIVE' },
+      select: { studentId: true, counselorLastReadAt: true },
+    })
+    const counts = await Promise.all(
+      links.map(l =>
+        prisma.counselorChatMessage.count({
+          where: {
+            counselorId,
+            studentId: l.studentId,
+            senderId: l.studentId,
+            ...(l.counselorLastReadAt ? { createdAt: { gt: l.counselorLastReadAt } } : {}),
+          },
+        })
+      )
+    )
+    const studentsWithUnread = counts.filter(c => c > 0).length
+    res.json({ data: { total: studentsWithUnread }, error: null })
+  } catch (err: unknown) {
+    logger.error('counselor_unread_total_error', { counselorId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch unread count' } })
   }
 })
 

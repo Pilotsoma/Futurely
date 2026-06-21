@@ -118,7 +118,10 @@ export default function CounselorStudentPage() {
             role="tab"
             aria-selected={activeTab === t.id}
             style={{ ...S.tabBtn, ...(activeTab === t.id ? S.tabBtnActive : {}) }}
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => {
+              setActiveTab(t.id)
+              if (t.id === 'chat') void api.counselorMarkChatRead(studentId)
+            }}
           >
             {t.label}
           </button>
@@ -143,7 +146,7 @@ export default function CounselorStudentPage() {
           <ActionItemsTab studentId={studentId} />
         )}
         {activeTab === 'chat' && (
-          <ChatTab studentId={studentId} counselorId={counselorId} studentName={student.name} />
+          <ChatTab studentId={studentId} counselorId={counselorId} studentName={student.name} onOpened={() => { void api.counselorMarkChatRead(studentId) }} />
         )}
       </div>
     </div>
@@ -163,8 +166,8 @@ function OverviewTab({ student, onRemove }: { student: CounselorStudentDetail; o
           <InfoField label="Email" value={student.email} />
           <InfoField label="Grade Level" value={p?.gradeLevel != null ? `Grade ${p.gradeLevel}` : '—'} />
           <InfoField label="Graduation Year" value={p?.graduationYear != null ? `Class of ${p.graduationYear}` : '—'} />
-          <InfoField label="Weighted GPA" value={p?.weightedGpa != null ? p.weightedGpa.toFixed(3) : '—'} />
-          <InfoField label="Unweighted GPA" value={p?.unweightedGpa != null ? p.unweightedGpa.toFixed(3) : '—'} />
+          <InfoField label="Weighted GPA" value={p?.weightedGpa ? p.weightedGpa.toFixed(3) : '—'} />
+          <InfoField label="Unweighted GPA" value={p?.unweightedGpa ? p.unweightedGpa.toFixed(3) : '—'} />
           <InfoField label="SAT Score" value={p?.satScore != null ? String(p.satScore) : '—'} />
           <InfoField label="ACT Score" value={p?.actScore != null ? String(p.actScore) : '—'} />
         </div>
@@ -246,7 +249,7 @@ function GradesTab({ studentId }: { studentId: number }) {
 
   if (loading) return <LoadingSkeleton />
   if (error)   return <ErrorState message={error} />
-  if (!courses.length) return <EmptyState message="No courses found for this student." />
+  if (!courses.length) return <EmptyState message="No grades synced yet. The student needs to visit their Grades page to sync their courses from HAC." />
 
   return (
     <div className="ns-card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -752,7 +755,7 @@ function ActionItemRow({ item, onToggle, onDelete }: {
 
 // ── Chat Tab ──────────────────────────────────────────────────────────────────
 
-function ChatTab({ studentId, counselorId, studentName }: { studentId: number; counselorId: number | null; studentName: string | null }) {
+function ChatTab({ studentId, counselorId, studentName, onOpened }: { studentId: number; counselorId: number | null; studentName: string | null; onOpened?: () => void }) {
   const [messages, setMessages] = useState<CounselorChatMessage[]>([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
@@ -769,6 +772,7 @@ function ChatTab({ studentId, counselorId, studentName }: { studentId: number; c
       try {
         const data = await api.counselorGetChat(studentId)
         setMessages(data.messages ?? [])
+        onOpened?.()
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load messages')
       } finally {

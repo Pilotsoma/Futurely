@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { initWebAuth, clearWebAuth } from '../../lib/authState'
+import { api } from '../../lib/api'
 
 const NAV = [
   {
@@ -21,6 +22,14 @@ export default function CounselorLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const [checked, setChecked] = useState(false)
   const [userName, setUserName] = useState('Counselor')
+  const [unreadTotal, setUnreadTotal] = useState(0)
+
+  const fetchUnread = useCallback(async () => {
+    try {
+      const { total } = await api.counselorUnreadTotal()
+      setUnreadTotal(total)
+    } catch { /* best-effort */ }
+  }, [])
 
   useEffect(() => {
     async function checkAuth() {
@@ -30,9 +39,22 @@ export default function CounselorLayout({ children }: { children: React.ReactNod
       if (user?.role !== 'COUNSELOR') { router.replace('/dashboard'); return }
       setChecked(true)
       if (user?.name) setUserName(user.name.split(' ')[0])
+      void fetchUnread()
     }
     void checkAuth()
-  }, [router])
+  }, [router, fetchUnread])
+
+  // Poll for unread every 30s
+  useEffect(() => {
+    if (!checked) return
+    const interval = setInterval(() => { void fetchUnread() }, 30_000)
+    return () => clearInterval(interval)
+  }, [checked, fetchUnread])
+
+  // Refresh unread when navigating back to dashboard
+  useEffect(() => {
+    if (checked && pathname === '/counselor/dashboard') void fetchUnread()
+  }, [pathname, checked, fetchUnread])
 
   function handleLogout() {
     clearWebAuth()
@@ -76,6 +98,14 @@ export default function CounselorLayout({ children }: { children: React.ReactNod
           <div style={S.userRow}>
             <div style={S.userAvatar}>{userName.charAt(0).toUpperCase()}</div>
             <span style={S.userName}>{userName}</span>
+            {unreadTotal > 0 && (
+              <Link href="/counselor/dashboard" style={{ textDecoration: 'none', marginLeft: 'auto', position: 'relative' }}>
+                <div style={S.bellWrap}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                  <span style={S.bellCount}>{unreadTotal}</span>
+                </div>
+              </Link>
+            )}
           </div>
           <button className="ns-btn-ghost" style={S.logoutBtn} onClick={handleLogout}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -103,4 +133,6 @@ const S: Record<string, React.CSSProperties> = {
   userName:   { fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' },
   logoutBtn:  { display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', fontSize: 13, padding: '8px 12px' },
   main:       { marginLeft: 220, flex: 1, overflowY: 'auto' as const, padding: 32, minHeight: '100vh' },
+  bellWrap:   { position: 'relative' as const, display: 'flex', alignItems: 'center' },
+  bellCount:  { position: 'absolute' as const, top: -6, right: -6, background: '#EF4444', color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, minWidth: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' },
 }
