@@ -830,6 +830,18 @@ router.get('/gpa', asyncHandler(async (req: AuthRequest, res: Response): Promise
       weightedGpa   = gpa
     }
 
+    // Persist GPA to Profile so counselors can see it
+    const gpaUpdate: Record<string, number> = {}
+    if (weightedGpa !== null)   gpaUpdate.weightedGpa   = weightedGpa
+    if (unweightedGpa !== null) gpaUpdate.unweightedGpa = unweightedGpa
+    if (Object.keys(gpaUpdate).length > 0) {
+      await prisma.profile.upsert({
+        where:  { userId: req.userId! },
+        create: { userId: req.userId!, ...gpaUpdate },
+        update: gpaUpdate,
+      }).catch(() => { /* non-fatal */ })
+    }
+
     res.json({
       data: {
         gpa: unweightedGpa,
@@ -1149,7 +1161,22 @@ router.post('/sync-profile', asyncHandler(async (req: AuthRequest, res: Response
       console.log('[GRADES ROUTER] Synced user from HAC:', userUpdate)
     }
 
-    // Apply profile updates (counselor, graduation year, grade level)
+    // Fetch and persist GPA from transcript
+    try {
+      const cachedTranscript = await readHacCache(userId, 'transcript', HAC_CACHE_TTL_MS.transcript)
+      const rawTranscript = cachedTranscript ?? await (async () => {
+        const t = await hacTranscript(entry.token)
+        void writeHacCache(userId, 'transcript', t)
+        return t
+      })()
+      const tr = rawTranscript as { weightedGPA?: string | null; unweightedGPA?: string | null }
+      const w = parseFloat(tr.weightedGPA ?? '')
+      const u = parseFloat(tr.unweightedGPA ?? '')
+      if (!isNaN(w)) profileUpdate.weightedGpa   = Math.round(w * 1000) / 1000
+      if (!isNaN(u)) profileUpdate.unweightedGpa = Math.round(u * 1000) / 1000
+    } catch { /* GPA fetch is non-fatal */ }
+
+    // Apply profile updates (counselor, graduation year, grade level, GPA)
     // Note: satScore, actScore, futureDecision are NOT overwritten — those are user-set
     let syncedProfile: Record<string, unknown> | null = null
     if (Object.keys(profileUpdate).length > 0) {
