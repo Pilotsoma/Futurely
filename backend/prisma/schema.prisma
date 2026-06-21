@@ -37,6 +37,7 @@ model User {
   emailVerificationExpiry  DateTime?
   lastSeenAt               DateTime?
   loginStreak              Int                      @default(0)
+  marketplaceAccess        Boolean                  @default(false)
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt
   assignments              Assignment[]

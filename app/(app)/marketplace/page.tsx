@@ -1086,10 +1086,7 @@ export default function MarketplacePage() {
     api.marketplaceInventory()
       .then(d => {
         setInv(d)
-        // If the server-side streak was admin-boosted, override the local gate
-        if (typeof d.loginStreak === 'number' && d.loginStreak >= 3) {
-          setStreak(prev => Math.max(prev ?? 0, d.loginStreak!))
-        }
+        if (d.marketplaceAccess) setStreak(prev => Math.max(prev ?? 0, 3))
         setLoading(false)
       })
       .catch(() => setLoading(false))

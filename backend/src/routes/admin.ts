@@ -301,7 +301,7 @@ router.post('/grant-market-access', async (req: AuthRequest, res: Response): Pro
       res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
       return
     }
-    await prisma.user.update({ where: { id: userId }, data: { loginStreak: 99 } })
+    await prisma.user.update({ where: { id: userId }, data: { marketplaceAccess: true } })
     logger.info('admin_market_access_granted', { adminId: req.userId, targetUserId: userId })
     res.json({ data: { ok: true }, error: null })
   } catch (err: unknown) {

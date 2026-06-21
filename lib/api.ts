@@ -1281,7 +1281,7 @@ export interface InventoryData {
   ownedTags: TagInventoryItem[]
   ownedNameColors: MarketplaceItem[]
   ownedPfpEffects: MarketplaceItem[]
-  loginStreak?: number
+  marketplaceAccess?: boolean
 }
 
 export interface BoxResult {
