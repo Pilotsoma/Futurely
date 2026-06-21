@@ -27,7 +27,7 @@ interface APIResponse {
   results?: NCESSchool[]
 }
 
-const BASE = 'https://educationdata.urban.org/api/v1/schools/ccd/directory/2022/'
+const BASE = 'https://educationdata.urban.org/api/v1/schools/ccd/directory/2019/'
 const PER_PAGE = 10000
 const DELAY_MS = 500
 
@@ -36,8 +36,13 @@ function sleep(ms: number) {
 }
 
 async function fetchPage(page: number): Promise<APIResponse> {
-  const url = `${BASE}?grade_high=12&per_page=${PER_PAGE}&page=${page}`
-  const res = await fetch(url)
+  const url = `${BASE}?school_level=3&school_status=1&per_page=${PER_PAGE}&page=${page}`
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; school-data-fetcher/1.0)',
+      'Accept': 'application/json',
+    },
+  })
   if (!res.ok) throw new Error(`HTTP ${res.status} on page ${page}`)
   return res.json() as Promise<APIResponse>
 }
