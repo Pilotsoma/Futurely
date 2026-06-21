@@ -1972,52 +1972,53 @@ export default function MarketplacePage() {
               No active listings yet — go to Inventory to list your items
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
               {listings.map(listing => {
-                const isOwn = listing.sellerId === (inv ? -1 : -1) // resolved via myActiveListings
                 const isMine = myActiveListings.some(l => l.id === listing.id)
                 const msg = buyMsg?.id === listing.id ? buyMsg.msg : null
+                const rarityColor = getRarityColor(listing.itemRarity, listing.itemId)
+                const canAfford = !!inv && inv.coins >= listing.price
                 return (
                   <PriceTooltip key={listing.id} price={prices[`${listing.itemType}:${listing.itemId}`]}>
-                  <div className="ns-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, borderLeft: `3px solid ${getRarityColor(listing.itemRarity, listing.itemId)}` }}>
-                    <button onClick={() => setPreviewItem({ type: listing.itemType as 'tag' | 'name-color' | 'pfp', id: listing.itemId, name: listing.itemName, rarity: listing.itemRarity, value: listing.itemValue })} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }} title="Preview item">
-                      <ItemIcon item={{ type: listing.itemType, itemValue: listing.itemValue, itemType: listing.itemType, itemId: listing.itemId }} />
-                    </button>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{listing.itemName}</span>
-                        <RarityBadge rarity={listing.itemRarity} itemId={listing.itemId} />
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'capitalize' as const }}>{listing.itemType.replace('-', ' ')}</span>
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                        by{' '}
-                        <button
-                          onClick={() => void openProfile(listing.seller.id)}
-                          className={listing.seller.nameColor === 'rainbow' ? 'name-rainbow' : ''}
-                          style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...(listing.seller.nameColor && listing.seller.nameColor !== 'rainbow' ? { color: listing.seller.nameColor } : { color: 'var(--text)' }) }}
-                        >
-                          {listing.seller.name ?? 'Unknown'}
-                        </button>
-                        {listing.seller.tag && (
-                          <span className={listing.seller.tag === 'DEV' ? 'tag-rainbow' : listing.seller.tag === 'GOD' ? 'tag-mythic' : listing.seller.tag === 'GOAT' ? 'tag-god' : ''} style={{ marginLeft: 6, fontWeight: 700, color: (listing.seller.tag === 'DEV' || listing.seller.tag === 'GOAT' || listing.seller.tag === 'GOD') ? undefined : listing.seller.tagColor ?? '#6B7280' }}>[{listing.seller.tag}]</span>
-                        )}
-                      </div>
+                  <div className="ns-card" style={{ padding: '12px 12px 10px', display: 'flex', flexDirection: 'column', gap: 8, border: `1px solid ${rarityColor}33`, borderTop: `3px solid ${rarityColor}` }}>
+                    {/* Icon + preview button */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <button onClick={() => setPreviewItem({ type: listing.itemType as 'tag' | 'name-color' | 'pfp', id: listing.itemId, name: listing.itemName, rarity: listing.itemRarity, value: listing.itemValue })} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }} title="Preview item">
+                        <ItemIcon item={{ type: listing.itemType, itemValue: listing.itemValue, itemType: listing.itemType, itemId: listing.itemId }} />
+                      </button>
+                      <RarityBadge rarity={listing.itemRarity} itemId={listing.itemId} />
                     </div>
-                    <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: '#EAB308', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}><CoinIcon size={16} />{listing.price.toLocaleString()}</div>
+                    {/* Item name */}
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{listing.itemName}</div>
+                    {/* Seller */}
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                      by{' '}
+                      <button
+                        onClick={() => void openProfile(listing.seller.id)}
+                        className={listing.seller.nameColor === 'rainbow' ? 'name-rainbow' : ''}
+                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...(listing.seller.nameColor && listing.seller.nameColor !== 'rainbow' ? { color: listing.seller.nameColor } : { color: 'var(--text)' }) }}
+                      >
+                        {listing.seller.name ?? 'Unknown'}
+                      </button>
+                    </div>
+                    {/* Price + action */}
+                    <div style={{ marginTop: 'auto' as const, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 15, fontWeight: 800, color: '#EAB308' }}>
+                        <CoinIcon size={13} />{listing.price.toLocaleString()}
+                      </div>
                       {msg ? (
-                        <div style={{ fontSize: 11, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600 }}>{msg}</div>
+                        <div style={{ fontSize: 10, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 700 }}>{msg}</div>
                       ) : isMine ? (
                         <button onClick={() => void handleCancelListing(listing.id)} disabled={cancellingListing === listing.id}
-                          style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #EF4444', background: 'transparent', color: '#EF4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                          style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #EF4444', background: 'transparent', color: '#EF4444', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                           {cancellingListing === listing.id ? '…' : 'Delist'}
                         </button>
                       ) : (
                         <button
                           onClick={() => void handleBuyListing(listing.id)}
-                          disabled={!!buyingId || !inv || inv.coins < listing.price}
-                          style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: !inv || inv.coins < listing.price ? 'var(--surface-2)' : 'var(--primary)', color: !inv || inv.coins < listing.price ? 'var(--text-muted)' : '#060D10', fontWeight: 700, fontSize: 12, cursor: !inv || inv.coins < listing.price ? 'not-allowed' : 'pointer', opacity: !inv || inv.coins < listing.price ? 0.5 : 1 }}>
-                          {buyingId === listing.id ? 'Buying…' : 'Buy'}
+                          disabled={!!buyingId || !canAfford}
+                          style={{ padding: '4px 10px', borderRadius: 7, border: 'none', background: !canAfford ? 'var(--surface-2)' : 'var(--primary)', color: !canAfford ? 'var(--text-muted)' : '#060D10', fontWeight: 700, fontSize: 11, cursor: !canAfford ? 'not-allowed' : 'pointer', opacity: !canAfford ? 0.5 : 1 }}>
+                          {buyingId === listing.id ? '…' : 'Buy'}
                         </button>
                       )}
                     </div>
