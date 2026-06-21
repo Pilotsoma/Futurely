@@ -79,26 +79,22 @@ function pfpClass(effect: string | null | undefined): string {
 }
 
 type DropGroup = { rarity: string; pct: string; items: string[] }
-type BoxType = 'tag' | 'name-color' | 'pfp' | 'dev-curse'
+type BoxType = 'cosmetics' | 'dev-curse'
 
 // ── Box card cycling previews ──────────────────────────────────────────────────
 
-const BOX_CYCLE_PREVIEWS: Record<string, Array<{ tag?: string; tagColor?: string; name?: string; value?: string; rarity: string }>> = {
-  'tag': [
-    { tag: 'Valedictorian', tagColor: '#F8FAFC',         rarity: 'Legendary' },
-    { tag: 'Ace',           tagColor: '#F97316',         rarity: 'Epic'      },
-    { tag: 'GOD',           tagColor: '#111111',         rarity: 'Mythic'    },
-    { tag: 'Verified',      tagColor: 'verified-yellow', rarity: 'Mythic'    },
-  ],
-  'name-color': [
-    { name: 'Pure White', value: '#F8FAFC', rarity: 'Legendary' },
-    { name: 'Magenta',    value: '#C026D3', rarity: 'Epic'      },
-    { name: 'Rainbow',    value: 'rainbow', rarity: 'Mythic'    },
-  ],
-  'pfp': [
-    { name: 'Gold Fill', value: 'glow-gold', rarity: 'Legendary' },
-    { name: 'Pink Glow', value: 'glow-pink', rarity: 'Epic'      },
-    { name: 'Rainbow',   value: 'rainbow',   rarity: 'Mythic'    },
+type PreviewItemDef = { type: 'tag' | 'name-color' | 'pfp'; tag?: string; tagColor?: string; name?: string; value?: string; rarity: string }
+
+const BOX_CYCLE_PREVIEWS: Record<string, PreviewItemDef[]> = {
+  'cosmetics': [
+    { type: 'tag',        tag: 'Valedictorian', tagColor: '#F8FAFC',  rarity: 'Legendary' },
+    { type: 'name-color', name: 'Magenta',      value: '#C026D3',     rarity: 'Epic'      },
+    { type: 'pfp',        name: 'Gold Fill',    value: 'glow-gold',   rarity: 'Legendary' },
+    { type: 'tag',        tag: 'GOD',           tagColor: '#111111',  rarity: 'Mythic'    },
+    { type: 'name-color', name: 'Rainbow RGB',  value: 'rainbow',     rarity: 'Mythic'    },
+    { type: 'pfp',        name: 'Pink Glow',    value: 'glow-pink',   rarity: 'Epic'      },
+    { type: 'tag',        tag: 'Ace',           tagColor: '#F97316',  rarity: 'Epic'      },
+    { type: 'pfp',        name: 'Rainbow',      value: 'rainbow',     rarity: 'Mythic'    },
   ],
 }
 
@@ -108,7 +104,7 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
 
   useEffect(() => {
     if (!items) return
-    const t = setInterval(() => setIdx(i => (i + 1) % items.length), 5000)
+    const t = setInterval(() => setIdx(i => (i + 1) % items.length), 3500)
     return () => clearInterval(t)
   }, [items])
 
@@ -119,14 +115,13 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
 
   return (
     <div style={{ width: 60, height: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-      {/* key change remounts the div so the CSS animation replays each cycle */}
       <div key={`${boxType}-${idx}`} style={{ animation: 'boxPreviewFadeIn 0.4s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {boxType === 'tag' && (
+        {item.type === 'tag' && (
           item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue'
             ? <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={26} />
             : <span
                 className={item.tag === 'GOD' ? 'tag-mythic' : item.tagColor === 'curse' ? 'tag-curse' : ''}
-                style={item.tag === 'GOD' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : item.tagColor === 'curse' ? { fontSize: 14, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #ff0000' } : {
+                style={item.tag === 'GOD' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : {
                   fontSize: 14, fontWeight: 800,
                   color: item.tagColor,
                   textShadow: item.rarity === 'Legendary' ? `0 0 10px ${rarityColor}88` : undefined,
@@ -138,19 +133,19 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
                 {item.tag}
               </span>
         )}
-        {boxType === 'name-color' && (
+        {item.type === 'name-color' && (
           <span
-            className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''}
+            className={item.value === 'rainbow' ? 'name-rainbow' : ''}
             style={{
               fontSize: 16, fontWeight: 800, letterSpacing: '0.3px',
-              color: (item.value !== 'rainbow' && item.value !== 'curse') ? item.value : undefined,
+              color: item.value !== 'rainbow' ? item.value : undefined,
               textShadow: item.rarity === 'Legendary' ? `0 0 10px ${item.value}88` : undefined,
             }}
           >
             Username
           </span>
         )}
-        {boxType === 'pfp' && (
+        {item.type === 'pfp' && (
           <div
             className={pfpClass(item.value)}
             style={{
@@ -183,37 +178,14 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
 
 const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost: number; drops: DropGroup[] }[] = [
   {
-    type: 'tag', icon: '🎰', label: 'Tag Spin', desc: 'Win exclusive profile tags', cost: 10,
+    type: 'cosmetics', icon: '🎁', label: 'Cosmetics Spin', desc: 'Any cosmetic — tags, name colors & PFP effects', cost: 20,
     drops: [
-      { rarity: 'Common',    pct: '60%',   items: ['Grinder', 'Focused', 'Scholar'] },
-      { rarity: 'Uncommon',  pct: '25%',   items: ['Honors Student', 'AP Student'] },
-      { rarity: 'Rare',      pct: '10%',   items: ["Dean's List", 'Top Performer'] },
-      { rarity: 'Epic',      pct: '3.6%',  items: ['Ace', 'Genius'] },
-      { rarity: 'Legendary', pct: '1%',    items: ['Valedictorian', 'Prodigy'] },
-      { rarity: 'Mythic',    pct: '0.3%',  items: ['GOD'] },
-      { rarity: 'Mythic',    pct: '0.1%',  items: ['Verified ✓'] },
-    ],
-  },
-  {
-    type: 'name-color', icon: '🎨', label: 'Name Color Spin', desc: 'Colorize your display name', cost: 15,
-    drops: [
-      { rarity: 'Common',    pct: '60%',    items: ['Forest Green', 'Navy Blue', 'Dark Red', 'Slate Blue', 'Teal'] },
-      { rarity: 'Uncommon',  pct: '24.99%', items: ['Bright Orange', 'Violet', 'Cyan'] },
-      { rarity: 'Rare',      pct: '10%',    items: ['Hot Pink', 'Gold', 'Lime Green'] },
-      { rarity: 'Epic',      pct: '3.96%',  items: ['Electric Blue', 'Magenta'] },
-      { rarity: 'Legendary', pct: '1%',     items: ['Pure White', 'Black'] },
-      { rarity: 'Mythic',    pct: '0.05%',  items: ['Rainbow RGB ✨'] },
-    ],
-  },
-  {
-    type: 'pfp', icon: '🖼️', label: 'Profile Picture Spin', desc: 'Apply effects to your avatar', cost: 20,
-    drops: [
-      { rarity: 'Common',    pct: '60%',    items: ['Green Border', 'Blue Border', 'Red Border', 'Navy Border', 'Teal Border'] },
-      { rarity: 'Uncommon',  pct: '24.99%', items: ['Orange Border', 'Violet Border', 'Cyan Border'] },
-      { rarity: 'Rare',      pct: '10%',    items: ['Hot Pink Border', 'Gold Border', 'Lime Border'] },
-      { rarity: 'Epic',      pct: '3.96%',  items: ['Pink Glow', 'Purple Glow'] },
-      { rarity: 'Legendary', pct: '1%',     items: ['Gold Fill', 'Void Fill', 'White Fill'] },
-      { rarity: 'Mythic',    pct: '0.05%',  items: ['Rainbow Animated ✨'] },
+      { rarity: 'Common',    pct: '60%',    items: ['Tags · Name Colors · PFP Borders'] },
+      { rarity: 'Uncommon',  pct: '25%',    items: ['Tags · Name Colors · PFP Borders'] },
+      { rarity: 'Rare',      pct: '10%',    items: ['Tags · Name Colors · PFP Borders'] },
+      { rarity: 'Epic',      pct: '3.9%',   items: ['Tags · Name Colors · PFP Glows'] },
+      { rarity: 'Legendary', pct: '0.99%',  items: ['Tags · Name Colors · PFP Fills'] },
+      { rarity: 'Mythic',    pct: '0.11%',  items: ['GOD · Verified · Rainbow'] },
     ],
   },
   {
@@ -228,7 +200,7 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
 ]
 
 type SimItem = { id: string; label: string; rarity: string; type: 'tag' | 'name-color' | 'pfp'; tag?: string; tagColor?: string; value?: string; name?: string }
-const SIM_ITEMS: Record<BoxType, SimItem[]> = {
+const SIM_ITEMS: Record<string, SimItem[]> = {
   tag: [
     { id: 'grinder',        label: 'Grinder (Common)',          rarity: 'Common',    type: 'tag', tag: 'Grinder',        tagColor: '#6B7280' },
     { id: 'focused',        label: 'Focused (Common)',          rarity: 'Common',    type: 'tag', tag: 'Focused',         tagColor: '#6B7280' },
@@ -263,6 +235,54 @@ const SIM_ITEMS: Record<BoxType, SimItem[]> = {
     { id: 'frame-black',    label: 'Void Fill (Legendary)',      rarity: 'Legendary', type: 'pfp', name: 'Void Fill',        value: 'frame-black' },
     { id: 'fill-white',     label: 'White Fill (Legendary)',     rarity: 'Legendary', type: 'pfp', name: 'White Fill',       value: 'fill-white' },
     { id: 'rainbow',        label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic',  type: 'pfp', name: 'Rainbow Animated', value: 'rainbow' },
+  ],
+  'cosmetics': [
+    { id: 'grinder',        label: 'Grinder (Common)',          rarity: 'Common',    type: 'tag',        tag: 'Grinder',        tagColor: '#6B7280' },
+    { id: 'focused',        label: 'Focused (Common)',          rarity: 'Common',    type: 'tag',        tag: 'Focused',        tagColor: '#6B7280' },
+    { id: 'scholar',        label: 'Scholar (Common)',          rarity: 'Common',    type: 'tag',        tag: 'Scholar',        tagColor: '#6B7280' },
+    { id: 'forest-green',   label: 'Forest Green (Common)',     rarity: 'Common',    type: 'name-color', name: 'Forest Green',  value: '#15803D' },
+    { id: 'navy-blue',      label: 'Navy Blue (Common)',        rarity: 'Common',    type: 'name-color', name: 'Navy Blue',     value: '#1D4ED8' },
+    { id: 'dark-red',       label: 'Dark Red (Common)',         rarity: 'Common',    type: 'name-color', name: 'Dark Red',      value: '#991B1B' },
+    { id: 'slate-blue',     label: 'Slate Blue (Common)',       rarity: 'Common',    type: 'name-color', name: 'Slate Blue',    value: '#4338CA' },
+    { id: 'teal',           label: 'Teal (Common)',             rarity: 'Common',    type: 'name-color', name: 'Teal',          value: '#0F766E' },
+    { id: 'border-green',   label: 'Green Border (Common)',     rarity: 'Common',    type: 'pfp',        name: 'Green Border',  value: 'border-green' },
+    { id: 'border-blue',    label: 'Blue Border (Common)',      rarity: 'Common',    type: 'pfp',        name: 'Blue Border',   value: 'border-blue' },
+    { id: 'border-red',     label: 'Red Border (Common)',       rarity: 'Common',    type: 'pfp',        name: 'Red Border',    value: 'border-red' },
+    { id: 'border-navy',    label: 'Navy Border (Common)',      rarity: 'Common',    type: 'pfp',        name: 'Navy Border',   value: 'border-navy' },
+    { id: 'border-teal',    label: 'Teal Border (Common)',      rarity: 'Common',    type: 'pfp',        name: 'Teal Border',   value: 'border-teal' },
+    { id: 'honors-student', label: 'Honors Student (Uncommon)', rarity: 'Uncommon',  type: 'tag',        tag: 'Honors Student', tagColor: '#3B82F6' },
+    { id: 'ap-student',     label: 'AP Student (Uncommon)',     rarity: 'Uncommon',  type: 'tag',        tag: 'AP Student',     tagColor: '#06B6D4' },
+    { id: 'bright-orange',  label: 'Bright Orange (Uncommon)',  rarity: 'Uncommon',  type: 'name-color', name: 'Bright Orange', value: '#EA580C' },
+    { id: 'violet',         label: 'Violet (Uncommon)',         rarity: 'Uncommon',  type: 'name-color', name: 'Violet',        value: '#7C3AED' },
+    { id: 'cyan',           label: 'Cyan (Uncommon)',           rarity: 'Uncommon',  type: 'name-color', name: 'Cyan',          value: '#0891B2' },
+    { id: 'border-orange',  label: 'Orange Border (Uncommon)',  rarity: 'Uncommon',  type: 'pfp',        name: 'Orange Border', value: 'border-orange' },
+    { id: 'border-violet',  label: 'Violet Border (Uncommon)',  rarity: 'Uncommon',  type: 'pfp',        name: 'Violet Border', value: 'border-violet' },
+    { id: 'border-cyan',    label: 'Cyan Border (Uncommon)',    rarity: 'Uncommon',  type: 'pfp',        name: 'Cyan Border',   value: 'border-cyan' },
+    { id: 'deans-list',     label: "Dean's List (Rare)",        rarity: 'Rare',      type: 'tag',        tag: "Dean's List",    tagColor: '#8B5CF6' },
+    { id: 'top-performer',  label: 'Top Performer (Rare)',      rarity: 'Rare',      type: 'tag',        tag: 'Top Performer',  tagColor: '#8B5CF6' },
+    { id: 'hot-pink',       label: 'Hot Pink (Rare)',           rarity: 'Rare',      type: 'name-color', name: 'Hot Pink',      value: '#DB2777' },
+    { id: 'gold',           label: 'Gold (Rare)',               rarity: 'Rare',      type: 'name-color', name: 'Gold',          value: '#D97706' },
+    { id: 'lime-green',     label: 'Lime Green (Rare)',         rarity: 'Rare',      type: 'name-color', name: 'Lime Green',    value: '#65A30D' },
+    { id: 'border-hotpink', label: 'Hot Pink Border (Rare)',    rarity: 'Rare',      type: 'pfp',        name: 'Hot Pink Border', value: 'border-hotpink' },
+    { id: 'border-gold',    label: 'Gold Border (Rare)',        rarity: 'Rare',      type: 'pfp',        name: 'Gold Border',   value: 'border-gold' },
+    { id: 'border-lime',    label: 'Lime Border (Rare)',        rarity: 'Rare',      type: 'pfp',        name: 'Lime Border',   value: 'border-lime' },
+    { id: 'ace',            label: 'Ace (Epic)',                rarity: 'Epic',      type: 'tag',        tag: 'Ace',            tagColor: '#F97316' },
+    { id: 'genius',         label: 'Genius (Epic)',             rarity: 'Epic',      type: 'tag',        tag: 'Genius',         tagColor: '#EC4899' },
+    { id: 'electric-blue',  label: 'Electric Blue (Epic)',      rarity: 'Epic',      type: 'name-color', name: 'Electric Blue', value: '#2563EB' },
+    { id: 'magenta',        label: 'Magenta (Epic)',            rarity: 'Epic',      type: 'name-color', name: 'Magenta',       value: '#C026D3' },
+    { id: 'glow-pink',      label: 'Pink Glow (Epic)',          rarity: 'Epic',      type: 'pfp',        name: 'Pink Glow',     value: 'glow-pink' },
+    { id: 'glow-purple',    label: 'Purple Glow (Epic)',        rarity: 'Epic',      type: 'pfp',        name: 'Purple Glow',   value: 'glow-purple' },
+    { id: 'mastermind',     label: 'Valedictorian (Legendary)', rarity: 'Legendary', type: 'tag',        tag: 'Valedictorian',  tagColor: '#F8FAFC' },
+    { id: 'prodigy',        label: 'Prodigy (Legendary)',       rarity: 'Legendary', type: 'tag',        tag: 'Prodigy',        tagColor: '#111111' },
+    { id: 'pure-white',     label: 'Pure White (Legendary)',    rarity: 'Legendary', type: 'name-color', name: 'Pure White',    value: '#F8FAFC' },
+    { id: 'black',          label: 'Black (Legendary)',         rarity: 'Legendary', type: 'name-color', name: 'Black',         value: '#111111' },
+    { id: 'glow-gold',      label: 'Gold Fill (Legendary)',     rarity: 'Legendary', type: 'pfp',        name: 'Gold Fill',     value: 'glow-gold' },
+    { id: 'frame-black',    label: 'Void Fill (Legendary)',     rarity: 'Legendary', type: 'pfp',        name: 'Void Fill',     value: 'frame-black' },
+    { id: 'fill-white',     label: 'White Fill (Legendary)',    rarity: 'Legendary', type: 'pfp',        name: 'White Fill',    value: 'fill-white' },
+    { id: 'god',            label: 'GOD (Mythic)',              rarity: 'Mythic',    type: 'tag',        tag: 'GOD',            tagColor: '#111111' },
+    { id: 'verified',       label: 'Verified ✓ Yellow (Mythic)', rarity: 'Mythic',  type: 'tag',        tag: 'Verified',       tagColor: 'verified-yellow' },
+    { id: 'rainbow',        label: 'Rainbow RGB ✨ (Mythic)',   rarity: 'Mythic',    type: 'name-color', name: 'Rainbow RGB',   value: 'rainbow' },
+    { id: 'rainbow-pfp',    label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic', type: 'pfp',       name: 'Rainbow Animated', value: 'rainbow' },
   ],
   'dev-curse': [
     { id: 'learner',      label: 'Learner (Common)',        rarity: 'Common', type: 'tag',        tag: 'Learner',    tagColor: '#94A3B8' },

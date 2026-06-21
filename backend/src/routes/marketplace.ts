@@ -88,6 +88,64 @@ const PFP_EFFECT_BOX_ITEMS: ColorItem[] = [
 ]
 
 interface DevCurseItem { id: string; name: string; tag?: string; tagColor?: string; value?: string; rarity: string; itemType: 'tag' | 'name-color' | 'pfp'; weight: number }
+interface CosmeticsItem { id: string; rarity: string; itemType: 'tag' | 'name-color' | 'pfp'; weight: number; tag?: string; tagColor?: string; name?: string; value?: string }
+
+// Combined cosmetics pool — 60% Common / 25% Uncommon / 10% Rare / 3.9% Epic / 0.99% Legendary / 0.11% Mythic
+// Within each rarity tier all items are equally likely. Weights: rarity_pct / item_count_in_tier.
+const COSMETICS_BOX_ITEMS: CosmeticsItem[] = [
+  // ── Common (60% / 13 items ≈ 4.615 each) ──────────────────────────────────
+  { id: 'grinder',        tag: 'Grinder',       tagColor: '#6B7280', rarity: 'Common',    itemType: 'tag',        weight: 4.615 },
+  { id: 'focused',        tag: 'Focused',        tagColor: '#6B7280', rarity: 'Common',    itemType: 'tag',        weight: 4.615 },
+  { id: 'scholar',        tag: 'Scholar',        tagColor: '#6B7280', rarity: 'Common',    itemType: 'tag',        weight: 4.615 },
+  { id: 'forest-green',  name: 'Forest Green',  value: '#15803D',    rarity: 'Common',    itemType: 'name-color', weight: 4.615 },
+  { id: 'navy-blue',     name: 'Navy Blue',      value: '#1D4ED8',    rarity: 'Common',    itemType: 'name-color', weight: 4.615 },
+  { id: 'dark-red',      name: 'Dark Red',       value: '#991B1B',    rarity: 'Common',    itemType: 'name-color', weight: 4.615 },
+  { id: 'slate-blue',    name: 'Slate Blue',     value: '#4338CA',    rarity: 'Common',    itemType: 'name-color', weight: 4.615 },
+  { id: 'teal',          name: 'Teal',           value: '#0F766E',    rarity: 'Common',    itemType: 'name-color', weight: 4.615 },
+  { id: 'border-green',  name: 'Green Border',   value: 'border-green',  rarity: 'Common', itemType: 'pfp',       weight: 4.615 },
+  { id: 'border-blue',   name: 'Blue Border',    value: 'border-blue',   rarity: 'Common', itemType: 'pfp',       weight: 4.615 },
+  { id: 'border-red',    name: 'Red Border',     value: 'border-red',    rarity: 'Common', itemType: 'pfp',       weight: 4.615 },
+  { id: 'border-navy',   name: 'Navy Border',    value: 'border-navy',   rarity: 'Common', itemType: 'pfp',       weight: 4.615 },
+  { id: 'border-teal',   name: 'Teal Border',    value: 'border-teal',   rarity: 'Common', itemType: 'pfp',       weight: 4.615 },
+  // ── Uncommon (25% / 8 items = 3.125 each) ─────────────────────────────────
+  { id: 'honors-student', tag: 'Honors Student', tagColor: '#3B82F6', rarity: 'Uncommon',  itemType: 'tag',        weight: 3.125 },
+  { id: 'ap-student',     tag: 'AP Student',     tagColor: '#06B6D4', rarity: 'Uncommon',  itemType: 'tag',        weight: 3.125 },
+  { id: 'bright-orange', name: 'Bright Orange',  value: '#EA580C',    rarity: 'Uncommon',  itemType: 'name-color', weight: 3.125 },
+  { id: 'violet',        name: 'Violet',         value: '#7C3AED',    rarity: 'Uncommon',  itemType: 'name-color', weight: 3.125 },
+  { id: 'cyan',          name: 'Cyan',           value: '#0891B2',    rarity: 'Uncommon',  itemType: 'name-color', weight: 3.125 },
+  { id: 'border-orange', name: 'Orange Border',  value: 'border-orange', rarity: 'Uncommon', itemType: 'pfp',     weight: 3.125 },
+  { id: 'border-violet', name: 'Violet Border',  value: 'border-violet', rarity: 'Uncommon', itemType: 'pfp',     weight: 3.125 },
+  { id: 'border-cyan',   name: 'Cyan Border',    value: 'border-cyan',   rarity: 'Uncommon', itemType: 'pfp',     weight: 3.125 },
+  // ── Rare (10% / 8 items = 1.25 each) ─────────────────────────────────────
+  { id: 'deans-list',    tag: "Dean's List",     tagColor: '#8B5CF6', rarity: 'Rare',      itemType: 'tag',        weight: 1.25 },
+  { id: 'top-performer', tag: 'Top Performer',   tagColor: '#8B5CF6', rarity: 'Rare',      itemType: 'tag',        weight: 1.25 },
+  { id: 'hot-pink',      name: 'Hot Pink',       value: '#DB2777',    rarity: 'Rare',      itemType: 'name-color', weight: 1.25 },
+  { id: 'gold',          name: 'Gold',           value: '#D97706',    rarity: 'Rare',      itemType: 'name-color', weight: 1.25 },
+  { id: 'lime-green',    name: 'Lime Green',     value: '#65A30D',    rarity: 'Rare',      itemType: 'name-color', weight: 1.25 },
+  { id: 'border-hotpink', name: 'Hot Pink Border', value: 'border-hotpink', rarity: 'Rare', itemType: 'pfp',      weight: 1.25 },
+  { id: 'border-gold',   name: 'Gold Border',    value: 'border-gold',   rarity: 'Rare',   itemType: 'pfp',       weight: 1.25 },
+  { id: 'border-lime',   name: 'Lime Border',    value: 'border-lime',   rarity: 'Rare',   itemType: 'pfp',       weight: 1.25 },
+  // ── Epic (3.9% / 6 items = 0.65 each) ────────────────────────────────────
+  { id: 'ace',           tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      itemType: 'tag',        weight: 0.65 },
+  { id: 'genius',        tag: 'Genius',          tagColor: '#EC4899', rarity: 'Epic',      itemType: 'tag',        weight: 0.65 },
+  { id: 'electric-blue', name: 'Electric Blue',  value: '#2563EB',    rarity: 'Epic',      itemType: 'name-color', weight: 0.65 },
+  { id: 'magenta',       name: 'Magenta',        value: '#C026D3',    rarity: 'Epic',      itemType: 'name-color', weight: 0.65 },
+  { id: 'glow-pink',     name: 'Pink Glow',      value: 'glow-pink',  rarity: 'Epic',      itemType: 'pfp',        weight: 0.65 },
+  { id: 'glow-purple',   name: 'Purple Glow',    value: 'glow-purple', rarity: 'Epic',     itemType: 'pfp',        weight: 0.65 },
+  // ── Legendary (0.99% / 7 items ≈ 0.1414 each) ────────────────────────────
+  { id: 'mastermind',    tag: 'Valedictorian',   tagColor: '#F8FAFC', rarity: 'Legendary', itemType: 'tag',        weight: 0.1414 },
+  { id: 'prodigy',       tag: 'Prodigy',         tagColor: '#111111', rarity: 'Legendary', itemType: 'tag',        weight: 0.1414 },
+  { id: 'pure-white',    name: 'Pure White',     value: '#F8FAFC',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1414 },
+  { id: 'black',         name: 'Black',          value: '#111111',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1414 },
+  { id: 'glow-gold',     name: 'Gold Fill',      value: 'glow-gold',  rarity: 'Legendary', itemType: 'pfp',        weight: 0.1414 },
+  { id: 'frame-black',   name: 'Void Fill',      value: 'frame-black', rarity: 'Legendary', itemType: 'pfp',      weight: 0.1414 },
+  { id: 'fill-white',    name: 'White Fill',     value: 'fill-white', rarity: 'Legendary', itemType: 'pfp',        weight: 0.1414 },
+  // ── Mythic (0.11% / 4 items = 0.0275 each) ───────────────────────────────
+  { id: 'god',           tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    itemType: 'tag',        weight: 0.0275 },
+  { id: 'verified',      tag: 'Verified',        tagColor: 'verified-yellow', rarity: 'Mythic', itemType: 'tag',   weight: 0.0275 },
+  { id: 'rainbow',       name: 'Rainbow RGB',    value: 'rainbow',    rarity: 'Mythic',    itemType: 'name-color', weight: 0.0275 },
+  { id: 'rainbow',       name: 'Rainbow Animated', value: 'rainbow',  rarity: 'Mythic',    itemType: 'pfp',        weight: 0.0275 },
+]
 // Common: 33332+33332+33333 = 99997 (99.997%) | Curse: 1×3 = 3 (0.001% each) | Total: 100000
 const DEV_CURSE_ITEMS: DevCurseItem[] = [
   { id: 'learner',    name: 'Learner',    tag: 'Learner',    tagColor: '#94A3B8', rarity: 'Common', itemType: 'tag', weight: 33332 },
@@ -513,11 +571,11 @@ router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: R
   const maxQty = boxType === 'dev-curse' ? 5000 : 100
   const quantity = Math.max(1, Math.min(maxQty, Math.floor(Number(rawQty) || 1)))
 
-  if (!boxType || !['tag', 'name-color', 'pfp', 'dev-curse'].includes(boxType)) {
-    res.status(400).json({ error: 'boxType must be tag, name-color, pfp, or dev-curse' }); return
+  if (!boxType || !['cosmetics', 'dev-curse'].includes(boxType)) {
+    res.status(400).json({ error: 'boxType must be cosmetics or dev-curse' }); return
   }
 
-  const BOX_COSTS: Record<string, number> = { tag: 10, 'name-color': 15, pfp: 20, 'dev-curse': 1 }
+  const BOX_COSTS: Record<string, number> = { cosmetics: 20, 'dev-curse': 1 }
   const BOX_COST = BOX_COSTS[boxType]
   const totalCost = BOX_COST * quantity
 
@@ -543,32 +601,30 @@ router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: R
     const postArgs: Parameters<typeof autoPostUnbox>[] = []
 
     for (let i = 0; i < quantity; i++) {
-      if (boxType === 'tag') {
-        const won = weightedRandom(TAG_BOX_ITEMS)
-        const alreadyHad = tagSet.has(won.tag)
-        newTags.push({ tag: won.tag, tagColor: won.tagColor })
-        tagSet.add(won.tag)
-        results.push({ won: { ...won, type: 'tag' }, alreadyHad })
-        if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
-          postArgs.push([req.userId, 'tag', won.id, won.tag, undefined, won.rarity, won.tagColor])
-
-      } else if (boxType === 'name-color') {
-        const won = weightedRandom(NAME_COLOR_BOX_ITEMS)
-        const alreadyHad = colorSet.has(won.id)
-        newColors.push({ id: won.id, name: won.name, value: won.value, rarity: won.rarity })
-        colorSet.add(won.id)
-        results.push({ won: { ...won, type: 'name-color' }, alreadyHad })
-        if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
-          postArgs.push([req.userId, 'name-color', won.id, won.name, won.value, won.rarity, undefined])
-
-      } else if (boxType === 'pfp') {
-        const won = weightedRandom(PFP_EFFECT_BOX_ITEMS)
-        const alreadyHad = pfpSet.has(won.id)
-        newPfps.push({ id: won.id, name: won.name, value: won.value, rarity: won.rarity })
-        pfpSet.add(won.id)
-        results.push({ won: { ...won, type: 'pfp' }, alreadyHad })
-        if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
-          postArgs.push([req.userId, 'pfp', won.id, won.name, won.value, won.rarity, undefined])
+      if (boxType === 'cosmetics') {
+        const won = weightedRandom(COSMETICS_BOX_ITEMS)
+        if (won.itemType === 'tag') {
+          const alreadyHad = tagSet.has(won.tag!)
+          newTags.push({ tag: won.tag!, tagColor: won.tagColor! })
+          tagSet.add(won.tag!)
+          results.push({ won: { id: won.id, name: won.name, tag: won.tag, tagColor: won.tagColor, rarity: won.rarity, type: 'tag' }, alreadyHad })
+          if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
+            postArgs.push([req.userId, 'tag', won.id, won.tag!, undefined, won.rarity, won.tagColor])
+        } else if (won.itemType === 'name-color') {
+          const alreadyHad = colorSet.has(won.id)
+          newColors.push({ id: won.id, name: won.name!, value: won.value!, rarity: won.rarity })
+          colorSet.add(won.id)
+          results.push({ won: { id: won.id, name: won.name, value: won.value, rarity: won.rarity, type: 'name-color' }, alreadyHad })
+          if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
+            postArgs.push([req.userId, 'name-color', won.id, won.name!, won.value!, won.rarity, undefined])
+        } else {
+          const alreadyHad = pfpSet.has(won.id)
+          newPfps.push({ id: won.id, name: won.name!, value: won.value!, rarity: won.rarity })
+          pfpSet.add(won.id)
+          results.push({ won: { id: won.id, name: won.name, value: won.value, rarity: won.rarity, type: 'pfp' }, alreadyHad })
+          if (won.rarity === 'Legendary' || won.rarity === 'Mythic')
+            postArgs.push([req.userId, 'pfp', won.id, won.name!, won.value!, won.rarity, undefined])
+        }
 
       } else { // dev-curse
         const cursed = weightedRandom(DEV_CURSE_ITEMS)
