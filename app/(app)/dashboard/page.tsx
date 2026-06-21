@@ -96,7 +96,7 @@ function getGpaTierBonus(ugpa: number | null, wgpa: number | null): number {
 }
 
 function gpaTierLabel(bonus: number): string {
-  if (bonus >= 100) return 'Perfect GPA'
+  if (bonus >= 100) return 'Top 1%'
   if (bonus >= 50) return 'Q1'
   if (bonus >= 15) return 'Q2'
   if (bonus >= 5) return 'Q3'
@@ -515,7 +515,9 @@ export default function DashboardPage() {
               <div style={{ background: 'rgba(43,74,142,0.08)', border: '1px solid rgba(43,74,142,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 5 }}>GPA Bonus</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>{gpaTierLabel(gpaTierBonus)}</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>
+                    {gpaPercentile !== null ? `${percentileStr(gpaPercentile)} Percentile` : gpaTierLabel(gpaTierBonus)}
+                  </span>
                   <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>+{gpaTierBonus} coins/day</span>
                 </div>
               </div>
