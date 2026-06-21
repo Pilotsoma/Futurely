@@ -95,8 +95,7 @@ function LoginPageInner() {
     const oauthResult = searchParams.get('oauth')
     const oauthError = searchParams.get('error')
     if (oauthError) {
-      const detail = searchParams.get('detail')
-      setError(oauthError === 'oauth_cancelled' ? 'Sign-in cancelled.' : `Sign-in failed. Please try again.${detail ? ` (${detail})` : ''}`)
+      setError(oauthError === 'oauth_cancelled' ? 'Sign-in cancelled.' : 'Sign-in failed. Please try again.')
     }
     if (oauthResult === 'success') {
       router.push('/dashboard')

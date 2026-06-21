@@ -1,12 +1,16 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaNeonHTTP } from '@prisma/adapter-neon'
-import { neon } from '@neondatabase/serverless'
+import { PrismaNeon } from '@prisma/adapter-neon'
+import { Pool, neonConfig } from '@neondatabase/serverless'
+import ws from 'ws'
 
-// Neon HTTP API requires the direct (non-pooled) connection string.
-// DATABASE_URL routes through PgBouncer (-pooler. in hostname) which
-// doesn't support the HTTP query endpoint — strip it to get the direct URL.
+neonConfig.webSocketConstructor = ws
+// Pipeline the auth handshake with the first query — saves one round trip on cold start
+neonConfig.pipelineConnect = 'password'
+
+// Use direct URL (bypass PgBouncer pooler) — pooling doesn't help in serverless
+// since each function instance is short-lived. Direct is lower latency.
 const directUrl = (process.env.DATABASE_URL ?? '').replace(/-pooler(?=\.)/, '')
-const sql = neon(directUrl)
-const adapter = new PrismaNeonHTTP(sql)
+const pool = new Pool({ connectionString: directUrl })
+const adapter = new PrismaNeon(pool)
 
 export const prisma = new PrismaClient({ adapter })

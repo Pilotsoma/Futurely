@@ -909,9 +909,8 @@ router.get('/oauth/google/callback', async (req: Request, res: Response): Promis
 
     await finishOAuth(res, 'google', info.sub, info.email, info.name)
   } catch (e) {
-    const errMsg = e instanceof Error ? e.message : String(e)
-    logger.error('auth.error', { event: 'oauth_google_callback', error: errMsg })
-    res.redirect(`${appUrl}/login?error=oauth_failed&detail=${encodeURIComponent(errMsg.slice(0, 120))}`)
+    logger.error('auth.error', { event: 'oauth_google_callback', error: e instanceof Error ? e.message : String(e) })
+    res.redirect(`${appUrl}/login?error=oauth_failed`)
   }
 })
 
