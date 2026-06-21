@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-const POLL_INTERVAL = 90_000  // 90s
+const POLL_INTERVAL = 7_000  // 7s
 const LOADED_SHA = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? 'dev'
 
 export default function UpdateBanner() {
