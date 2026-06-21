@@ -183,9 +183,9 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
       { rarity: 'Common',    pct: '60%',    items: ['Tags · Name Colors · PFP Borders'] },
       { rarity: 'Uncommon',  pct: '25%',    items: ['Tags · Name Colors · PFP Borders'] },
       { rarity: 'Rare',      pct: '10%',    items: ['Tags · Name Colors · PFP Borders'] },
-      { rarity: 'Epic',      pct: '3.9%',   items: ['Tags · Name Colors · PFP Glows'] },
-      { rarity: 'Legendary', pct: '0.99%',  items: ['Tags · Name Colors · PFP Fills'] },
-      { rarity: 'Mythic',    pct: '0.11%',  items: ['GOD · Verified · Rainbow'] },
+      { rarity: 'Epic',      pct: '3.95%',  items: ['Tags · Name Colors · PFP Glows'] },
+      { rarity: 'Legendary', pct: '1%',     items: ['Tags · Name Colors · PFP Fills'] },
+      { rarity: 'Mythic',    pct: '0.05%',  items: ['GOD · Verified · Rainbow'] },
     ],
   },
   {

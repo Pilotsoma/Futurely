@@ -125,26 +125,26 @@ const COSMETICS_BOX_ITEMS: CosmeticsItem[] = [
   { id: 'border-hotpink', name: 'Hot Pink Border', value: 'border-hotpink', rarity: 'Rare', itemType: 'pfp',      weight: 1.25 },
   { id: 'border-gold',   name: 'Gold Border',    value: 'border-gold',   rarity: 'Rare',   itemType: 'pfp',       weight: 1.25 },
   { id: 'border-lime',   name: 'Lime Border',    value: 'border-lime',   rarity: 'Rare',   itemType: 'pfp',       weight: 1.25 },
-  // ── Epic (3.9% / 6 items = 0.65 each) ────────────────────────────────────
-  { id: 'ace',           tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      itemType: 'tag',        weight: 0.65 },
-  { id: 'genius',        tag: 'Genius',          tagColor: '#EC4899', rarity: 'Epic',      itemType: 'tag',        weight: 0.65 },
-  { id: 'electric-blue', name: 'Electric Blue',  value: '#2563EB',    rarity: 'Epic',      itemType: 'name-color', weight: 0.65 },
-  { id: 'magenta',       name: 'Magenta',        value: '#C026D3',    rarity: 'Epic',      itemType: 'name-color', weight: 0.65 },
-  { id: 'glow-pink',     name: 'Pink Glow',      value: 'glow-pink',  rarity: 'Epic',      itemType: 'pfp',        weight: 0.65 },
-  { id: 'glow-purple',   name: 'Purple Glow',    value: 'glow-purple', rarity: 'Epic',     itemType: 'pfp',        weight: 0.65 },
-  // ── Legendary (0.99% / 7 items ≈ 0.1414 each) ────────────────────────────
-  { id: 'mastermind',    tag: 'Valedictorian',   tagColor: '#F8FAFC', rarity: 'Legendary', itemType: 'tag',        weight: 0.1414 },
-  { id: 'prodigy',       tag: 'Prodigy',         tagColor: '#111111', rarity: 'Legendary', itemType: 'tag',        weight: 0.1414 },
-  { id: 'pure-white',    name: 'Pure White',     value: '#F8FAFC',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1414 },
-  { id: 'black',         name: 'Black',          value: '#111111',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1414 },
-  { id: 'glow-gold',     name: 'Gold Fill',      value: 'glow-gold',  rarity: 'Legendary', itemType: 'pfp',        weight: 0.1414 },
-  { id: 'frame-black',   name: 'Void Fill',      value: 'frame-black', rarity: 'Legendary', itemType: 'pfp',      weight: 0.1414 },
-  { id: 'fill-white',    name: 'White Fill',     value: 'fill-white', rarity: 'Legendary', itemType: 'pfp',        weight: 0.1414 },
-  // ── Mythic (0.11% / 4 items = 0.0275 each) ───────────────────────────────
-  { id: 'god',           tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    itemType: 'tag',        weight: 0.0275 },
-  { id: 'verified',      tag: 'Verified',        tagColor: 'verified-yellow', rarity: 'Mythic', itemType: 'tag',   weight: 0.0275 },
-  { id: 'rainbow',       name: 'Rainbow RGB',    value: 'rainbow',    rarity: 'Mythic',    itemType: 'name-color', weight: 0.0275 },
-  { id: 'rainbow',       name: 'Rainbow Animated', value: 'rainbow',  rarity: 'Mythic',    itemType: 'pfp',        weight: 0.0275 },
+  // ── Epic (3.95% / 6 items ≈ 0.6583 each) ─────────────────────────────────
+  { id: 'ace',           tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      itemType: 'tag',        weight: 0.6583 },
+  { id: 'genius',        tag: 'Genius',          tagColor: '#EC4899', rarity: 'Epic',      itemType: 'tag',        weight: 0.6583 },
+  { id: 'electric-blue', name: 'Electric Blue',  value: '#2563EB',    rarity: 'Epic',      itemType: 'name-color', weight: 0.6583 },
+  { id: 'magenta',       name: 'Magenta',        value: '#C026D3',    rarity: 'Epic',      itemType: 'name-color', weight: 0.6583 },
+  { id: 'glow-pink',     name: 'Pink Glow',      value: 'glow-pink',  rarity: 'Epic',      itemType: 'pfp',        weight: 0.6583 },
+  { id: 'glow-purple',   name: 'Purple Glow',    value: 'glow-purple', rarity: 'Epic',     itemType: 'pfp',        weight: 0.6583 },
+  // ── Legendary (1% / 7 items ≈ 0.1429 each) ───────────────────────────────
+  { id: 'mastermind',    tag: 'Valedictorian',   tagColor: '#F8FAFC', rarity: 'Legendary', itemType: 'tag',        weight: 0.1429 },
+  { id: 'prodigy',       tag: 'Prodigy',         tagColor: '#111111', rarity: 'Legendary', itemType: 'tag',        weight: 0.1429 },
+  { id: 'pure-white',    name: 'Pure White',     value: '#F8FAFC',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1429 },
+  { id: 'black',         name: 'Black',          value: '#111111',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1429 },
+  { id: 'glow-gold',     name: 'Gold Fill',      value: 'glow-gold',  rarity: 'Legendary', itemType: 'pfp',        weight: 0.1429 },
+  { id: 'frame-black',   name: 'Void Fill',      value: 'frame-black', rarity: 'Legendary', itemType: 'pfp',      weight: 0.1429 },
+  { id: 'fill-white',    name: 'White Fill',     value: 'fill-white', rarity: 'Legendary', itemType: 'pfp',        weight: 0.1429 },
+  // ── Mythic (0.05% / 4 items = 0.0125 each) ───────────────────────────────
+  { id: 'god',           tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    itemType: 'tag',        weight: 0.0125 },
+  { id: 'verified',      tag: 'Verified',        tagColor: 'verified-yellow', rarity: 'Mythic', itemType: 'tag',   weight: 0.0125 },
+  { id: 'rainbow',       name: 'Rainbow RGB',    value: 'rainbow',    rarity: 'Mythic',    itemType: 'name-color', weight: 0.0125 },
+  { id: 'rainbow',       name: 'Rainbow Animated', value: 'rainbow',  rarity: 'Mythic',    itemType: 'pfp',        weight: 0.0125 },
 ]
 // Common: 33332+33332+33333 = 99997 (99.997%) | Curse: 1×3 = 3 (0.001% each) | Total: 100000
 const DEV_CURSE_ITEMS: DevCurseItem[] = [
