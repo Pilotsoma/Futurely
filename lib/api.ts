@@ -116,6 +116,8 @@ export const api = {
     request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
   authMe: () =>
     request<{ id: number; email: string; name: string | null; role: string; emailVerified: boolean }>('/api/auth/me'),
+  searchSchools: (q: string) =>
+    request<Array<{ name: string; city: string; state: string }>>(`/api/schools/search?q=${encodeURIComponent(q)}`),
   sendOtp: (email: string) =>
     request<{ sent: boolean }>('/api/auth/send-otp', {
       method: 'POST',

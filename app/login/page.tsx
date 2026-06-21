@@ -46,6 +46,12 @@ function LoginPageInner() {
   const [institution, setInstitution] = useState('')
   const [applyAsCounselor, setApplyAsCounselor] = useState(false)
 
+  const [schoolQuery, setSchoolQuery]       = useState('')
+  const [schoolResults, setSchoolResults]   = useState<Array<{ name: string; city: string; state: string }>>([])
+  const [schoolOpen, setSchoolOpen]         = useState(false)
+  const [schoolLoading, setSchoolLoading]   = useState(false)
+  const schoolRef = useRef<HTMLDivElement>(null)
+
   const [showForgot, setShowForgot]       = useState(false)
   const [forgotEmail, setForgotEmail]     = useState('')
   const [forgotLoading, setForgotLoading] = useState(false)
@@ -61,10 +67,28 @@ function LoginPageInner() {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setIsdOpen(false)
       }
+      if (schoolRef.current && !schoolRef.current.contains(e.target as Node)) {
+        setSchoolOpen(false)
+      }
     }
     document.addEventListener('mousedown', onOutsideClick)
     return () => document.removeEventListener('mousedown', onOutsideClick)
   }, [])
+
+  // Debounced school search
+  useEffect(() => {
+    if (schoolQuery.length < 2) { setSchoolResults([]); setSchoolOpen(false); return }
+    const timer = setTimeout(async () => {
+      setSchoolLoading(true)
+      try {
+        const results = await api.searchSchools(schoolQuery)
+        setSchoolResults(results)
+        setSchoolOpen(true)
+      } catch { setSchoolResults([]) }
+      finally { setSchoolLoading(false) }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [schoolQuery])
 
   // Handle OAuth redirect back
   useEffect(() => {
@@ -91,7 +115,7 @@ function LoginPageInner() {
   function selectOther() {
     setSelectedIsd(null); setHacUrl(''); setUseCustomUrl(true); setIsdSearch(''); setIsdOpen(false)
   }
-  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setInstitution(''); setApplyAsCounselor(false) }
+  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setInstitution(''); setApplyAsCounselor(false); setSchoolQuery(''); setSchoolResults([]); setSchoolOpen(false) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -406,8 +430,45 @@ function LoginPageInner() {
             <>
               <div style={styles.field}>
                 <label style={styles.label}>School / Organization</label>
-                <input type="text" value={institution} onChange={e => setInstitution(e.target.value)}
-                  placeholder="Lincoln High School" required style={styles.input} />
+                <div ref={schoolRef} style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={schoolQuery || institution}
+                    onChange={e => { setSchoolQuery(e.target.value); setInstitution(e.target.value) }}
+                    onFocus={() => { if (schoolResults.length > 0) setSchoolOpen(true) }}
+                    placeholder="Start typing your school name..."
+                    autoComplete="off"
+                    style={styles.input}
+                  />
+                  {schoolLoading && (
+                    <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>searching…</span>
+                  )}
+                  {schoolOpen && schoolResults.length > 0 && (
+                    <div style={styles.dropdownPanel}>
+                      <div style={styles.dropdownList}>
+                        {schoolResults.map(s => (
+                          <button
+                            key={`${s.name}-${s.city}-${s.state}`}
+                            type="button"
+                            style={{ ...styles.dropdownItem, background: institution === s.name ? 'var(--primary-dim)' : 'transparent', color: institution === s.name ? 'var(--primary)' : 'var(--text)' }}
+                            onClick={() => { setInstitution(s.name); setSchoolQuery(''); setSchoolOpen(false) }}
+                          >
+                            <span style={{ fontWeight: 500 }}>{s.name}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>{s.city}{s.city && s.state ? ', ' : ''}{s.state}</span>
+                          </button>
+                        ))}
+                        <div style={styles.dropdownDivider} />
+                        <button
+                          type="button"
+                          style={{ ...styles.dropdownItem, color: 'var(--text-secondary)', fontStyle: 'italic' }}
+                          onClick={() => { setSchoolOpen(false) }}
+                        >
+                          Not listed — keep what I typed
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
                 <input type="checkbox" checked={applyAsCounselor} onChange={e => setApplyAsCounselor(e.target.checked)}

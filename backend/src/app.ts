@@ -41,6 +41,7 @@ import marketplaceRouter from './routes/marketplace'
 import educatorRouter from './routes/educator'
 import counselorRouter from './routes/counselor'
 import adminRouter from './routes/admin'
+import schoolsRouter from './routes/schools'
 import { requireAuth } from './middleware/auth'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
@@ -244,6 +245,7 @@ app.get('/health/connectivity', async (_req, res) => {
 // Auth routes get their own tight limiter; register gets an even stricter one
 app.use('/auth/register', registerLimiter)
 app.use('/auth', authLimiter, authRoutes)
+app.use('/schools', schoolsRouter)
 app.use('/grades', gradesRoutes)
 
 /**
