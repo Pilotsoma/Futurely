@@ -1949,7 +1949,7 @@ export default function MarketplacePage() {
                   <button onClick={() => setSpinnerBox(box.type)}
                     disabled={!inv || inv.coins < box.cost || !!spinnerBox}
                     style={{ width: '100%', padding: '10px 0', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#060D10', fontWeight: 700, fontSize: 13, marginTop: 4, cursor: inv && inv.coins >= box.cost && !spinnerBox ? 'pointer' : 'not-allowed', opacity: !inv || inv.coins < box.cost ? 0.45 : 1 }}>
-                    🎰 Spin — <CoinIcon size={13} style={{ margin: '0 3px' }} />{box.cost}
+                    Spin — <CoinIcon size={13} style={{ margin: '0 3px' }} />{box.cost}
                   </button>
                   {isHovered && (
                     <div style={{ width: '100%', borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 2, display: 'flex', flexDirection: 'column', gap: 5, textAlign: 'left' }}>
