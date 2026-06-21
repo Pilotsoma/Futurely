@@ -14,7 +14,7 @@ const router = Router()
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const BCRYPT_ROUNDS = 12
+const BCRYPT_ROUNDS = 10
 const ACCESS_TOKEN_EXPIRY = '15m'
 const REFRESH_TOKEN_EXPIRY_DAYS = 7
 const RESET_TOKEN_EXPIRY_MINUTES = 15
@@ -865,10 +865,11 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
   }
 
   const accessToken = issueAccessToken(userId)
-  const refreshToken = await issueRefreshToken(userId)
+  const [refreshToken, hasSchool] = await Promise.all([
+    issueRefreshToken(userId),
+    prisma.schoolConnection.findUnique({ where: { userId } }),
+  ])
   setAuthCookies(res, accessToken, refreshToken)
-
-  const hasSchool = await prisma.schoolConnection.findUnique({ where: { userId } })
   res.redirect(`${appUrl}/dashboard${!hasSchool ? '?connect=1' : ''}`)
 }
 
