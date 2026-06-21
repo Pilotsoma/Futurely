@@ -264,7 +264,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
                   {profile.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
                     profile.tagColor === 'verified-yellow' || profile.tagColor === 'verified-blue'
                       ? <VerifiedBadge variant={profile.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
-                      : <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''} style={isDevTag ? O.tagDev : isMythicTag ? O.tagGod : isGodTag ? O.tagGod : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
+                      : <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : profile.tagColor === 'curse' ? 'tag-curse' : ''} style={isDevTag ? O.tagDev : isMythicTag ? O.tagGod : isGodTag ? O.tagGod : profile.tagColor === 'curse' ? { ...O.tag, border: '1px solid #ff0000' } : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
                           {profile.tag}
                         </span>
                   )}
@@ -958,7 +958,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             {post.user.tag && (
               tagColor === 'verified-yellow' || tagColor === 'verified-blue'
                 ? <VerifiedBadge variant={tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
-                : <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''} style={isDevTag ? P.tagDev : isMythicTag ? P.tagGod : isGodTag ? P.tagGod : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
+                : <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : tagColor === 'curse' ? 'tag-curse' : ''} style={isDevTag ? P.tagDev : isMythicTag ? P.tagGod : isGodTag ? P.tagGod : tagColor === 'curse' ? { ...P.tag, border: '1px solid #ff0000' } : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
                     {post.user.tag}
                   </span>
             )}
@@ -1023,9 +1023,14 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                 style={{ fontSize: 13, fontWeight: 800, ...(post.unboxItemType === 'name-color' ? nameColorStyle(post.unboxItemValue) : { color: 'var(--text)' }) }}
               >DUMMY</span>
               {post.unboxItemType === 'tag' ? (
-                <span style={{ ...P.tag, color: post.unboxItemTagColor || '#6B7280', border: `1px solid ${post.unboxItemTagColor || '#6B7280'}`, background: post.unboxItemTagColor ? `${post.unboxItemTagColor}22` : 'rgba(107,114,128,0.12)' }}>
-                  {post.unboxItemName}
-                </span>
+                post.unboxItemTagColor === 'verified-yellow' || post.unboxItemTagColor === 'verified-blue'
+                  ? <VerifiedBadge variant={post.unboxItemTagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={18} />
+                  : <span
+                      className={post.unboxItemTagColor === 'curse' ? 'tag-curse' : ''}
+                      style={{ ...P.tag, color: post.unboxItemTagColor === 'curse' ? undefined : post.unboxItemTagColor || '#6B7280', border: `1px solid ${post.unboxItemTagColor === 'curse' ? '#ff0000' : post.unboxItemTagColor || '#6B7280'}`, background: post.unboxItemTagColor && post.unboxItemTagColor !== 'curse' ? `${post.unboxItemTagColor}22` : 'rgba(107,114,128,0.12)' }}
+                    >
+                      {post.unboxItemName}
+                    </span>
               ) : (
                 <span style={{ ...P.tag, color: '#6B7280', border: '1px solid rgba(107,114,128,0.4)', background: 'rgba(107,114,128,0.12)' }}>
                   DUMMY
@@ -1462,13 +1467,15 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                     tagColor === 'verified-yellow' || tagColor === 'verified-blue'
                       ? <VerifiedBadge variant={tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
                       : <span
-                          className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
+                          className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : tagColor === 'curse' ? 'tag-curse' : ''}
                           style={isDevTag
                             ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' }
                             : isMythicTag
                             ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }
                             : isGodTag
                             ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' }
+                            : tagColor === 'curse'
+                            ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff0000' }
                             : { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }
                           }
                         >

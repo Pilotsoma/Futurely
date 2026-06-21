@@ -283,4 +283,31 @@ router.post('/educator-requests/:id/reinstate', async (req: AuthRequest, res: Re
   }
 })
 
+// ── POST /admin/grant-market-access ──
+const grantMarketAccessSchema = z.object({
+  userId: z.number().int().positive(),
+})
+
+router.post('/grant-market-access', async (req: AuthRequest, res: Response): Promise<void> => {
+  const parse = grantMarketAccessSchema.safeParse(req.body)
+  if (!parse.success) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid request' } })
+    return
+  }
+  const { userId } = parse.data
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
+    if (!user) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
+      return
+    }
+    await prisma.user.update({ where: { id: userId }, data: { loginStreak: 99 } })
+    logger.info('admin_market_access_granted', { adminId: req.userId, targetUserId: userId })
+    res.json({ data: { ok: true }, error: null })
+  } catch (err: unknown) {
+    logger.error('admin_grant_market_access_error', { adminId: req.userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to grant market access' } })
+  }
+})
+
 export default router

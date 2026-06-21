@@ -736,6 +736,9 @@ export const api = {
   adminStats: () =>
     request<{ totalUsers: number; activeUsers: number; liveUsers: number }>('/api/marketplace/admin/stats'),
 
+  adminGrantMarketAccess: (userId: number) =>
+    request<{ ok: boolean }>('/api/admin/grant-market-access', { method: 'POST', body: JSON.stringify({ userId }) }),
+
   // ── Educator (Teacher + Counselor shared) ─────────────────────────────────
 
   educatorMe: () =>
@@ -1278,6 +1281,7 @@ export interface InventoryData {
   ownedTags: TagInventoryItem[]
   ownedNameColors: MarketplaceItem[]
   ownedPfpEffects: MarketplaceItem[]
+  loginStreak?: number
 }
 
 export interface BoxResult {

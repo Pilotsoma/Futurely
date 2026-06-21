@@ -1017,6 +1017,9 @@ export default function MarketplacePage() {
   const [devMsg, setDevMsg] = useState('')
   const [simBoxType, setSimBoxType] = useState<'tag' | 'name-color' | 'pfp'>('name-color')
   const [simItemId, setSimItemId] = useState('')
+  const [devMarketUserId, setDevMarketUserId] = useState('')
+  const [devMarketGranting, setDevMarketGranting] = useState(false)
+  const [devMarketMsg, setDevMarketMsg] = useState('')
 
   // Shop (listings)
   const [listings, setListings] = useState<MarketplaceListing[]>([])
@@ -1081,7 +1084,14 @@ export default function MarketplacePage() {
     setStreak(parseInt(localStorage.getItem(`ns_streak_${uid}`) ?? '0', 10))
 
     api.marketplaceInventory()
-      .then(d => { setInv(d); setLoading(false) })
+      .then(d => {
+        setInv(d)
+        // If the server-side streak was admin-boosted, override the local gate
+        if (typeof d.loginStreak === 'number' && d.loginStreak >= 3) {
+          setStreak(prev => Math.max(prev ?? 0, d.loginStreak!))
+        }
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
 
     api.getItemPrices().then(setPrices).catch(() => {})
@@ -1092,7 +1102,7 @@ export default function MarketplacePage() {
         const uid = JSON.parse(atob(token.split('.')[1])).sub
         if (uid) {
           api.feedUserProfile(uid)
-            .then(p => setIsDevUser(p.role === 'DEV' || p.role === 'ADMIN' || p.tag === 'DEV'))
+            .then(p => setIsDevUser(p.role === 'DEV' || p.role === 'ADMIN' || p.tag === 'DEV' || (p.allTags ?? []).some(t => t.tag === 'DEV')))
             .catch(() => {})
         }
       }
@@ -1800,7 +1810,7 @@ export default function MarketplacePage() {
             const itemPreview = result.won.type === 'tag' ? (
               (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                 ? <div style={{ marginBottom: 4 }}><VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={64} /></div>
-                : <div className={result.won.tag === 'GOD' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 22, fontWeight: 800, color: (result.won.tag === 'GOAT' || result.won.tag === 'GOD') ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
+                : <div className={result.won.tag === 'GOD' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 22, fontWeight: 800, color: (result.won.tag === 'GOAT' || result.won.tag === 'GOD' || result.won.tagColor === 'curse') ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
                     [{result.won.tag}]
                   </div>
             ) : result.won.type === 'name-color' ? (
@@ -1853,7 +1863,7 @@ export default function MarketplacePage() {
                     {result.won.type === 'tag' && (
                       (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                         ? <VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
-                        : <span className={result.won.tag === 'GOD' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 12, fontWeight: 700, color: result.won.tag !== 'GOAT' && result.won.tag !== 'GOD' ? (result.won.tagColor ?? '#6B7280') : undefined }}>
+                        : <span className={result.won.tag === 'GOD' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 700, color: result.won.tag !== 'GOAT' && result.won.tag !== 'GOD' && result.won.tagColor !== 'curse' ? (result.won.tagColor ?? '#6B7280') : undefined }}>
                             [{result.won.tag}]
                           </span>
                     )}
@@ -2520,7 +2530,14 @@ export default function MarketplacePage() {
                         </button>
                         {isMe && <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: 'rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>YOU</span>}
                       </div>
-                      {entry.tag && <span style={{ fontSize: 11, fontWeight: 700, color: entry.tagColor ?? '#6B7280' }}>[{entry.tag}]</span>}
+                      {entry.tag && (
+                        entry.tagColor === 'verified-yellow' || entry.tagColor === 'verified-blue'
+                          ? <VerifiedBadge variant={entry.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />
+                          : <span
+                              className={entry.tag === 'DEV' ? 'tag-rainbow' : entry.tag === 'GOD' ? 'tag-mythic' : entry.tag === 'GOAT' ? 'tag-god' : entry.tagColor === 'curse' ? 'tag-curse' : ''}
+                              style={{ fontSize: 11, fontWeight: 700, color: (entry.tag === 'DEV' || entry.tag === 'GOD' || entry.tag === 'GOAT' || entry.tagColor === 'curse') ? undefined : entry.tagColor ?? '#6B7280' }}
+                            >[{entry.tag}]</span>
+                      )}
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       {leaderboardSub === 'coins' && <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#EAB308', fontWeight: 700, fontSize: 14 }}><CoinIcon size={14} />{entry.value.toLocaleString()}</div>}
@@ -2727,7 +2744,7 @@ export default function MarketplacePage() {
                   </optgroup>
                   <optgroup label="— Marketplace Tags —">
                     {SIM_ITEMS.tag.map(t => (
-                      <option key={t.id} value={t.id}>{t.tag} ({t.rarity})</option>
+                      <option key={t.id} value={t.id}>{t.label}</option>
                     ))}
                   </optgroup>
                 </select>
@@ -2741,6 +2758,37 @@ export default function MarketplacePage() {
               </button>
             </div>
             {devMsg && <div style={{ fontSize: 12, color: devMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600 }}>{devMsg}</div>}
+
+            {/* Grant Market Access to any user */}
+            <div style={{ borderTop: '1px solid rgba(255,107,107,0.2)', paddingTop: 14, marginTop: 2 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🔓 Grant Market Access</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  value={devMarketUserId}
+                  onChange={e => setDevMarketUserId(e.target.value)}
+                  placeholder="User ID"
+                  type="number"
+                  style={{ width: 110, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}
+                />
+                <button
+                  disabled={devMarketGranting || !devMarketUserId.trim()}
+                  onClick={async () => {
+                    const uid = parseInt(devMarketUserId)
+                    if (isNaN(uid)) { setDevMarketMsg('Invalid user ID'); return }
+                    setDevMarketGranting(true); setDevMarketMsg('')
+                    try {
+                      await api.adminGrantMarketAccess(uid)
+                      setDevMarketMsg(`✓ Market access granted to user ${uid}`)
+                    } catch { setDevMarketMsg('Failed') }
+                    finally { setDevMarketGranting(false) }
+                  }}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#22C55E', color: '#000', fontWeight: 700, fontSize: 13, cursor: devMarketUserId.trim() ? 'pointer' : 'not-allowed', opacity: devMarketUserId.trim() ? 1 : 0.5 }}
+                >
+                  {devMarketGranting ? '…' : 'Grant'}
+                </button>
+              </div>
+              {devMarketMsg && <div style={{ fontSize: 12, color: devMarketMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{devMarketMsg}</div>}
+            </div>
 
             {/* Simulate unlock */}
             <div style={{ borderTop: '1px solid rgba(255,107,107,0.2)', paddingTop: 14, marginTop: 2 }}>
