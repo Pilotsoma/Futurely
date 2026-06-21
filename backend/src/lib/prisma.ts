@@ -1,12 +1,13 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaNeonHTTP } from '@prisma/adapter-neon'
-import { neon } from '@neondatabase/serverless'
+import { PrismaNeon } from '@prisma/adapter-neon'
+import { Pool, neonConfig } from '@neondatabase/serverless'
+import ws from 'ws'
 
-// HTTP transport: no WebSocket handshake on cold start — each query is a plain
-// HTTPS request. Faster on serverless than WebSocket Pool (no connection setup).
-// Trade-off: no interactive transactions (prisma.$transaction with callback) —
-// confirmed none are used in this codebase.
-const sql = neon(process.env.DATABASE_URL!)
-const adapter = new PrismaNeonHTTP(sql)
+// WebSocket transport — required because Vercel's serverless compute blocks
+// outbound port 5432 (raw TCP). Port 443 (wss://) is always open.
+neonConfig.webSocketConstructor = ws
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const adapter = new PrismaNeon(pool)
 
 export const prisma = new PrismaClient({ adapter })
