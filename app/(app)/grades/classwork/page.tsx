@@ -225,8 +225,8 @@ export default function ClassworkPage() {
                                   <td style={{ padding: '7px 8px', color: 'var(--text-secondary)' }}>{a.category || '—'}</td>
                                   <td style={{ padding: '7px 8px', color: 'var(--text-muted)' }}>{a.dateDue || '—'}</td>
                                   <td style={{ padding: '7px 8px' }}>
-                                    {a.score !== null && a.totalPoints !== null
-                                      ? <span style={{ color: avgColor(String((a.score / (a.totalPoints || 1)) * 100)) }}>{a.score}/{a.totalPoints}</span>
+                                    {a.score !== null && a.totalPoints !== null && a.totalPoints > 0
+                                      ? <span style={{ color: avgColor(String((a.score / a.totalPoints) * 100)), fontWeight: 600 }}>{((a.score / a.totalPoints) * 100).toFixed(1)}%</span>
                                       : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                                   </td>
                                 </tr>
