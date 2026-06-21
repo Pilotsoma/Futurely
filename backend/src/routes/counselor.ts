@@ -6,6 +6,7 @@ import { requireCounselor } from '../middleware/requireAdmin'
 import { writeAuditLog } from '../lib/auditLog'
 import { supabaseAdmin } from '../lib/supabaseAdmin'
 import { logger } from '../common/logger'
+import { calculateGpa } from '../lib/gpa'
 
 const router = Router()
 router.use(requireCounselor)
@@ -89,7 +90,12 @@ router.get('/students', async (req: AuthRequest, res: Response): Promise<void> =
       where: { counselorId, status: 'ACTIVE' },
       include: {
         student: {
-          select: { id: true, name: true, email: true, role: true, profile: true },
+          select: {
+            id: true, name: true, email: true, role: true, profile: true,
+            courses: {
+              include: { grades: { where: { gradingPeriod: 'CURRENT' }, take: 1 } },
+            },
+          },
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -108,7 +114,21 @@ router.get('/students', async (req: AuthRequest, res: Response): Promise<void> =
       })
     )
     const unreadMap = Object.fromEntries(unreadCounts.map(u => [u.studentId, u.count]))
-    const data = links.map(l => ({ ...l.student, unreadCount: unreadMap[l.studentId] ?? 0 }))
+    const data = links.map(l => {
+      const { courses, ...studentWithoutCourses } = l.student
+      const gradeInputs = courses.flatMap(c =>
+        c.grades.map(g => ({ letterGrade: g.letterGrade, creditHours: c.creditHours, courseType: c.courseType }))
+      )
+      const computed = calculateGpa(gradeInputs)
+      const profile = studentWithoutCourses.profile
+        ? {
+            ...studentWithoutCourses.profile,
+            weightedGpa:   computed?.weighted   ?? studentWithoutCourses.profile.weightedGpa,
+            unweightedGpa: computed?.unweighted ?? studentWithoutCourses.profile.unweightedGpa,
+          }
+        : null
+      return { ...studentWithoutCourses, profile, unreadCount: unreadMap[l.studentId] ?? 0 }
+    })
     res.json({ data, error: null })
   } catch (err: unknown) {
     logger.error('counselor_list_students_error', { counselorId, error: err instanceof Error ? err.message : String(err) })
@@ -228,6 +248,20 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
       res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Student not found' } })
       return
     }
+
+    // Compute GPA from courses so counselor sees the same value the student sees
+    const gradeInputs = student.courses.flatMap(c =>
+      c.grades.map(g => ({ letterGrade: g.letterGrade, creditHours: c.creditHours, courseType: c.courseType }))
+    )
+    const computed = calculateGpa(gradeInputs)
+    const profile = student.profile
+      ? {
+          ...student.profile,
+          weightedGpa:   computed?.weighted   ?? student.profile.weightedGpa,
+          unweightedGpa: computed?.unweighted ?? student.profile.unweightedGpa,
+        }
+      : null
+
     await writeAuditLog({
       userId: req.userId!,
       resourceType: 'STUDENT_PROFILE',
@@ -235,7 +269,7 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
       action: 'COUNSELOR_VIEWED_STUDENT',
       ipAddress: req.ip ?? 'unknown',
     })
-    res.json({ data: student, error: null })
+    res.json({ data: { ...student, profile }, error: null })
   } catch (err: unknown) {
     logger.error('counselor_student_view_error', { counselorId: req.userId, studentId, error: err instanceof Error ? err.message : String(err) })
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch student data' } })
