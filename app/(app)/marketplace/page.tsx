@@ -1020,6 +1020,8 @@ export default function MarketplacePage() {
   const [devMarketUserId, setDevMarketUserId] = useState('')
   const [devMarketGranting, setDevMarketGranting] = useState(false)
   const [devMarketMsg, setDevMarketMsg] = useState('')
+  const [profileMarketGranting, setProfileMarketGranting] = useState(false)
+  const [profileMarketMsg, setProfileMarketMsg] = useState('')
 
   // Shop (listings)
   const [listings, setListings] = useState<MarketplaceListing[]>([])
@@ -1181,6 +1183,7 @@ export default function MarketplacePage() {
 
   async function openProfile(userId: number) {
     setProfilePanelLoading(true); setProfilePanel(null)
+    setProfileMarketGranting(false); setProfileMarketMsg('')
     try {
       const p = await api.feedUserProfile(userId)
       setProfilePanel(p)
@@ -2691,7 +2694,7 @@ export default function MarketplacePage() {
 
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 20, padding: '14px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 0 }}>
+                <div style={{ display: 'flex', gap: 20, padding: '14px 0', borderTop: '1px solid var(--border)', borderBottom: isDevUser ? 'none' : '1px solid var(--border)', marginBottom: 0 }}>
                   {[
                     { label: 'Followers', value: profilePanel._count.followers },
                     { label: 'Following', value: profilePanel._count.following },
@@ -2703,6 +2706,29 @@ export default function MarketplacePage() {
                     </div>
                   ))}
                 </div>
+
+                {isDevUser && (
+                  <div style={{ borderTop: '1px solid rgba(255,107,107,0.25)', paddingTop: 14, marginTop: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🔧 DEV Actions</div>
+                    <button
+                      disabled={profileMarketGranting}
+                      onClick={async () => {
+                        setProfileMarketGranting(true); setProfileMarketMsg('')
+                        try {
+                          await api.adminGrantMarketAccess(profilePanel.id)
+                          setProfileMarketMsg('✓ Market access granted')
+                        } catch { setProfileMarketMsg('Failed') }
+                        finally { setProfileMarketGranting(false) }
+                      }}
+                      style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#22C55E', color: '#000', fontWeight: 700, fontSize: 12, cursor: profileMarketGranting ? 'not-allowed' : 'pointer', opacity: profileMarketGranting ? 0.6 : 1 }}
+                    >
+                      {profileMarketGranting ? '…' : '🔓 Grant Market Access'}
+                    </button>
+                    {profileMarketMsg && (
+                      <div style={{ fontSize: 11, color: profileMarketMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 8 }}>{profileMarketMsg}</div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
