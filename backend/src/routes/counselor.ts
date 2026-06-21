@@ -61,8 +61,8 @@ router.post('/students', async (req: AuthRequest, res: Response): Promise<void> 
   const { studentId } = parse.data
   try {
     const student = await prisma.user.findUnique({ where: { id: studentId }, select: { role: true } })
-    if (!student || student.role !== 'STUDENT') {
-      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Student not found or not a student account' } })
+    if (!student || ['TEACHER', 'COUNSELOR'].includes(student.role)) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
       return
     }
     const link = await prisma.counselorStudentLink.create({
