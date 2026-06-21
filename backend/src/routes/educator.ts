@@ -1,7 +1,7 @@
 import { Router, Response } from 'express'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
-import { AuthRequest } from '../middleware/auth'
+import { AuthRequest, requireAuth } from '../middleware/auth'
 import { requireEducator } from '../middleware/requireAdmin'
 import { generateUniqueInviteCode } from '../lib/inviteCode'
 import { writeAuditLog } from '../lib/auditLog'
@@ -21,11 +21,7 @@ const requestRoleSchema = z.object({
   institution: z.string().min(2).max(200),
 })
 
-router.post('/request-role', async (req: AuthRequest, res: Response): Promise<void> => {
-  if (!req.userId) {
-    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
-    return
-  }
+router.post('/request-role', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   const parse = requestRoleSchema.safeParse(req.body)
   if (!parse.success) {
     res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid request' } })

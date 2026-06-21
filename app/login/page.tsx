@@ -150,7 +150,11 @@ function LoginPageInner() {
       localStorage.setItem('ns_user', JSON.stringify(result.user))
       if (mode === 'register-teacher') {
         const requestedRole = applyAsCounselor ? 'COUNSELOR' : 'TEACHER'
-        await api.educatorRequestRole(requestedRole, institution.trim())
+        try {
+          await api.educatorRequestRole(requestedRole, institution.trim() || 'Not specified')
+        } catch {
+          // Role request failed (e.g. already submitted) — account was created, redirect anyway
+        }
         router.push('/teacher/dashboard')
         return
       }
