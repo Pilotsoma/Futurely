@@ -19,12 +19,14 @@ const authChannel = typeof BroadcastChannel !== 'undefined'
 export async function initWebAuth(): Promise<boolean> {
   if (getApiToken()) return true  // already loaded (e.g., just logged in)
 
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
   try {
     const res = await fetch(`${BASE()}/api/auth/refresh`, {
       method: 'POST',
-      credentials: 'include',  // sends httpOnly refresh_token cookie automatically
+      signal: controller.signal,
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      // no body — refresh token comes from httpOnly cookie
     })
     if (!res.ok) return false
 
@@ -33,6 +35,8 @@ export async function initWebAuth(): Promise<boolean> {
     return true
   } catch {
     return false
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
