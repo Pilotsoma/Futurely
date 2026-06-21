@@ -18,6 +18,30 @@ async function verifyLink(counselorId: number, studentId: number): Promise<boole
   return link !== null && link.status === 'ACTIVE'
 }
 
+// ── GET /counselor/students/search?q=name ── Search students by name/email
+router.get('/students/search', async (req: AuthRequest, res: Response): Promise<void> => {
+  const q = String(req.query.q ?? '').trim()
+  if (q.length < 2) { res.json({ data: [], error: null }); return }
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        role: 'STUDENT',
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, name: true, email: true },
+      take: 10,
+      orderBy: { name: 'asc' },
+    })
+    res.json({ data: users, error: null })
+  } catch (err: unknown) {
+    logger.error('counselor_search_students_error', { counselorId: req.userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Search failed' } })
+  }
+})
+
 // ── POST /counselor/students ── Link a student
 const linkStudentSchema = z.object({
   studentId: z.number().int(),

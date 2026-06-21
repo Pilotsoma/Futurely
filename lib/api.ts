@@ -788,6 +788,9 @@ export const api = {
   counselorStudents: () =>
     request<CounselorStudentSummary[]>('/api/counselor/students'),
 
+  counselorSearchStudents: (q: string) =>
+    request<Array<{ id: number; name: string | null; email: string }>>(`/api/counselor/students/search?q=${encodeURIComponent(q)}`),
+
   counselorRemoveStudent: (studentId: number) =>
     request<{ removed: boolean }>(`/api/counselor/students/${studentId}`, { method: 'DELETE' }),
 
