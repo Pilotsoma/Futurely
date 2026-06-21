@@ -1,10 +1,25 @@
+import * as fs from 'fs'
+import * as path from 'path'
+
 export interface School {
   name: string
   city: string
   state: string
 }
 
-export const SCHOOLS: School[] = [
+// If the full NCES dataset has been generated (run scripts/fetch-schools.ts),
+// load it; otherwise fall back to the curated list below.
+function loadFull(): School[] | null {
+  try {
+    const p = path.join(__dirname, 'schools-full.json')
+    if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf8')) as School[]
+  } catch { /* ignore */ }
+  return null
+}
+
+const FULL = loadFull()
+
+const CURATED: School[] = [
   // Alabama
   { name: 'Alabama School of Fine Arts', city: 'Birmingham', state: 'AL' },
   { name: 'Homewood High School', city: 'Homewood', state: 'AL' },
@@ -530,10 +545,13 @@ export const SCHOOLS: School[] = [
   { name: 'Whitefish Bay High School', city: 'Whitefish Bay', state: 'WI' },
 ]
 
+export const SCHOOLS = CURATED
+
 export function searchSchools(query: string, limit = 12): School[] {
   const q = query.toLowerCase().trim()
   if (q.length < 2) return []
-  return SCHOOLS
+  const source = FULL ?? CURATED
+  return source
     .filter(s =>
       s.name.toLowerCase().includes(q) ||
       s.city.toLowerCase().includes(q) ||
