@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, type CounselorStudentSummary } from '../../../lib/api'
 
-interface StudentResult { id: number; name: string | null; email: string }
+interface StudentResult { id: number; name: string | null; email: string; hacUsername: string | null }
 
 export default function CounselorDashboardPage() {
   const router = useRouter()
@@ -67,7 +67,7 @@ export default function CounselorDashboardPage() {
 
   function pickStudent(s: StudentResult) {
     setSelected(s)
-    setSearchQuery(s.name ?? s.email)
+    setSearchQuery(s.hacUsername ?? s.name ?? s.email)
     setSearchOpen(false)
   }
 
@@ -161,7 +161,7 @@ export default function CounselorDashboardPage() {
           <p style={S.cardLabel}>Add a student</p>
           <form onSubmit={e => void handleAdd(e)}>
             <div style={{ marginBottom: 14 }}>
-              <label style={S.fieldLabel}>Search by name or email</label>
+              <label style={S.fieldLabel}>Search by HAC username</label>
               <div ref={searchRef} style={{ position: 'relative' }}>
                 <input
                   className="ns-input"
@@ -169,7 +169,7 @@ export default function CounselorDashboardPage() {
                   value={searchQuery}
                   onChange={e => { setSearchQuery(e.target.value); setSelected(null) }}
                   onFocus={() => { if (searchResults.length > 0 && !selected) setSearchOpen(true) }}
-                  placeholder="Type student name or email…"
+                  placeholder="Type student's HAC username…"
                   disabled={adding}
                   autoComplete="off"
                   style={S.input}
@@ -192,13 +192,12 @@ export default function CounselorDashboardPage() {
                         onMouseDown={e => { e.preventDefault(); pickStudent(s) }}
                       >
                         <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--primary)', flexShrink: 0 }}>
-                          {(s.name ?? s.email).charAt(0).toUpperCase()}
+                          {(s.name ?? s.hacUsername ?? '?').charAt(0).toUpperCase()}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name ?? s.email}</div>
-                          {s.name && <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.email}</div>}
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>HAC: {s.hacUsername}</div>
                         </div>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>ID {s.id}</span>
                       </button>
                     ))}
                   </div>
@@ -206,7 +205,7 @@ export default function CounselorDashboardPage() {
               </div>
               {selected && (
                 <p style={{ fontSize: 11, color: '#22C55E', marginTop: 5, fontWeight: 600 }}>
-                  ✓ Selected: {selected.name ?? selected.email} (ID {selected.id})
+                  ✓ {selected.name ?? selected.email} — HAC: {selected.hacUsername}
                 </p>
               )}
             </div>
