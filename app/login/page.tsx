@@ -247,8 +247,8 @@ function LoginPageInner() {
           </div>
         )}
 
-        {/* ── OAuth buttons (login + register screens, not OTP step) ── */}
-        {(mode === 'login' || registerStep === 'form') && (
+        {/* ── OAuth buttons (login + student register only — parent/teacher need extra fields) ── */}
+        {(mode === 'login' || mode === 'register-student') && registerStep === 'form' && (
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 4 }}>
             <a href={`${BASE}/api/auth/oauth/google`} style={styles.oauthBtn}>
               <svg width="18" height="18" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
