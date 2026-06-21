@@ -212,27 +212,17 @@ router.post(
 
     const encryptedToken = encryptPassword(accessToken)
 
-    // Upsert by compound key (userId + canvasInstanceUrl)
-    await prisma.canvasConnection.upsert({
-      where: {
-        userId_canvasInstanceUrl: { userId, canvasInstanceUrl },
-      },
-      create: {
-        userId,
-        canvasInstanceUrl,
-        encryptedToken,
-        canvasUserId: String(self.id),
-        canvasUserName: self.name,
-      },
-      update: {
-        encryptedToken,
-        canvasUserId: String(self.id),
-        canvasUserName: self.name,
-        syncStatus: null,
-        syncError: null,
-        lastSynced: null,
-      },
-    })
+    const existingCanvas = await prisma.canvasConnection.findFirst({ where: { userId, canvasInstanceUrl }, select: { id: true } })
+    if (existingCanvas) {
+      await prisma.canvasConnection.update({
+        where: { id: existingCanvas.id },
+        data: { encryptedToken, canvasUserId: String(self.id), canvasUserName: self.name, syncStatus: null, syncError: null, lastSynced: null },
+      })
+    } else {
+      await prisma.canvasConnection.create({
+        data: { userId, canvasInstanceUrl, encryptedToken, canvasUserId: String(self.id), canvasUserName: self.name },
+      })
+    }
 
     await prisma.complianceAuditLog.create({
       data: {
@@ -360,22 +350,15 @@ router.post(
       )
 
       for (const payload of upsertPayloads) {
-        await prisma.assignment.upsert({
-          where: {
-            userId_title_subject: {
-              userId: payload.userId,
-              title: payload.title,
-              subject: payload.subject,
-            },
-          },
-          update: {
-            dueDate: payload.dueDate,
-          },
-          create: {
-            ...payload,
-            completed: false,
-          },
+        const existing = await prisma.assignment.findFirst({
+          where: { userId: payload.userId, title: payload.title, subject: payload.subject },
+          select: { id: true },
         })
+        if (existing) {
+          await prisma.assignment.update({ where: { id: existing.id }, data: { dueDate: payload.dueDate } })
+        } else {
+          await prisma.assignment.create({ data: { ...payload, completed: false } })
+        }
       }
 
       // Send one summary notification for newly added Canvas assignments

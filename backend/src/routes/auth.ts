@@ -844,7 +844,7 @@ const otpLimiter = rateLimit({
 async function finishOAuth(res: Response, provider: string, providerId: string, email: string, name?: string): Promise<void> {
   const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
 
-  let existing = await prisma.oAuthAccount.findUnique({ where: { provider_providerId: { provider, providerId } } })
+  let existing = await prisma.oAuthAccount.findFirst({ where: { provider, providerId } })
   let userId: number
   let isNew = false
 
