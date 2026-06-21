@@ -114,6 +114,8 @@ export const api = {
     }),
   logout: () =>
     request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
+  authMe: () =>
+    request<{ id: number; email: string; name: string | null; role: string; emailVerified: boolean }>('/api/auth/me'),
   sendOtp: (email: string) =>
     request<{ sent: boolean }>('/api/auth/send-otp', {
       method: 'POST',

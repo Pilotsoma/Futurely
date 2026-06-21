@@ -93,10 +93,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       const ok = await initWebAuth()
       if (!ok) { router.replace('/login'); return }
 
-      const user = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { name?: string | null; role?: string } | null
-      if (user?.role === 'DEV' || user?.role === 'ADMIN') setIsAdmin(true)
-      if (user?.name) {
-        const n = user.name
+      // Fetch live user data so role is always current (e.g. after OAuth login or role upgrade)
+      const freshUser = await api.authMe().catch(() => null)
+      const cachedUser = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { name?: string | null; role?: string } | null
+      const role = freshUser?.role ?? cachedUser?.role
+      const name = freshUser?.name ?? cachedUser?.name
+      if (freshUser) {
+        localStorage.setItem('ns_user', JSON.stringify({ ...cachedUser, ...freshUser }))
+      }
+      if (role === 'DEV' || role === 'ADMIN') setIsAdmin(true)
+      if (name) {
+        const n = name
         if (n.includes(',')) {
           const rest = n.split(',')[1]?.trim() ?? ''
           const first = rest.split(' ')[0]
