@@ -977,8 +977,13 @@ router.get('/classwork', asyncHandler(async (req: AuthRequest, res: Response): P
 
     const cached = await readHacCache(req.userId!, cacheKey, CLASSWORK_TTL_MS)
     if (cached) {
-      res.json({ data: cached })
-      return
+      // Bypass old cache entries that predate category-weight scraping
+      const hasWeights = (cached as { classes?: Array<{ categoryWeights?: unknown }> })
+        .classes?.some(c => c.categoryWeights != null)
+      if (hasWeights) {
+        res.json({ data: cached })
+        return
+      }
     }
 
     const { classes, availablePeriods, currentPeriod } = await hacGrades(entry.token, period)

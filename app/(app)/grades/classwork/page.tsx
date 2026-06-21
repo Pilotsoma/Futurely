@@ -22,6 +22,7 @@ interface Course {
   room: string
   average: string | null
   scores: Assignment[]
+  categoryWeights?: Record<string, number>
 }
 
 const GRADE_COLOR: Record<string, string> = { A: 'var(--gc-a)', B: 'var(--gc-b)', C: 'var(--gc-c)', D: 'var(--gc-d)', F: 'var(--gc-f)' }
@@ -201,7 +202,8 @@ export default function ClassworkPage() {
                       <td colSpan={6} style={{ background: 'rgba(0,0,0,0.15)', padding: '12px 20px' }}>
                         <WhatIfScorer
                           currentAverage={parseFloat(c.average ?? '0') || 0}
-                          existingAssignments={c.scores.map(a => ({ score: a.score, total: a.totalPoints }))}
+                          existingAssignments={c.scores.map(a => ({ score: a.score, total: a.totalPoints, category: a.category }))}
+                          categoryWeights={c.categoryWeights}
                           onClose={() => setOpenWhatIf(null)}
                         />
                       </td>

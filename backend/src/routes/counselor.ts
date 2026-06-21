@@ -8,6 +8,43 @@ import { supabaseAdmin } from '../lib/supabaseAdmin'
 import { logger } from '../common/logger'
 import { calculateGpa } from '../lib/gpa'
 
+type HacGpa = { weighted: number; unweighted: number }
+
+function extractHacGpa(hacDataCache: unknown): HacGpa | null {
+  if (!hacDataCache || typeof hacDataCache !== 'object') return null
+  const cache = hacDataCache as Record<string, { data?: unknown }>
+  const entry = cache['transcript']
+  if (!entry?.data) return null
+  const t = entry.data as { weightedGPA?: string | null; unweightedGPA?: string | null }
+  const w = parseFloat(t.weightedGPA ?? '')
+  const u = parseFloat(t.unweightedGPA ?? '')
+  if (isNaN(w) && isNaN(u)) return null
+  return {
+    weighted:   isNaN(w) ? 0 : Math.round(w * 1000) / 1000,
+    unweighted: isNaN(u) ? 0 : Math.round(u * 1000) / 1000,
+  }
+}
+
+function mergeGpa(
+  profile: Record<string, unknown> | null,
+  bestGpa: HacGpa | null,
+  studentId: number
+): Record<string, unknown> | null {
+  if (profile) {
+    return {
+      ...profile,
+      weightedGpa:   bestGpa?.weighted   ?? (typeof profile.weightedGpa   === 'number' && profile.weightedGpa   > 0 ? profile.weightedGpa   : null),
+      unweightedGpa: bestGpa?.unweighted ?? (typeof profile.unweightedGpa === 'number' && profile.unweightedGpa > 0 ? profile.unweightedGpa : null),
+    }
+  }
+  if (!bestGpa) return null
+  return {
+    userId: studentId, gradeLevel: null, graduationYear: null,
+    satScore: null, actScore: null, counselorName: null, futureDecision: null,
+    weightedGpa: bestGpa.weighted, unweightedGpa: bestGpa.unweighted,
+  }
+}
+
 const router = Router()
 router.use(requireCounselor)
 
@@ -249,18 +286,21 @@ router.get('/students/:studentId', async (req: AuthRequest, res: Response): Prom
       return
     }
 
-    // Compute GPA from courses so counselor sees the same value the student sees
+    // GPA priority: HAC transcript cache > computed from courses > stored profile value
+    const schoolConn = await prisma.schoolConnection.findUnique({
+      where: { userId: studentId },
+      select: { hacDataCache: true },
+    })
+    const hacGpa = extractHacGpa(schoolConn?.hacDataCache)
+
     const gradeInputs = student.courses.flatMap(c =>
       c.grades.map(g => ({ letterGrade: g.letterGrade, creditHours: c.creditHours, courseType: c.courseType }))
     )
-    const computed = calculateGpa(gradeInputs)
-    const profile = student.profile
-      ? {
-          ...student.profile,
-          weightedGpa:   computed?.weighted   ?? student.profile.weightedGpa,
-          unweightedGpa: computed?.unweighted ?? student.profile.unweightedGpa,
-        }
-      : null
+    const computedGpa = calculateGpa(gradeInputs)
+    const bestGpa: HacGpa | null = hacGpa
+      ?? (computedGpa ? { weighted: computedGpa.weighted, unweighted: computedGpa.unweighted } : null)
+
+    const profile = mergeGpa(student.profile as Record<string, unknown> | null, bestGpa, studentId)
 
     await writeAuditLog({
       userId: req.userId!,
