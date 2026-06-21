@@ -7,7 +7,7 @@
     "dev": "ts-node-dev --respawn src/index.ts",
     "build": "prisma generate && tsc",
     "postinstall": "prisma generate",
-    "start": "node dist/src/index.js",
+    "start": "prisma migrate deploy && node dist/src/index.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force && prisma db seed",
