@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { api, getApiToken, CounselorLink, StudentClassroom, StudentActionItem, CounselorChatMessage } from '../../../lib/api'
+import { useRouter } from 'next/navigation'
+import { api, CounselorLink, StudentClassroom, StudentActionItem } from '../../../lib/api'
 
 export default function ClassroomPage() {
+  const router = useRouter()
   const [classrooms, setClassrooms] = useState<StudentClassroom[]>([])
   const [actionItems, setActionItems] = useState<StudentActionItem[]>([])
   const [activeLinks, setActiveLinks] = useState<CounselorLink[]>([])
@@ -14,21 +16,7 @@ export default function ClassroomPage() {
   const [joining, setJoining] = useState(false)
   const [joinMsg, setJoinMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
-  const [chatCounselorId, setChatCounselorId] = useState<number | null>(null)
-  const [chatMessages, setChatMessages] = useState<CounselorChatMessage[]>([])
-  const [chatInput, setChatInput] = useState('')
-  const [chatSending, setChatSending] = useState(false)
-  const [chatLoading, setChatLoading] = useState(false)
   const chatBottomRef = useRef<HTMLDivElement>(null)
-
-  const [myId, setMyId] = useState<number | null>(null)
-
-  useEffect(() => {
-    try {
-      const token = getApiToken()
-      if (token) setMyId(Number(JSON.parse(atob(token.split('.')[1])).sub))
-    } catch { /* ignore */ }
-  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -61,32 +49,6 @@ export default function ClassroomPage() {
       setJoinMsg({ ok: false, text: err instanceof Error ? err.message : 'Invalid code or already joined.' })
     } finally { setJoining(false) }
   }
-
-  async function openChat(counselorId: number) {
-    setChatCounselorId(counselorId)
-    setChatMessages([])
-    setChatLoading(true)
-    try {
-      const { messages } = await api.studentGetCounselorChat(counselorId)
-      setChatMessages([...messages].reverse())
-    } catch { /* ignore */ }
-    finally { setChatLoading(false) }
-  }
-
-  async function sendMessage(e: React.FormEvent) {
-    e.preventDefault()
-    if (!chatCounselorId || !chatInput.trim()) return
-    setChatSending(true)
-    try {
-      const msg = await api.studentSendCounselorMessage(chatCounselorId, chatInput.trim())
-      setChatMessages(prev => [...prev, msg])
-      setChatInput('')
-      setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-    } catch { /* ignore */ }
-    finally { setChatSending(false) }
-  }
-
-  const activeCounselor = activeLinks.find(l => l.counselorId === chatCounselorId)
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: 760, margin: '0 auto' }}>
@@ -160,36 +122,64 @@ export default function ClassroomPage() {
           {activeLinks.length > 0 && (
             <div style={{ marginBottom: 28 }}>
               <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
-                My Counselors
+                My Counselor{activeLinks.length > 1 ? 's' : ''}
               </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {activeLinks.map(link => (
-                  <div key={link.id} className="ns-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px' }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', margin: 0 }}>
-                        {link.counselor.name ?? link.counselor.email}
-                      </p>
-                      <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>Counselor</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 }}>
+                {activeLinks.map(link => {
+                  const openCount = actionItems.filter(a => !a.completed).length
+                  return (
+                    <div key={link.id} className="ns-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      {/* Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, flexShrink: 0 }}>
+                          {(link.counselor.name ?? link.counselor.email).charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {link.counselor.name ?? link.counselor.email}
+                          </p>
+                          <p style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600, margin: '2px 0 0' }}>Counselor</p>
+                        </div>
+                      </div>
+
+                      {/* Quick stats */}
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', textAlign: 'center' as const }}>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: openCount > 0 ? '#F97316' : 'var(--text)' }}>{openCount}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>Open Tasks</div>
+                        </div>
+                        <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', textAlign: 'center' as const }}>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle' }}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>Chat</div>
+                        </div>
+                      </div>
+
+                      {/* CTA */}
+                      <button
+                        className="ns-btn-primary"
+                        style={{ width: '100%', height: 38, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+                        onClick={() => router.push(`/my-counselor/${link.counselorId}`)}
+                      >
+                        Open Portal
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                      </button>
                     </div>
-                    <button
-                      onClick={() => void openChat(link.counselorId)}
-                      style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                      Chat
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
 
-          {/* ── Action items ── */}
-          {actionItems.length > 0 && (
+          {/* ── Quick action items preview (only if no counselors) ── */}
+          {activeLinks.length === 0 && actionItems.length > 0 && (
             <div style={{ marginBottom: 28 }}>
               <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
                 Action Items
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {actionItems.map(item => (
+                {actionItems.slice(0, 3).map(item => (
                   <div key={item.id} className="ns-card" style={{ padding: '12px 18px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                     <div style={{ width: 16, height: 16, borderRadius: 4, border: '2px solid', borderColor: item.completed ? '#22C55E' : 'var(--border)', background: item.completed ? '#22C55E' : 'transparent', flexShrink: 0, marginTop: 2 }}>
                       {item.completed && <svg viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><polyline points="2,6 5,9 10,3"/></svg>}
@@ -198,7 +188,6 @@ export default function ClassroomPage() {
                       <p style={{ fontWeight: 600, fontSize: 14, color: item.completed ? 'var(--text-muted)' : 'var(--text)', margin: 0, textDecoration: item.completed ? 'line-through' : 'none' }}>
                         {item.title}
                       </p>
-                      {item.description && <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>{item.description}</p>}
                       {item.dueDate && <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>Due {new Date(item.dueDate).toLocaleDateString()}</p>}
                     </div>
                   </div>
@@ -208,56 +197,8 @@ export default function ClassroomPage() {
           )}
         </>
       )}
-
-      {/* ── Chat modal ── */}
-      {chatCounselorId !== null && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'var(--card)', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', margin: 0 }}>
-                  {activeCounselor?.counselor.name ?? activeCounselor?.counselor.email ?? 'Counselor'}
-                </p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>Counselor</p>
-              </div>
-              <button onClick={() => setChatCounselorId(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {chatLoading ? (
-                <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>Loading…</p>
-              ) : chatMessages.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>No messages yet. Say hello!</p>
-              ) : (
-                chatMessages.map(msg => {
-                  const isMe = msg.senderId === myId
-                  return (
-                    <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
-                      <div style={{ maxWidth: '75%', padding: '8px 12px', borderRadius: 12, background: isMe ? 'var(--primary)' : 'var(--bg)', color: isMe ? '#fff' : 'var(--text)', fontSize: 14, lineHeight: 1.5 }}>
-                        {msg.body}
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-              <div ref={chatBottomRef} />
-            </div>
-            <form onSubmit={e => void sendMessage(e)} style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
-              <input
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                placeholder="Type a message…"
-                style={{ flex: 1, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14 }}
-              />
-              <button
-                type="submit"
-                disabled={chatSending || !chatInput.trim()}
-                style={{ padding: '9px 18px', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: (chatSending || !chatInput.trim()) ? 0.5 : 1 }}>
-                Send
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* hidden ref kept to avoid unused warning */}
+      <div ref={chatBottomRef} style={{ display: 'none' }} />
     </div>
   )
 }

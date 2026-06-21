@@ -561,4 +561,84 @@ router.get('/counselor-links/pending', requireAuth, async (req: AuthRequest, res
   }
 })
 
+// ── GET /students/counselor-portal/:counselorId ── Full portal data for a student's counselor
+router.get('/counselor-portal/:counselorId', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const counselorId = parseInt(req.params.counselorId)
+  if (isNaN(counselorId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid counselorId' } })
+    return
+  }
+  const studentId = req.userId
+  try {
+    const link = await prisma.counselorStudentLink.findUnique({
+      where: { counselorId_studentId: { counselorId, studentId } },
+      include: { counselor: { select: { id: true, name: true, email: true } } },
+    })
+    if (!link || link.status !== 'ACTIVE') {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'No active counselor link found' } })
+      return
+    }
+    const [notes, recommendations, actionItems] = await Promise.all([
+      prisma.counselorNote.findMany({
+        where: { counselorId, studentId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.counselorCourseRecommendation.findMany({
+        where: { counselorId, studentId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.counselorActionItem.findMany({
+        where: { counselorId, studentId },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ])
+    await writeAuditLog({
+      userId: studentId,
+      resourceType: 'COUNSELOR_PORTAL',
+      resourceId: counselorId.toString(),
+      action: 'STUDENT_VIEWED_COUNSELOR_PORTAL',
+      ipAddress: req.ip ?? 'unknown',
+    })
+    res.json({
+      data: { counselor: link.counselor, notes, recommendations, actionItems },
+      error: null,
+    })
+  } catch (err: unknown) {
+    logger.error('student_counselor_portal_error', { studentId, counselorId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch portal data' } })
+  }
+})
+
+// ── PATCH /students/action-items/:id ── Toggle action item completion
+router.patch('/action-items/:id', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const id = parseInt(req.params.id)
+  if (isNaN(id)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid action item id' } })
+    return
+  }
+  try {
+    const item = await prisma.counselorActionItem.findUnique({ where: { id } })
+    if (!item || item.studentId !== req.userId) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Action item not found' } })
+      return
+    }
+    const updated = await prisma.counselorActionItem.update({
+      where: { id },
+      data: { completed: !item.completed },
+    })
+    res.json({ data: updated, error: null })
+  } catch (err: unknown) {
+    logger.error('student_action_item_toggle_error', { studentId: req.userId, id, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to update action item' } })
+  }
+})
+
 export default router

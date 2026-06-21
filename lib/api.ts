@@ -926,6 +926,12 @@ export const api = {
 
   studentGetCounselorChat: (counselorId: number) =>
     request<{ messages: CounselorChatMessage[]; nextCursor: string | null }>(`/api/students/counselor-chat/${counselorId}`),
+
+  studentCounselorPortal: (counselorId: number) =>
+    request<StudentCounselorPortal>(`/api/students/counselor-portal/${counselorId}`),
+
+  studentToggleActionItem: (id: number) =>
+    request<StudentActionItem>(`/api/students/action-items/${id}`, { method: 'PATCH' }),
 }
 
 // ── Planner types ─────────────────────────────────────────────────────────
@@ -1553,6 +1559,29 @@ export interface StudentActionItem {
   dueDate: string | null
   completed: boolean
   createdAt: string
+}
+
+export interface StudentCounselorNote {
+  id: number
+  body: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudentCounselorRecommendation {
+  id: number
+  courseName: string
+  courseCode: string | null
+  rationale: string | null
+  semester: string
+  createdAt: string
+}
+
+export interface StudentCounselorPortal {
+  counselor: { id: number; name: string | null; email: string }
+  notes: StudentCounselorNote[]
+  recommendations: StudentCounselorRecommendation[]
+  actionItems: StudentActionItem[]
 }
 
 export interface CounselorLink {
