@@ -26,7 +26,7 @@ router.get('/students/search', async (req: AuthRequest, res: Response): Promise<
     const connections = await prisma.schoolConnection.findMany({
       where: {
         hacUsername: { contains: q, mode: 'insensitive' },
-        user: { role: 'STUDENT' },
+        user: { role: { notIn: ['TEACHER', 'COUNSELOR'] } },
       },
       select: {
         hacUsername: true,
