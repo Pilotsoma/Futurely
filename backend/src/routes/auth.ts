@@ -488,14 +488,13 @@ router.post('/refresh', refreshTokenLimiter, async (req: Request, res: Response)
       return
     }
 
-    // Rotate: revoke old, issue fresh pair
-    await prisma.refreshToken.update({
-      where: { id: stored.id },
-      data: { revokedAt: new Date() },
-    })
+    // Rotate: revoke old and create new in parallel (both depend only on stored, not each other)
+    const [newRefreshToken] = await Promise.all([
+      issueRefreshToken(stored.userId),
+      prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } }),
+    ])
 
     const newAccessToken = issueAccessToken(stored.userId)
-    const newRefreshToken = await issueRefreshToken(stored.userId)
     setAuthCookies(res, newAccessToken, newRefreshToken)
 
     logger.info('auth.token_refreshed', { userId: stored.userId })

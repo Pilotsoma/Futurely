@@ -112,7 +112,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           setUserName(n.split(' ')[0])
         }
       }
-      api.portalStatus().catch(() => {}).finally(() => setChecked(true))
+      setChecked(true)
+      api.portalStatus().catch(() => {})
     }
     void checkAuth()
   }, [router])
