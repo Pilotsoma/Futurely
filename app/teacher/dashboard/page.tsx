@@ -47,7 +47,7 @@ export default function TeacherDashboardPage() {
     setCreateError(null)
     try {
       const created = await api.educatorCreateClassroom(name.trim(), description.trim() || undefined)
-      setClassrooms(prev => [created, ...prev])
+      setClassrooms(prev => [{ ...created, _count: { memberships: 0 } }, ...prev])
       setShowModal(false)
       setName('')
       setDescription('')
