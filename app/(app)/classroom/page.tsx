@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import { api, getApiToken, CounselorLink, StudentClassroom, StudentActionItem, CounselorChatMessage } from '../../../lib/api'
 
 export default function ClassroomPage() {
@@ -136,13 +137,20 @@ export default function ClassroomPage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {classrooms.map(cls => (
-                  <div key={cls.id} className="ns-card" style={{ padding: '14px 18px' }}>
-                    <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', margin: '0 0 2px' }}>{cls.name}</p>
-                    {cls.description && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 4px' }}>{cls.description}</p>}
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
-                      Teacher: {cls.educator.name ?? cls.educator.email}
-                    </p>
-                  </div>
+                  <Link key={cls.id} href={`/classroom/${cls.id}`} style={{ textDecoration: 'none' }}>
+                    <div className="ns-card" style={{ padding: '14px 18px', cursor: 'pointer', transition: 'border-color 0.15s' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', margin: '0 0 2px' }}>{cls.name}</p>
+                          {cls.description && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 4px' }}>{cls.description}</p>}
+                          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                            Teacher: {cls.educator.name ?? cls.educator.email}
+                          </p>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                      </div>
+                    </div>
+                  </Link>
                 ))}
               </div>
             )}

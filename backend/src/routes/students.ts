@@ -288,6 +288,44 @@ router.get('/classrooms', requireAuth, async (req: AuthRequest, res: Response): 
   }
 })
 
+// ── GET /students/classrooms/:id ──
+router.get('/classrooms/:id', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const classroomId = parseInt(req.params.id)
+  if (isNaN(classroomId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid classroom id' } })
+    return
+  }
+  try {
+    // Verify the student is actually a member
+    const membership = await prisma.classroomMembership.findUnique({
+      where: { classroomId_studentId: { classroomId, studentId: req.userId! } },
+    })
+    if (!membership) {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'You are not a member of this classroom' } })
+      return
+    }
+    const classroom = await prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        educator: { select: { id: true, name: true, email: true } },
+        assignments: { orderBy: { dueDate: 'asc' } },
+        memberships: {
+          include: { student: { select: { id: true, name: true } } },
+          orderBy: { joinedAt: 'asc' },
+        },
+      },
+    })
+    if (!classroom) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Classroom not found' } })
+      return
+    }
+    res.json({ data: classroom, error: null })
+  } catch (err: unknown) {
+    logger.error('student_classroom_detail_error', { studentId: req.userId, classroomId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch classroom' } })
+  }
+})
+
 // ── GET /students/action-items ──
 router.get('/action-items', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) {

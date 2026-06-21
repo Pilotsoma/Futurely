@@ -885,6 +885,9 @@ export const api = {
   studentClassrooms: () =>
     request<StudentClassroom[]>('/api/students/classrooms'),
 
+  studentClassroomDetail: (id: number) =>
+    request<ClassroomDetail>(`/api/students/classrooms/${id}`),
+
   studentJoinClassroom: (inviteCode: string) =>
     request<{ id: number }>('/api/students/classrooms/join', {
       method: 'POST',
@@ -1517,6 +1520,20 @@ export interface StudentClassroom {
   description: string | null
   inviteCode: string
   educator: { id: number; name: string | null; email: string }
+}
+
+export interface ClassroomAssignment {
+  id: number
+  title: string
+  description: string | null
+  subject: string
+  dueDate: string
+  createdAt: string
+}
+
+export interface ClassroomDetail extends StudentClassroom {
+  assignments: ClassroomAssignment[]
+  memberships: Array<{ id: number; student: { id: number; name: string | null } }>
 }
 
 export interface StudentActionItem {
