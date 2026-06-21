@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { api, type StudentData } from '../../../lib/api'
+import { consumeStudentPrefetch } from '../../../lib/prefetch'
 import AiBar from '../../../components/ui/AiBar'
 import PageLoader from '../../../components/ui/PageLoader'
 import CoinIcon from '../../../components/ui/CoinIcon'
@@ -226,7 +227,9 @@ export default function DashboardPage() {
     api.marketplaceDailyClaim(currentStreak)
       .then(r => setCoins(r.coins))
       .catch(() => {})
-    api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed'))
+    const prefetch = consumeStudentPrefetch()
+    const dataPromise = prefetch ?? api.me().catch(() => null)
+    dataPromise.then(d => { if (d) setData(d); else api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed')) })
     api.portalGpa()
       .then(g => { setPortalUGpa(g.unweightedGpa); setPortalWGpa(g.weightedGpa) })
       .catch(() => {})

@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { motion, AnimatePresence, type Transition } from 'framer-motion'
 import { api } from '../../lib/api'
 import { initWebAuth, clearWebAuth } from '../../lib/authState'
+import { startStudentPrefetch } from '../../lib/prefetch'
 import NotificationBell from '../../components/ui/NotificationBell'
 import UpdatePopup from '../../components/ui/UpdatePopup'
 import ForcedLogoutWatcher from '../../components/ui/ForcedLogoutWatcher'
@@ -92,6 +93,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     async function checkAuth() {
       const ok = await initWebAuth()
       if (!ok) { router.replace('/login'); return }
+      startStudentPrefetch()
 
       // Fetch live user data so role is always current (e.g. after OAuth login or role upgrade)
       const freshUser = await api.authMe().catch(() => null)
