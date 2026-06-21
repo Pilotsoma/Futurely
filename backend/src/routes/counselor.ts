@@ -7,6 +7,7 @@ import { writeAuditLog } from '../lib/auditLog'
 import { supabaseAdmin } from '../lib/supabaseAdmin'
 import { logger } from '../common/logger'
 import { calculateGpa } from '../lib/gpa'
+import { sendToUser } from '../lib/websocket'
 
 type HacGpa = { weighted: number; unweighted: number }
 
@@ -106,6 +107,13 @@ router.post('/students', async (req: AuthRequest, res: Response): Promise<void> 
     const link = await prisma.counselorStudentLink.create({
       data: { counselorId: req.userId!, studentId, status: 'ACTIVE' },
     })
+    try {
+      const notif = await prisma.notification.create({
+        data: { userId: studentId, fromUserId: req.userId!, type: 'COUNSELOR_LINKED', preview: null },
+        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+      })
+      sendToUser(studentId, 'NOTIFICATION', notif)
+    } catch { /* non-critical */ }
     logger.info('counselor_student_link_created', { counselorId: req.userId, studentId })
     res.status(201).json({ data: link, error: null })
   } catch (err: unknown) {
@@ -460,6 +468,13 @@ router.post('/students/:studentId/recommendations', async (req: AuthRequest, res
       action: 'COUNSELOR_CREATED_RECOMMENDATION',
       ipAddress: req.ip ?? 'unknown',
     })
+    try {
+      const notif = await prisma.notification.create({
+        data: { userId: studentId, fromUserId: req.userId!, type: 'COUNSELOR_RECOMMENDATION_ADDED', preview: parse.data.courseName },
+        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+      })
+      sendToUser(studentId, 'NOTIFICATION', notif)
+    } catch { /* non-critical */ }
     res.status(201).json({ data: rec, error: null })
   } catch (err: unknown) {
     logger.error('counselor_recommendation_create_error', { counselorId: req.userId, studentId, error: err instanceof Error ? err.message : String(err) })
@@ -548,6 +563,13 @@ router.post('/students/:studentId/notes', async (req: AuthRequest, res: Response
       action: 'COUNSELOR_CREATED_NOTE',
       ipAddress: req.ip ?? 'unknown',
     })
+    try {
+      const notif = await prisma.notification.create({
+        data: { userId: studentId, fromUserId: req.userId!, type: 'COUNSELOR_NOTE_ADDED', preview: parse.data.body.slice(0, 120) },
+        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+      })
+      sendToUser(studentId, 'NOTIFICATION', notif)
+    } catch { /* non-critical */ }
     res.status(201).json({ data: note, error: null })
   } catch (err: unknown) {
     logger.error('counselor_note_create_error', { counselorId: req.userId, studentId, error: err instanceof Error ? err.message : String(err) })
@@ -667,6 +689,13 @@ router.post('/students/:studentId/action-items', async (req: AuthRequest, res: R
         dueDate: parse.data.dueDate ? new Date(parse.data.dueDate) : undefined,
       },
     })
+    try {
+      const notif = await prisma.notification.create({
+        data: { userId: studentId, fromUserId: req.userId!, type: 'ACTION_ITEM_CREATED', preview: parse.data.title },
+        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+      })
+      sendToUser(studentId, 'NOTIFICATION', notif)
+    } catch { /* non-critical */ }
     res.status(201).json({ data: item, error: null })
   } catch (err: unknown) {
     logger.error('counselor_action_item_create_error', { counselorId: req.userId, studentId, error: err instanceof Error ? err.message : String(err) })

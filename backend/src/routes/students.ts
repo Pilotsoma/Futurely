@@ -6,6 +6,7 @@ import { ASSIGNMENT_SOURCE } from '../constants/assignmentSource'
 import { writeAuditLog } from '../lib/auditLog'
 import { supabaseAdmin } from '../lib/supabaseAdmin'
 import { logger } from '../common/logger'
+import { sendToUser } from '../lib/websocket'
 
 const router = Router()
 
@@ -257,6 +258,13 @@ router.post('/classrooms/join', requireAuth, async (req: AuthRequest, res: Respo
       action: 'EDUCATOR_ACCESS_CONSENTED',
       ipAddress: req.ip ?? 'unknown',
     })
+    try {
+      const notif = await prisma.notification.create({
+        data: { userId: req.userId, fromUserId: classroom.educatorId, type: 'CLASSROOM_JOINED', preview: classroom.name },
+        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+      })
+      sendToUser(req.userId, 'NOTIFICATION', notif)
+    } catch { /* non-critical */ }
     logger.info('student_joined_classroom', { studentId: req.userId, classroomId: classroom.id })
     res.status(201).json({ data: membership, error: null })
   } catch (err: unknown) {

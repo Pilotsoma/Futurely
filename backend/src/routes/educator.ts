@@ -7,6 +7,7 @@ import { generateUniqueInviteCode } from '../lib/inviteCode'
 import { writeAuditLog } from '../lib/auditLog'
 import { grantCoinsToStudent } from '../services/educatorService'
 import { logger } from '../common/logger'
+import { sendToUser } from '../lib/websocket'
 
 const router = Router()
 
@@ -245,6 +246,21 @@ router.post('/classrooms/:classroomId/assignments', async (req: AuthRequest, res
         dueDate: new Date(parse.data.dueDate),
       },
     })
+    // Notify all students in the classroom
+    try {
+      const memberships = await prisma.classroomMembership.findMany({
+        where: { classroomId },
+        select: { studentId: true },
+      })
+      const due = new Date(parse.data.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      await Promise.all(memberships.map(async m => {
+        const notif = await prisma.notification.create({
+          data: { userId: m.studentId, fromUserId: req.userId!, type: 'TEACHER_ASSIGNMENT', preview: `${parse.data.title} — due ${due}` },
+          include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        })
+        sendToUser(m.studentId, 'NOTIFICATION', notif)
+      }))
+    } catch { /* non-critical */ }
     logger.info('educator_assignment_created', { educatorId: req.userId, classroomId, assignmentId: assignment.id })
     res.status(201).json({ data: assignment, error: null })
   } catch (err: unknown) {
