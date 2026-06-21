@@ -20,15 +20,23 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = _apiToken
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    credentials: 'include',  // sends httpOnly cookies (access_token, refresh_token) automatically
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 20000)
+  let res: Response
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...options,
+      signal: controller.signal,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options?.headers,
+      },
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }
     const msg  = typeof body?.error === 'string' ? body.error : body?.error?.message
