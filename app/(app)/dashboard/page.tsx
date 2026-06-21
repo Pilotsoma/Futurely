@@ -65,14 +65,25 @@ function getNextMilestone(streak: number) {
   return STREAK_MILESTONES.find(m => m.days > streak) ?? null
 }
 
-// Same scale as the bonus formula: unweighted floor 2.0/max 4.0, weighted floor 2.5/max 5.0, averaged.
+function normalCdf(z: number): number {
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741
+  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911
+  const sign = z >= 0 ? 1 : -1
+  const x = Math.abs(z) / Math.SQRT2
+  const t = 1 / (1 + p * x)
+  const y = 1 - (((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t) * Math.exp(-x * x)
+  return 0.5 * (1 + sign * y)
+}
+
+// National distribution (mean 2.96, sd 0.52). Weighted GPA normalized to 4.0 scale first.
+// Averages both when available — stricter than unweighted-only.
 function computeGpaPercentile(ugpa: number | null, wgpa: number | null): number | null {
   if (ugpa === null && wgpa === null) return null
-  const fromU = (g: number) => Math.max(0, Math.min(100, (g - 2.0) / 2.0 * 100))
-  const fromW = (g: number) => Math.max(0, Math.min(100, (g - 2.5) / 2.5 * 100))
-  if (ugpa !== null && wgpa !== null) return (fromU(ugpa) + fromW(wgpa)) / 2
-  if (ugpa !== null) return fromU(ugpa)
-  return fromW(wgpa!)
+  const pctFromGpa = (g: number) => Math.min(99.99, Math.max(0.01, normalCdf((g - 2.96) / 0.52) * 100))
+  const uPct = ugpa !== null ? pctFromGpa(ugpa) : null
+  const wPct = wgpa !== null ? pctFromGpa(wgpa * 4 / 5) : null
+  if (uPct !== null && wPct !== null) return (uPct + wPct) / 2
+  return uPct ?? wPct!
 }
 
 // Returns 0–50 (percent). Averages unweighted (floor 2.0/max 4.0) and weighted (floor 2.5/max 5.0).
