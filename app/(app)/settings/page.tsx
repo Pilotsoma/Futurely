@@ -370,11 +370,17 @@ export default function SettingsPage() {
           {/* Profile card */}
           <div className="ns-card" style={S.profileCard}>
             <div style={S.avatar}>{initials(data?.name ?? null)}</div>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={S.profileName}>{parseHacName(data?.name) || 'Student'}</div>
               <div style={S.profileSub}>
                 {[profile?.gradeLevel ? `Grade ${profile.gradeLevel}` : '', profile?.graduationYear ? `Class of ${profile.graduationYear}` : ''].filter(Boolean).join(' · ') || 'Student account'}
               </div>
+              {data?.id && (
+                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                  Student ID: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1 }}>{data.id}</span>
+                  <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-muted)' }}>(share with your counselor to get linked)</span>
+                </div>
+              )}
             </div>
           </div>
 

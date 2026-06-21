@@ -115,7 +115,8 @@ function LoginPageInner() {
   function selectOther() {
     setSelectedIsd(null); setHacUrl(''); setUseCustomUrl(true); setIsdSearch(''); setIsdOpen(false)
   }
-  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setInstitution(''); setApplyAsCounselor(false); setSchoolQuery(''); setSchoolResults([]); setSchoolOpen(false) }
+  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setSchoolQuery(''); setSchoolResults([]); setSchoolOpen(false) }
+  function fullReset() { reset(); setInstitution(''); setApplyAsCounselor(false) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -499,37 +500,37 @@ function LoginPageInner() {
           <>
             <p style={styles.switchText}>
               Don&apos;t have an account?{' '}
-              <button type="button" onClick={() => { setMode('register-student'); reset() }} style={styles.switchLink}>Create one</button>
+              <button type="button" onClick={() => { setMode('register-student'); fullReset() }} style={styles.switchLink}>Create one</button>
             </p>
             <p style={{ ...styles.switchText, marginTop: 4 }}>
               Parent or guardian?{' '}
-              <button type="button" onClick={() => { setMode('register-parent'); reset() }} style={styles.switchLink}>Create a parent account</button>
+              <button type="button" onClick={() => { setMode('register-parent'); fullReset() }} style={styles.switchLink}>Create a parent account</button>
             </p>
             <p style={{ ...styles.switchText, marginTop: 4 }}>
               Teacher or counselor?{' '}
-              <button type="button" onClick={() => { setMode('register-teacher'); reset() }} style={styles.switchLink}>Create a teacher account</button>
+              <button type="button" onClick={() => { setMode('register-teacher'); fullReset() }} style={styles.switchLink}>Create a teacher account</button>
             </p>
           </>
         )}
 
         {mode === 'register-student' && (
           <>
-            <p style={styles.switchText}>Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); reset() }} style={styles.switchLink}>Log In</button></p>
-            <p style={styles.switchText}>Parent or guardian?{' '}<button type="button" onClick={() => { setMode('register-parent'); reset() }} style={styles.switchLink}>Create a parent account instead</button></p>
+            <p style={styles.switchText}>Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); fullReset() }} style={styles.switchLink}>Log In</button></p>
+            <p style={styles.switchText}>Parent or guardian?{' '}<button type="button" onClick={() => { setMode('register-parent'); fullReset() }} style={styles.switchLink}>Create a parent account instead</button></p>
           </>
         )}
 
         {mode === 'register-parent' && (
           <p style={styles.switchText}>
-            Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); reset() }} style={styles.switchLink}>Log In</button>
-            {' · '}<button type="button" onClick={() => { setMode('register-student'); reset() }} style={styles.switchLink}>Student account</button>
+            Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); fullReset() }} style={styles.switchLink}>Log In</button>
+            {' · '}<button type="button" onClick={() => { setMode('register-student'); fullReset() }} style={styles.switchLink}>Student account</button>
           </p>
         )}
 
         {mode === 'register-teacher' && (
           <p style={styles.switchText}>
-            Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); reset() }} style={styles.switchLink}>Log In</button>
-            {' · '}<button type="button" onClick={() => { setMode('register-student'); reset() }} style={styles.switchLink}>Student account</button>
+            Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); fullReset() }} style={styles.switchLink}>Log In</button>
+            {' · '}<button type="button" onClick={() => { setMode('register-student'); fullReset() }} style={styles.switchLink}>Student account</button>
           </p>
         )}
       </div>
