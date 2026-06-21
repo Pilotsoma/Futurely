@@ -206,7 +206,11 @@ function LoginPageInner() {
           }
         }
       }
-      router.push(result.user.role === 'PARENT' ? '/parent/dashboard' : '/dashboard')
+      const role = result.user.role
+      if (role === 'PARENT') router.push('/parent/dashboard')
+      else if (role === 'TEACHER') router.push('/teacher/dashboard')
+      else if (role === 'COUNSELOR') router.push('/counselor/dashboard')
+      else router.push('/dashboard')
     } catch (err) {
       if (err instanceof ApiError && err.code === 'NAME_TAKEN') {
         setError('That display name is already taken. Please choose a different one.')
