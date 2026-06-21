@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, Space_Grotesk } from 'next/font/google'
 import './globals.css'
+import UpdateBanner from '../components/ui/UpdateBanner'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -28,7 +29,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#050B18" />
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('ns_theme')||'dark';document.documentElement.setAttribute('data-theme',t);if(localStorage.getItem('ns_grade_colors')==='false')document.documentElement.setAttribute('data-grade-colors','off');}catch(e){}})();` }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <UpdateBanner />
+      </body>
     </html>
   )
 }
