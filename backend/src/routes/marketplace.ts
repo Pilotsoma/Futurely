@@ -426,8 +426,8 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
     const rawTags = parseTagArr(user.allTags)
     const ownedTags = rawTags.map(t => {
       const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
-             ?? TAG_BOX_ITEMS.find(d => d.tag === t.tag)
              ?? SPECIAL_TAGS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
+             ?? TAG_BOX_ITEMS.find(d => d.tag === t.tag)
       const streakMeta = STREAK_TAG_META[t.tag]
       return { id: def?.id ?? t.tag, tag: t.tag, tagColor: def?.tagColor ?? t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
     })

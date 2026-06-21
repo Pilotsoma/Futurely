@@ -2586,15 +2586,17 @@ export default function MarketplacePage() {
                               <div className={pfpClass(item.value)} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...pfpStyle(item.value) }} />
                             )}
                             {item.type === 'tag' && (
-                              item.tagColor === 'curse'
-                                ? <span
-                                    className="tag-curse"
-                                    style={{ fontSize: 11, fontWeight: 800, padding: '1px 3px', borderRadius: 4, border: '1.5px solid #ff0000' }}
-                                  >CURSE</span>
-                                : <span
-                                    className={item.name === 'GOD' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : ''}
-                                    style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'GOD' || item.name === 'GOAT') ? undefined : item.tagColor ?? '#6B7280' }}
-                                  >{truncateTag(item.name ?? '')}</span>
+                              (item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue')
+                                ? <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
+                                : item.tagColor === 'curse'
+                                  ? <span
+                                      className="tag-curse"
+                                      style={{ fontSize: 11, fontWeight: 800, padding: '1px 3px', borderRadius: 4, border: '1.5px solid #ff0000' }}
+                                    >CURSE</span>
+                                  : <span
+                                      className={item.name === 'GOD' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : ''}
+                                      style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'GOD' || item.name === 'GOAT') ? undefined : item.tagColor ?? '#6B7280' }}
+                                    >{truncateTag(item.name ?? '')}</span>
                             )}
                           </div>
                           {/* Name */}
