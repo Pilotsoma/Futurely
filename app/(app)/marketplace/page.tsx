@@ -930,7 +930,7 @@ function SpinWheelModal({
           }}
         >
           {phase === 'spinning'
-            ? '🌀 Spinning…'
+            ? 'Spinning…'
             : <><CoinIcon size={15} />{totalCost} — Spin{quantity > 1 ? ` ×${quantity}` : ''}!</>
           }
         </button>
