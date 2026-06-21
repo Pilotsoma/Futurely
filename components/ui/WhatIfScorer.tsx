@@ -47,7 +47,7 @@ function recalculate(
   hyps: Hypothetical[],
   weights: Record<string, number>,
   currentAverage: number,
-): { simAvg: number; noExistingIn: AssignmentType[] } {
+): { simAvg: number; firstInCat: AssignmentType[] } {
   // Group existing graded assignments by category
   const existingByCat: Partial<Record<AssignmentType, number[]>> = {}
   for (const a of existing) {
@@ -65,27 +65,23 @@ function recalculate(
 
   // For each affected category:
   //   delta = (new_cat_avg − old_cat_avg) × weight
+  // old_avg = 0 when category has no existing grades (simulated grade is the first).
   // Then: simulated = currentAverage + Σ(deltas)
-  // This way we never diverge from the HAC baseline.
   let totalDelta = 0
-  const noExistingIn: AssignmentType[] = []
+  const firstInCat: AssignmentType[] = []
 
   for (const [cat, simGrades] of Object.entries(hypsByCat) as [AssignmentType, number[]][]) {
     const w = weights[cat] ?? DEFAULT_WEIGHTS[cat] ?? 0
     const existingGrades = existingByCat[cat] ?? []
 
-    if (existingGrades.length === 0) {
-      // Can't compute an old_avg — can't produce a meaningful delta
-      noExistingIn.push(cat)
-      continue
-    }
+    if (existingGrades.length === 0) firstInCat.push(cat)
 
-    const oldAvg = avg(existingGrades)
+    const oldAvg = existingGrades.length > 0 ? avg(existingGrades) : 0
     const newAvg = avg([...existingGrades, ...simGrades])
     totalDelta += (newAvg - oldAvg) * w
   }
 
-  return { simAvg: currentAverage + totalDelta, noExistingIn }
+  return { simAvg: currentAverage + totalDelta, firstInCat }
 }
 
 export default function WhatIfScorer({
@@ -109,9 +105,9 @@ export default function WhatIfScorer({
     setGrade('')
   }
 
-  const { simAvg, noExistingIn } = hyps.length > 0
+  const { simAvg, firstInCat } = hyps.length > 0
     ? recalculate(existingAssignments, hyps, weights, currentAverage)
-    : { simAvg: currentAverage, noExistingIn: [] }
+    : { simAvg: currentAverage, firstInCat: [] }
 
   const delta = simAvg - currentAverage
   const deltaColor = delta > 0.005 ? '#22C55E' : delta < -0.005 ? '#EF4444' : 'var(--text-muted)'
@@ -190,9 +186,9 @@ export default function WhatIfScorer({
         </div>
       )}
 
-      {noExistingIn.length > 0 && (
-        <div style={{ marginTop: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '7px 12px', fontSize: 11.5, color: '#EF4444', lineHeight: 1.5 }}>
-          No existing {noExistingIn.join(', ')} grades found — simulation skipped for {noExistingIn.length > 1 ? 'those categories' : 'that category'}.
+      {firstInCat.length > 0 && (
+        <div style={{ marginTop: 8, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '7px 12px', fontSize: 11.5, color: '#D97706', lineHeight: 1.5 }}>
+          No existing {firstInCat.join(', ')} grades — simulating as your first assignment in {firstInCat.length > 1 ? 'those categories' : 'that category'}.
         </div>
       )}
 
