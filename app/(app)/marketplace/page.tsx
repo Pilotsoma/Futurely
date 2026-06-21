@@ -178,7 +178,7 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
 
 const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost: number; drops: DropGroup[] }[] = [
   {
-    type: 'cosmetics', icon: '🎁', label: 'Cosmetics Spin', desc: 'Any cosmetic — tags, name colors & PFP effects', cost: 20,
+    type: 'cosmetics', icon: '🎁', label: 'Cosmetics Spin', desc: 'Any cosmetic — tags, name colors & PFP effects', cost: 25,
     drops: [
       { rarity: 'Common',    pct: '60%',    items: ['Tags · Name Colors · PFP Borders'] },
       { rarity: 'Uncommon',  pct: '25%',    items: ['Tags · Name Colors · PFP Borders'] },

@@ -57,8 +57,8 @@ const STREAK_MILESTONES: Array<{ days: number; emoji: string; tag?: string; tagC
   { days: 100, tag: 'GOAT',    tagColor: '#EAB308', emoji: '👑' },
 ]
 
-function streakCoinBonus(streak: number, perDay = 5) {
-  return Math.min(275, 30 + Math.max(0, streak - 1) * perDay)
+function streakCoinBonus(streak: number) {
+  return Math.min(400, 50 + Math.max(0, streak - 1) * 7)
 }
 
 function getNextMilestone(streak: number) {
@@ -88,17 +88,19 @@ function computeGpaPercentile(ugpa: number | null, wgpa: number | null): number 
   return Math.min(99.99, Math.max(50.01, normalCdf(z) * 100))
 }
 
-// Extra coins earned per additional streak day based on GPA percentile
-function gpaStreakIncrement(percentile: number | null): number {
-  if (percentile === null) return 5
-  if (percentile >= 99.99) return 15   // top 0.01%: 200% more than baseline
-  if (percentile >= 99.9)  return 12
-  if (percentile >= 99.0)  return 10
-  if (percentile >= 97.0)  return 9
-  if (percentile >= 95.0)  return 8
-  if (percentile >= 90.0)  return 7
-  if (percentile >= 75.0)  return 6
-  return 5
+function getGpaTierBonus(ugpa: number | null, wgpa: number | null): number {
+  const fromU = (g: number) => g >= 4.0 ? 100 : g >= 3.7 ? 50 : g >= 3.3 ? 15 : g >= 2.7 ? 5 : 0
+  const fromW = (g: number) => g >= 5.0 ? 100 : g >= 4.5 ? 50 : g >= 4.0 ? 15 : g >= 3.5 ? 5 : 0
+  if (ugpa === null && wgpa === null) return 0
+  return Math.max(fromU(ugpa ?? 0), fromW(wgpa ?? 0))
+}
+
+function gpaTierLabel(bonus: number): string {
+  if (bonus >= 100) return 'Perfect GPA'
+  if (bonus >= 50) return 'Q1'
+  if (bonus >= 15) return 'Q2'
+  if (bonus >= 5) return 'Q3'
+  return 'Q4'
 }
 
 function percentileStr(p: number): string {
@@ -332,7 +334,7 @@ export default function DashboardPage() {
   const effectiveUGpa = portalUGpa ?? data.profile?.unweightedGpa ?? null
   const effectiveWGpa = portalWGpa ?? data.profile?.weightedGpa ?? null
   const gpaPercentile = computeGpaPercentile(effectiveUGpa, effectiveWGpa)
-  const streakIncrement = gpaStreakIncrement(gpaPercentile)
+  const gpaTierBonus = getGpaTierBonus(effectiveUGpa, effectiveWGpa)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
@@ -425,7 +427,7 @@ export default function DashboardPage() {
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)} {...staggerItem(4)}>
           <div style={S.statNum}>{animStreak}</div>
           <div style={S.statLabel}>Day Streak 🔥</div>
-          <div style={{ ...S.statSub, color: '#EAB308' }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{streakCoinBonus(dayStreak, streakIncrement)} today{streakIncrement > 5 ? ` ✦` : ''}</div>
+          <div style={{ ...S.statSub, color: '#EAB308' }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{streakCoinBonus(dayStreak) + gpaTierBonus} today{gpaTierBonus > 0 ? ' ✦' : ''}</div>
           {(() => {
             const next = getNextMilestone(dayStreak)
             if (!next) return <div style={S.statSub} title="All streak rewards earned">👑 GOAT</div>
@@ -505,28 +507,26 @@ export default function DashboardPage() {
               {dayStreak} Day Streak!
             </h3>
             <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#EAB308', fontWeight: 600, textAlign: 'center' as const }}>
-              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{streakCoinBonus(dayStreak, streakIncrement)} coins today · +{streakIncrement} more each extra day
+              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{streakCoinBonus(dayStreak) + gpaTierBonus} coins today
             </div>
 
             {/* GPA Rank Section */}
-            {gpaPercentile !== null ? (
+            {gpaTierBonus > 0 ? (
               <div style={{ background: 'rgba(43,74,142,0.08)', border: '1px solid rgba(43,74,142,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 5 }}>GPA Rank</div>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 5 }}>GPA Bonus</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>{percentileStr(gpaPercentile)} Percentile</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                    +{streakIncrement}/day{streakIncrement > 5 ? ` (+${streakIncrement - 5} bonus)` : ''}
-                  </span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>{gpaTierLabel(gpaTierBonus)}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>+{gpaTierBonus} coins/day</span>
                 </div>
               </div>
-            ) : effectiveUGpa !== null ? (
+            ) : (effectiveUGpa !== null || effectiveWGpa !== null) ? (
               <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '9px 14px', marginBottom: 10, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' as const }}>
-                📚 GPA below 3.0 · Reach 3.0+ to unlock streak bonuses
+                📚 Raise your GPA to unlock daily bonus coins
               </div>
             ) : null}
 
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Start at +30 coins on day 1, and earn +{streakIncrement} more for every consecutive day. Log in every day to unlock exclusive tags too!
+              Start at +50 coins on day 1, earn +7 more per consecutive day, up to +400/day at day 51. Log in every day to unlock exclusive tags too!
             </p>
 
             {newlyAwardedTags.length > 0 && (
@@ -607,21 +607,21 @@ export default function DashboardPage() {
                     Your Daily Streak Bonus
                   </p>
                   <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-blue)', marginBottom: 4 }}>
-                    +{streakIncrement} coins per streak day
+                    +{gpaTierBonus} coins/day bonus
                   </p>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Average students earn +5/day{streakIncrement > 5 ? ` · You earn +${streakIncrement - 5} extra` : ''}
+                    {gpaTierLabel(gpaTierBonus)} tier · stacks on top of your streak earnings
                   </p>
                 </div>
               </>
             ) : (
               <>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-                  Maintain a 3.0+ GPA in both unweighted and weighted to unlock enhanced daily streak bonuses.
+                  Raise your GPA to unlock daily coin bonuses that stack on top of your streak earnings.
                 </p>
                 <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: '#EAB308', lineHeight: 1.5 }}>
-                    Top 0.01% of students earn +15 coins/day<br />vs +5 for the average student
+                    Perfect GPA (4.0/5.0) → +100/day<br />Q1 (3.7+/4.5+) → +50/day<br />Q2 (3.3+/4.0+) → +15/day
                   </p>
                 </div>
               </>

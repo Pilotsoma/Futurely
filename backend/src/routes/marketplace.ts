@@ -446,10 +446,20 @@ router.post('/daily-coins', requireAuth, async (req: AuthRequest, res: Response)
   try {
     const { streak } = req.body as { streak?: number }
     const streakDay = typeof streak === 'number' && streak >= 1 ? streak : 1
-    const coinBonus = Math.min(275, 30 + (streakDay - 1) * 5)
+    const streakBonus = Math.min(400, 50 + (streakDay - 1) * 7)
 
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { coins: true, lastCoinClaim: true } })
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { coins: true, lastCoinClaim: true, profile: { select: { weightedGpa: true, unweightedGpa: true } } } })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
+
+    const ugpa = user.profile?.unweightedGpa ?? null
+    const wgpa = user.profile?.weightedGpa ?? null
+    const gpaBonus = (() => {
+      const fromU = (g: number) => g >= 4.0 ? 100 : g >= 3.7 ? 50 : g >= 3.3 ? 15 : g >= 2.7 ? 5 : 0
+      const fromW = (g: number) => g >= 5.0 ? 100 : g >= 4.5 ? 50 : g >= 4.0 ? 15 : g >= 3.5 ? 5 : 0
+      if (ugpa === null && wgpa === null) return 0
+      return Math.max(fromU(ugpa ?? 0), fromW(wgpa ?? 0))
+    })()
+    const coinBonus = streakBonus + gpaBonus
 
     const todayUTC = new Date().toISOString().slice(0, 10)
     const lastClaimDate = user.lastCoinClaim ? user.lastCoinClaim.toISOString().slice(0, 10) : null
@@ -575,7 +585,7 @@ router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: R
     res.status(400).json({ error: 'boxType must be cosmetics or dev-curse' }); return
   }
 
-  const BOX_COSTS: Record<string, number> = { cosmetics: 20, 'dev-curse': 1 }
+  const BOX_COSTS: Record<string, number> = { cosmetics: 25, 'dev-curse': 1 }
   const BOX_COST = BOX_COSTS[boxType]
   const totalCost = BOX_COST * quantity
 
