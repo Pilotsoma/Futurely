@@ -141,7 +141,7 @@ export const SEED_PRICES: Record<string, number> = {
 // Streak tags: fully soulbound — no trade, no list, no quicksell
 const SOULBOUND_TAGS = new Set(['Novice', 'Pro', 'Veteran', 'Legend'])
 // Dev-curse exclusives: no trade, no list; quicksell allowed but yields 0 coins
-const ZERO_QUICKSELL_TAGS = new Set(['Learner', 'C Student', 'Bottom 100', 'CURSE'])
+const ZERO_QUICKSELL_TAGS = new Set(['Learner', 'C Student', 'Bottom 100'])
 // Union used for trade + listing checks
 const NON_TRADEABLE_TAGS = new Set([...SOULBOUND_TAGS, ...ZERO_QUICKSELL_TAGS])
 
@@ -239,8 +239,9 @@ function removeItem(user: UserSnap, item: TradeItem): Record<string, string | nu
     const idx = owned.findIndex((i: { id: string }) => i.id === item.id)
     if (idx !== -1) owned.splice(idx, 1)
     updates.ownedNameColors = JSON.stringify(owned)
-    const def = NAME_COLOR_BOX_ITEMS.find(c => c.id === item.id)
-    if (def && user.nameColor === def.value && !owned.some((i: { id: string }) => i.id === item.id)) {
+    const def = NAME_COLOR_BOX_ITEMS.find(c => c.id === item.id) ?? DEV_CURSE_ITEMS.find(c => c.id === item.id && c.itemType === 'name-color')
+    const itemValue = def && 'value' in def ? def.value : undefined
+    if (itemValue && user.nameColor === itemValue && !owned.some((i: { id: string }) => i.id === item.id)) {
       updates.nameColor = null
     }
   } else if (item.type === 'pfp') {
@@ -248,8 +249,9 @@ function removeItem(user: UserSnap, item: TradeItem): Record<string, string | nu
     const idx = owned.findIndex((i: { id: string }) => i.id === item.id)
     if (idx !== -1) owned.splice(idx, 1)
     updates.ownedPfpEffects = JSON.stringify(owned)
-    const def = PFP_EFFECT_BOX_ITEMS.find(c => c.id === item.id)
-    if (def && user.pfpEffect === def.value && !owned.some((i: { id: string }) => i.id === item.id)) {
+    const def = PFP_EFFECT_BOX_ITEMS.find(c => c.id === item.id) ?? DEV_CURSE_ITEMS.find(c => c.id === item.id && c.itemType === 'pfp')
+    const itemValue = def && 'value' in def ? def.value : undefined
+    if (itemValue && user.pfpEffect === itemValue && !owned.some((i: { id: string }) => i.id === item.id)) {
       updates.pfpEffect = null
     }
   }
@@ -290,12 +292,14 @@ function applyMultipleRemoves(user: UserSnap, items: TradeItem[]): Record<string
       if (user.tag === tagName) { updates.tag = 'Student'; updates.tagColor = null }
     } else if (item.type === 'name-color') {
       nameColors = nameColors.filter(i => i.id !== item.id)
-      const def = NAME_COLOR_BOX_ITEMS.find(c => c.id === item.id)
-      if (def && user.nameColor === def.value) updates.nameColor = null
+      const def = NAME_COLOR_BOX_ITEMS.find(c => c.id === item.id) ?? DEV_CURSE_ITEMS.find(c => c.id === item.id && c.itemType === 'name-color')
+      const ncValue = def && 'value' in def ? def.value : undefined
+      if (ncValue && user.nameColor === ncValue) updates.nameColor = null
     } else if (item.type === 'pfp') {
       pfpEffects = pfpEffects.filter(i => i.id !== item.id)
-      const def = PFP_EFFECT_BOX_ITEMS.find(c => c.id === item.id)
-      if (def && user.pfpEffect === def.value) updates.pfpEffect = null
+      const def = PFP_EFFECT_BOX_ITEMS.find(c => c.id === item.id) ?? DEV_CURSE_ITEMS.find(c => c.id === item.id && c.itemType === 'pfp')
+      const pfpValue = def && 'value' in def ? def.value : undefined
+      if (pfpValue && user.pfpEffect === pfpValue) updates.pfpEffect = null
     }
   }
 
@@ -978,7 +982,7 @@ router.post('/listings', requireAuth, txLimiter, async (req: AuthRequest, res: R
       const owned = parseJsonArr(user.ownedNameColors)
       const def = owned.find(i => i.id === itemId) as { id: string; name: string; value: string; rarity: string } | undefined
       if (!def) { res.status(403).json({ error: 'You do not own this name color' }); return }
-      const catalogDef = NAME_COLOR_BOX_ITEMS.find(c => c.id === itemId)
+      const catalogDef = NAME_COLOR_BOX_ITEMS.find(c => c.id === itemId) ?? DEV_CURSE_ITEMS.find(c => c.id === itemId && c.itemType === 'name-color')
       itemName = def.name; itemValue = def.value; itemRarity = def.rarity
       tradeItem.name = def.name; tradeItem.value = def.value; tradeItem.rarity = def.rarity
       if (!catalogDef) { res.status(400).json({ error: 'Unknown name color item' }); return }
@@ -986,7 +990,7 @@ router.post('/listings', requireAuth, txLimiter, async (req: AuthRequest, res: R
       const owned = parseJsonArr(user.ownedPfpEffects)
       const def = owned.find(i => i.id === itemId) as { id: string; name: string; value: string; rarity: string } | undefined
       if (!def) { res.status(403).json({ error: 'You do not own this pfp effect' }); return }
-      const catalogDef = PFP_EFFECT_BOX_ITEMS.find(c => c.id === itemId)
+      const catalogDef = PFP_EFFECT_BOX_ITEMS.find(c => c.id === itemId) ?? DEV_CURSE_ITEMS.find(c => c.id === itemId && c.itemType === 'pfp')
       itemName = def.name; itemValue = def.value; itemRarity = def.rarity
       tradeItem.name = def.name; tradeItem.value = def.value; tradeItem.rarity = def.rarity
       if (!catalogDef) { res.status(400).json({ error: 'Unknown pfp effect item' }); return }
