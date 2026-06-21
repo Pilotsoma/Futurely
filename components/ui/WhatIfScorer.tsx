@@ -5,7 +5,6 @@ import { useState } from 'react'
 const ASSIGNMENT_TYPES = ['Daily', 'Minor', 'Major'] as const
 type AssignmentType = (typeof ASSIGNMENT_TYPES)[number]
 
-// Katy ISD standard weights — used when HAC doesn't expose them explicitly
 const DEFAULT_WEIGHTS: Record<AssignmentType, number> = {
   Daily: 0.10,
   Minor: 0.30,
@@ -20,7 +19,7 @@ interface ExistingAssignment {
 
 interface Hypothetical {
   title: string
-  grade: number   // raw percentage, 0–100
+  grade: number
   type: AssignmentType
 }
 
@@ -39,42 +38,54 @@ function normalizeCat(raw: string): AssignmentType | null {
   return null
 }
 
+function avg(grades: number[]): number {
+  return grades.reduce((s, g) => s + g, 0) / grades.length
+}
+
 function recalculate(
   existing: ExistingAssignment[],
   hyps: Hypothetical[],
   weights: Record<string, number>,
-): number | null {
-  // Group per-category grade percentages
-  const catGrades: Partial<Record<AssignmentType, number[]>> = {}
-
+  currentAverage: number,
+): { simAvg: number; noExistingIn: AssignmentType[] } {
+  // Group existing graded assignments by category
+  const existingByCat: Partial<Record<AssignmentType, number[]>> = {}
   for (const a of existing) {
     if (a.score === null || a.total === null || a.total <= 0) continue
     const cat = normalizeCat(a.category)
     if (!cat) continue
-    ;(catGrades[cat] ??= []).push((a.score / a.total) * 100)
+    ;(existingByCat[cat] ??= []).push((a.score / a.total) * 100)
   }
 
+  // Group simulated grades by type
+  const hypsByCat: Partial<Record<AssignmentType, number[]>> = {}
   for (const h of hyps) {
-    ;(catGrades[h.type] ??= []).push(h.grade)
+    ;(hypsByCat[h.type] ??= []).push(h.grade)
   }
 
-  const cats = Object.keys(catGrades) as AssignmentType[]
-  if (cats.length === 0) return null
+  // For each affected category:
+  //   delta = (new_cat_avg − old_cat_avg) × weight
+  // Then: simulated = currentAverage + Σ(deltas)
+  // This way we never diverge from the HAC baseline.
+  let totalDelta = 0
+  const noExistingIn: AssignmentType[] = []
 
-  // Weighted average across categories that have at least one grade.
-  // If a category has no assignments it's excluded and the remaining
-  // weights are renormalized — this matches how HAC computes the grade.
-  let weightedSum = 0
-  let totalWeight = 0
-  for (const cat of cats) {
-    const grades = catGrades[cat]!
-    const avg = grades.reduce((s, g) => s + g, 0) / grades.length
-    const w = weights[cat] ?? DEFAULT_WEIGHTS[cat] ?? (1 / 3)
-    weightedSum += w * avg
-    totalWeight += w
+  for (const [cat, simGrades] of Object.entries(hypsByCat) as [AssignmentType, number[]][]) {
+    const w = weights[cat] ?? DEFAULT_WEIGHTS[cat] ?? 0
+    const existingGrades = existingByCat[cat] ?? []
+
+    if (existingGrades.length === 0) {
+      // Can't compute an old_avg — can't produce a meaningful delta
+      noExistingIn.push(cat)
+      continue
+    }
+
+    const oldAvg = avg(existingGrades)
+    const newAvg = avg([...existingGrades, ...simGrades])
+    totalDelta += (newAvg - oldAvg) * w
   }
 
-  return totalWeight === 0 ? null : weightedSum / totalWeight
+  return { simAvg: currentAverage + totalDelta, noExistingIn }
 }
 
 export default function WhatIfScorer({
@@ -98,12 +109,12 @@ export default function WhatIfScorer({
     setGrade('')
   }
 
-  const simAvg = hyps.length > 0
-    ? (recalculate(existingAssignments, hyps, weights) ?? currentAverage)
-    : currentAverage
+  const { simAvg, noExistingIn } = hyps.length > 0
+    ? recalculate(existingAssignments, hyps, weights, currentAverage)
+    : { simAvg: currentAverage, noExistingIn: [] }
 
   const delta = simAvg - currentAverage
-  const deltaColor = delta > 0.05 ? '#22C55E' : delta < -0.05 ? '#EF4444' : 'var(--text-muted)'
+  const deltaColor = delta > 0.005 ? '#22C55E' : delta < -0.005 ? '#EF4444' : 'var(--text-muted)'
 
   return (
     <div style={S.wrap}>
@@ -115,13 +126,13 @@ export default function WhatIfScorer({
       <div style={S.scoreRow}>
         <div>
           <div style={S.scoreTag}>Current</div>
-          <div style={S.scoreNum}>{currentAverage.toFixed(1)}%</div>
+          <div style={S.scoreNum}>{currentAverage.toFixed(2)}%</div>
         </div>
         <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>→</span>
         <div>
           <div style={S.scoreTag}>Simulated</div>
           <div style={{ ...S.scoreNum, color: hyps.length > 0 ? 'var(--primary)' : 'var(--text-muted)' }}>
-            {simAvg.toFixed(1)}%
+            {simAvg.toFixed(2)}%
           </div>
         </div>
         {hyps.length > 0 && (
@@ -179,13 +190,19 @@ export default function WhatIfScorer({
         </div>
       )}
 
+      {noExistingIn.length > 0 && (
+        <div style={{ marginTop: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '7px 12px', fontSize: 11.5, color: '#EF4444', lineHeight: 1.5 }}>
+          No existing {noExistingIn.join(', ')} grades found — simulation skipped for {noExistingIn.length > 1 ? 'those categories' : 'that category'}.
+        </div>
+      )}
+
       {!categoryWeights && (
-        <div style={{ marginTop: 10, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '8px 12px', fontSize: 11.5, color: '#D97706', lineHeight: 1.5 }}>
-          Category weights not detected from HAC — using Katy ISD defaults (Daily 10% / Minor 30% / Major 60%). Refresh your Grades page to sync actual weights.
+        <div style={{ marginTop: 8, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '7px 12px', fontSize: 11.5, color: '#D97706', lineHeight: 1.5 }}>
+          Weights not detected from HAC — using Katy ISD defaults (Daily 10% / Minor 30% / Major 60%). Refresh your Grades page to sync actual weights.
         </div>
       )}
       {categoryWeights && (
-        <p style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
           Using weights from HAC: Daily {Math.round(weights.Daily * 100)}% / Minor {Math.round(weights.Minor * 100)}% / Major {Math.round(weights.Major * 100)}%.
         </p>
       )}
