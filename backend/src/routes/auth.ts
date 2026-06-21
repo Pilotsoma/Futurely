@@ -310,10 +310,6 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     const userRole = roleInput === 'PARENT' ? 'PARENT' : roleInput === 'TEACHER' ? 'TEACHER' : roleInput === 'COUNSELOR' ? 'COUNSELOR' : 'STUDENT'
     const defaultTag = userRole === 'PARENT' ? 'Parent' : userRole === 'TEACHER' || userRole === 'COUNSELOR' ? 'Teacher' : 'Student'
 
-    const verificationToken = crypto.randomBytes(32).toString('hex')
-    const verificationExpiry = new Date()
-    verificationExpiry.setHours(verificationExpiry.getHours() + VERIFY_TOKEN_EXPIRY_HOURS)
-
     const user = await prisma.user.create({
       data: {
         email,
@@ -326,10 +322,7 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
       },
     })
 
-    // Fire-and-forget — don't fail registration if email fails
-    void sendVerificationEmail(email, verificationToken).catch((err) =>
-      console.error('Failed to send verification email:', err),
-    )
+    // Email is already verified via OTP — no verification link needed
 
     const token = issueAccessToken(user.id)
     const refreshToken = await issueRefreshToken(user.id)
