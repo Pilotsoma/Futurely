@@ -874,6 +874,12 @@ export const api = {
   adminDenyEducatorRequest: (id: number) =>
     request<{ ok: boolean }>(`/api/admin/educator-requests/${id}/deny`, { method: 'POST' }),
 
+  adminRevokeEducatorRequest: (id: number) =>
+    request<{ ok: boolean }>(`/api/admin/educator-requests/${id}/revoke`, { method: 'POST' }),
+
+  adminReinstateEducatorRequest: (id: number) =>
+    request<{ ok: boolean }>(`/api/admin/educator-requests/${id}/reinstate`, { method: 'POST' }),
+
   // ── Student classroom + counselor ────────────────────────────────────────
 
   studentClassrooms: () =>

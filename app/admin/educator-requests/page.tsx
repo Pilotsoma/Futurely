@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { initWebAuth } from '../../../lib/authState'
 import { api, type EducatorRequest } from '../../../lib/api'
 
@@ -74,10 +75,41 @@ export default function AdminEducatorRequestsPage() {
     }
   }
 
+  async function handleRevoke(id: number) {
+    if (!confirm('Revoke access? This will delete all their classrooms, counselor links, and educator data. This cannot be undone.')) return
+    setActioning(prev => ({ ...prev, [id]: true }))
+    try {
+      await api.adminRevokeEducatorRequest(id)
+      setRequests(prev => prev.filter(r => r.id !== id))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to revoke access')
+    } finally {
+      setActioning(prev => ({ ...prev, [id]: false }))
+    }
+  }
+
+  async function handleReinstate(id: number) {
+    setActioning(prev => ({ ...prev, [id]: true }))
+    try {
+      await api.adminReinstateEducatorRequest(id)
+      setRequests(prev => prev.filter(r => r.id !== id))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to reinstate access')
+    } finally {
+      setActioning(prev => ({ ...prev, [id]: false }))
+    }
+  }
+
   if (!checked) return null
 
   return (
     <div className="fade-up" style={S.shell}>
+      <div style={{ marginBottom: 20 }}>
+        <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to Dashboard
+        </Link>
+      </div>
       <div style={S.pageHeader}>
         <div>
           <h1 style={S.title}>Educator Role Requests</h1>
@@ -166,25 +198,21 @@ export default function AdminEducatorRequestsPage() {
                     <td style={S.td}>
                       {status === 'PENDING' ? (
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            style={S.approveBtn}
-                            onClick={() => void handleApprove(r.id)}
-                            disabled={actioning[r.id]}
-                          >
+                          <button style={S.approveBtn} onClick={() => void handleApprove(r.id)} disabled={actioning[r.id]}>
                             {actioning[r.id] ? '…' : 'Approve'}
                           </button>
-                          <button
-                            style={S.denyBtn}
-                            onClick={() => void handleDeny(r.id)}
-                            disabled={actioning[r.id]}
-                          >
+                          <button style={S.denyBtn} onClick={() => void handleDeny(r.id)} disabled={actioning[r.id]}>
                             {actioning[r.id] ? '…' : 'Deny'}
                           </button>
                         </div>
+                      ) : status === 'APPROVED' ? (
+                        <button style={S.revokeBtn} onClick={() => void handleRevoke(r.id)} disabled={actioning[r.id]}>
+                          {actioning[r.id] ? '…' : 'Revoke Access'}
+                        </button>
                       ) : (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                          {r.status === 'APPROVED' ? 'Approved' : 'Denied'}
-                        </span>
+                        <button style={S.reinstateBtn} onClick={() => void handleReinstate(r.id)} disabled={actioning[r.id]}>
+                          {actioning[r.id] ? '…' : 'Reinstate'}
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -212,8 +240,10 @@ const S: Record<string, React.CSSProperties> = {
   emptySub:    { fontSize: 13, color: 'var(--text-secondary)' },
   th:          { textAlign: 'left' as const, padding: '10px 16px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' },
   td:          { padding: '13px 16px', fontSize: 14, color: 'var(--text)', verticalAlign: 'middle' },
-  approveBtn:  { height: 32, padding: '0 14px', fontSize: 13, fontWeight: 600, background: '#16a34a', color: '#FFFFFF', border: 'none', borderRadius: 7, cursor: 'pointer' },
-  denyBtn:     { height: 32, padding: '0 14px', fontSize: 13, fontWeight: 600, background: 'transparent', color: '#dc2626', border: '1px solid #dc2626', borderRadius: 7, cursor: 'pointer' },
+  approveBtn:    { height: 32, padding: '0 14px', fontSize: 13, fontWeight: 600, background: '#16a34a', color: '#FFFFFF', border: 'none', borderRadius: 7, cursor: 'pointer' },
+  denyBtn:       { height: 32, padding: '0 14px', fontSize: 13, fontWeight: 600, background: 'transparent', color: '#dc2626', border: '1px solid #dc2626', borderRadius: 7, cursor: 'pointer' },
+  revokeBtn:     { height: 32, padding: '0 14px', fontSize: 13, fontWeight: 600, background: '#dc2626', color: '#FFFFFF', border: 'none', borderRadius: 7, cursor: 'pointer' },
+  reinstateBtn:  { height: 32, padding: '0 14px', fontSize: 13, fontWeight: 600, background: '#16a34a', color: '#FFFFFF', border: 'none', borderRadius: 7, cursor: 'pointer' },
   badgeTeacher:  { display: 'inline-block', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 5, padding: '2px 8px', fontSize: 11, fontWeight: 700, color: 'var(--primary)' },
   badgeCounselor: { display: 'inline-block', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 5, padding: '2px 8px', fontSize: 11, fontWeight: 700, color: '#7c3aed' },
   errorBox:    { background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, padding: '12px 16px', color: '#DC2626', fontSize: 13 },
