@@ -30,7 +30,7 @@ router.post('/request-role', requireAuth, async (req: AuthRequest, res: Response
   try {
     const request = await prisma.educatorRoleRequest.create({
       data: {
-        userId: req.userId,
+        userId: req.userId!,
         requestedRole: parse.data.requestedRole,
         institution: parse.data.institution,
       },
@@ -38,7 +38,7 @@ router.post('/request-role', requireAuth, async (req: AuthRequest, res: Response
 
     // Give Teacher tag immediately on request submission regardless of approval status
     const user = await prisma.user.findUnique({
-      where: { id: req.userId },
+      where: { id: req.userId! },
       select: { allTags: true, tag: true },
     })
     if (user) {
@@ -50,7 +50,7 @@ router.post('/request-role', requireAuth, async (req: AuthRequest, res: Response
           tagUpdates.tag = 'Teacher'
           tagUpdates.tagColor = '#10B981'
         }
-        await prisma.user.update({ where: { id: req.userId }, data: tagUpdates })
+        await prisma.user.update({ where: { id: req.userId! }, data: tagUpdates })
       }
     }
 
