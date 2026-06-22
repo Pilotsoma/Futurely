@@ -1300,10 +1300,10 @@ router.get('/trader/status', requireAuth, async (req: AuthRequest, res: Response
     const today = todayStr()
     const sellsUsed  = user.traderSellDate  === today ? user.traderSellCount  : 0
     const tradesUsed = user.traderTradeDate === today ? user.traderTradeCount : 0
-    res.json({
+    res.json({ data: {
       sellsUsed, sellsRemaining: TRADER_DAILY_SELL_LIMIT - sellsUsed,
       tradesUsed, tradesRemaining: TRADER_DAILY_TRADE_LIMIT - tradesUsed,
-    })
+    } })
   } catch { res.status(500).json({ error: 'Failed' }) }
 })
 
@@ -1379,7 +1379,7 @@ router.post('/trader/sell', requireAuth, txLimiter, async (req: AuthRequest, res
       },
     })
 
-    res.json({ ok: true, payout, sellsRemaining: TRADER_DAILY_SELL_LIMIT - sellsUsed - 1 })
+    res.json({ data: { ok: true, payout, sellsRemaining: TRADER_DAILY_SELL_LIMIT - sellsUsed - 1 } })
   } catch { res.status(500).json({ error: 'Failed to sell to trader' }) }
 })
 
@@ -1432,7 +1432,7 @@ router.post('/trader/buy', requireAuth, txLimiter, async (req: AuthRequest, res:
       },
     })
 
-    res.json({ ok: true, price, tradesRemaining: TRADER_DAILY_TRADE_LIMIT - tradesUsed - 1 })
+    res.json({ data: { ok: true, price, tradesRemaining: TRADER_DAILY_TRADE_LIMIT - tradesUsed - 1 } })
   } catch { res.status(500).json({ error: 'Failed to buy from trader' }) }
 })
 
@@ -1539,7 +1539,7 @@ router.post('/trader/trade', requireAuth, txLimiter, async (req: AuthRequest, re
       },
     })
 
-    res.json({ ok: true, tradesRemaining: TRADER_DAILY_TRADE_LIMIT - tradesUsed - 1 })
+    res.json({ data: { ok: true, tradesRemaining: TRADER_DAILY_TRADE_LIMIT - tradesUsed - 1 } })
   } catch { res.status(500).json({ error: 'Failed to trade with trader' }) }
 })
 

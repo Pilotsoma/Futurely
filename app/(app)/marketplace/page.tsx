@@ -1327,9 +1327,9 @@ export default function MarketplacePage() {
       }
     } catch {}
     api.traderCatalog().then(r => {
-      setTraderCatalog(r.data)
+      setTraderCatalog(r)
       setTraderCatalogLoaded(true)
-      try { localStorage.setItem(CATALOG_KEY, JSON.stringify(r.data)) } catch {}
+      try { localStorage.setItem(CATALOG_KEY, JSON.stringify(r)) } catch {}
     }).catch(() => {})
 
     try {
