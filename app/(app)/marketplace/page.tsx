@@ -541,15 +541,24 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
   const [circulation, setCirculation] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Fetch circulation count eagerly on mount so it shows on both tabs
   useEffect(() => {
-    setLoading(true)
+    api.marketplaceItemOwners(item.type, item.id)
+      .then(d => { setOwners(d.owners); setCirculation(d.total) })
+      .catch(() => { setOwners([]); setCirculation(0) })
+  }, [item.type, item.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     if (tab === 'history') {
+      if (history !== null) return
+      setLoading(true)
       api.marketplaceItemHistory(item.type, item.id)
         .then(d => setHistory(d))
         .catch(() => setHistory([]))
         .finally(() => setLoading(false))
     } else {
-      if (owners !== null) { setLoading(false); return }
+      if (owners !== null) { return }
+      setLoading(true)
       api.marketplaceItemOwners(item.type, item.id)
         .then(d => { setOwners(d.owners); setCirculation(d.total) })
         .catch(() => { setOwners([]); setCirculation(0) })
@@ -595,7 +604,14 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
           {loading ? (
             <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
           ) : tab === 'history' ? (
-            <SalesChart data={history ?? []} />
+            <>
+              {circulation !== null && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 12 }}>
+                  <span style={{ color: 'var(--text)' }}>{circulation}</span> in circulation
+                </div>
+              )}
+              <SalesChart data={history ?? []} />
+            </>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {(owners ?? []).length === 0 ? (
