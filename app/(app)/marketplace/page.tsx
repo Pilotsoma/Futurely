@@ -1512,20 +1512,36 @@ export default function MarketplacePage() {
     finally { setTargetLoading(false) }
   }
 
-  function toggleOffer(item: TradeItem) {
-    setSelectedOffer(prev =>
-      prev.some(i => i.id === item.id && i.type === item.type)
-        ? prev.filter(i => !(i.id === item.id && i.type === item.type))
-        : [...prev, item]
-    )
+  function addOffer(item: TradeItem, maxQty: number) {
+    setSelectedOffer(prev => {
+      const selected = prev.filter(i => i.id === item.id && i.type === item.type).length
+      if (selected >= maxQty) return prev
+      return [...prev, item]
+    })
   }
 
-  function toggleRequest(item: TradeItem) {
-    setSelectedRequest(prev =>
-      prev.some(i => i.id === item.id && i.type === item.type)
-        ? prev.filter(i => !(i.id === item.id && i.type === item.type))
-        : [...prev, item]
-    )
+  function removeOffer(item: TradeItem) {
+    setSelectedOffer(prev => {
+      const idx = prev.findLastIndex(i => i.id === item.id && i.type === item.type)
+      if (idx === -1) return prev
+      return [...prev.slice(0, idx), ...prev.slice(idx + 1)]
+    })
+  }
+
+  function addRequest(item: TradeItem, maxQty: number) {
+    setSelectedRequest(prev => {
+      const selected = prev.filter(i => i.id === item.id && i.type === item.type).length
+      if (selected >= maxQty) return prev
+      return [...prev, item]
+    })
+  }
+
+  function removeRequest(item: TradeItem) {
+    setSelectedRequest(prev => {
+      const idx = prev.findLastIndex(i => i.id === item.id && i.type === item.type)
+      if (idx === -1) return prev
+      return [...prev.slice(0, idx), ...prev.slice(idx + 1)]
+    })
   }
 
   async function handleSendTrade() {
@@ -2168,17 +2184,19 @@ export default function MarketplacePage() {
                     }
 
                     // Tile renderer shared by both columns
-                    function TradeGrid({ items, accentColor, onToggle, isSelected }: {
+                    function TradeGrid({ items, accentColor, selectedList, onAdd, onRemove }: {
                       items: Array<TradeItem & { qty: number }>
                       accentColor: string
-                      onToggle: (item: TradeItem) => void
-                      isSelected: (item: TradeItem) => boolean
+                      selectedList: TradeItem[]
+                      onAdd: (item: TradeItem, maxQty: number) => void
+                      onRemove: (item: TradeItem) => void
                     }) {
                       if (items.length === 0) return null
                       return (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 6 }}>
                           {items.map(item => {
-                            const sel = isSelected(item)
+                            const selCount = selectedList.filter(i => i.id === item.id && i.type === item.type).length
+                            const available = item.qty - selCount
                             const borderColor = getRarityBorderColor(item.rarity, item.id)
                             const isRainbowRarity = RARITY_COLOR[item.rarity] === 'rainbow'
                             return (
@@ -2187,25 +2205,30 @@ export default function MarketplacePage() {
                                   style={{
                                     position: 'relative' as const,
                                     borderRadius: 8,
-                                    border: sel ? `2px solid ${accentColor}` : isRainbowRarity ? '2px solid transparent' : `2px solid ${borderColor}44`,
-                                    background: sel ? `${accentColor}18` : 'var(--surface-2)',
+                                    border: selCount > 0 ? `2px solid ${accentColor}` : isRainbowRarity ? '2px solid transparent' : `2px solid ${borderColor}44`,
+                                    background: selCount > 0 ? `${accentColor}18` : 'var(--surface-2)',
                                     padding: '8px 4px 6px',
                                     display: 'flex',
                                     flexDirection: 'column' as const,
                                     alignItems: 'center',
                                     gap: 4,
-                                    cursor: 'pointer',
+                                    cursor: available > 0 ? 'pointer' : 'default',
+                                    opacity: available === 0 ? 0.5 : 1,
                                     minHeight: 76,
                                   }}
-                                  onClick={() => onToggle(item)}
+                                  onClick={() => onAdd(item, item.qty)}
                                 >
-                                  {/* Qty badge */}
-                                  {item.qty > 1 && (
-                                    <span style={{ position: 'absolute' as const, top: 3, right: 3, fontSize: 9, fontWeight: 800, background: 'var(--surface)', color: 'var(--text-muted)', borderRadius: 99, padding: '1px 4px', border: '1px solid var(--border)', lineHeight: 1.4 }}>×{item.qty}</span>
+                                  {/* Available qty badge (top-right) — shown when > 1 or some are selected */}
+                                  {(item.qty > 1 || selCount > 0) && (
+                                    <span style={{ position: 'absolute' as const, top: 3, right: 3, fontSize: 9, fontWeight: 800, background: 'var(--surface)', color: available === 0 ? '#EF4444' : 'var(--text-muted)', borderRadius: 99, padding: '1px 4px', border: `1px solid ${available === 0 ? '#EF444466' : 'var(--border)'}`, lineHeight: 1.4 }}>×{available}</span>
                                   )}
-                                  {/* Selected check */}
-                                  {sel && (
-                                    <span style={{ position: 'absolute' as const, top: 3, left: 4, fontSize: 11, fontWeight: 800, color: accentColor, lineHeight: 1 }}>✓</span>
+                                  {/* Selected count badge (top-left) — shown when any are selected */}
+                                  {selCount > 0 && (
+                                    <button
+                                      style={{ position: 'absolute' as const, top: 2, left: 2, fontSize: 9, fontWeight: 800, color: accentColor, background: `${accentColor}22`, border: `1px solid ${accentColor}66`, borderRadius: 99, padding: '1px 4px', lineHeight: 1.4, cursor: 'pointer' }}
+                                      onClick={e => { e.stopPropagation(); onRemove(item) }}
+                                      title="Remove one"
+                                    >{selCount}✕</button>
                                   )}
                                   {/* Visual */}
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 28, width: '100%' }}>
@@ -2274,11 +2297,11 @@ export default function MarketplacePage() {
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
                               {theirTagsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🏷️ Tags</div>}
-                              <TradeGrid items={theirTagsDedup} accentColor="var(--primary)" onToggle={item => toggleRequest(item)} isSelected={item => selectedRequest.some(i => i.id === item.id && i.type === item.type)} />
+                              <TradeGrid items={theirTagsDedup} accentColor="var(--primary)" selectedList={selectedRequest} onAdd={(item, max) => addRequest(item, max)} onRemove={item => removeRequest(item)} />
                               {theirColorsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🎨 Colors</div>}
-                              <TradeGrid items={theirColorsDedup} accentColor="var(--primary)" onToggle={item => toggleRequest(item)} isSelected={item => selectedRequest.some(i => i.id === item.id && i.type === item.type)} />
+                              <TradeGrid items={theirColorsDedup} accentColor="var(--primary)" selectedList={selectedRequest} onAdd={(item, max) => addRequest(item, max)} onRemove={item => removeRequest(item)} />
                               {theirPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🖼️ PFP</div>}
-                              <TradeGrid items={theirPfpDedup} accentColor="var(--primary)" onToggle={item => toggleRequest(item)} isSelected={item => selectedRequest.some(i => i.id === item.id && i.type === item.type)} />
+                              <TradeGrid items={theirPfpDedup} accentColor="var(--primary)" selectedList={selectedRequest} onAdd={(item, max) => addRequest(item, max)} onRemove={item => removeRequest(item)} />
                               {selectedRequest.length > 0 && selectedRequestTotal > 0 && (
                                 <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, paddingTop: 6, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 3 }}>
                                   <CoinIcon size={11} />Selected: {selectedRequestTotal.toLocaleString()}
@@ -2305,11 +2328,11 @@ export default function MarketplacePage() {
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
                               {myTagsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🏷️ Tags</div>}
-                              <TradeGrid items={myTagsDedup} accentColor="#22C55E" onToggle={item => toggleOffer(item)} isSelected={item => selectedOffer.some(i => i.id === item.id && i.type === item.type)} />
+                              <TradeGrid items={myTagsDedup} accentColor="#22C55E" selectedList={selectedOffer} onAdd={(item, max) => addOffer(item, max)} onRemove={item => removeOffer(item)} />
                               {myColorsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🎨 Colors</div>}
-                              <TradeGrid items={myColorsDedup} accentColor="#22C55E" onToggle={item => toggleOffer(item)} isSelected={item => selectedOffer.some(i => i.id === item.id && i.type === item.type)} />
+                              <TradeGrid items={myColorsDedup} accentColor="#22C55E" selectedList={selectedOffer} onAdd={(item, max) => addOffer(item, max)} onRemove={item => removeOffer(item)} />
                               {myPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🖼️ PFP</div>}
-                              <TradeGrid items={myPfpDedup} accentColor="#22C55E" onToggle={item => toggleOffer(item)} isSelected={item => selectedOffer.some(i => i.id === item.id && i.type === item.type)} />
+                              <TradeGrid items={myPfpDedup} accentColor="#22C55E" selectedList={selectedOffer} onAdd={(item, max) => addOffer(item, max)} onRemove={item => removeOffer(item)} />
                               {selectedOffer.length > 0 && selectedOfferTotal > 0 && (
                                 <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, paddingTop: 6, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 3 }}>
                                   <CoinIcon size={11} />Selected: {selectedOfferTotal.toLocaleString()}
