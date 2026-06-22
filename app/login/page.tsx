@@ -41,6 +41,7 @@ function LoginPageInner() {
 
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [agreedPrivacy, setAgreedPrivacy]       = useState(false)
+  const [agreedTos, setAgreedTos]               = useState(false)
   const [agreedAge, setAgreedAge]               = useState(false)
 
   const [institution, setInstitution] = useState('')
@@ -154,6 +155,7 @@ function LoginPageInner() {
       return
     }
     setAgreedPrivacy(false)
+    setAgreedTos(false)
     setAgreedAge(false)
     setShowPrivacyModal(true)
   }
@@ -587,22 +589,93 @@ function LoginPageInner() {
         </div>
       )}
 
-      {/* ── Privacy Policy Modal ── */}
+      {/* ── Terms of Service & Privacy Policy Modal ── */}
       {showPrivacyModal && (
         <div style={styles.modalBackdrop} onClick={() => setShowPrivacyModal(false)}>
           <div style={styles.modalCard} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <span style={{ fontWeight: 700, fontSize: 16 }}>Privacy Policy</span>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Terms of Service &amp; Privacy Policy</span>
               <button type="button" onClick={() => setShowPrivacyModal(false)} style={styles.modalClose}>✕</button>
             </div>
 
             <div style={styles.modalBody}>
               <p style={styles.ppMeta}>Effective Date: June 18, 2026 · Futurely, Inc.</p>
 
+              {/* ── Terms of Service ── */}
+              <p style={{ ...styles.ppSection, marginTop: 0, fontSize: 14 }}>Terms of Service</p>
+
               <p style={styles.ppText}>
-                Welcome to Futurely. This Privacy Policy explains how we collect, use, and protect
-                your information when you use our platform. By creating an account you agree to
-                these terms.
+                By creating an account and using Futurely, you agree to be bound by these Terms of
+                Service. Please read them carefully.
+              </p>
+
+              <p style={styles.ppSection}>1. Eligibility</p>
+              <p style={styles.ppText}>
+                You must be at least 13 years of age to use Futurely. By registering, you confirm
+                that you meet this requirement. If you are under 18, a parent or guardian must
+                review and agree to these terms on your behalf.
+              </p>
+
+              <p style={styles.ppSection}>2. Acceptable Use</p>
+              <p style={styles.ppText}>
+                You agree to use Futurely only for lawful purposes. You may not use the platform
+                to harass, threaten, or harm others; post content that is obscene, defamatory, or
+                unlawful; attempt to gain unauthorized access to other accounts or systems; or
+                engage in any activity that disrupts the platform or other users&apos; experience.
+              </p>
+
+              <p style={styles.ppSection}>3. Account Responsibility</p>
+              <p style={styles.ppText}>
+                You are responsible for maintaining the confidentiality of your account credentials.
+                You agree to notify us immediately at <strong>support@futurely.app</strong> if you
+                suspect unauthorized use of your account. Futurely is not liable for losses
+                resulting from unauthorized access caused by your failure to keep credentials secure.
+              </p>
+
+              <p style={styles.ppSection}>4. Virtual Items &amp; Coins</p>
+              <p style={styles.ppText}>
+                Futurely&apos;s marketplace, virtual coins, and in-app items have no real-world
+                monetary value and are not redeemable for cash or external goods. Futurely
+                reserves the right to modify, adjust, or remove virtual items at any time.
+              </p>
+
+              <p style={styles.ppSection}>5. Intellectual Property</p>
+              <p style={styles.ppText}>
+                All content on Futurely — including the platform design, logos, and software — is
+                owned by Futurely, Inc. and protected by applicable intellectual property laws.
+                You may not copy, reproduce, or distribute any platform content without prior
+                written consent.
+              </p>
+
+              <p style={styles.ppSection}>6. Termination</p>
+              <p style={styles.ppText}>
+                Futurely reserves the right to suspend or terminate accounts that violate these
+                Terms of Service, engage in harmful behavior, or misuse the platform. You may
+                delete your account at any time via Settings → Account.
+              </p>
+
+              <p style={styles.ppSection}>7. Disclaimer &amp; Limitation of Liability</p>
+              <p style={styles.ppText}>
+                Futurely is provided &quot;as is&quot; without warranties of any kind. We do not
+                guarantee uninterrupted service or that academic data fetched from third-party
+                portals will be accurate or complete. To the extent permitted by law, Futurely
+                is not liable for indirect, incidental, or consequential damages arising from
+                your use of the platform.
+              </p>
+
+              <p style={styles.ppSection}>8. Changes to Terms</p>
+              <p style={styles.ppText}>
+                We may update these Terms periodically. Material changes will be communicated via
+                email or in-app notice. Continued use of Futurely after such notice constitutes
+                acceptance of the updated Terms.
+              </p>
+
+              {/* ── Privacy Policy ── */}
+              <p style={{ ...styles.ppSection, marginTop: 28, fontSize: 14 }}>Privacy Policy</p>
+
+              <p style={styles.ppText}>
+                This Privacy Policy explains how we collect, use, and protect your information
+                when you use our platform.
               </p>
 
               <p style={styles.ppSection}>1. Information We Collect</p>
@@ -678,6 +751,15 @@ function LoginPageInner() {
               <label style={styles.checkRow}>
                 <input
                   type="checkbox"
+                  checked={agreedTos}
+                  onChange={e => setAgreedTos(e.target.checked)}
+                  style={styles.checkbox}
+                />
+                <span style={styles.checkLabel}>I have read and agree to the Terms of Service</span>
+              </label>
+              <label style={styles.checkRow}>
+                <input
+                  type="checkbox"
                   checked={agreedPrivacy}
                   onChange={e => setAgreedPrivacy(e.target.checked)}
                   style={styles.checkbox}
@@ -695,9 +777,9 @@ function LoginPageInner() {
               </label>
               <button
                 type="button"
-                disabled={!agreedPrivacy || !agreedAge || isLoading}
+                disabled={!agreedTos || !agreedPrivacy || !agreedAge || isLoading}
                 onClick={() => { setShowPrivacyModal(false); void doRegisterOrLogin() }}
-                style={{ ...styles.btn, marginTop: 6, opacity: (!agreedPrivacy || !agreedAge || isLoading) ? 0.45 : 1 }}
+                style={{ ...styles.btn, marginTop: 6, opacity: (!agreedTos || !agreedPrivacy || !agreedAge || isLoading) ? 0.45 : 1 }}
               >
                 {isLoading ? 'Creating account...' : 'Continue & Create Account'}
               </button>
