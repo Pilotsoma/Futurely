@@ -544,6 +544,42 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 }
 .tag-mythic { animation: godMythic 2.5s ease-in-out infinite; font-weight: 800 !important; }
 
+@keyframes prodigyGlow {
+  0%, 100% {
+    color: #9ca3af;
+    border-color: rgba(107,114,128,0.6);
+    background: rgba(17,24,39,0.45);
+    text-shadow: 0 0 6px rgba(156,163,175,0.65), 0 0 14px rgba(107,114,128,0.35);
+    box-shadow: 0 0 8px rgba(107,114,128,0.3);
+  }
+  50% {
+    color: #e5e7eb;
+    border-color: rgba(209,213,219,0.75);
+    background: rgba(31,41,55,0.5);
+    text-shadow: 0 0 10px rgba(229,231,235,0.85), 0 0 22px rgba(156,163,175,0.6);
+    box-shadow: 0 0 18px rgba(156,163,175,0.55);
+  }
+}
+.tag-prodigy { animation: prodigyGlow 2.5s ease-in-out infinite; font-weight: 800 !important; }
+
+@keyframes valeGlow {
+  0%, 100% {
+    color: #e8e8ff;
+    border-color: rgba(232,232,255,0.55);
+    background: rgba(255,255,255,0.07);
+    text-shadow: 0 0 5px rgba(255,255,255,0.7), 0 0 12px rgba(232,232,255,0.45);
+    box-shadow: 0 0 8px rgba(255,255,255,0.25);
+  }
+  50% {
+    color: #ffffff;
+    border-color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.12);
+    text-shadow: 0 0 10px rgba(255,255,255,1), 0 0 22px rgba(232,232,255,0.75), 0 0 38px rgba(200,200,255,0.4);
+    box-shadow: 0 0 18px rgba(255,255,255,0.55), 0 0 32px rgba(200,200,255,0.25);
+  }
+}
+.tag-valedictorian { animation: valeGlow 3s ease-in-out infinite; font-weight: 800 !important; }
+
 @keyframes legendaryPulse {
   0%, 100% { border-color: #EAB308; box-shadow: 0 0 16px #EAB30855; }
   50%       { border-color: #FDE68A; box-shadow: 0 0 38px #EAB308aa; }

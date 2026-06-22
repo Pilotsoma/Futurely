@@ -12,6 +12,20 @@ import {
   FeedPost,
 } from '../../../lib/api'
 
+// ── Tag helpers ───────────────────────────────────────────────────────────────
+function tagCssClass(tag?: string | null, tagColor?: string | null): string {
+  if (tag === 'DEV') return 'tag-rainbow'
+  if (tag === 'VIP') return 'tag-mythic'
+  if (tag === 'GOAT') return 'tag-god'
+  if (tag === 'Prodigy') return 'tag-prodigy'
+  if (tag === 'Valedictorian') return 'tag-valedictorian'
+  if (tagColor === 'curse') return 'tag-curse'
+  return ''
+}
+function isAnimatedTag(tag?: string | null): boolean {
+  return tag === 'DEV' || tag === 'VIP' || tag === 'GOAT' || tag === 'Prodigy' || tag === 'Valedictorian'
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DUMMY_PFP = 'https://i.pinimg.com/474x/13/74/20/137420f5b9c39bc911e472f5d20f053e.jpg'
@@ -111,8 +125,8 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
           item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue'
             ? <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={26} />
             : <span
-                className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
-                style={(item.tag === 'VIP' || item.tag === 'GOAT' || item.tag === 'DEV') ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : item.tagColor === 'curse' ? { fontSize: 14, fontWeight: 800, padding: '5px 10px', borderRadius: 8 } : {
+                className={tagCssClass(item.tag, item.tagColor)}
+                style={isAnimatedTag(item.tag) ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : item.tagColor === 'curse' ? { fontSize: 14, fontWeight: 800, padding: '5px 10px', borderRadius: 8 } : {
                   fontSize: 14, fontWeight: 800,
                   color: item.tagColor,
                   textShadow: item.rarity === 'Legendary' ? `0 0 10px ${rarityColor}88` : undefined,
@@ -657,7 +671,7 @@ function ItemPreviewModal({ item, estValue, onClose, onViewProfile }: { item: Pr
                       {owner.tag && (
                         (owner.tagColor === 'verified-yellow' || owner.tagColor === 'verified-blue')
                           ? <VerifiedBadge variant={owner.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
-                          : <span className={owner.tag === 'DEV' ? 'tag-rainbow' : owner.tag === 'VIP' ? 'tag-mythic' : owner.tag === 'GOAT' ? 'tag-god' : owner.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, fontWeight: 700, color: (owner.tag === 'DEV' || owner.tag === 'VIP' || owner.tag === 'GOAT' || owner.tagColor === 'curse') ? undefined : owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>
+                          : <span className={tagCssClass(owner.tag, owner.tagColor)} style={{ fontSize: 11, fontWeight: 700, color: isAnimatedTag(owner.tag) || owner.tagColor === 'curse' ? undefined : owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>
                       )}
                       {(owner.badge === 'verified-yellow' || owner.badge === 'verified-blue') && <VerifiedBadge variant={owner.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                     </div>
@@ -748,7 +762,7 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
               {current.tag
                 ? (current.tagColor === 'verified-yellow' || current.tagColor === 'verified-blue')
                   ? <VerifiedBadge variant={current.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={48} />
-                  : <span className={current.tag === 'VIP' ? 'tag-mythic' : current.tag === 'GOAT' ? 'tag-god' : current.tag === 'DEV' ? 'tag-rainbow' : current.tagColor === 'curse' ? 'tag-curse' : ''} style={{ color: (current.tag === 'VIP' || current.tag === 'GOAT' || current.tag === 'DEV' || current.tagColor === 'curse') ? undefined : current.tagColor ?? carouselColor }}>[{current.tag}]</span>
+                  : <span className={tagCssClass(current.tag, current.tagColor)} style={{ color: isAnimatedTag(current.tag) || current.tagColor === 'curse' ? undefined : current.tagColor ?? carouselColor }}>[{current.tag}]</span>
                 : current.type === 'name-color'
                   ? <span className={current.value === 'rainbow' ? 'name-rainbow' : current.value === 'curse' ? 'name-curse' : ''} style={{ color: (current.value === 'rainbow' || current.value === 'curse') ? undefined : current.value ?? carouselColor }}>{userName ?? 'Username'}</span>
                   : <span>{current.name}</span>
@@ -1062,12 +1076,8 @@ function TraderItemPreview({ type, id, name, tagColor, value, rarity }: {
   if (type === 'tag') {
     if (tagColor === 'verified-yellow') return <VerifiedBadge variant="yellow" size={20} />
     if (tagColor === 'verified-blue')   return <VerifiedBadge variant="blue"   size={20} />
-    const cls =
-      id === 'god'          ? 'tag-mythic'  :
-      id === 'goat'         ? 'tag-god'     :
-      id === 'dev'          ? 'tag-rainbow' :
-      tagColor === 'curse'  ? 'tag-curse'   : ''
-    const base: React.CSSProperties = cls
+    const cls = tagCssClass(name, tagColor)
+    const base: React.CSSProperties = isAnimatedTag(name) || tagColor === 'curse'
       ? { fontSize: 10, fontWeight: 900, padding: '2px 6px', borderRadius: 5 }
       : { fontSize: 10, fontWeight: 800, color: tagColor, padding: '2px 6px', borderRadius: 5, background: `${rarityColor}1A`, border: `1px solid ${rarityColor}44` }
     return <span className={cls} style={base}>{name}</span>
@@ -1912,10 +1922,10 @@ export default function MarketplacePage() {
             (item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue')
               ? <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
               : <span
-                  className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+                  className={tagCssClass(item.tag, item.tagColor)}
                   style={item.tagColor === 'curse'
                     ? { fontSize: 11, fontWeight: 800, padding: '1px 3px', borderRadius: 4, border: '1.5px solid #ff0000' }
-                    : { fontSize: 13, fontWeight: 700, color: (item.tag === 'VIP' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+                    : { fontSize: 13, fontWeight: 700, color: isAnimatedTag(item.tag) ? undefined : item.tagColor ?? '#6B7280' }}
                 >{truncateTag(item.tag ?? '')}</span>
           )}
         </button>
@@ -1933,10 +1943,10 @@ export default function MarketplacePage() {
                 </span>
               </span>
             : <span
-                className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+                className={tagCssClass(item.tag, item.tagColor)}
                 style={item.tagColor === 'curse'
                   ? { flex: 1, fontSize: 13, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '2px 7px', borderRadius: 4, border: '1.5px solid #ff0000', display: 'inline-block', maxWidth: 'max-content' }
-                  : { flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: (item.tag === 'VIP' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+                  : { flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isAnimatedTag(item.tag) ? undefined : item.tagColor ?? '#6B7280' }}
               >{item.tag}</span>
         )}
         <RarityBadge rarity={item.rarity} itemId={item.id} />
@@ -2049,7 +2059,7 @@ export default function MarketplacePage() {
                   {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
                 </span>
                 {item.type === 'tag' ? (
-                  <span className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.tag === 'GOAT' || item.tag === 'VIP' || item.tag === 'DEV' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
+                  <span className={tagCssClass(item.tag, item.tagColor)} style={{ fontSize: 12, fontWeight: 800, color: isAnimatedTag(item.tag) || item.tagColor === 'curse' ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
                 ) : item.type === 'name-color' ? (
                   <span className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.value === 'rainbow' || item.value === 'curse') ? undefined : item.value }}>{inv?.name ?? 'Username'}</span>
                 ) : (
@@ -2165,7 +2175,7 @@ export default function MarketplacePage() {
             const itemPreview = result.won.type === 'tag' ? (
               (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                 ? <div style={{ marginBottom: 4 }}><VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={64} /></div>
-                : <div className={result.won.tag === 'VIP' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tag === 'DEV' ? 'tag-rainbow' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 22, fontWeight: 800, color: (result.won.tag === 'GOAT' || result.won.tag === 'VIP' || result.won.tag === 'DEV' || result.won.tagColor === 'curse') ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
+                : <div className={tagCssClass(result.won.tag, result.won.tagColor)} style={{ fontSize: 22, fontWeight: 800, color: isAnimatedTag(result.won.tag) || result.won.tagColor === 'curse' ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
                     [{result.won.tag}]
                   </div>
             ) : result.won.type === 'name-color' ? (
@@ -2218,7 +2228,7 @@ export default function MarketplacePage() {
                     {result.won.type === 'tag' ? (
                       (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                         ? <VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
-                        : <span className={result.won.tag === 'VIP' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tag === 'DEV' ? 'tag-rainbow' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 700, color: (result.won.tag === 'GOAT' || result.won.tag === 'VIP' || result.won.tag === 'DEV' || result.won.tagColor === 'curse') ? undefined : (result.won.tagColor ?? '#6B7280') }}>
+                        : <span className={tagCssClass(result.won.tag, result.won.tagColor)} style={{ fontSize: 12, fontWeight: 700, color: isAnimatedTag(result.won.tag) || result.won.tagColor === 'curse' ? undefined : (result.won.tagColor ?? '#6B7280') }}>
                             [{result.won.tag}]
                           </span>
                     ) : inv?.tag ? (
@@ -2431,7 +2441,7 @@ export default function MarketplacePage() {
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 600 }}>Username</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              {u.tag && <div className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'VIP' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : u.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (u.tag === 'DEV' || u.tag === 'VIP' || u.tag === 'GOAT' || u.tagColor === 'curse') ? undefined : u.tagColor ?? '#6B7280', fontWeight: 700 }}>[{u.tag}]</div>}
+                              {u.tag && <div className={tagCssClass(u.tag, u.tagColor)} style={{ fontSize: 11, color: isAnimatedTag(u.tag) || u.tagColor === 'curse' ? undefined : u.tagColor ?? '#6B7280', fontWeight: 700 }}>[{u.tag}]</div>}
                               {(u.badge === 'verified-yellow' || u.badge === 'verified-blue') && <VerifiedBadge variant={u.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                             </div>
                           </div>
@@ -2448,7 +2458,7 @@ export default function MarketplacePage() {
                     <div style={{ flex: 1 }}>
                       <div className={tradeTarget.user.nameColor === 'rainbow' ? 'name-rainbow' : tradeTarget.user.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(tradeTarget.user.nameColor) }}>Username</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {tradeTarget.user.tag && <div className={tradeTarget.user.tag === 'DEV' ? 'tag-rainbow' : tradeTarget.user.tag === 'VIP' ? 'tag-mythic' : tradeTarget.user.tag === 'GOAT' ? 'tag-god' : tradeTarget.user.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (tradeTarget.user.tag === 'DEV' || tradeTarget.user.tag === 'GOAT' || tradeTarget.user.tag === 'VIP' || tradeTarget.user.tagColor === 'curse') ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
+                        {tradeTarget.user.tag && <div className={tagCssClass(tradeTarget.user.tag, tradeTarget.user.tagColor)} style={{ fontSize: 11, color: isAnimatedTag(tradeTarget.user.tag) || tradeTarget.user.tagColor === 'curse' ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
                         {(tradeTarget.user.badge === 'verified-yellow' || tradeTarget.user.badge === 'verified-blue') && <VerifiedBadge variant={tradeTarget.user.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                       </div>
                     </div>
@@ -2527,8 +2537,8 @@ export default function MarketplacePage() {
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 28, width: '100%' }}>
                                     {item.type === 'tag' ? (
                                       <span
-                                        className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
-                                        style={{ fontSize: 9, fontWeight: 800, padding: '1px 4px', borderRadius: 3, border: `1px solid ${item.tagColor === 'curse' ? '#ff0000' : (item.tag === 'GOAT' || item.tag === 'VIP' || item.tag === 'DEV') ? undefined : `${item.tagColor ?? '#6B7280'}66`}`, color: (item.tag === 'GOAT' || item.tag === 'VIP' || item.tag === 'DEV' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}
+                                        className={tagCssClass(item.tag, item.tagColor)}
+                                        style={{ fontSize: 9, fontWeight: 800, padding: '1px 4px', borderRadius: 3, border: `1px solid ${item.tagColor === 'curse' ? '#ff0000' : isAnimatedTag(item.tag) ? undefined : `${item.tagColor ?? '#6B7280'}66`}`, color: isAnimatedTag(item.tag) || item.tagColor === 'curse' ? undefined : item.tagColor ?? '#6B7280', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}
                                       >{item.tag ?? item.id}</span>
                                     ) : item.type === 'name-color' ? (
                                       <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'block', flexShrink: 0, border: '2px solid var(--border)', background: item.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : item.value === 'curse' ? 'rgba(255,0,0,0.25)' : item.value }} />
@@ -2691,7 +2701,7 @@ export default function MarketplacePage() {
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                           <div>
                             <span className={trade.sender.nameColor === 'rainbow' ? 'name-rainbow' : trade.sender.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(trade.sender.nameColor) }}>Username</span>
-                            {trade.sender.tag && <span className={trade.sender.tag === 'DEV' ? 'tag-rainbow' : trade.sender.tag === 'VIP' ? 'tag-mythic' : trade.sender.tag === 'GOAT' ? 'tag-god' : trade.sender.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (trade.sender.tag === 'DEV' || trade.sender.tag === 'GOAT' || trade.sender.tag === 'VIP' || trade.sender.tagColor === 'curse') ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
+                            {trade.sender.tag && <span className={tagCssClass(trade.sender.tag, trade.sender.tagColor)} style={{ fontSize: 11, color: isAnimatedTag(trade.sender.tag) || trade.sender.tagColor === 'curse' ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
                             {(trade.sender.badge === 'verified-yellow' || trade.sender.badge === 'verified-blue') && <VerifiedBadge variant={trade.sender.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>{new Date(trade.createdAt).toLocaleDateString()}</span>
@@ -2746,7 +2756,7 @@ export default function MarketplacePage() {
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                           <div>
                             <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : trade.receiver.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(trade.receiver.nameColor) }}>Username</span>
-                            {trade.receiver.tag && <span className={trade.receiver.tag === 'DEV' ? 'tag-rainbow' : trade.receiver.tag === 'VIP' ? 'tag-mythic' : trade.receiver.tag === 'GOAT' ? 'tag-god' : trade.receiver.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (trade.receiver.tag === 'DEV' || trade.receiver.tag === 'GOAT' || trade.receiver.tag === 'VIP' || trade.receiver.tagColor === 'curse') ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
+                            {trade.receiver.tag && <span className={tagCssClass(trade.receiver.tag, trade.receiver.tagColor)} style={{ fontSize: 11, color: isAnimatedTag(trade.receiver.tag) || trade.receiver.tagColor === 'curse' ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
                             {(trade.receiver.badge === 'verified-yellow' || trade.receiver.badge === 'verified-blue') && <VerifiedBadge variant={trade.receiver.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#EAB308', background: '#EAB30818', padding: '2px 8px', borderRadius: 99 }}>
@@ -3227,8 +3237,8 @@ export default function MarketplacePage() {
                           entry.tagColor === 'verified-yellow' || entry.tagColor === 'verified-blue'
                             ? <VerifiedBadge variant={entry.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />
                             : <span
-                                className={entry.tag === 'DEV' ? 'tag-rainbow' : entry.tag === 'VIP' ? 'tag-mythic' : entry.tag === 'GOAT' ? 'tag-god' : entry.tagColor === 'curse' ? 'tag-curse' : ''}
-                                style={{ fontSize: 11, fontWeight: 700, color: (entry.tag === 'DEV' || entry.tag === 'VIP' || entry.tag === 'GOAT' || entry.tagColor === 'curse') ? undefined : entry.tagColor ?? '#6B7280' }}
+                                className={tagCssClass(entry.tag, entry.tagColor)}
+                                style={{ fontSize: 11, fontWeight: 700, color: isAnimatedTag(entry.tag) || entry.tagColor === 'curse' ? undefined : entry.tagColor ?? '#6B7280' }}
                               >[{entry.tag}]</span>
                         )}
                         {(entry.badge === 'verified-yellow' || entry.badge === 'verified-blue') && <VerifiedBadge variant={entry.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
@@ -3295,8 +3305,8 @@ export default function MarketplacePage() {
                                       style={{ fontSize: 11, fontWeight: 800, padding: '1px 3px', borderRadius: 4, border: '1.5px solid #ff0000' }}
                                     >CURSE</span>
                                   : <span
-                                      className={item.name === 'VIP' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : item.name === 'DEV' ? 'tag-rainbow' : ''}
-                                      style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'VIP' || item.name === 'GOAT' || item.name === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+                                      className={tagCssClass(item.name, item.tagColor)}
+                                      style={{ fontSize: 11, fontWeight: 800, color: isAnimatedTag(item.name) ? undefined : item.tagColor ?? '#6B7280' }}
                                     >{truncateTag(item.name ?? '')}</span>
                             )}
                           </div>
@@ -3392,8 +3402,8 @@ export default function MarketplacePage() {
                         profilePanel.tagColor === 'verified-yellow' || profilePanel.tagColor === 'verified-blue'
                           ? <VerifiedBadge variant={profilePanel.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                           : <span
-                              className={profilePanel.tag === 'DEV' ? 'tag-rainbow' : profilePanel.tag === 'VIP' ? 'tag-mythic' : profilePanel.tag === 'GOAT' ? 'tag-god' : profilePanel.tagColor === 'curse' ? 'tag-curse' : ''}
-                              style={profilePanel.tag === 'DEV' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' } : profilePanel.tag === 'VIP' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4 } : profilePanel.tag === 'GOAT' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' } : profilePanel.tagColor === 'curse' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1.5px solid #ff0000' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'var(--primary-dim)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
+                              className={tagCssClass(profilePanel.tag, profilePanel.tagColor)}
+                              style={isAnimatedTag(profilePanel.tag) ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4 } : profilePanel.tagColor === 'curse' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1.5px solid #ff0000' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'var(--primary-dim)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
                             >
                               {profilePanel.tag}
                             </span>

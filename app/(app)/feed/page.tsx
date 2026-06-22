@@ -260,7 +260,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
                   {profile.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
                     profile.tagColor === 'verified-yellow' || profile.tagColor === 'verified-blue'
                       ? <VerifiedBadge variant={profile.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
-                      : <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : profile.tagColor === 'curse' ? 'tag-curse' : ''} style={isDevTag ? O.tagDev : isMythicTag ? O.tagGod : isGodTag ? O.tagGod : profile.tagColor === 'curse' ? { ...O.tag, border: '1px solid #ff0000' } : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
+                      : <span className={tagCssClass(profile.tag, profile.tagColor)} style={isAnimatedTag(profile.tag) ? { ...O.tag } : profile.tagColor === 'curse' ? { ...O.tag, border: '1px solid #ff0000' } : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
                           {profile.tag}
                         </span>
                   )}
@@ -559,7 +559,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             {post.user.tag && (
               tagColor === 'verified-yellow' || tagColor === 'verified-blue'
                 ? <VerifiedBadge variant={tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
-                : <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : tagColor === 'curse' ? 'tag-curse' : ''} style={isDevTag ? P.tagDev : isMythicTag ? P.tagGod : isGodTag ? P.tagGod : tagColor === 'curse' ? { ...P.tag, border: '1px solid #ff0000' } : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
+                : <span className={tagCssClass(post.user.tag, tagColor)} style={isAnimatedTag(post.user.tag) ? { ...P.tag } : tagColor === 'curse' ? { ...P.tag, border: '1px solid #ff0000' } : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
                     {post.user.tag}
                   </span>
             )}
@@ -609,9 +609,9 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)' }}>
             {/* Avatar: pfp type uses won effect, others use default */}
             {post.unboxItemType === 'pfp' ? (
-              <div className={pfpClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemValue) }}>D</div>
+              <div className={pfpClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemValue) }}>{(post.user.name?.[0] ?? 'U').toUpperCase()}</div>
             ) : (
-              <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>D</div>
+              <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>{(post.user.name?.[0] ?? 'U').toUpperCase()}</div>
             )}
             {/* Name + tag row */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
@@ -623,20 +623,20 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
               <span
                 className={post.unboxItemType === 'name-color' ? nameColorClass(post.unboxItemValue) : ''}
                 style={{ fontSize: 13, fontWeight: 800, ...(post.unboxItemType === 'name-color' ? nameColorStyle(post.unboxItemValue) : { color: 'var(--text)' }) }}
-              >DUMMY</span>
+              >{post.user.name ?? 'User'}</span>
               {post.unboxItemType === 'tag' ? (
                 post.unboxItemTagColor === 'verified-yellow' || post.unboxItemTagColor === 'verified-blue'
                   ? <VerifiedBadge variant={post.unboxItemTagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={18} />
                   : <span
-                      className={post.unboxItemTagColor === 'curse' ? 'tag-curse' : ''}
-                      style={{ ...P.tag, color: post.unboxItemTagColor === 'curse' ? undefined : post.unboxItemTagColor || '#6B7280', border: `1px solid ${post.unboxItemTagColor === 'curse' ? '#ff0000' : post.unboxItemTagColor || '#6B7280'}`, background: post.unboxItemTagColor && post.unboxItemTagColor !== 'curse' ? `${post.unboxItemTagColor}22` : 'rgba(107,114,128,0.12)' }}
+                      className={tagCssClass(post.unboxItemName, post.unboxItemTagColor)}
+                      style={isAnimatedTag(post.unboxItemName) ? { ...P.tag } : post.unboxItemTagColor === 'curse' ? { ...P.tag, border: '1px solid #ff0000' } : { ...P.tag, color: post.unboxItemTagColor || '#6B7280', border: `1px solid ${post.unboxItemTagColor || '#6B7280'}`, background: post.unboxItemTagColor ? `${post.unboxItemTagColor}22` : 'rgba(107,114,128,0.12)' }}
                     >
                       {post.unboxItemName}
                     </span>
               ) : (
-                <span style={{ ...P.tag, color: '#6B7280', border: '1px solid rgba(107,114,128,0.4)', background: 'rgba(107,114,128,0.12)' }}>
-                  DUMMY
-                </span>
+                post.user.tag
+                  ? <span className={tagCssClass(post.user.tag, post.user.tagColor)} style={isAnimatedTag(post.user.tag) ? { ...P.tag } : post.user.tagColor === 'curse' ? { ...P.tag, border: '1px solid #ff0000' } : { ...P.tag, color: post.user.tagColor || '#6B7280', border: `1px solid ${post.user.tagColor || 'rgba(107,114,128,0.4)'}`, background: post.user.tagColor ? `${post.user.tagColor}22` : 'rgba(107,114,128,0.12)' }}>{post.user.tag}</span>
+                  : <span style={{ ...P.tag, color: '#6B7280', border: '1px solid rgba(107,114,128,0.4)', background: 'rgba(107,114,128,0.12)' }}>Student</span>
               )}
             </div>
           </div>
@@ -685,14 +685,14 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           {isItemGiveaway && post.giveawayTag && (
             <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
               {isPfpGiveaway ? (
-                <div className={pfpClass(post.giveawayTagColor)} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, ...pfpStyle(post.giveawayTagColor) }}>D</div>
+                <div className={pfpClass(post.giveawayTagColor)} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, ...pfpStyle(post.giveawayTagColor) }}>U</div>
               ) : (
-                <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>D</div>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>U</div>
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
                   <span className={isNameColorGiveaway && giveawayRainbow ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(isNameColorGiveaway && !giveawayRainbow ? { color: post.giveawayTagColor ?? 'var(--text)' } : !isNameColorGiveaway ? { color: 'var(--text)' } : {}) }}>
-                    DUMMY
+                    Username
                   </span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>[Student]</span>
                 </div>
@@ -1069,13 +1069,9 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                     tagColor === 'verified-yellow' || tagColor === 'verified-blue'
                       ? <VerifiedBadge variant={tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
                       : <span
-                          className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : tagColor === 'curse' ? 'tag-curse' : ''}
-                          style={isDevTag
-                            ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' }
-                            : isMythicTag
+                          className={tagCssClass(c.user.tag, tagColor)}
+                          style={isAnimatedTag(c.user.tag)
                             ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }
-                            : isGodTag
-                            ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' }
                             : tagColor === 'curse'
                             ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff0000' }
                             : { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }
@@ -1172,8 +1168,8 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
                 u.tagColor === 'verified-yellow' || u.tagColor === 'verified-blue'
                   ? <VerifiedBadge variant={u.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                   : <span
-                      className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'VIP' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : u.tagColor === 'curse' ? 'tag-curse' : ''}
-                      style={u.tag === 'DEV' ? P.tagDev : u.tag === 'VIP' ? P.tagGod : u.tag === 'GOAT' ? P.tagGod : u.tagColor === 'curse' ? { ...P.tag } : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
+                      className={tagCssClass(u.tag, u.tagColor)}
+                      style={isAnimatedTag(u.tag) ? { ...P.tag } : u.tagColor === 'curse' ? { ...P.tag } : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
                     >{u.tag}</span>
               )}
               {(u.badge === 'verified-yellow' || u.badge === 'verified-blue') && <VerifiedBadge variant={u.badge === 'verified-yellow' ? 'yellow' : 'blue'} />}
@@ -1811,6 +1807,19 @@ const P: Record<string, React.CSSProperties> = {
   followBtn:  { padding: '2px 9px', borderRadius: 5, border: '1px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontWeight: 600, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' as const },
   deleteBtn:  { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center' },
   actionBtn:  { background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 6, fontWeight: 600 },
+}
+
+function tagCssClass(tag?: string | null, tagColor?: string | null): string {
+  if (tag === 'DEV') return 'tag-rainbow'
+  if (tag === 'VIP') return 'tag-mythic'
+  if (tag === 'GOAT') return 'tag-god'
+  if (tag === 'Prodigy') return 'tag-prodigy'
+  if (tag === 'Valedictorian') return 'tag-valedictorian'
+  if (tagColor === 'curse') return 'tag-curse'
+  return ''
+}
+function isAnimatedTag(tag?: string | null): boolean {
+  return tag === 'DEV' || tag === 'VIP' || tag === 'GOAT' || tag === 'Prodigy' || tag === 'Valedictorian'
 }
 
 const N: Record<string, React.CSSProperties> = {

@@ -11,6 +11,19 @@ import PageLoader from '../../../components/ui/PageLoader'
 import CoinIcon from '../../../components/ui/CoinIcon'
 import NotificationBell from '../../../components/ui/NotificationBell'
 
+function tagCssClass(tag?: string | null, tagColor?: string | null): string {
+  if (tag === 'DEV') return 'tag-rainbow'
+  if (tag === 'VIP') return 'tag-mythic'
+  if (tag === 'GOAT') return 'tag-god'
+  if (tag === 'Prodigy') return 'tag-prodigy'
+  if (tag === 'Valedictorian') return 'tag-valedictorian'
+  if (tagColor === 'curse') return 'tag-curse'
+  return ''
+}
+function isAnimatedTag(tag?: string | null): boolean {
+  return tag === 'DEV' || tag === 'VIP' || tag === 'GOAT' || tag === 'Prodigy' || tag === 'Valedictorian'
+}
+
 function useCountUp(target: number | null, duration = 700): number {
   const [val, setVal] = useState(0)
   useEffect(() => {
@@ -547,10 +560,10 @@ export default function DashboardPage() {
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{earned ? m.emoji : '🔒'}</span>
                     <div style={{ flex: 1 }}>
                       {m.tag ? (
-                        <span className={m.tag === 'VIP' ? 'tag-mythic' : m.tag === 'GOAT' ? 'tag-god' : ''} style={{
+                        <span className={tagCssClass(m.tag, m.tagColor)} style={{
                           fontSize: 13, fontWeight: 700,
-                          color: (m.tag === 'GOAT' || m.tag === 'VIP') ? undefined : '#fff',
-                          background: (m.tag === 'GOAT' || m.tag === 'VIP') ? undefined : m.tagColor,
+                          color: isAnimatedTag(m.tag) ? undefined : '#fff',
+                          background: isAnimatedTag(m.tag) ? undefined : m.tagColor,
                           borderRadius: 6, padding: '2px 8px',
                           marginRight: 4,
                         }}>
