@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView, useScroll, useTransform } from 'framer-motion'
+import Particles from './Particles'
+import BorderGlow from './BorderGlow'
 
 function Reveal({
   children, delay = 0, y = 32, style,
@@ -104,7 +106,18 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', paddingTop: 60 }}>
+      <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', paddingTop: 60, overflow: 'hidden' }}>
+        <Particles
+          particleColors={['#ffffff']}
+          particleCount={200}
+          particleSpread={10}
+          speed={0.1}
+          particleBaseSize={100}
+          moveParticlesOnHover
+          alphaParticles={false}
+          disableRotation={false}
+          pixelRatio={1}
+        />
 
         {/* Subtle warm washes */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
@@ -255,46 +268,60 @@ export default function LandingPage() {
         {/* Row 1 */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
           <Reveal delay={0.04}>
-            <BentoCard accent="#2D6A4F" icon={ICON_GRADES} label="Grade Portal"
-              desc="Connect HAC or PowerSchool. Every grade, GPA trend, classwork score, and transcript — pulled in automatically. No more logging into clunky school portals."
-              large />
+            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
+              <BentoCard accent="#2D6A4F" icon={ICON_GRADES} label="Grade Portal"
+                desc="Connect HAC or PowerSchool. Every grade, GPA trend, classwork score, and transcript — pulled in automatically. No more logging into clunky school portals."
+                large />
+            </BorderGlow>
           </Reveal>
           <Reveal delay={0.1}>
-            <BentoCard accent="#2B4A8E" icon={ICON_AI} label="AI Advisor"
-              desc="Ask anything about your grades, college chances, or what to prioritize. Get answers built around your actual data." />
+            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
+              <BentoCard accent="#2B4A8E" icon={ICON_AI} label="AI Advisor"
+                desc="Ask anything about your grades, college chances, or what to prioritize. Get answers built around your actual data." />
+            </BorderGlow>
           </Reveal>
         </div>
 
         {/* Row 2 */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
           <Reveal delay={0.06}>
-            <BentoCard accent="#8A6E2D" icon={ICON_PLANNER} label="Smart Planner"
-              desc="Assignments, deadlines, and priorities surfaced automatically. Never miss a due date again." />
+            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
+              <BentoCard accent="#8A6E2D" icon={ICON_PLANNER} label="Smart Planner"
+                desc="Assignments, deadlines, and priorities surfaced automatically. Never miss a due date again." />
+            </BorderGlow>
           </Reveal>
           <Reveal delay={0.12}>
-            <BentoCard accent="#6A5A8A" icon={ICON_SIM} label="GPA Simulator"
-              desc="See how a grade change affects your GPA in real time before you turn it in." />
+            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
+              <BentoCard accent="#6A5A8A" icon={ICON_SIM} label="GPA Simulator"
+                desc="See how a grade change affects your GPA in real time before you turn it in." />
+            </BorderGlow>
           </Reveal>
           <Reveal delay={0.18}>
-            <BentoCard accent="#C45A1A" icon={ICON_STREAK} label="Daily Streaks"
-              desc="Log in every day. Build your streak. Earn coins, exclusive tags, and unlock the Marketplace." />
+            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
+              <BentoCard accent="#C45A1A" icon={ICON_STREAK} label="Daily Streaks"
+                desc="Log in every day. Build your streak. Earn coins, exclusive tags, and unlock the Marketplace." />
+            </BorderGlow>
           </Reveal>
         </div>
 
         {/* Row 3 */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14 }}>
           <Reveal delay={0.08}>
-            <BentoCard accent="#3A6B8A" icon={ICON_SOCIAL} label="Study Feed"
-              desc="Posts, reactions, follows. A social layer built for students — not another distraction." />
+            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
+              <BentoCard accent="#3A6B8A" icon={ICON_SOCIAL} label="Study Feed"
+                desc="Posts, reactions, follows. A social layer built for students — not another distraction." />
+            </BorderGlow>
           </Reveal>
           <Reveal delay={0.14}>
-            <BentoCard accent="#2D6A4F" icon={
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
-              </svg>
-            } label="Marketplace"
-              desc="Unlock at a 3-day streak. Buy, sell, and trade items with coins you earn by showing up. Earn enough coins and you can snag exclusive profile effects, name colors, and gear."
-              large />
+            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
+              <BentoCard accent="#2D6A4F" icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+                </svg>
+              } label="Marketplace"
+                desc="Unlock at a 3-day streak. Buy, sell, and trade items with coins you earn by showing up. Earn enough coins and you can snag exclusive profile effects, name colors, and gear."
+                large />
+            </BorderGlow>
           </Reveal>
         </div>
       </section>
@@ -317,17 +344,17 @@ export default function LandingPage() {
               { n: '03', title: 'See your full picture', desc: 'Grades, GPA trends, upcoming deadlines, and AI insights — all in one place, automatically.' },
             ].map((s, i) => (
               <Reveal key={s.n} delay={i * 0.1}>
-                <div style={{
-                  padding: '36px 28px', borderRadius: 20,
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  boxShadow: '0 1px 4px rgba(26,21,14,0.06)',
-                  height: '100%',
-                }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', letterSpacing: '2px', marginBottom: 20 }}>{s.n}</div>
-                  <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.4px', marginBottom: 12, lineHeight: 1.25 }}>{s.title}</h3>
-                  <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', lineHeight: 1.75 }}>{s.desc}</p>
-                </div>
+                <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
+                  <div style={{
+                    padding: '36px 28px', borderRadius: 19,
+                    boxShadow: '0 1px 4px rgba(26,21,14,0.06)',
+                    height: '100%',
+                  }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', letterSpacing: '2px', marginBottom: 20 }}>{s.n}</div>
+                    <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.4px', marginBottom: 12, lineHeight: 1.25 }}>{s.title}</h3>
+                    <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', lineHeight: 1.75 }}>{s.desc}</p>
+                  </div>
+                </BorderGlow>
               </Reveal>
             ))}
           </div>
@@ -400,24 +427,21 @@ function BentoCard({ accent, icon, label, desc, large = false }: {
   return (
     <div style={{
       background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 20,
+      borderRadius: 19,
       padding: large ? '36px 32px' : '28px 26px',
       height: '100%',
       position: 'relative',
       overflow: 'hidden',
       boxShadow: '0 1px 4px rgba(26,21,14,0.05)',
-      transition: 'border-color 0.25s, transform 0.25s, box-shadow 0.25s',
+      transition: 'transform 0.25s, box-shadow 0.25s',
     }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLDivElement
-        el.style.borderColor = `rgba(${rgb},0.35)`
-        el.style.transform = 'translateY(-3px)'
+        el.style.transform = 'translateY(-2px)'
         el.style.boxShadow = `0 12px 40px rgba(${rgb},0.10), 0 3px 10px rgba(${rgb},0.07)`
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLDivElement
-        el.style.borderColor = 'var(--border)'
         el.style.transform = 'translateY(0px)'
         el.style.boxShadow = '0 1px 4px rgba(26,21,14,0.05)'
       }}
