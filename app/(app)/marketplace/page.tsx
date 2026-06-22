@@ -3238,10 +3238,12 @@ export default function MarketplacePage() {
 
       {/* ── CATALOG TAB ── */}
       {tab === 'catalog' && (() => {
-        const sections: Array<{ label: string; type: 'tag' | 'name-color' | 'pfp' }> = [
-          { label: '🏷️ Tags', type: 'tag' },
-          { label: '🎨 Name Colors', type: 'name-color' },
-          { label: '🖼️ Profile Picture Effects', type: 'pfp' },
+        const isBadge = (i: CatalogItem) => i.type === 'tag' && (i.tagColor === 'verified-yellow' || i.tagColor === 'verified-blue')
+        const sections: Array<{ label: string; id: string; filter: (i: CatalogItem) => boolean }> = [
+          { label: '🏅 Badges',                  id: 'badge',      filter: i => isBadge(i) },
+          { label: '🏷️ Tags',                    id: 'tag',        filter: i => i.type === 'tag' && !isBadge(i) },
+          { label: '🎨 Name Colors',             id: 'name-color', filter: i => i.type === 'name-color' },
+          { label: '🖼️ Profile Picture Effects', id: 'pfp',        filter: i => i.type === 'pfp' },
         ]
         const rarityOrder: Record<string, number> = { Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5 }
         return (
@@ -3249,10 +3251,11 @@ export default function MarketplacePage() {
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20, marginTop: -8 }}>Every single item — click any item to see who owns it.</p>
             {sections.map(sec => {
               const items = CATALOG_ALL_ITEMS
-                .filter(i => i.type === sec.type)
+                .filter(i => sec.filter(i))
                 .sort((a, b) => (rarityOrder[a.rarity] ?? 9) - (rarityOrder[b.rarity] ?? 9))
+              if (items.length === 0) return null
               return (
-                <div key={sec.type} className="ns-card" style={{ padding: 18, marginBottom: 16 }}>
+                <div key={sec.id} className="ns-card" style={{ padding: 18, marginBottom: 16 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>{sec.label}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                     {items.map((item, i) => {
