@@ -1039,6 +1039,50 @@ function SpinWheelModal({
 // ── Trader sub-components (memoized to avoid parent re-render cost) ───────────
 
 const SELL_SKIP = new Set(['GOAT', 'Novice', 'Pro', 'Veteran', 'Legend'])
+
+function TraderItemPreview({ type, id, name, tagColor, value, rarity }: {
+  type: 'tag' | 'name-color' | 'pfp'
+  id: string
+  name: string
+  tagColor?: string
+  value?: string
+  rarity: string
+}) {
+  const rarityColor = getRarityColor(rarity, id)
+  if (type === 'tag') {
+    if (tagColor === 'verified-yellow') return <VerifiedBadge variant="yellow" size={20} />
+    if (tagColor === 'verified-blue')   return <VerifiedBadge variant="blue"   size={20} />
+    const cls =
+      id === 'god'          ? 'tag-mythic'  :
+      id === 'goat'         ? 'tag-god'     :
+      id === 'dev'          ? 'tag-rainbow' :
+      tagColor === 'curse'  ? 'tag-curse'   : ''
+    const base: React.CSSProperties = cls
+      ? { fontSize: 10, fontWeight: 900, padding: '2px 6px', borderRadius: 5 }
+      : { fontSize: 10, fontWeight: 800, color: tagColor, padding: '2px 6px', borderRadius: 5, background: `${rarityColor}1A`, border: `1px solid ${rarityColor}44` }
+    return <span className={cls} style={base}>{name}</span>
+  }
+  if (type === 'name-color') {
+    const isRainbow = value === 'rainbow'
+    const isCurse   = value === 'curse'
+    return (
+      <span
+        className={isRainbow ? 'name-rainbow' : isCurse ? 'name-curse' : ''}
+        style={{ fontSize: 11, fontWeight: 800, color: (!isRainbow && !isCurse) ? value : undefined, letterSpacing: '0.2px' }}
+      >
+        Name
+      </span>
+    )
+  }
+  return (
+    <div
+      className={pfpClass(value)}
+      style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 11, flexShrink: 0, ...pfpStyle(value) }}
+    >
+      A
+    </div>
+  )
+}
 const TRADER_RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
 
 const TraderSellGrid = React.memo(function TraderSellGrid({
@@ -1050,11 +1094,11 @@ const TraderSellGrid = React.memo(function TraderSellGrid({
 }) {
   const items = useMemo(() => {
     const raw = [
-      ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity })),
-      ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity })),
-      ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity })),
+      ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity, tagColor: t.tagColor, value: undefined as string | undefined })),
+      ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity, tagColor: undefined as string | undefined, value: c.value })),
+      ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity, tagColor: undefined as string | undefined, value: p.value })),
     ].filter(i => !SELL_SKIP.has(i.id))
-    const seen = new Map<string, { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number }>()
+    const seen = new Map<string, { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; tagColor?: string; value?: string; count: number }>()
     for (const item of raw) {
       const key = `${item.type}:${item.id}`
       const ex = seen.get(key)
@@ -1080,11 +1124,9 @@ const TraderSellGrid = React.memo(function TraderSellGrid({
             <button
               key={`${item.type}:${item.id}`}
               onClick={() => onSell({ type: item.type, id: item.id, name: item.name, rarity: item.rarity, payout })}
-              style={{ width: '100%', padding: '10px 6px', borderRadius: 10, border: `2px solid ${color}44`, background: 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+              style={{ width: '100%', padding: '10px 6px', borderRadius: 10, border: `2px solid ${color}44`, background: 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-word' as const }}>
-                {item.type === 'tag' ? `[${item.name}]` : item.name}
-              </div>
+              <TraderItemPreview type={item.type} id={item.id} name={item.name} tagColor={item.tagColor} value={item.value} rarity={item.rarity} />
               {item.count > 1 && (
                 <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)', background: 'var(--surface)', padding: '1px 6px', borderRadius: 99 }}>
                   x{item.count.toLocaleString()}
@@ -1144,10 +1186,8 @@ const TraderBuyGrid = React.memo(function TraderBuyGrid({
             const canAfford = coins >= item.traderPrice
             return (
               <button key={`${item.type}:${item.id}`} onClick={() => onBuy(item)}
-                style={{ width: '100%', padding: '10px 6px', borderRadius: 10, border: `2px solid ${color}${canAfford ? '66' : '22'}`, background: 'var(--surface-2)', cursor: canAfford ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: canAfford ? 1 : 0.5 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-word' as const }}>
-                  {item.type === 'tag' ? `[${item.name}]` : item.name}
-                </div>
+                style={{ width: '100%', padding: '10px 6px', borderRadius: 10, border: `2px solid ${color}${canAfford ? '66' : '22'}`, background: 'var(--surface-2)', cursor: canAfford ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, opacity: canAfford ? 1 : 0.5 }}>
+                <TraderItemPreview type={item.type} id={item.id} name={item.name} tagColor={item.tagColor} value={item.value} rarity={item.rarity} />
                 <div style={{ fontSize: 10, color: canAfford ? '#EAB308' : 'var(--text-muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <CoinIcon size={9} />{item.traderPrice.toLocaleString()}
                 </div>
@@ -2893,13 +2933,13 @@ export default function MarketplacePage() {
             const canTrade = tradeOfferItems.length > 0 && tradeWantItems.length > 0 && offerEstTotal >= wantPriceTotal
 
             // Deduplicated sell-able inventory
-            const invItems: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number }> = (() => {
+            const invItems: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; tagColor?: string; value?: string; count: number }> = (() => {
               const raw = [
-                ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity })),
-                ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity })),
-                ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity })),
+                ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity, tagColor: t.tagColor, value: undefined as string | undefined })),
+                ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity, tagColor: undefined as string | undefined, value: c.value })),
+                ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity, tagColor: undefined as string | undefined, value: p.value })),
               ].filter(i => !SELL_SKIP.has(i.id))
-              const seen = new Map<string, { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number }>()
+              const seen = new Map<string, { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; tagColor?: string; value?: string; count: number }>()
               for (const item of raw) {
                 const key = `${item.type}:${item.id}`
                 const ex = seen.get(key)
@@ -2945,10 +2985,8 @@ export default function MarketplacePage() {
                             if (isSelected) setTradeOfferItems(prev => prev.filter(x => !(x.type === item.type && x.id === item.id)))
                             else setTradeOfferItems(prev => [...prev, { type: item.type, id: item.id, name: item.name, rarity: item.rarity }])
                           }}
-                          style={{ padding: '8px 4px', borderRadius: 9, border: `2px solid ${isSelected ? color : color + '33'}`, background: isSelected ? `${color}22` : 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-word' as const }}>
-                            {item.type === 'tag' ? `[${item.name}]` : item.name}
-                          </div>
+                          style={{ padding: '8px 4px', borderRadius: 9, border: `2px solid ${isSelected ? color : color + '33'}`, background: isSelected ? `${color}22` : 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+                          <TraderItemPreview type={item.type} id={item.id} name={item.name} tagColor={item.tagColor} value={item.value} rarity={item.rarity} />
                           {item.count > 1 && <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600 }}>x{item.count.toLocaleString()}</div>}
                           <div style={{ fontSize: 9, color: '#EAB308', fontWeight: 600 }}>{estVal > 0 ? estVal.toLocaleString() : '—'}</div>
                         </button>
@@ -2989,10 +3027,8 @@ export default function MarketplacePage() {
                               if (isSelected) setTradeWantItems(prev => prev.filter(x => !(x.type === item.type && x.id === item.id)))
                               else setTradeWantItems(prev => [...prev, item])
                             }}
-                            style={{ padding: '8px 4px', borderRadius: 9, border: `2px solid ${isSelected ? color : color + '33'}`, background: isSelected ? `${color}22` : 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-word' as const }}>
-                              {item.type === 'tag' ? `[${item.name}]` : item.name}
-                            </div>
+                            style={{ padding: '8px 4px', borderRadius: 9, border: `2px solid ${isSelected ? color : color + '33'}`, background: isSelected ? `${color}22` : 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+                            <TraderItemPreview type={item.type} id={item.id} name={item.name} tagColor={item.tagColor} value={item.value} rarity={item.rarity} />
                             <div style={{ fontSize: 9, color: '#8B5CF6', fontWeight: 600 }}>{item.traderPrice.toLocaleString()}</div>
                           </button>
                         )
