@@ -1187,6 +1187,7 @@ export default function MarketplacePage() {
       .catch(() => setLoading(false))
 
     api.getItemPrices().then(setPrices).catch(() => {})
+    api.traderCatalog().then(r => { setTraderCatalog(r.data); setTraderCatalogLoaded(true) }).catch(() => {})
 
     try {
       const token = getApiToken()
@@ -1253,10 +1254,7 @@ export default function MarketplacePage() {
   useEffect(() => {
     if (tab !== 'trader') return
     api.traderStatus().then(setTraderStatus).catch(() => {})
-    if (!traderCatalogLoaded) {
-      api.traderCatalog().then(r => { setTraderCatalog(r.data); setTraderCatalogLoaded(true) }).catch(() => {})
-    }
-  }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tab])
 
   // Scroll result card into view when a new single result appears
   useEffect(() => {
