@@ -56,9 +56,9 @@ export default function Particles({
         y: Math.random() * h,
         vx: (Math.random() - 0.5) * baseV,
         vy: (Math.random() - 0.5) * baseV,
-        radius: particleBaseSize * 0.01 * (0.4 + Math.random() * 0.8),
+        radius: particleBaseSize * 0.025 * (0.5 + Math.random() * 1.0),
         color: particleColors[Math.floor(Math.random() * particleColors.length)],
-        alpha: alphaParticles ? 0.2 + Math.random() * 0.8 : 0.7 + Math.random() * 0.3,
+        alpha: alphaParticles ? 0.2 + Math.random() * 0.8 : 0.5 + Math.random() * 0.5,
       }))
     }
 
@@ -83,8 +83,8 @@ export default function Particles({
           const dx = p.x - mouseRef.current.x
           const dy = p.y - mouseRef.current.y
           const dist = Math.hypot(dx, dy)
-          if (dist < 100 && dist > 0) {
-            const f = ((100 - dist) / 100) * 0.04
+          if (dist < 160 && dist > 0) {
+            const f = ((160 - dist) / 160) * 0.25
             p.vx += (dx / dist) * f
             p.vy += (dy / dist) * f
           }

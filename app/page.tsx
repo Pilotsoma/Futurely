@@ -68,7 +68,25 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', overflowX: 'hidden', position: 'relative' }}>
+      {/* Fixed cosmic background */}
+      <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse at 50% 30%, #0d0d1f 0%, #05050d 100%)', zIndex: 0 }} />
+      {/* Fixed particles layer */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
+        <Particles
+          particleColors={['#ffffff']}
+          particleCount={200}
+          particleSpread={10}
+          speed={0.1}
+          particleBaseSize={100}
+          moveParticlesOnHover
+          alphaParticles={false}
+          disableRotation={false}
+          pixelRatio={1}
+        />
+      </div>
+      {/* All page content sits above particles */}
+      <div style={{ position: 'relative', zIndex: 2 }}>
 
       {/* ── Scroll progress ──────────────────────────────────────────────── */}
       <motion.div style={{
@@ -106,18 +124,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', paddingTop: 60, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 30%, #0d0d1f 0%, #05050d 100%)' }}>
-        <Particles
-          particleColors={['#ffffff']}
-          particleCount={200}
-          particleSpread={10}
-          speed={0.1}
-          particleBaseSize={100}
-          moveParticlesOnHover
-          alphaParticles={false}
-          disableRotation={false}
-          pixelRatio={1}
-        />
+      <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', paddingTop: 60, overflow: 'hidden' }}>
 
         {/* Subtle warm washes */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
@@ -409,6 +416,7 @@ export default function LandingPage() {
         </div>
         <p>© 2026 Futurely · Built for high school students who mean business.</p>
       </footer>
+      </div>{/* end content wrapper */}
     </div>
   )
 }
