@@ -116,7 +116,7 @@ function avatarContent(user: { name: string | null; avatarUrl?: string | null })
 function nameColorStyle(color: string | null | undefined): React.CSSProperties {
   if (!color || color === 'rainbow' || color === 'curse') return {}
   if (color === '#111111') return { color, textShadow: '0 0 6px rgba(180,180,180,0.65)' }
-  if (color === '#F8F8FF') return { color, textShadow: '0 0 10px rgba(255,255,255,1), 0 0 20px rgba(200,210,255,0.5), 0 0 2px rgba(255,255,255,0.95)' }
+  if (color === '#C0C0C0') return { color: '#E8E8FF', textShadow: '0 0 4px rgba(255,255,255,1), 0 0 8px rgba(255,255,255,0.95), 0 0 18px rgba(255,255,255,0.7), 0 0 35px rgba(210,220,255,0.35)' }
   return { color }
 }
 function nameColorClass(color: string | null | undefined): string {

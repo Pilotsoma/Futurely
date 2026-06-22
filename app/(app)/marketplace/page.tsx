@@ -214,7 +214,7 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'hot-pink',      label: 'Hot Pink (Rare)',          rarity: 'Rare',      type: 'name-color', name: 'Hot Pink',       value: '#DB2777' },
     { id: 'electric-blue', label: 'Electric Blue (Epic)',     rarity: 'Epic',      type: 'name-color', name: 'Electric Blue',  value: '#2563EB' },
     { id: 'magenta',       label: 'Magenta (Epic)',           rarity: 'Epic',      type: 'name-color', name: 'Magenta',        value: '#C026D3' },
-    { id: 'platinum',    label: 'Platinum (Legendary)',   rarity: 'Legendary', type: 'name-color', name: 'Platinum',     value: '#F8F8FF' },
+    { id: 'platinum',    label: 'Platinum (Legendary)',   rarity: 'Legendary', type: 'name-color', name: 'Platinum',     value: '#C0C0C0' },
     { id: 'black',         label: 'Black (Legendary)',        rarity: 'Legendary', type: 'name-color', name: 'Black',          value: '#111111' },
     { id: 'rainbow',       label: 'Rainbow RGB ✨ (Mythic)',  rarity: 'Mythic',    type: 'name-color', name: 'Rainbow RGB',    value: 'rainbow' },
   ],
@@ -265,7 +265,7 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'glow-purple',    label: 'Purple Glow (Epic)',        rarity: 'Epic',      type: 'pfp',        name: 'Purple Glow',   value: 'glow-purple' },
     { id: 'mastermind',     label: 'Valedictorian (Legendary)', rarity: 'Legendary', type: 'tag',        tag: 'Valedictorian',  tagColor: '#FFFFFF' },
     { id: 'prodigy',        label: 'Prodigy (Legendary)',       rarity: 'Legendary', type: 'tag',        tag: 'Prodigy',        tagColor: '#111111' },
-    { id: 'platinum',     label: 'Platinum (Legendary)',    rarity: 'Legendary', type: 'name-color', name: 'Platinum',    value: '#F8F8FF' },
+    { id: 'platinum',     label: 'Platinum (Legendary)',    rarity: 'Legendary', type: 'name-color', name: 'Platinum',    value: '#C0C0C0' },
     { id: 'black',          label: 'Black (Legendary)',         rarity: 'Legendary', type: 'name-color', name: 'Black',         value: '#111111' },
     { id: 'glow-gold',      label: 'Gold Fill (Legendary)',     rarity: 'Legendary', type: 'pfp',        name: 'Gold Fill',     value: 'glow-gold' },
     { id: 'frame-black',    label: 'Void Fill (Legendary)',     rarity: 'Legendary', type: 'pfp',        name: 'Void Fill',     value: 'frame-black' },
@@ -363,7 +363,7 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'lime-green',    type: 'name-color', name: 'Lime Green',     rarity: 'Rare',      value: '#65A30D' },
   { id: 'electric-blue', type: 'name-color', name: 'Electric Blue',  rarity: 'Epic',      value: '#2563EB' },
   { id: 'magenta',       type: 'name-color', name: 'Magenta',        rarity: 'Epic',      value: '#C026D3' },
-  { id: 'platinum',    type: 'name-color', name: 'Platinum',     rarity: 'Legendary', value: '#F8F8FF' },
+  { id: 'platinum',    type: 'name-color', name: 'Platinum',     rarity: 'Legendary', value: '#C0C0C0' },
   { id: 'black',         type: 'name-color', name: 'Black',          rarity: 'Legendary', value: '#111111' },
   { id: 'rainbow',       type: 'name-color', name: 'Rainbow RGB ✨', rarity: 'Mythic',    value: 'rainbow' },
   // ── PFP Effects ──
@@ -411,7 +411,7 @@ interface TraderCatalogItem {
 function ncStyle(color: string | null | undefined, fallback?: string): React.CSSProperties {
   if (!color || color === 'rainbow' || color === 'curse') return fallback ? { color: fallback } : {}
   if (color === '#111111') return { color, textShadow: '0 0 6px rgba(180,180,180,0.65)' }
-  if (color === '#F8F8FF') return { color, textShadow: '0 0 10px rgba(255,255,255,1), 0 0 20px rgba(200,210,255,0.5), 0 0 2px rgba(255,255,255,0.95)' }
+  if (color === '#C0C0C0') return { color: '#E8E8FF', textShadow: '0 0 4px rgba(255,255,255,1), 0 0 8px rgba(255,255,255,0.95), 0 0 18px rgba(255,255,255,0.7), 0 0 35px rgba(210,220,255,0.35)' }
   return { color }
 }
 
