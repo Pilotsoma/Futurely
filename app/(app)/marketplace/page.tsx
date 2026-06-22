@@ -1048,11 +1048,21 @@ const TraderSellGrid = React.memo(function TraderSellGrid({
   prices: Record<string, number>
   onSell: (item: { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; payout: number }) => void
 }) {
-  const items = useMemo(() => [
-    ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity })),
-    ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity })),
-    ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity })),
-  ].filter(i => !SELL_SKIP.has(i.id)), [inv])
+  const items = useMemo(() => {
+    const raw = [
+      ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity })),
+      ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity })),
+      ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity })),
+    ].filter(i => !SELL_SKIP.has(i.id))
+    const seen = new Map<string, { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number }>()
+    for (const item of raw) {
+      const key = `${item.type}:${item.id}`
+      const ex = seen.get(key)
+      if (ex) ex.count++
+      else seen.set(key, { ...item, count: 1 })
+    }
+    return Array.from(seen.values())
+  }, [inv])
 
   if (items.length === 0) {
     return <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Your inventory is empty — nothing to sell.</div>
@@ -1063,18 +1073,23 @@ const TraderSellGrid = React.memo(function TraderSellGrid({
         The trader pays <strong style={{ color: '#EAB308' }}>50% of est value</strong> for any item. Limit: 5 sells/day.
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 8 }}>
-        {items.map((item, i) => {
+        {items.map(item => {
           const payout = Math.floor((prices[`${item.type}:${item.id}`] ?? 0) * 0.5)
           const color = getRarityBorderColor(item.rarity, item.id)
           return (
             <button
-              key={`${item.type}:${item.id}:${i}`}
+              key={`${item.type}:${item.id}`}
               onClick={() => onSell({ type: item.type, id: item.id, name: item.name, rarity: item.rarity, payout })}
               style={{ width: '100%', padding: '10px 6px', borderRadius: 10, border: `2px solid ${color}44`, background: 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
             >
               <div style={{ fontSize: 11, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-word' as const }}>
                 {item.type === 'tag' ? `[${item.name}]` : item.name}
               </div>
+              {item.count > 1 && (
+                <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-muted)', background: 'var(--surface)', padding: '1px 6px', borderRadius: 99 }}>
+                  x{item.count.toLocaleString()}
+                </div>
+              )}
               <div style={{ fontSize: 10, color: '#EAB308', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <CoinIcon size={9} />{payout > 0 ? payout.toLocaleString() : '—'}
               </div>
