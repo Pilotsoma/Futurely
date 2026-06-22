@@ -347,6 +347,17 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'GOAT',           type: 'tag', name: 'GOAT',            rarity: 'Mythic',    tagColor: '#EAB308' },
   { id: 'verified',       type: 'tag', name: 'Verified',        rarity: 'Mythic',    tagColor: 'verified-yellow' },
   { id: 'verified-blue',  type: 'tag', name: 'Verified (Blue)', rarity: 'Mythic',    tagColor: 'verified-blue' },
+  // ── Streak Tags (soulbound) ──
+  { id: 'novice',   type: 'tag', name: 'Novice',   rarity: 'Streak', tagColor: '#22C55E' },
+  { id: 'pro',      type: 'tag', name: 'Pro',      rarity: 'Streak', tagColor: '#3B82F6' },
+  { id: 'veteran',  type: 'tag', name: 'Veteran',  rarity: 'Streak', tagColor: '#F97316' },
+  { id: 'legend',   type: 'tag', name: 'Legend',   rarity: 'Streak', tagColor: '#EC4899' },
+  // ── Staff / Secret Tags ──
+  { id: 'dev',   type: 'tag', name: 'DEV',   rarity: 'Staff', tagColor: '#ff6b6b' },
+  { id: 'admin', type: 'tag', name: 'Admin', rarity: 'Staff', tagColor: '#EF4444' },
+  { id: 'mod',   type: 'tag', name: 'MOD',   rarity: 'Staff', tagColor: '#3B82F6' },
+  { id: 'vip',   type: 'tag', name: 'GOD',   rarity: 'Staff', tagColor: '#A855F7' },
+  { id: 'bot',   type: 'tag', name: 'BOT',   rarity: 'Staff', tagColor: '#6B7280' },
   // ── Name Colors ──
   { id: 'forest-green',  type: 'name-color', name: 'Forest Green',  rarity: 'Common',    value: '#15803D' },
   { id: 'navy-blue',     type: 'name-color', name: 'Navy Blue',      rarity: 'Common',    value: '#1D4ED8' },
