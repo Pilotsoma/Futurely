@@ -695,7 +695,7 @@ function sampleEvenly<T>(arr: T[], n: number): T[] {
 
 const HIGHLIGHT_RARITIES = ['Curse', 'Unobtainable', 'Mythic', 'Legendary']
 
-function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; onClose: () => void }) {
+function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBoxResult; onClose: () => void; userName?: string | null }) {
   const [cardIdx, setCardIdx] = useState(0)
 
   const qty = result.results.length
@@ -749,7 +749,9 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
                 ? (current.tagColor === 'verified-yellow' || current.tagColor === 'verified-blue')
                   ? <VerifiedBadge variant={current.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={48} />
                   : <span className={current.tag === 'VIP' ? 'tag-mythic' : current.tag === 'GOAT' ? 'tag-god' : current.tag === 'DEV' ? 'tag-rainbow' : current.tagColor === 'curse' ? 'tag-curse' : ''} style={{ color: (current.tag === 'VIP' || current.tag === 'GOAT' || current.tag === 'DEV' || current.tagColor === 'curse') ? undefined : current.tagColor ?? carouselColor }}>[{current.tag}]</span>
-                : <span>{current.name}</span>
+                : current.type === 'name-color'
+                  ? <span className={current.value === 'rainbow' ? 'name-rainbow' : current.value === 'curse' ? 'name-curse' : ''} style={{ color: (current.value === 'rainbow' || current.value === 'curse') ? undefined : current.value ?? carouselColor }}>{userName ?? 'Username'}</span>
+                  : <span>{current.name}</span>
               }
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -802,7 +804,11 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
               <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
                 {(g.won.tagColor === 'verified-yellow' || g.won.tagColor === 'verified-blue')
                   ? <><VerifiedBadge variant={g.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} /> Verified</>
-                  : g.won.tag ? `[${g.won.tag}]` : (g.won.name ?? g.won.id)}
+                  : g.won.tag
+                    ? `[${g.won.tag}]`
+                    : g.won.type === 'name-color'
+                      ? <span className={g.won.value === 'rainbow' ? 'name-rainbow' : g.won.value === 'curse' ? 'name-curse' : ''} style={{ color: (g.won.value === 'rainbow' || g.won.value === 'curse') ? undefined : g.won.value }}>{userName ?? 'Username'}</span>
+                      : (g.won.name ?? g.won.id)}
               </div>
               <div style={{ fontSize: 11, color: getRarityColor(g.won.rarity, g.won.id), fontWeight: 700, flexShrink: 0 }}>{g.won.rarity}</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)', flexShrink: 0, minWidth: 32, textAlign: 'right' }}>×{g.count}</div>
@@ -3338,7 +3344,7 @@ export default function MarketplacePage() {
         />
       )}
       {multiResult && (
-        <MultiSpinResultOverlay result={multiResult} onClose={() => setMultiResult(null)} />
+        <MultiSpinResultOverlay result={multiResult} onClose={() => setMultiResult(null)} userName={inv?.name} />
       )}
 
       {/* ── Profile Panel ── */}
