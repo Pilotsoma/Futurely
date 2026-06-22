@@ -146,11 +146,10 @@ export default function Particles({
       init()
     }
 
-    function loop(time: number) {
+    function loop() {
       const { w, h } = dims()
       if (!ctx) return
       ctx.clearRect(0, 0, w, h)
-      const t = time / 1000
       const baseV = speed * particleSpread * 0.015
 
       for (const s of stars) {
@@ -183,9 +182,7 @@ export default function Particles({
         if (s.y < 0)  { s.y += h; s.oy += h }
         if (s.y > h)  { s.y -= h; s.oy -= h }
 
-        // Twinkling
-        const twinkle = 0.75 + 0.25 * Math.sin(t * s.twinkleFreq + s.twinklePhase)
-        const alpha = s.alpha * twinkle
+        const alpha = s.alpha
 
         // Draw star sprite (bloom + core)
         const sw = s.sprite.width

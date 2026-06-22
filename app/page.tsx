@@ -72,9 +72,8 @@ export default function LandingPage() {
       {/* Fixed cosmic background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0,
         background: `
-          radial-gradient(ellipse at 18% 72%, rgba(60,20,110,0.28) 0%, transparent 48%),
-          radial-gradient(ellipse at 82% 18%, rgba(15,40,100,0.22) 0%, transparent 45%),
-          radial-gradient(ellipse at 55% 90%, rgba(20,10,60,0.18) 0%, transparent 40%),
+          radial-gradient(ellipse at 18% 72%, rgba(50,15,90,0.12) 0%, transparent 48%),
+          radial-gradient(ellipse at 82% 18%, rgba(10,30,80,0.10) 0%, transparent 45%),
           radial-gradient(ellipse at 50% 40%, #0c0c22 0%, #04040e 100%)
         `.replace(/\s+/g,' ')
       }} />
