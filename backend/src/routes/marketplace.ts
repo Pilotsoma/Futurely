@@ -152,9 +152,9 @@ const DEV_CURSE_ITEMS: DevCurseItem[] = [
   { id: 'learner',    name: 'Learner',    tag: 'Learner',    tagColor: '#94A3B8', rarity: 'Common', itemType: 'tag', weight: 33332 },
   { id: 'c-student',  name: 'C Student',  tag: 'C Student',  tagColor: '#78716C', rarity: 'Common', itemType: 'tag', weight: 33332 },
   { id: 'bottom-100', name: 'Bottom 100', tag: 'Bottom 100', tagColor: '#6B7280', rarity: 'Common', itemType: 'tag', weight: 33333 },
-  { id: 'curse-tag',  name: 'CURSE tag',  tag: 'CURSE',      tagColor: 'curse',   rarity: 'Curse',  itemType: 'tag', weight: 1 },
-  { id: 'curse-name', name: 'Curse Name Color', value: 'curse', rarity: 'Curse', itemType: 'name-color', weight: 1 },
-  { id: 'curse',      name: 'The Curse PFP', value: 'unobtainable-curse', rarity: 'Curse', itemType: 'pfp', weight: 1 },
+  { id: 'curse-tag',  name: 'The Curse',  tag: 'CURSE',      tagColor: 'curse',   rarity: 'Curse',  itemType: 'tag', weight: 1 },
+  { id: 'curse-name', name: 'The Curse', value: 'curse', rarity: 'Curse', itemType: 'name-color', weight: 1 },
+  { id: 'curse',      name: 'The Curse', value: 'unobtainable-curse', rarity: 'Curse', itemType: 'pfp', weight: 1 },
 ]
 
 export const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Unobtainable', 'Curse']

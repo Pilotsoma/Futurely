@@ -180,12 +180,12 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
     ],
   },
   {
-    type: 'dev-curse', icon: '💀', label: "The Curse", desc: '1 coin · mostly Common · 0.001% each: Curse Tag, Curse Name, Curse PFP', cost: 1,
+    type: 'dev-curse', icon: '💀', label: "The Curse", desc: '1 coin · mostly Common · 0.001% chance at The Curse', cost: 1,
     drops: [
       { rarity: 'Common', pct: '99.997%', items: ['Learner', 'C Student', 'Bottom 100'] },
-      { rarity: 'Curse',  pct: '0.001%',  items: ['CURSE tag'] },
-      { rarity: 'Curse',  pct: '0.001%',  items: ['Curse Name Color'] },
-      { rarity: 'Curse',  pct: '0.001%',  items: ['The Curse PFP'] },
+      { rarity: 'Curse',  pct: '0.001%',  items: ['The Curse'] },
+      { rarity: 'Curse',  pct: '0.001%',  items: ['The Curse'] },
+      { rarity: 'Curse',  pct: '0.001%',  items: ['The Curse'] },
     ],
   },
 ]
@@ -279,9 +279,9 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'learner',      label: 'Learner (Common)',        rarity: 'Common', type: 'tag',        tag: 'Learner',    tagColor: '#94A3B8' },
     { id: 'c-student',    label: 'C Student (Common)',      rarity: 'Common', type: 'tag',        tag: 'C Student',  tagColor: '#78716C' },
     { id: 'bottom-100',   label: 'Bottom 100 (Common)',     rarity: 'Common', type: 'tag',        tag: 'Bottom 100', tagColor: '#6B7280' },
-    { id: 'curse-tag',    label: 'CURSE tag',               rarity: 'Curse',  type: 'tag',        tag: 'CURSE',      tagColor: 'curse' },
-    { id: 'curse-name',   label: 'Curse Name Color',        rarity: 'Curse',  type: 'name-color', name: 'Curse Name Color', value: 'curse' },
-    { id: 'curse',        label: 'The Curse PFP',           rarity: 'Curse',  type: 'pfp',        name: 'The Curse', value: 'unobtainable-curse' },
+    { id: 'curse-tag',    label: 'The Curse',               rarity: 'Curse',  type: 'tag',        tag: 'CURSE',      tagColor: 'curse' },
+    { id: 'curse-name',   label: 'The Curse',               rarity: 'Curse',  type: 'name-color', name: 'The Curse', value: 'curse' },
+    { id: 'curse',        label: 'The Curse',               rarity: 'Curse',  type: 'pfp',        name: 'The Curse', value: 'unobtainable-curse' },
   ],
 }
 
@@ -384,9 +384,9 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'frame-black',    type: 'pfp', name: 'Void Fill',         rarity: 'Legendary', value: 'frame-black'    },
   { id: 'fill-white',     type: 'pfp', name: 'White Fill',        rarity: 'Legendary', value: 'fill-white'     },
   { id: 'rainbow',        type: 'pfp', name: 'Rainbow Animated ✨', rarity: 'Mythic',       value: 'rainbow'              },
-  { id: 'curse',         type: 'pfp',        name: 'The Curse PFP',     rarity: 'Curse', value: 'unobtainable-curse' },
-  { id: 'curse-tag',    type: 'tag',        name: 'CURSE tag',         rarity: 'Curse', tagColor: 'curse' },
-  { id: 'curse-name',   type: 'name-color', name: 'Curse Name Color',  rarity: 'Curse', value: 'curse' },
+  { id: 'curse',         type: 'pfp',        name: 'The Curse',         rarity: 'Curse', value: 'unobtainable-curse' },
+  { id: 'curse-tag',    type: 'tag',        name: 'The Curse',         rarity: 'Curse', tagColor: 'curse' },
+  { id: 'curse-name',   type: 'name-color', name: 'The Curse',         rarity: 'Curse', value: 'curse' },
   // Developer's Curse exclusives (Common, zero-quicksell)
   { id: 'Learner',    type: 'tag', name: 'Learner',    rarity: 'Common', tagColor: '#94A3B8' },
   { id: 'C Student',  type: 'tag', name: 'C Student',  rarity: 'Common', tagColor: '#78716C' },
