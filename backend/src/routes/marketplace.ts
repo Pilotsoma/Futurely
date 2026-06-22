@@ -1684,7 +1684,7 @@ router.post('/coins/send', requireAuth, txLimiter, async (req: AuthRequest, res:
     return
   }
   try {
-    const tax = Math.ceil(amount * 0.05)
+    const tax = amount >= 10 ? Math.ceil(amount * 0.05) : 0
     const totalCost = amount + tax
     const sender = await prisma.user.findUnique({ where: { id: senderId }, select: { coins: true } })
     if (!sender || sender.coins < totalCost) {

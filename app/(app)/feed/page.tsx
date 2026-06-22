@@ -286,7 +286,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
             {/* Send Coins — visible to all users on other profiles */}
             {userId !== currentUserId && (() => {
               const amt = parseInt(sendCoinAmount)
-              const tax = (!isNaN(amt) && amt > 0) ? Math.ceil(amt * 0.05) : 0
+              const tax = (!isNaN(amt) && amt >= 10) ? Math.ceil(amt * 0.05) : 0
               return (
                 <div style={{ marginBottom: 20, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
