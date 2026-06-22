@@ -534,7 +534,7 @@ function SalesChart({ data }: { data: ItemSalePoint[] }) {
   )
 }
 
-function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem; onClose: () => void; onViewProfile: (id: number) => void }) {
+function ItemPreviewModal({ item, estValue, onClose, onViewProfile }: { item: PreviewItem; estValue?: number; onClose: () => void; onViewProfile: (id: number) => void }) {
   const [tab, setTab] = useState<'history' | 'owners'>('history')
   const [history, setHistory] = useState<ItemSalePoint[] | null>(null)
   const [owners, setOwners] = useState<ItemOwner[] | null>(null)
@@ -583,6 +583,11 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
               {circulation !== null && (
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
                   {circulation} in circulation
+                </span>
+              )}
+              {estValue != null && estValue > 0 && (
+                <span style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                  <CoinIcon size={10} />Est. {estValue.toLocaleString()}
                 </span>
               )}
             </div>
@@ -2763,7 +2768,7 @@ export default function MarketplacePage() {
 
       {/* ── Item Preview Modal ── */}
       {previewItem && (
-        <ItemPreviewModal item={previewItem} onClose={() => setPreviewItem(null)} onViewProfile={openProfile} />
+        <ItemPreviewModal item={previewItem} estValue={prices[`${previewItem.type}:${previewItem.id}`]} onClose={() => setPreviewItem(null)} onViewProfile={openProfile} />
       )}
 
       {/* ── Spin Wheel Modal ── */}
