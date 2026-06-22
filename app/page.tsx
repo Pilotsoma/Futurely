@@ -106,7 +106,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', paddingTop: 60, overflow: 'hidden' }}>
+      <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', paddingTop: 60, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 30%, #0d0d1f 0%, #05050d 100%)' }}>
         <Particles
           particleColors={['#ffffff']}
           particleCount={200}

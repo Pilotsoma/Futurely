@@ -128,15 +128,15 @@ export default function Particles({
       mouseRef.current = { x: -9999, y: -9999 }
     }
     if (moveParticlesOnHover) {
-      canvas.parentElement?.addEventListener('mousemove', onMouseMove)
-      canvas.parentElement?.addEventListener('mouseleave', onMouseLeave)
+      window.addEventListener('mousemove', onMouseMove)
+      window.addEventListener('mouseleave', onMouseLeave)
     }
 
     return () => {
       cancelAnimationFrame(rafId)
       ro.disconnect()
-      canvas.parentElement?.removeEventListener('mousemove', onMouseMove)
-      canvas.parentElement?.removeEventListener('mouseleave', onMouseLeave)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseleave', onMouseLeave)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
