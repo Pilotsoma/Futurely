@@ -78,7 +78,7 @@ type PreviewItemDef = { type: 'tag' | 'name-color' | 'pfp'; tag?: string; tagCol
 
 const BOX_CYCLE_PREVIEWS: Record<string, PreviewItemDef[]> = {
   'cosmetics': [
-    { type: 'tag',        tag: 'Valedictorian', tagColor: '#C0C0C0',  rarity: 'Legendary' },
+    { type: 'tag',        tag: 'Valedictorian', tagColor: '#FFFFFF',  rarity: 'Legendary' },
     { type: 'name-color', name: 'Magenta',      value: '#C026D3',     rarity: 'Epic'      },
     { type: 'pfp',        name: 'Gold Fill',    value: 'glow-gold',   rarity: 'Legendary' },
     { type: 'tag',        tag: 'VIP',           tagColor: '#111111',  rarity: 'Mythic'    },
@@ -202,7 +202,7 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'top-performer',  label: 'Top Performer (Rare)',      rarity: 'Rare',      type: 'tag', tag: 'Top Performer',   tagColor: '#8B5CF6' },
     { id: 'ace',            label: 'Ace (Epic)',                rarity: 'Epic',      type: 'tag', tag: 'Ace',             tagColor: '#F97316' },
     { id: 'genius',         label: 'Genius (Epic)',             rarity: 'Epic',      type: 'tag', tag: 'Genius',          tagColor: '#EC4899' },
-    { id: 'mastermind',     label: 'Valedictorian (Legendary)', rarity: 'Legendary', type: 'tag', tag: 'Valedictorian',   tagColor: '#C0C0C0' },
+    { id: 'mastermind',     label: 'Valedictorian (Legendary)', rarity: 'Legendary', type: 'tag', tag: 'Valedictorian',   tagColor: '#FFFFFF' },
     { id: 'prodigy',        label: 'Prodigy (Legendary)',       rarity: 'Legendary', type: 'tag', tag: 'Prodigy',         tagColor: '#111111' },
     { id: 'god',            label: 'VIP (Mythic)',              rarity: 'Mythic',    type: 'tag', tag: 'VIP',             tagColor: '#111111' },
     { id: 'verified',      label: 'Verified ✓ Yellow (Mythic)', rarity: 'Mythic',   type: 'tag', tag: 'Verified',         tagColor: 'verified-yellow' },
@@ -263,7 +263,7 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'magenta',        label: 'Magenta (Epic)',            rarity: 'Epic',      type: 'name-color', name: 'Magenta',       value: '#C026D3' },
     { id: 'glow-pink',      label: 'Pink Glow (Epic)',          rarity: 'Epic',      type: 'pfp',        name: 'Pink Glow',     value: 'glow-pink' },
     { id: 'glow-purple',    label: 'Purple Glow (Epic)',        rarity: 'Epic',      type: 'pfp',        name: 'Purple Glow',   value: 'glow-purple' },
-    { id: 'mastermind',     label: 'Valedictorian (Legendary)', rarity: 'Legendary', type: 'tag',        tag: 'Valedictorian',  tagColor: '#C0C0C0' },
+    { id: 'mastermind',     label: 'Valedictorian (Legendary)', rarity: 'Legendary', type: 'tag',        tag: 'Valedictorian',  tagColor: '#FFFFFF' },
     { id: 'prodigy',        label: 'Prodigy (Legendary)',       rarity: 'Legendary', type: 'tag',        tag: 'Prodigy',        tagColor: '#111111' },
     { id: 'platinum',     label: 'Platinum (Legendary)',    rarity: 'Legendary', type: 'name-color', name: 'Platinum',    value: '#C0C0C0' },
     { id: 'black',          label: 'Black (Legendary)',         rarity: 'Legendary', type: 'name-color', name: 'Black',         value: '#111111' },
@@ -332,7 +332,7 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'top-performer',  type: 'tag', name: 'Top Performer',  rarity: 'Rare',      tagColor: '#8B5CF6' },
   { id: 'ace',            type: 'tag', name: 'Ace',            rarity: 'Epic',      tagColor: '#F97316' },
   { id: 'genius',         type: 'tag', name: 'Genius',         rarity: 'Epic',      tagColor: '#EC4899' },
-  { id: 'mastermind',     type: 'tag', name: 'Valedictorian',  rarity: 'Legendary', tagColor: '#C0C0C0' },
+  { id: 'mastermind',     type: 'tag', name: 'Valedictorian',  rarity: 'Legendary', tagColor: '#FFFFFF' },
   { id: 'prodigy',        type: 'tag', name: 'Prodigy',        rarity: 'Legendary', tagColor: '#111111' },
   { id: 'god',            type: 'tag', name: 'VIP',             rarity: 'Mythic',    tagColor: '#111111' },
   { id: 'GOAT',           type: 'tag', name: 'GOAT',            rarity: 'Mythic',    tagColor: '#EAB308' },

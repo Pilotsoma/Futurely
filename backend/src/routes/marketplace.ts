@@ -33,7 +33,7 @@ export const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'top-performer',  tag: 'Top Performer',   tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
   { id: 'ace',            tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      weight: 1.75 },
   { id: 'genius',         tag: 'Genius',          tagColor: '#EC4899', rarity: 'Epic',      weight: 1.85 },
-  { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#C0C0C0', rarity: 'Legendary', weight: 0.5  },
+  { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#FFFFFF', rarity: 'Legendary', weight: 0.5  },
   { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#111111',        rarity: 'Legendary', weight: 0.5  },
   { id: 'god',            tag: 'VIP',             tagColor: '#111111',        rarity: 'Mythic',    weight: 0.3  },
   { id: 'verified',       tag: 'Verified',        tagColor: 'verified-yellow', rarity: 'Mythic',   weight: 0.1  },
@@ -134,7 +134,7 @@ const COSMETICS_BOX_ITEMS: CosmeticsItem[] = [
   { id: 'glow-pink',     name: 'Pink Glow',      value: 'glow-pink',  rarity: 'Epic',      itemType: 'pfp',        weight: 0.6583 },
   { id: 'glow-purple',   name: 'Purple Glow',    value: 'glow-purple', rarity: 'Epic',     itemType: 'pfp',        weight: 0.6583 },
   // ── Legendary (0.75% / 7 items ≈ 0.1071 each) ───────────────────────────
-  { id: 'mastermind',    tag: 'Valedictorian',   tagColor: '#C0C0C0', rarity: 'Legendary', itemType: 'tag',        weight: 0.1071 },
+  { id: 'mastermind',    tag: 'Valedictorian',   tagColor: '#FFFFFF', rarity: 'Legendary', itemType: 'tag',        weight: 0.1071 },
   { id: 'prodigy',       tag: 'Prodigy',         tagColor: '#111111', rarity: 'Legendary', itemType: 'tag',        weight: 0.1071 },
   { id: 'platinum',    name: 'Platinum',     value: '#C0C0C0',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1071 },
   { id: 'black',         name: 'Black',          value: '#111111',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1071 },
