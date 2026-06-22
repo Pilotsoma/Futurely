@@ -1068,7 +1068,7 @@ function TraderItemPreview({ type, id, name, tagColor, value, rarity }: {
     return (
       <span
         className={isRainbow ? 'name-rainbow' : isCurse ? 'name-curse' : ''}
-        style={{ fontSize: 11, fontWeight: 800, color: (!isRainbow && !isCurse) ? value : undefined, letterSpacing: '0.2px' }}
+        style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.2px', ...(!isRainbow && !isCurse ? ncStyle(value) : {}) }}
       >
         Name
       </span>
