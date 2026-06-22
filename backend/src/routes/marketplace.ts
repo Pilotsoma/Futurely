@@ -1298,7 +1298,7 @@ const TRADER_DAILY_BUY_LIMIT   = 3
 const TRADER_DAILY_TRADE_LIMIT = 3
 
 const TRADER_MARKUP: Record<string, number> = {
-  Common: 1.5, Uncommon: 1.75, Rare: 2.0, Epic: 2.25, Legendary: 2.5, Mythic: 3.0,
+  Common: 1.5, Uncommon: 1.75, Rare: 2.0, Epic: 2.25, Legendary: 2.5, Mythic: 2.0,
 }
 
 // All items the trader stocks (no Staff, no Curse, no GOAT, no streak tags)
