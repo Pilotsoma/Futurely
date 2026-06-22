@@ -1941,7 +1941,7 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
     const [activeUsers, allPrices] = await Promise.all([
       prisma.user.findMany({
         where: { deletedAt: null },
-        select: { ...userSelect, coins: true, ownedNameColors: true, ownedPfpEffects: true, allTags: true },
+        select: { ...userSelect, ownedNameColors: true, ownedPfpEffects: true, allTags: true },
         take: 500,
       }),
       prisma.itemPrice.findMany({ where: { itemType: { not: 'meta' } } }),
@@ -1949,7 +1949,7 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
 
     const priceMap = new Map(allPrices.map(p => [`${p.itemType}:${p.itemId}`, p.price]))
     const withValue = activeUsers.map(u => {
-      let value = u.coins
+      let value = 0
       for (const item of parseJsonArr(u.ownedNameColors)) value += priceMap.get(`name-color:${(item as { id: string }).id}`) ?? 0
       for (const item of parseJsonArr(u.ownedPfpEffects)) value += priceMap.get(`pfp:${(item as { id: string }).id}`) ?? 0
       for (const t of parseTagArr(u.allTags)) {
