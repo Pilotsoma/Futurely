@@ -2739,14 +2739,19 @@ export default function MarketplacePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {historyTrades.map(trade => {
                     const isTraderTrade = trade.note === 'WANDERING_TRADER'
+                    const iAmSender = trade.senderId === currentUserId
+                    const otherUser = iAmSender ? trade.receiver : trade.sender
+                    const myItems = parseTradeItemsClient(iAmSender ? trade.senderItems : trade.receiverItems)
+                    const theirItems = parseTradeItemsClient(iAmSender ? trade.receiverItems : trade.senderItems)
+                    const otherLabel = isTraderTrade ? 'Wandering Trader' : (otherUser.name ?? 'User')
                     return (
                     <div key={trade.id} className="ns-card" style={{ padding: 16, borderLeft: `3px solid ${isTraderTrade ? '#A855F7' : '#22C55E'}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                         <span style={{ fontSize: 16 }}>{isTraderTrade ? '🏕️' : '✅'}</span>
                         <span style={{ flex: 1, fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
-                          {trade.sender.name ?? 'User'}
+                          You
                           <span style={{ margin: '0 6px' }}>⇄</span>
-                          {isTraderTrade ? 'Wandering Trader' : (trade.receiver.name ?? 'User')}
+                          {otherLabel}
                         </span>
                         <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                           {new Date(trade.createdAt).toLocaleDateString()}
@@ -2755,12 +2760,12 @@ export default function MarketplacePage() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
                         <div>
                           <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>You gave</div>
-                          {renderTradeItems(parseTradeItemsClient(trade.senderItems))}
+                          {renderTradeItems(myItems)}
                         </div>
                         <div style={{ fontSize: 16 }}>⇄</div>
                         <div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>{isTraderTrade ? 'Trader gave' : `${trade.receiver.name ?? 'User'} gave`}</div>
-                          {renderTradeItems(parseTradeItemsClient(trade.receiverItems))}
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>{otherLabel} gave</div>
+                          {renderTradeItems(theirItems)}
                         </div>
                       </div>
                     </div>
@@ -2966,34 +2971,56 @@ export default function MarketplacePage() {
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>
                     Your Offer — Est Value: <span style={{ color: offerEstTotal >= wantPriceTotal && tradeOfferItems.length > 0 ? '#22C55E' : '#EAB308' }}>{offerEstTotal.toLocaleString()} coins</span>
                   </div>
-                  {tradeOfferItems.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginBottom: 10 }}>
-                      {tradeOfferItems.map(item => {
-                        const color = getRarityBorderColor(item.rarity, item.id)
-                        return (
-                          <div key={`${item.type}:${item.id}`} onClick={() => setTradeOfferItems(prev => prev.filter(x => !(x.type === item.type && x.id === item.id)))}
-                            style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${color}66`, background: `${color}18`, cursor: 'pointer', fontSize: 11, fontWeight: 700, color, display: 'flex', alignItems: 'center', gap: 5 }}>
-                            {item.type === 'tag' ? `[${item.name}]` : item.name}
-                            <span style={{ fontSize: 10, opacity: 0.7 }}>✕</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                  {tradeOfferItems.length > 0 && (() => {
+                    const chipGroups = Array.from(
+                      tradeOfferItems.reduce((m, i) => {
+                        const k = `${i.type}:${i.id}`
+                        const ex = m.get(k)
+                        if (ex) ex.count++; else m.set(k, { ...i, count: 1 })
+                        return m
+                      }, new Map<string, { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number }>()).values()
+                    )
+                    return (
+                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginBottom: 10 }}>
+                        {chipGroups.map(item => {
+                          const color = getRarityBorderColor(item.rarity, item.id)
+                          return (
+                            <div key={`${item.type}:${item.id}`}
+                              onClick={() => {
+                                // remove the last occurrence of this item
+                                setTradeOfferItems(prev => {
+                                  const idx = [...prev].reverse().findIndex(x => x.type === item.type && x.id === item.id)
+                                  if (idx === -1) return prev
+                                  const realIdx = prev.length - 1 - idx
+                                  return prev.filter((_, i) => i !== realIdx)
+                                })
+                              }}
+                              style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${color}66`, background: `${color}18`, cursor: 'pointer', fontSize: 11, fontWeight: 700, color, display: 'flex', alignItems: 'center', gap: 5 }}>
+                              {item.type === 'tag' ? `[${item.name}]` : item.name}
+                              {item.count > 1 && <span style={{ fontSize: 10, opacity: 0.9 }}>×{item.count}</span>}
+                              <span style={{ fontSize: 10, opacity: 0.7 }}>✕</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 6 }}>
                     {invItems.map(item => {
-                      const isSelected = tradeOfferItems.some(x => x.type === item.type && x.id === item.id)
+                      const offerCount = tradeOfferItems.filter(x => x.type === item.type && x.id === item.id).length
+                      const isFull = offerCount >= item.count
                       const color = getRarityBorderColor(item.rarity, item.id)
                       const estVal = prices[`${item.type}:${item.id}`] ?? 0
                       return (
                         <button key={`${item.type}:${item.id}`}
                           onClick={() => {
-                            if (isSelected) setTradeOfferItems(prev => prev.filter(x => !(x.type === item.type && x.id === item.id)))
-                            else setTradeOfferItems(prev => [...prev, { type: item.type, id: item.id, name: item.name, rarity: item.rarity }])
+                            if (!isFull) setTradeOfferItems(prev => [...prev, { type: item.type, id: item.id, name: item.name, rarity: item.rarity }])
                           }}
-                          style={{ padding: '8px 4px', borderRadius: 9, border: `2px solid ${isSelected ? color : color + '33'}`, background: isSelected ? `${color}22` : 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+                          style={{ padding: '8px 4px', borderRadius: 9, border: `2px solid ${offerCount > 0 ? color : color + '33'}`, background: offerCount > 0 ? `${color}22` : 'var(--surface-2)', cursor: isFull ? 'not-allowed' : 'pointer', opacity: isFull ? 0.5 : 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
                           <TraderItemPreview type={item.type} id={item.id} name={item.name} tagColor={item.tagColor} value={item.value} rarity={item.rarity} />
-                          {item.count > 1 && <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600 }}>x{item.count.toLocaleString()}</div>}
+                          <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600 }}>
+                            {offerCount > 0 ? `${offerCount}/${item.count}` : `x${item.count.toLocaleString()}`}
+                          </div>
                           <div style={{ fontSize: 9, color: '#EAB308', fontWeight: 600 }}>{estVal > 0 ? estVal.toLocaleString() : '—'}</div>
                         </button>
                       )
