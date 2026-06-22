@@ -1684,9 +1684,11 @@ router.post('/coins/send', requireAuth, txLimiter, async (req: AuthRequest, res:
     return
   }
   try {
+    const tax = Math.ceil(amount * 0.05)
+    const totalCost = amount + tax
     const sender = await prisma.user.findUnique({ where: { id: senderId }, select: { coins: true } })
-    if (!sender || sender.coins < amount) {
-      res.status(402).json({ data: null, error: { code: 'INSUFFICIENT_COINS', message: 'Not enough coins' } })
+    if (!sender || sender.coins < totalCost) {
+      res.status(402).json({ data: null, error: { code: 'INSUFFICIENT_COINS', message: `Not enough coins (need ${totalCost}: ${amount} + ${tax} tax)` } })
       return
     }
     const receiver = await prisma.user.findUnique({ where: { id: receiverId, deletedAt: null }, select: { id: true, coins: true } })
@@ -1695,11 +1697,11 @@ router.post('/coins/send', requireAuth, txLimiter, async (req: AuthRequest, res:
       return
     }
     await prisma.$transaction([
-      prisma.user.update({ where: { id: senderId }, data: { coins: { decrement: amount } } }),
+      prisma.user.update({ where: { id: senderId }, data: { coins: { decrement: totalCost } } }),
       prisma.user.update({ where: { id: receiverId }, data: { coins: { increment: amount } } }),
     ])
     const updated = await prisma.user.findUnique({ where: { id: senderId }, select: { coins: true } })
-    res.json({ data: { ok: true, newBalance: updated!.coins }, error: null })
+    res.json({ data: { ok: true, newBalance: updated!.coins, tax }, error: null })
   } catch (err) {
     console.error('[COINS_SEND]', err)
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to send coins' } })

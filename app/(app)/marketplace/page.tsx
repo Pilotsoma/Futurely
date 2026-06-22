@@ -2836,40 +2836,48 @@ export default function MarketplacePage() {
                 )}
 
                 {/* Send Coins — visible to all users on other profiles */}
-                {currentUserId !== null && profilePanel.id !== currentUserId && (
-                  <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <input
-                        className="ns-input"
-                        style={{ flex: 1, height: 34, fontSize: 13 }}
-                        type="number"
-                        min="1"
-                        placeholder="Amount"
-                        value={profileSendAmount}
-                        onChange={e => { setProfileSendAmount(e.target.value); setProfileSendMsg('') }}
-                      />
-                      <button
-                        style={{ background: '#EAB308', color: '#000', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: profileSendBusy ? 'not-allowed' : 'pointer', opacity: profileSendBusy ? 0.6 : 1 }}
-                        disabled={profileSendBusy}
-                        onClick={async () => {
-                          const amt = parseInt(profileSendAmount)
-                          if (isNaN(amt) || amt <= 0 || profileSendBusy) return
-                          setProfileSendBusy(true); setProfileSendMsg('')
-                          try {
-                            await api.sendCoins(profilePanel.id, amt)
-                            setProfileSendMsg(`✓ Sent ${amt} coins`)
-                            setProfileSendAmount('')
-                          } catch (e: unknown) {
-                            const msg = (e instanceof Error ? e.message : '') || 'Failed'
-                            setProfileSendMsg(msg.includes('INSUFFICIENT') ? 'Not enough coins' : 'Failed')
-                          } finally { setProfileSendBusy(false) }
-                        }}
-                      >{profileSendBusy ? '…' : 'Send'}</button>
+                {currentUserId !== null && profilePanel.id !== currentUserId && (() => {
+                  const amt = parseInt(profileSendAmount)
+                  const tax = (!isNaN(amt) && amt > 0) ? Math.ceil(amt * 0.05) : 0
+                  return (
+                    <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <input
+                          className="ns-input"
+                          style={{ flex: 1, height: 34, fontSize: 13 }}
+                          type="number"
+                          min="1"
+                          placeholder="Amount"
+                          value={profileSendAmount}
+                          onChange={e => { setProfileSendAmount(e.target.value); setProfileSendMsg('') }}
+                        />
+                        <button
+                          style={{ background: '#EAB308', color: '#000', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: profileSendBusy ? 'not-allowed' : 'pointer', opacity: profileSendBusy ? 0.6 : 1 }}
+                          disabled={profileSendBusy}
+                          onClick={async () => {
+                            if (isNaN(amt) || amt <= 0 || profileSendBusy) return
+                            setProfileSendBusy(true); setProfileSendMsg('')
+                            try {
+                              await api.sendCoins(profilePanel.id, amt)
+                              setProfileSendMsg(`✓ Sent ${amt} coins (−${tax} tax)`)
+                              setProfileSendAmount('')
+                            } catch (e: unknown) {
+                              const msg = (e instanceof Error ? e.message : '') || 'Failed'
+                              setProfileSendMsg(msg.includes('INSUFFICIENT') ? 'Not enough coins' : 'Failed')
+                            } finally { setProfileSendBusy(false) }
+                          }}
+                        >{profileSendBusy ? '…' : 'Send'}</button>
+                      </div>
+                      {tax > 0 && !profileSendMsg && (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5 }}>
+                          5% tax — you pay <strong style={{ color: '#EAB308' }}>{amt + tax}</strong> total ({amt} + {tax} tax)
+                        </div>
+                      )}
+                      {profileSendMsg && <div style={{ fontSize: 11, color: profileSendMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{profileSendMsg}</div>}
                     </div>
-                    {profileSendMsg && <div style={{ fontSize: 11, color: profileSendMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{profileSendMsg}</div>}
-                  </div>
-                )}
+                  )
+                })()}
 
                 {/* Full DEV + MOD panels */}
                 {currentUserId !== null && (

@@ -284,40 +284,48 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
             )}
 
             {/* Send Coins — visible to all users on other profiles */}
-            {userId !== currentUserId && (
-              <div style={{ marginBottom: 20, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <input
-                    className="ns-input"
-                    style={{ flex: 1, height: 34, fontSize: 13 }}
-                    type="number"
-                    min="1"
-                    placeholder="Amount"
-                    value={sendCoinAmount}
-                    onChange={e => { setSendCoinAmount(e.target.value); setSendCoinMsg('') }}
-                  />
-                  <button
-                    style={{ background: '#EAB308', color: '#000', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: sendCoinBusy ? 'not-allowed' : 'pointer', opacity: sendCoinBusy ? 0.6 : 1 }}
-                    disabled={sendCoinBusy}
-                    onClick={async () => {
-                      const amt = parseInt(sendCoinAmount)
-                      if (isNaN(amt) || amt <= 0 || sendCoinBusy) return
-                      setSendCoinBusy(true); setSendCoinMsg('')
-                      try {
-                        await api.sendCoins(userId, amt)
-                        setSendCoinMsg(`✓ Sent ${amt} coins`)
-                        setSendCoinAmount('')
-                      } catch (e: unknown) {
-                        const msg = (e instanceof Error ? e.message : '') || 'Failed'
-                        setSendCoinMsg(msg.includes('INSUFFICIENT') ? 'Not enough coins' : 'Failed')
-                      } finally { setSendCoinBusy(false) }
-                    }}
-                  >{sendCoinBusy ? '…' : 'Send'}</button>
+            {userId !== currentUserId && (() => {
+              const amt = parseInt(sendCoinAmount)
+              const tax = (!isNaN(amt) && amt > 0) ? Math.ceil(amt * 0.05) : 0
+              return (
+                <div style={{ marginBottom: 20, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      className="ns-input"
+                      style={{ flex: 1, height: 34, fontSize: 13 }}
+                      type="number"
+                      min="1"
+                      placeholder="Amount"
+                      value={sendCoinAmount}
+                      onChange={e => { setSendCoinAmount(e.target.value); setSendCoinMsg('') }}
+                    />
+                    <button
+                      style={{ background: '#EAB308', color: '#000', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: sendCoinBusy ? 'not-allowed' : 'pointer', opacity: sendCoinBusy ? 0.6 : 1 }}
+                      disabled={sendCoinBusy}
+                      onClick={async () => {
+                        if (isNaN(amt) || amt <= 0 || sendCoinBusy) return
+                        setSendCoinBusy(true); setSendCoinMsg('')
+                        try {
+                          await api.sendCoins(userId, amt)
+                          setSendCoinMsg(`✓ Sent ${amt} coins (−${tax} tax)`)
+                          setSendCoinAmount('')
+                        } catch (e: unknown) {
+                          const msg = (e instanceof Error ? e.message : '') || 'Failed'
+                          setSendCoinMsg(msg.includes('INSUFFICIENT') ? 'Not enough coins' : 'Failed')
+                        } finally { setSendCoinBusy(false) }
+                      }}
+                    >{sendCoinBusy ? '…' : 'Send'}</button>
+                  </div>
+                  {tax > 0 && !sendCoinMsg && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5 }}>
+                      5% tax — you pay <strong style={{ color: '#EAB308' }}>{amt + tax}</strong> total ({amt} + {tax} tax)
+                    </div>
+                  )}
+                  {sendCoinMsg && <div style={{ fontSize: 11, color: sendCoinMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{sendCoinMsg}</div>}
                 </div>
-                {sendCoinMsg && <div style={{ fontSize: 11, color: sendCoinMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{sendCoinMsg}</div>}
-              </div>
-            )}
+              )
+            })()}
 
             {/* DEV/Admin panel */}
             <DevAdminPanel
