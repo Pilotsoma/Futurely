@@ -2153,15 +2153,6 @@ export default function MarketplacePage() {
                     </button>
                   </div>
 
-                  {/* Search their inventory */}
-                  <input
-                    className="ns-input"
-                    style={{ width: '100%', height: 34, fontSize: 12, marginBottom: 12, boxSizing: 'border-box' as const }}
-                    placeholder="Search their inventory…"
-                    value={tradeInvSearch}
-                    onChange={e => setTradeInvSearch(e.target.value)}
-                  />
-
                   {/* ── Trade inventory grids ── */}
                   {(() => {
                     // Deduplicate items by type:id, counting quantity
@@ -2268,9 +2259,16 @@ export default function MarketplacePage() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                         {/* Their inventory */}
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 6 }}>
                             Their Items — tap to request
                           </div>
+                          <input
+                            className="ns-input"
+                            style={{ width: '100%', height: 30, fontSize: 11, marginBottom: 8, boxSizing: 'border-box' as const, padding: '0 10px' }}
+                            placeholder="Search their items…"
+                            value={tradeInvSearch}
+                            onChange={e => setTradeInvSearch(e.target.value)}
+                          />
                           {theirTagsDedup.length === 0 && theirColorsDedup.length === 0 && theirPfpDedup.length === 0 ? (
                             <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>{tradeInvQ ? 'No matching items' : 'No tradeable items'}</div>
                           ) : (
