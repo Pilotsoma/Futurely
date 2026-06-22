@@ -1257,7 +1257,7 @@ router.get('/users/:userId/inventory', requireAuth, async (req: AuthRequest, res
 
 const TRADER_DAILY_SELL_LIMIT  = 3
 const TRADER_DAILY_BUY_LIMIT   = 3
-const TRADER_DAILY_TRADE_LIMIT = 5
+const TRADER_DAILY_TRADE_LIMIT = 3
 
 const TRADER_MARKUP: Record<string, number> = {
   Common: 1.5, Uncommon: 1.75, Rare: 2.0, Epic: 2.25, Legendary: 2.5, Mythic: 3.0,

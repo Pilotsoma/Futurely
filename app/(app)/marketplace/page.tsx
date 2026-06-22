@@ -2896,7 +2896,7 @@ export default function MarketplacePage() {
                       Buys: {traderStatus.buysRemaining}/3 left today
                     </div>
                     <div style={{ padding: '4px 12px', borderRadius: 99, background: traderStatus.tradesRemaining > 0 ? 'rgba(139,92,246,0.12)' : 'rgba(107,114,128,0.12)', border: `1px solid ${traderStatus.tradesRemaining > 0 ? '#8B5CF655' : '#6B728055'}`, fontSize: 11, fontWeight: 700, color: traderStatus.tradesRemaining > 0 ? '#8B5CF6' : 'var(--text-muted)' }}>
-                      Trades: {traderStatus.tradesRemaining}/5 left today
+                      Trades: {traderStatus.tradesRemaining}/3 left today
                     </div>
                   </div>
                 )}
