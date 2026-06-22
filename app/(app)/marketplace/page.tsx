@@ -1297,7 +1297,22 @@ export default function MarketplacePage() {
       .catch(() => setLoading(false))
 
     api.getItemPrices().then(setPrices).catch(() => {})
-    api.traderCatalog().then(r => { setTraderCatalog(r.data); setTraderCatalogLoaded(true) }).catch(() => {})
+    api.traderStatus().then(setTraderStatus).catch(() => {})
+
+    // Use cached catalog for instant load, then refresh in background
+    const CATALOG_KEY = 'ns_trader_catalog_v13'
+    try {
+      const cached = JSON.parse(localStorage.getItem(CATALOG_KEY) ?? 'null')
+      if (Array.isArray(cached) && cached.length > 0) {
+        setTraderCatalog(cached)
+        setTraderCatalogLoaded(true)
+      }
+    } catch {}
+    api.traderCatalog().then(r => {
+      setTraderCatalog(r.data)
+      setTraderCatalogLoaded(true)
+      try { localStorage.setItem(CATALOG_KEY, JSON.stringify(r.data)) } catch {}
+    }).catch(() => {})
 
     try {
       const token = getApiToken()
