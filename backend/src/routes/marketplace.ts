@@ -863,6 +863,19 @@ router.put('/equip', requireAuth, async (req: AuthRequest, res: Response): Promi
           select: { badge: true },
         })
         res.json({ data: { badge: updated.badge } })
+      } else if (itemId === 'verified-blue') {
+        const owned = parseTagArr(user.allTags)
+        const ownsVerifiedBlue = owned.some(t => {
+          const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
+          return def?.id === 'verified-blue'
+        })
+        if (!ownsVerifiedBlue) { res.status(403).json({ error: 'You do not own the verified blue badge' }); return }
+        const updated = await prisma.user.update({
+          where: { id: req.userId },
+          data: { badge: 'verified-blue' },
+          select: { badge: true },
+        })
+        res.json({ data: { badge: updated.badge } })
       } else {
         const updated = await prisma.user.update({
           where: { id: req.userId },

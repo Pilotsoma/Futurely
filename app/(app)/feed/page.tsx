@@ -264,8 +264,8 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
                           {profile.tag}
                         </span>
                   )}
-                  {profile.badge === 'verified-yellow' && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
-                    <VerifiedBadge variant="yellow" size={16} />
+                  {(profile.badge === 'verified-yellow' || profile.badge === 'verified-blue') && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
+                    <VerifiedBadge variant={profile.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
                   )}
                 </div>
               </div>
@@ -563,7 +563,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                     {post.user.tag}
                   </span>
             )}
-            {post.user.badge === 'verified-yellow' && <VerifiedBadge variant="yellow" size={16} />}
+            {(post.user.badge === 'verified-yellow' || post.user.badge === 'verified-blue') && <VerifiedBadge variant={post.user.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />}
             {post.userId !== currentUserId && (
               <button
                 style={{ ...P.followBtn, ...(isFollowing ? { background: 'var(--primary)', color: '#FFFFFF', border: '1px solid var(--primary)' } : {}) }}
@@ -1084,7 +1084,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                           {c.user.tag}
                         </span>
                   )}
-                  {c.user.badge === 'verified-yellow' && <VerifiedBadge variant="yellow" size={16} />}
+                  {(c.user.badge === 'verified-yellow' || c.user.badge === 'verified-blue') && <VerifiedBadge variant={c.user.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />}
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{timeAgo(c.createdAt)}</span>
                 </div>
                 <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text)', marginBottom: 6 }}>{c.body}</div>
@@ -1176,7 +1176,7 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
                       style={u.tag === 'DEV' ? P.tagDev : u.tag === 'VIP' ? P.tagGod : u.tag === 'GOAT' ? P.tagGod : u.tagColor === 'curse' ? { ...P.tag } : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
                     >{u.tag}</span>
               )}
-              {u.badge === 'verified-yellow' && <VerifiedBadge variant="yellow" />}
+              {(u.badge === 'verified-yellow' || u.badge === 'verified-blue') && <VerifiedBadge variant={u.badge === 'verified-yellow' ? 'yellow' : 'blue'} />}
             </div>
           </div>
           <button style={{ ...P.followBtn, padding: '6px 14px', fontSize: 12.5, background: followedUsers.has(u.id) ? 'var(--primary)' : 'transparent', color: followedUsers.has(u.id) ? '#060D10' : 'var(--primary)' }} onClick={() => onFollow(u.id)}>

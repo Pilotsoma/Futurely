@@ -658,7 +658,7 @@ function ItemPreviewModal({ item, estValue, onClose, onViewProfile }: { item: Pr
                           ? <VerifiedBadge variant={owner.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                           : <span className={owner.tag === 'DEV' ? 'tag-rainbow' : owner.tag === 'VIP' ? 'tag-mythic' : owner.tag === 'GOAT' ? 'tag-god' : owner.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, fontWeight: 700, color: (owner.tag === 'DEV' || owner.tag === 'VIP' || owner.tag === 'GOAT' || owner.tagColor === 'curse') ? undefined : owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>
                       )}
-                      {owner.badge === 'verified-yellow' && <VerifiedBadge variant="yellow" size={14} />}
+                      {(owner.badge === 'verified-yellow' || owner.badge === 'verified-blue') && <VerifiedBadge variant={owner.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
@@ -1968,6 +1968,14 @@ export default function MarketplacePage() {
               >
                 {inv?.badge === 'verified-yellow' ? 'Unequip Badge' : 'Equip Badge'}
               </button>
+            ) : type === 'tag' && item.tagColor === 'verified-blue' ? (
+              <button
+                onClick={() => void handleEquipBadge(inv?.badge === 'verified-blue' ? null : 'verified-blue')}
+                disabled={!!equipping}
+                style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${inv?.badge === 'verified-blue' ? 'var(--border)' : '#1D9BF0'}`, background: inv?.badge === 'verified-blue' ? 'var(--surface-2)' : '#1D9BF018', color: inv?.badge === 'verified-blue' ? 'var(--text-muted)' : '#1D9BF0', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {inv?.badge === 'verified-blue' ? 'Unequip Badge' : 'Equip Badge'}
+              </button>
             ) : (
               <button
                 onClick={() => void handleEquip(type, isEquipped ? null : item.id)}
@@ -2416,7 +2424,7 @@ export default function MarketplacePage() {
                             <div style={{ fontSize: 13, fontWeight: 600 }}>{u.name ?? 'User'}</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                               {u.tag && <div className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'VIP' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : u.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (u.tag === 'DEV' || u.tag === 'VIP' || u.tag === 'GOAT' || u.tagColor === 'curse') ? undefined : u.tagColor ?? '#6B7280', fontWeight: 700 }}>[{u.tag}]</div>}
-                              {u.badge === 'verified-yellow' && <VerifiedBadge variant="yellow" size={14} />}
+                              {(u.badge === 'verified-yellow' || u.badge === 'verified-blue') && <VerifiedBadge variant={u.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                             </div>
                           </div>
                         </button>
@@ -2433,7 +2441,7 @@ export default function MarketplacePage() {
                       <div className={tradeTarget.user.nameColor === 'rainbow' ? 'name-rainbow' : tradeTarget.user.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(tradeTarget.user.nameColor) }}>{tradeTarget.user.name ?? 'User'}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         {tradeTarget.user.tag && <div className={tradeTarget.user.tag === 'DEV' ? 'tag-rainbow' : tradeTarget.user.tag === 'VIP' ? 'tag-mythic' : tradeTarget.user.tag === 'GOAT' ? 'tag-god' : tradeTarget.user.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (tradeTarget.user.tag === 'DEV' || tradeTarget.user.tag === 'GOAT' || tradeTarget.user.tag === 'VIP' || tradeTarget.user.tagColor === 'curse') ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
-                        {tradeTarget.user.badge === 'verified-yellow' && <VerifiedBadge variant="yellow" size={14} />}
+                        {(tradeTarget.user.badge === 'verified-yellow' || tradeTarget.user.badge === 'verified-blue') && <VerifiedBadge variant={tradeTarget.user.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                       </div>
                     </div>
                     <button onClick={() => { setTradeTarget(null); setSelectedOffer([]); setSelectedRequest([]) }}
@@ -2672,7 +2680,7 @@ export default function MarketplacePage() {
                           <div>
                             <span className={trade.sender.nameColor === 'rainbow' ? 'name-rainbow' : trade.sender.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(trade.sender.nameColor) }}>{trade.sender.name ?? 'User'}</span>
                             {trade.sender.tag && <span className={trade.sender.tag === 'DEV' ? 'tag-rainbow' : trade.sender.tag === 'VIP' ? 'tag-mythic' : trade.sender.tag === 'GOAT' ? 'tag-god' : trade.sender.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (trade.sender.tag === 'DEV' || trade.sender.tag === 'GOAT' || trade.sender.tag === 'VIP' || trade.sender.tagColor === 'curse') ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
-                            {trade.sender.badge === 'verified-yellow' && <VerifiedBadge variant="yellow" size={14} />}
+                            {(trade.sender.badge === 'verified-yellow' || trade.sender.badge === 'verified-blue') && <VerifiedBadge variant={trade.sender.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>{new Date(trade.createdAt).toLocaleDateString()}</span>
                         </div>
@@ -2727,7 +2735,7 @@ export default function MarketplacePage() {
                           <div>
                             <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : trade.receiver.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(trade.receiver.nameColor) }}>{trade.receiver.name ?? 'User'}</span>
                             {trade.receiver.tag && <span className={trade.receiver.tag === 'DEV' ? 'tag-rainbow' : trade.receiver.tag === 'VIP' ? 'tag-mythic' : trade.receiver.tag === 'GOAT' ? 'tag-god' : trade.receiver.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (trade.receiver.tag === 'DEV' || trade.receiver.tag === 'GOAT' || trade.receiver.tag === 'VIP' || trade.receiver.tagColor === 'curse') ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
-                            {trade.receiver.badge === 'verified-yellow' && <VerifiedBadge variant="yellow" size={14} />}
+                            {(trade.receiver.badge === 'verified-yellow' || trade.receiver.badge === 'verified-blue') && <VerifiedBadge variant={trade.receiver.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#EAB308', background: '#EAB30818', padding: '2px 8px', borderRadius: 99 }}>
                             PENDING
@@ -3194,7 +3202,7 @@ export default function MarketplacePage() {
                                 style={{ fontSize: 11, fontWeight: 700, color: (entry.tag === 'DEV' || entry.tag === 'VIP' || entry.tag === 'GOAT' || entry.tagColor === 'curse') ? undefined : entry.tagColor ?? '#6B7280' }}
                               >[{entry.tag}]</span>
                         )}
-                        {entry.badge === 'verified-yellow' && <VerifiedBadge variant="yellow" size={14} />}
+                        {(entry.badge === 'verified-yellow' || entry.badge === 'verified-blue') && <VerifiedBadge variant={entry.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -3358,7 +3366,7 @@ export default function MarketplacePage() {
                               {profilePanel.tag}
                             </span>
                       )}
-                      {profilePanel.badge === 'verified-yellow' && <VerifiedBadge variant="yellow" size={18} />}
+                      {(profilePanel.badge === 'verified-yellow' || profilePanel.badge === 'verified-blue') && <VerifiedBadge variant={profilePanel.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={18} />}
                     </div>
                   </div>
                 </div>
