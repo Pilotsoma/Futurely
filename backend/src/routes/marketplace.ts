@@ -63,7 +63,7 @@ const NAME_COLOR_BOX_ITEMS: ColorItem[] = [
   { id: 'lime-green',    name: 'Lime Green',     value: '#65A30D', rarity: 'Rare',      weight: 3.33  },
   { id: 'electric-blue', name: 'Electric Blue',  value: '#2563EB', rarity: 'Epic',      weight: 1.98  },
   { id: 'magenta',       name: 'Magenta',        value: '#C026D3', rarity: 'Epic',      weight: 1.98  },
-  { id: 'platinum',    name: 'Platinum',     value: '#C0C0C0', rarity: 'Legendary', weight: 0.5   },
+  { id: 'platinum',    name: 'Platinum',     value: '#F8F8FF', rarity: 'Legendary', weight: 0.5   },
   { id: 'black',         name: 'Black',          value: '#111111', rarity: 'Legendary', weight: 0.5   },
   { id: 'rainbow',       name: 'Rainbow RGB',    value: 'rainbow', rarity: 'Mythic',    weight: 0.05  },
 ]
@@ -136,7 +136,7 @@ const COSMETICS_BOX_ITEMS: CosmeticsItem[] = [
   // ── Legendary (0.75% / 7 items ≈ 0.1071 each) ───────────────────────────
   { id: 'mastermind',    tag: 'Valedictorian',   tagColor: '#FFFFFF', rarity: 'Legendary', itemType: 'tag',        weight: 0.1071 },
   { id: 'prodigy',       tag: 'Prodigy',         tagColor: '#111111', rarity: 'Legendary', itemType: 'tag',        weight: 0.1071 },
-  { id: 'platinum',    name: 'Platinum',     value: '#C0C0C0',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1071 },
+  { id: 'platinum',    name: 'Platinum',     value: '#F8F8FF',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1071 },
   { id: 'black',         name: 'Black',          value: '#111111',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1071 },
   { id: 'glow-gold',     name: 'Gold Fill',      value: 'glow-gold',  rarity: 'Legendary', itemType: 'pfp',        weight: 0.1071 },
   { id: 'frame-black',   name: 'Void Fill',      value: 'frame-black', rarity: 'Legendary', itemType: 'pfp',      weight: 0.1071 },
