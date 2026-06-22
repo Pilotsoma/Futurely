@@ -180,7 +180,7 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
     ],
   },
   {
-    type: 'dev-curse', icon: '💀', label: "Developer's Curse", desc: '1 coin · mostly Common · 0.001% each: Curse Tag, Curse Name, Curse PFP', cost: 1,
+    type: 'dev-curse', icon: '💀', label: "The Curse", desc: '1 coin · mostly Common · 0.001% each: Curse Tag, Curse Name, Curse PFP', cost: 1,
     drops: [
       { rarity: 'Common', pct: '99.997%', items: ['Learner', 'C Student', 'Bottom 100'] },
       { rarity: 'Curse',  pct: '0.001%',  items: ['CURSE tag'] },
@@ -2071,12 +2071,14 @@ export default function MarketplacePage() {
                 const canAfford = !!inv && inv.coins >= listing.price
                 return (
                   <PriceTooltip key={listing.id} price={prices[`${listing.itemType}:${listing.itemId}`]}>
-                  <div className="ns-card" style={{ padding: '12px 12px 10px', display: 'flex', flexDirection: 'column', gap: 8, border: `1px solid ${rarityColor}33`, borderTop: `3px solid ${rarityColor}` }}>
-                    {/* Icon + preview button */}
+                  <div
+                    className="ns-card"
+                    style={{ padding: '12px 12px 10px', display: 'flex', flexDirection: 'column', gap: 8, border: `1px solid ${rarityColor}33`, borderTop: `3px solid ${rarityColor}`, cursor: 'pointer' }}
+                    onClick={() => setPreviewItem({ type: listing.itemType as 'tag' | 'name-color' | 'pfp', id: listing.itemId, name: listing.itemName, rarity: listing.itemRarity, value: listing.itemValue })}
+                  >
+                    {/* Icon + rarity */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <button onClick={() => setPreviewItem({ type: listing.itemType as 'tag' | 'name-color' | 'pfp', id: listing.itemId, name: listing.itemName, rarity: listing.itemRarity, value: listing.itemValue })} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }} title="Preview item">
-                        <ItemIcon item={{ type: listing.itemType, itemValue: listing.itemValue, itemType: listing.itemType, itemId: listing.itemId }} />
-                      </button>
+                      <ItemIcon item={{ type: listing.itemType, itemValue: listing.itemValue, itemType: listing.itemType, itemId: listing.itemId }} />
                       <RarityBadge rarity={listing.itemRarity} itemId={listing.itemId} />
                     </div>
                     {/* Item name */}
@@ -2085,7 +2087,7 @@ export default function MarketplacePage() {
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
                       by{' '}
                       <button
-                        onClick={() => void openProfile(listing.seller.id)}
+                        onClick={e => { e.stopPropagation(); void openProfile(listing.seller.id) }}
                         className={listing.seller.nameColor === 'rainbow' ? 'name-rainbow' : listing.seller.nameColor === 'curse' ? 'name-curse' : ''}
                         style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...(listing.seller.nameColor && listing.seller.nameColor !== 'rainbow' && listing.seller.nameColor !== 'curse' ? { color: listing.seller.nameColor } : { color: 'var(--text)' }) }}
                       >
@@ -2100,13 +2102,13 @@ export default function MarketplacePage() {
                       {msg ? (
                         <div style={{ fontSize: 10, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 700 }}>{msg}</div>
                       ) : isMine ? (
-                        <button onClick={() => void handleCancelListing(listing.id)} disabled={cancellingListing === listing.id}
+                        <button onClick={e => { e.stopPropagation(); void handleCancelListing(listing.id) }} disabled={cancellingListing === listing.id}
                           style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #EF4444', background: 'transparent', color: '#EF4444', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                           {cancellingListing === listing.id ? '…' : 'Delist'}
                         </button>
                       ) : (
                         <button
-                          onClick={() => void handleBuyListing(listing.id)}
+                          onClick={e => { e.stopPropagation(); void handleBuyListing(listing.id) }}
                           disabled={!!buyingId || !canAfford}
                           style={{ padding: '4px 10px', borderRadius: 7, border: 'none', background: !canAfford ? 'var(--surface-2)' : 'var(--primary)', color: !canAfford ? 'var(--text-muted)' : '#060D10', fontWeight: 700, fontSize: 11, cursor: !canAfford ? 'not-allowed' : 'pointer', opacity: !canAfford ? 0.5 : 1 }}>
                           {buyingId === listing.id ? '…' : 'Buy'}
