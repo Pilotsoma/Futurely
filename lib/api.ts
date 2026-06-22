@@ -733,6 +733,15 @@ export const api = {
       body: JSON.stringify({ itemType, itemId }),
     }),
 
+  traderTrade: (
+    offerItems: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string }>,
+    wantItems: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string }>,
+  ) =>
+    request<{ ok: boolean; tradesRemaining: number }>('/api/marketplace/trader/trade', {
+      method: 'POST',
+      body: JSON.stringify({ offerItems, wantItems }),
+    }),
+
   // ── Parent API ────────────────────────────────────────────────────────────────
 
   parentLinkStudent: (credentials: { districtUrl: string; username: string; password: string }) =>

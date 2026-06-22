@@ -395,7 +395,7 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
 
 type Tab = 'boxes' | 'shop' | 'trade' | 'trader' | 'inventory' | 'leaderboard' | 'catalog'
 type TradeSubTab = 'new' | 'incoming' | 'sent' | 'history'
-type TraderSubTab = 'sell' | 'buy'
+type TraderSubTab = 'sell' | 'buy' | 'trade'
 
 interface TraderCatalogItem {
   type: 'tag' | 'name-color' | 'pfp'
@@ -1285,6 +1285,9 @@ export default function MarketplacePage() {
   const [traderBuyConfirm, setTraderBuyConfirm] = useState<TraderCatalogItem | null>(null)
   const [traderBusy, setTraderBusy] = useState(false)
   const [traderMsg, setTraderMsg] = useState('')
+  // Item-for-item trade state
+  const [tradeOfferItems, setTradeOfferItems] = useState<Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string }>>([])
+  const [tradeWantItems, setTradeWantItems] = useState<TraderCatalogItem[]>([])
 
   // Item prices for hover tooltips
   const [prices, setPrices] = useState<Record<string, number>>({})
@@ -2852,10 +2855,10 @@ export default function MarketplacePage() {
 
           {/* Sub-tabs */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            {(['sell', 'buy'] as TraderSubTab[]).map(st => (
-              <button key={st} onClick={() => { setTraderSubTab(st); setTraderMsg('') }}
+            {(['sell', 'buy', 'trade'] as TraderSubTab[]).map(st => (
+              <button key={st} onClick={() => { setTraderSubTab(st); setTraderMsg(''); setTradeOfferItems([]); setTradeWantItems([]) }}
                 style={{ flex: 1, padding: '9px 0', borderRadius: 9, border: `1px solid ${traderSubTab === st ? 'var(--primary)' : 'var(--border)'}`, background: traderSubTab === st ? 'var(--primary)18' : 'transparent', color: traderSubTab === st ? 'var(--primary)' : 'var(--text-muted)', fontWeight: traderSubTab === st ? 700 : 500, fontSize: 13, cursor: 'pointer' }}>
-                {st === 'sell' ? '💰 Sell to Trader' : '🛒 Buy from Trader'}
+                {st === 'sell' ? '💰 Sell' : st === 'buy' ? '🛒 Buy' : '🔄 Trade'}
               </button>
             ))}
           </div>
@@ -2882,6 +2885,165 @@ export default function MarketplacePage() {
               onBuy={setTraderBuyConfirm}
             />
           )}
+
+          {/* TRADE sub-tab — item-for-item swap */}
+          {traderSubTab === 'trade' && (() => {
+            const offerEstTotal = tradeOfferItems.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
+            const wantPriceTotal = tradeWantItems.reduce((s, i) => s + i.traderPrice, 0)
+            const canTrade = tradeOfferItems.length > 0 && tradeWantItems.length > 0 && offerEstTotal >= wantPriceTotal
+
+            // Deduplicated sell-able inventory
+            const invItems: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number }> = (() => {
+              const raw = [
+                ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity })),
+                ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity })),
+                ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity })),
+              ].filter(i => !SELL_SKIP.has(i.id))
+              const seen = new Map<string, { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number }>()
+              for (const item of raw) {
+                const key = `${item.type}:${item.id}`
+                const ex = seen.get(key)
+                if (ex) ex.count++
+                else seen.set(key, { ...item, count: 1 })
+              }
+              return Array.from(seen.values())
+            })()
+
+            return (
+              <>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  Offer items from your inventory. The trader accepts if your total est value covers his prices.
+                </div>
+
+                {/* Offer section */}
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>
+                    Your Offer — Est Value: <span style={{ color: offerEstTotal >= wantPriceTotal && tradeOfferItems.length > 0 ? '#22C55E' : '#EAB308' }}>{offerEstTotal.toLocaleString()} coins</span>
+                  </div>
+                  {tradeOfferItems.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginBottom: 10 }}>
+                      {tradeOfferItems.map(item => {
+                        const color = getRarityBorderColor(item.rarity, item.id)
+                        return (
+                          <div key={`${item.type}:${item.id}`} onClick={() => setTradeOfferItems(prev => prev.filter(x => !(x.type === item.type && x.id === item.id)))}
+                            style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${color}66`, background: `${color}18`, cursor: 'pointer', fontSize: 11, fontWeight: 700, color, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            {item.type === 'tag' ? `[${item.name}]` : item.name}
+                            <span style={{ fontSize: 10, opacity: 0.7 }}>✕</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 6 }}>
+                    {invItems.map(item => {
+                      const isSelected = tradeOfferItems.some(x => x.type === item.type && x.id === item.id)
+                      const color = getRarityBorderColor(item.rarity, item.id)
+                      const estVal = prices[`${item.type}:${item.id}`] ?? 0
+                      return (
+                        <button key={`${item.type}:${item.id}`}
+                          onClick={() => {
+                            if (isSelected) setTradeOfferItems(prev => prev.filter(x => !(x.type === item.type && x.id === item.id)))
+                            else setTradeOfferItems(prev => [...prev, { type: item.type, id: item.id, name: item.name, rarity: item.rarity }])
+                          }}
+                          style={{ padding: '8px 4px', borderRadius: 9, border: `2px solid ${isSelected ? color : color + '33'}`, background: isSelected ? `${color}22` : 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-word' as const }}>
+                            {item.type === 'tag' ? `[${item.name}]` : item.name}
+                          </div>
+                          {item.count > 1 && <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600 }}>x{item.count.toLocaleString()}</div>}
+                          <div style={{ fontSize: 9, color: '#EAB308', fontWeight: 600 }}>{estVal > 0 ? estVal.toLocaleString() : '—'}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Want section */}
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>
+                    You Want — Trader Price: <span style={{ color: wantPriceTotal > offerEstTotal && tradeWantItems.length > 0 ? '#EF4444' : '#8B5CF6' }}>{wantPriceTotal.toLocaleString()} coins</span>
+                  </div>
+                  {tradeWantItems.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginBottom: 10 }}>
+                      {tradeWantItems.map(item => {
+                        const color = getRarityBorderColor(item.rarity, item.id)
+                        return (
+                          <div key={`${item.type}:${item.id}`} onClick={() => setTradeWantItems(prev => prev.filter(x => !(x.type === item.type && x.id === item.id)))}
+                            style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${color}66`, background: `${color}18`, cursor: 'pointer', fontSize: 11, fontWeight: 700, color, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            {item.type === 'tag' ? `[${item.name}]` : item.name}
+                            <span style={{ fontSize: 10, opacity: 0.7 }}>✕</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {!traderCatalogLoaded ? (
+                    <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)', fontSize: 13 }}>Loading catalog…</div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 6 }}>
+                      {traderCatalog.map(item => {
+                        const isSelected = tradeWantItems.some(x => x.type === item.type && x.id === item.id)
+                        const color = getRarityBorderColor(item.rarity, item.id)
+                        return (
+                          <button key={`${item.type}:${item.id}`}
+                            onClick={() => {
+                              if (isSelected) setTradeWantItems(prev => prev.filter(x => !(x.type === item.type && x.id === item.id)))
+                              else setTradeWantItems(prev => [...prev, item])
+                            }}
+                            style={{ padding: '8px 4px', borderRadius: 9, border: `2px solid ${isSelected ? color : color + '33'}`, background: isSelected ? `${color}22` : 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-word' as const }}>
+                              {item.type === 'tag' ? `[${item.name}]` : item.name}
+                            </div>
+                            <div style={{ fontSize: 9, color: '#8B5CF6', fontWeight: 600 }}>{item.traderPrice.toLocaleString()}</div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Value balance bar */}
+                {(tradeOfferItems.length > 0 || tradeWantItems.length > 0) && (
+                  <div style={{ padding: '12px 16px', borderRadius: 10, background: 'var(--surface-2)', border: `1px solid ${canTrade ? '#22C55E44' : '#EF444444'}`, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                    <div style={{ color: 'var(--text-muted)' }}>
+                      Offer est: <strong style={{ color: '#EAB308' }}>{offerEstTotal.toLocaleString()}</strong>
+                    </div>
+                    <div style={{ color: canTrade ? '#22C55E' : '#EF4444', fontWeight: 700, fontSize: 13 }}>
+                      {canTrade ? '✓ Deal accepted' : offerEstTotal < wantPriceTotal ? `↑ Need ${(wantPriceTotal - offerEstTotal).toLocaleString()} more` : 'Select items'}
+                    </div>
+                    <div style={{ color: 'var(--text-muted)' }}>
+                      Trader asks: <strong style={{ color: '#8B5CF6' }}>{wantPriceTotal.toLocaleString()}</strong>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  disabled={!canTrade || traderBusy}
+                  onClick={async () => {
+                    if (!canTrade || traderBusy) return
+                    setTraderBusy(true)
+                    setTraderMsg('')
+                    try {
+                      const r = await api.traderTrade(
+                        tradeOfferItems.map(i => ({ type: i.type, id: i.id })),
+                        tradeWantItems.map(i => ({ type: i.type, id: i.id })),
+                      )
+                      setTradeOfferItems([])
+                      setTradeWantItems([])
+                      setTraderMsg(`✓ Trade complete! ${r.tradesRemaining} trades left today.`)
+                      api.traderStatus().then(setTraderStatus).catch(() => {})
+                      refreshInventory()
+                    } catch (e) {
+                      setTraderMsg(e instanceof ApiError ? e.message : 'Trade failed')
+                    } finally {
+                      setTraderBusy(false)
+                    }
+                  }}
+                  style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: canTrade && !traderBusy ? 'linear-gradient(135deg,#8B5CF6,#6D28D9)' : 'var(--surface-2)', color: canTrade && !traderBusy ? '#fff' : 'var(--text-muted)', fontWeight: 700, fontSize: 14, cursor: canTrade && !traderBusy ? 'pointer' : 'not-allowed', opacity: traderBusy ? 0.6 : 1 }}>
+                  {traderBusy ? 'Trading…' : '🔄 Confirm Trade'}
+                </button>
+              </>
+            )
+          })()}
         </>
       )}
 
