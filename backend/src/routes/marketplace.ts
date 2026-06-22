@@ -164,31 +164,31 @@ const RARITY_RANK: Record<string, number> = {
 // ── Estimated item prices (seed; updated dynamically on each sale) ─────────────
 
 export const SEED_PRICES: Record<string, number> = {
-  // Tags — spin cost 10 (was 15, ×2/3): Common 7, Uncommon 13, Rare 33, Epic 167, Legendary 667, GOD 3333, GOAT 33333
-  'tag:honors-student': 13,  'tag:ap-student': 13,
-  'tag:deans-list': 33,      'tag:top-performer': 33,
-  'tag:ace': 167,            'tag:genius': 167,
+  // Tags — Common 12, Uncommon 20, Rare 35, Epic 125, Legendary 1000, Mythic 3333+
+  'tag:grinder': 12,         'tag:focused': 12,         'tag:scholar': 12,
+  'tag:honors-student': 20,  'tag:ap-student': 20,
+  'tag:deans-list': 35,      'tag:top-performer': 35,
+  'tag:ace': 125,            'tag:genius': 125,
   'tag:mastermind': 1000,    'tag:prodigy': 1000,
   'tag:god': 3333,
-  // GOAT is the day-100 streak tag (tradeable — rarest item in the game)
   'tag:GOAT': 33333,
-  // Name Colors — spin cost 15 (was 25, ×0.6): Common 9, Uncommon 18, Rare 45, Epic 210, Legendary 1200, Mythic 30000
-  'name-color:forest-green': 9,    'name-color:navy-blue': 9,    'name-color:dark-red': 9,
-  'name-color:slate-blue': 9,      'name-color:teal': 9,
-  'name-color:bright-orange': 18,  'name-color:violet': 18,      'name-color:cyan': 18,
-  'name-color:hot-pink': 45,       'name-color:gold': 45,        'name-color:lime-green': 45,
-  'name-color:electric-blue': 210, 'name-color:magenta': 210,
+  // Name Colors — Common 12, Uncommon 20, Rare 35, Epic 125, Legendary 1200, Mythic 30000
+  'name-color:forest-green': 12,   'name-color:navy-blue': 12,   'name-color:dark-red': 12,
+  'name-color:slate-blue': 12,     'name-color:teal': 12,
+  'name-color:bright-orange': 20,  'name-color:violet': 20,      'name-color:cyan': 20,
+  'name-color:hot-pink': 35,       'name-color:gold': 35,        'name-color:lime-green': 35,
+  'name-color:electric-blue': 125, 'name-color:magenta': 125,
   'name-color:pure-white': 1200,   'name-color:black': 1200,
   'name-color:rainbow': 30000,
-  // PFP Effects — spin cost 20 (was 30, ×2/3): Common 13, Uncommon 27, Rare 67, Epic 267, Legendary 2000, Mythic 50000
-  'pfp:border-green': 13,    'pfp:border-blue': 13,    'pfp:border-red': 13,
-  'pfp:border-navy': 13,     'pfp:border-teal': 13,
-  'pfp:border-orange': 27,   'pfp:border-violet': 27,  'pfp:border-cyan': 27,
-  'pfp:border-hotpink': 67,  'pfp:border-gold': 67,    'pfp:border-lime': 67,
-  'pfp:glow-pink': 267,      'pfp:glow-purple': 267,
-  'pfp:glow-gold': 2000,     'pfp:frame-black': 2000,   'pfp:fill-white': 2000,
+  // PFP Effects — Common 12, Uncommon 20, Rare 35, Epic 125, Legendary 2000, Mythic 50000
+  'pfp:border-green': 12,    'pfp:border-blue': 12,    'pfp:border-red': 12,
+  'pfp:border-navy': 12,     'pfp:border-teal': 12,
+  'pfp:border-orange': 20,   'pfp:border-violet': 20,  'pfp:border-cyan': 20,
+  'pfp:border-hotpink': 35,  'pfp:border-gold': 35,    'pfp:border-lime': 35,
+  'pfp:glow-pink': 125,      'pfp:glow-purple': 125,
+  'pfp:glow-gold': 2000,     'pfp:frame-black': 2000,  'pfp:fill-white': 2000,
   'pfp:rainbow': 50000,
-  // Verified badge — 0.1% chance, tag spin cost 10
+  // Verified badge
   'tag:verified': 10_000,
   // Developer's Curse — 0.001% chance each, estimated market value
   'pfp:curse': 250_000,
@@ -400,7 +400,7 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 // Bump this number whenever SEED_PRICES changes — forces a one-time DB reset
 // to the new values, after which dynamic pricing takes over again.
-const SEED_VERSION = 9
+const SEED_VERSION = 10
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
