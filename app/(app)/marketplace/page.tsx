@@ -1603,7 +1603,7 @@ export default function MarketplacePage() {
   }
 
   async function handleSendTrade() {
-    if (!tradeTarget || selectedRequest.length === 0 || sendingTrade) return
+    if (!tradeTarget || (selectedOffer.length === 0 && selectedRequest.length === 0) || sendingTrade) return
     if (!inv || inv.coins < 5) { setTradeMsg('Need 🪙 5 to send a trade'); return }
     setSendingTrade(true); setTradeMsg('')
     try {
@@ -2427,9 +2427,14 @@ export default function MarketplacePage() {
                       ⚠️ You're offering nothing — this is a gift request
                     </div>
                   )}
+                  {selectedOffer.length > 0 && selectedRequest.length === 0 && (
+                    <div style={{ fontSize: 12, color: '#F97316', fontWeight: 600, marginBottom: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)' }}>
+                      ⚠️ You're asking for nothing — this is a free gift
+                    </div>
+                  )}
                   <button onClick={() => void handleSendTrade()}
-                    disabled={sendingTrade || selectedRequest.length === 0 || !inv || inv.coins < 5}
-                    style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 14, cursor: selectedRequest.length > 0 ? 'pointer' : 'not-allowed', opacity: selectedRequest.length === 0 ? 0.4 : 1 }}>
+                    disabled={sendingTrade || (selectedOffer.length === 0 && selectedRequest.length === 0) || !inv || inv.coins < 5}
+                    style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 14, cursor: (selectedOffer.length > 0 || selectedRequest.length > 0) ? 'pointer' : 'not-allowed', opacity: (selectedOffer.length === 0 && selectedRequest.length === 0) ? 0.4 : 1 }}>
                     {sendingTrade ? 'Sending…' : <>Send Trade — <CoinIcon size={13} style={{ margin: '0 3px' }} />5</>}
                   </button>
                 </>

@@ -1504,7 +1504,8 @@ router.post('/trades', requireAuth, txLimiter, async (req: AuthRequest, res: Res
   if (!receiverId || typeof receiverId !== 'number') { res.status(400).json({ error: 'receiverId required' }); return }
   if (receiverId === req.userId) { res.status(400).json({ error: 'Cannot trade with yourself' }); return }
   if (!Array.isArray(senderItems)) { res.status(400).json({ error: 'senderItems must be an array' }); return }
-  if (!Array.isArray(receiverItems) || receiverItems.length === 0) { res.status(400).json({ error: 'receiverItems must be a non-empty array' }); return }
+  if (!Array.isArray(receiverItems)) { res.status(400).json({ error: 'receiverItems must be an array' }); return }
+  if (senderItems.length === 0 && receiverItems.length === 0) { res.status(400).json({ error: 'Trade must include at least one item' }); return }
 
   const hasNonTradeable = [...senderItems, ...receiverItems].some(
     i => i.type === 'tag' && NON_TRADEABLE_TAGS.has(i.id)
