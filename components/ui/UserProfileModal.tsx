@@ -75,7 +75,9 @@ function pfpClass(effect: string | null | undefined): string {
 }
 function nameColorStyle(color: string | null | undefined): React.CSSProperties {
   if (!color || color === 'rainbow' || color === 'curse') return {}
-  return color === '#111111' ? { color, textShadow: '0 0 6px rgba(180,180,180,0.65)' } : { color }
+  if (color === '#111111') return { color, textShadow: '0 0 6px rgba(180,180,180,0.65)' }
+  if (color === '#C0C0C0') return { color, textShadow: '0 0 8px rgba(255,255,255,0.9), 0 0 2px rgba(255,255,255,0.6)' }
+  return { color }
 }
 function nameColorClass(color: string | null | undefined): string {
   return color === 'rainbow' ? 'name-rainbow' : ''
