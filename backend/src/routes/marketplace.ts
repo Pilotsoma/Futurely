@@ -491,7 +491,7 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { coins: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, ownedNameColors: true, ownedPfpEffects: true, lastCoinClaim: true, allTags: true, marketplaceAccess: true },
+      select: { coins: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, badge: true, ownedNameColors: true, ownedPfpEffects: true, lastCoinClaim: true, allTags: true, marketplaceAccess: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
@@ -516,6 +516,7 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
         tagColor: user.tagColor,
         nameColor: user.nameColor,
         pfpEffect: user.pfpEffect,
+        badge: user.badge,
         ownedTags,
         ownedNameColors: parseJsonArr(user.ownedNameColors),
         ownedPfpEffects: parseJsonArr(user.ownedPfpEffects),
@@ -838,15 +839,40 @@ router.post('/quicksell', requireAuth, txLimiter, async (req: AuthRequest, res: 
 router.put('/equip', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   const { type, itemId } = req.body as { type?: string; itemId?: string | null }
-  if (!type || !['name-color', 'pfp', 'tag'].includes(type)) {
-    res.status(400).json({ error: 'type must be name-color, pfp, or tag' }); return
+  if (!type || !['name-color', 'pfp', 'tag', 'badge'].includes(type)) {
+    res.status(400).json({ error: 'type must be name-color, pfp, tag, or badge' }); return
   }
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { ownedNameColors: true, ownedPfpEffects: true, allTags: true, tag: true, tagColor: true },
+      select: { ownedNameColors: true, ownedPfpEffects: true, allTags: true, tag: true, tagColor: true, badge: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
+
+    if (type === 'badge') {
+      if (itemId === 'verified') {
+        const owned = parseTagArr(user.allTags)
+        const ownsVerified = owned.some(t => {
+          const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor) ?? TAG_BOX_ITEMS.find(d => d.tag === t.tag)
+          return (def?.id ?? t.tag) === 'verified'
+        })
+        if (!ownsVerified) { res.status(403).json({ error: 'You do not own the verified badge' }); return }
+        const updated = await prisma.user.update({
+          where: { id: req.userId },
+          data: { badge: 'verified-yellow' },
+          select: { badge: true },
+        })
+        res.json({ data: { badge: updated.badge } })
+      } else {
+        const updated = await prisma.user.update({
+          where: { id: req.userId },
+          data: { badge: null },
+          select: { badge: true },
+        })
+        res.json({ data: { badge: updated.badge } })
+      }
+      return
+    }
 
     if (type === 'tag') {
       if (itemId) {
@@ -1566,8 +1592,8 @@ router.get('/trades/incoming', requireAuth, async (req: AuthRequest, res: Respon
     const trades = await prisma.tradeOffer.findMany({
       where: { receiverId: req.userId, status: 'PENDING' },
       include: {
-        sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
-        receiver: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
+        sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, badge: true } },
+        receiver: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, badge: true } },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -1583,8 +1609,8 @@ router.get('/trades/sent', requireAuth, async (req: AuthRequest, res: Response):
     const trades = await prisma.tradeOffer.findMany({
       where: { senderId: req.userId, status: 'PENDING' },
       include: {
-        sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
-        receiver: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
+        sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, badge: true } },
+        receiver: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, badge: true } },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -1603,8 +1629,8 @@ router.get('/trades/history', requireAuth, async (req: AuthRequest, res: Respons
         OR: [{ senderId: req.userId }, { receiverId: req.userId }],
       },
       include: {
-        sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
-        receiver: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
+        sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, badge: true } },
+        receiver: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, badge: true } },
       },
       orderBy: { updatedAt: 'desc' },
       take: 50,
@@ -1920,7 +1946,7 @@ router.get('/item/:itemType/:itemId/owners', async (req: Request, res: Response)
 
 router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userSelect = { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true }
+    const userSelect = { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, badge: true }
 
     const [coinsRows, streakRows] = await Promise.all([
       prisma.user.findMany({

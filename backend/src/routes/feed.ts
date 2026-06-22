@@ -69,7 +69,7 @@ function recordModDelete(userId: number) {
 const USER_SELECT = {
   id: true, name: true,
   tag: true, tagColor: true,
-  nameColor: true, pfpEffect: true, avatarUrl: true,
+  nameColor: true, pfpEffect: true, badge: true, avatarUrl: true,
   chatBanned: true, chatMutedUntil: true,
   role: true, allTags: true,
 } as const;
@@ -77,15 +77,15 @@ const USER_SELECT = {
 type RawUser = {
   id: number; name: string | null; hacName?: string | null;
   tag: string | null; tagColor: string | null;
-  nameColor: string | null; pfpEffect: string | null; avatarUrl: string | null;
+  nameColor: string | null; pfpEffect: string | null; badge?: string | null; avatarUrl: string | null;
   chatBanned: boolean; chatMutedUntil: Date | null;
   role: string; allTags: unknown;
 };
 
 function toFeedUser(u: RawUser) {
-  if (u.chatBanned) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  return { id: u.id, name: u.name, hacName: u.hacName, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
+  if (u.chatBanned) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null, badge: null as string | null, avatarUrl: null as string | null };
+  if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null, badge: null as string | null, avatarUrl: null as string | null };
+  return { id: u.id, name: u.name, hacName: u.hacName, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, badge: u.badge ?? null, avatarUrl: u.avatarUrl };
 }
 
 function parseAllTags(raw: unknown): Array<{ tag: string; tagColor: string }> {
@@ -182,7 +182,7 @@ router.get('/posts', async (req: Request, res: Response) => {
         user: {
           select: {
             id: true, name: true,
-            tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true,
+            tag: true, tagColor: true, nameColor: true, pfpEffect: true, badge: true, avatarUrl: true,
             chatBanned: true, chatMutedUntil: true,
             role: true, allTags: true,
             _count: { select: { followers: true } },
@@ -769,7 +769,7 @@ router.get('/search', async (req: Request, res: Response) => {
     const users = await prisma.user.findMany({
       where: { AND: [{ id: { not: userId } }, { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
-      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, role: true, allTags: true },
+      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, badge: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -813,7 +813,7 @@ router.get('/users/search', async (req: Request, res: Response) => {
     const users = await prisma.user.findMany({
       where: { AND: [{ id: { not: userId } }, { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
-      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, role: true, allTags: true },
+      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, badge: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {

@@ -653,6 +653,12 @@ export const api = {
       body: JSON.stringify({ type, itemId }),
     }),
 
+  equipBadge: (itemId: string | null) =>
+    request<{ badge: string | null }>('/api/marketplace/equip', {
+      method: 'PUT',
+      body: JSON.stringify({ type: 'badge', itemId }),
+    }),
+
   marketplaceAdminGrant: (payload: { type: 'coins'; amount: number } | { type: 'name-color' | 'pfp' | 'tag'; itemId: string }) =>
     request<{ coins?: number; granted?: MarketplaceItem & { tag?: string; tagColor?: string }; tag?: string; tagColor?: string }>('/api/marketplace/admin/grant', {
       method: 'POST',
@@ -1232,6 +1238,7 @@ export interface FeedUser {
   tagColor: string | null
   nameColor: string | null
   pfpEffect: string | null
+  badge?: string | null
   avatarUrl?: string | null
 }
 
@@ -1284,6 +1291,7 @@ export interface FeedUserProfile {
   tagColor: string | null
   nameColor: string | null
   pfpEffect: string | null
+  badge?: string | null
   avatarUrl?: string | null
   role: string
   isFollowing: boolean
@@ -1318,6 +1326,7 @@ export interface InventoryData {
   tagColor: string | null
   nameColor: string | null
   pfpEffect: string | null
+  badge?: string | null
   ownedTags: TagInventoryItem[]
   ownedNameColors: MarketplaceItem[]
   ownedPfpEffects: MarketplaceItem[]
@@ -1353,7 +1362,7 @@ export interface MarketplaceListing {
   status: string
   buyerId: number | null
   createdAt: string
-  seller: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }
+  seller: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
 }
 
 export interface TradeOffer {
@@ -1365,12 +1374,12 @@ export interface TradeOffer {
   status: string
   note?: string | null
   createdAt: string
-  sender: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }
-  receiver: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }
+  sender: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
+  receiver: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
 }
 
 export interface UserPublicInventory {
-  user: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }
+  user: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
   tags: TagInventoryItem[]
   nameColors: MarketplaceItem[]
   pfpEffects: MarketplaceItem[]
@@ -1380,7 +1389,7 @@ export interface ItemSalePoint { price: number; soldAt: string }
 
 export interface ItemOwner {
   rank: number; id: number; name: string | null
-  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null
+  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; badge?: string | null
   qty: number
 }
 
@@ -1388,7 +1397,7 @@ export interface ItemOwnersData { owners: ItemOwner[]; total: number }
 
 export interface LeaderboardEntry {
   rank: number; id: number; name: string | null
-  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; value: number
+  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; badge?: string | null; value: number
 }
 
 export interface LeaderboardData {

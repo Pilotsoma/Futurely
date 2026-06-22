@@ -23,6 +23,7 @@ model User {
   lastCoinClaim            DateTime?
   nameColor                String?
   pfpEffect                String?
+  badge                    String?
   avatarUrl                String?
   ownedNameColors          Json                     @default("[]")
   ownedPfpEffects          Json                     @default("[]")
