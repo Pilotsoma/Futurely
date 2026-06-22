@@ -33,7 +33,7 @@ export const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'top-performer',  tag: 'Top Performer',   tagColor: '#8B5CF6', rarity: 'Rare',      weight: 5    },
   { id: 'ace',            tag: 'Ace',             tagColor: '#F97316', rarity: 'Epic',      weight: 1.75 },
   { id: 'genius',         tag: 'Genius',          tagColor: '#EC4899', rarity: 'Epic',      weight: 1.85 },
-  { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
+  { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#C0C0C0', rarity: 'Legendary', weight: 0.5  },
   { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#111111',        rarity: 'Legendary', weight: 0.5  },
   { id: 'god',            tag: 'VIP',             tagColor: '#111111',        rarity: 'Mythic',    weight: 0.3  },
   { id: 'verified',       tag: 'Verified',        tagColor: 'verified-yellow', rarity: 'Mythic',   weight: 0.1  },
@@ -63,7 +63,7 @@ const NAME_COLOR_BOX_ITEMS: ColorItem[] = [
   { id: 'lime-green',    name: 'Lime Green',     value: '#65A30D', rarity: 'Rare',      weight: 3.33  },
   { id: 'electric-blue', name: 'Electric Blue',  value: '#2563EB', rarity: 'Epic',      weight: 1.98  },
   { id: 'magenta',       name: 'Magenta',        value: '#C026D3', rarity: 'Epic',      weight: 1.98  },
-  { id: 'pure-white',    name: 'Pure White',     value: '#F8FAFC', rarity: 'Legendary', weight: 0.5   },
+  { id: 'platinum',    name: 'Platinum',     value: '#C0C0C0', rarity: 'Legendary', weight: 0.5   },
   { id: 'black',         name: 'Black',          value: '#111111', rarity: 'Legendary', weight: 0.5   },
   { id: 'rainbow',       name: 'Rainbow RGB',    value: 'rainbow', rarity: 'Mythic',    weight: 0.05  },
 ]
@@ -134,9 +134,9 @@ const COSMETICS_BOX_ITEMS: CosmeticsItem[] = [
   { id: 'glow-pink',     name: 'Pink Glow',      value: 'glow-pink',  rarity: 'Epic',      itemType: 'pfp',        weight: 0.6583 },
   { id: 'glow-purple',   name: 'Purple Glow',    value: 'glow-purple', rarity: 'Epic',     itemType: 'pfp',        weight: 0.6583 },
   // ── Legendary (0.75% / 7 items ≈ 0.1071 each) ───────────────────────────
-  { id: 'mastermind',    tag: 'Valedictorian',   tagColor: '#F8FAFC', rarity: 'Legendary', itemType: 'tag',        weight: 0.1071 },
+  { id: 'mastermind',    tag: 'Valedictorian',   tagColor: '#C0C0C0', rarity: 'Legendary', itemType: 'tag',        weight: 0.1071 },
   { id: 'prodigy',       tag: 'Prodigy',         tagColor: '#111111', rarity: 'Legendary', itemType: 'tag',        weight: 0.1071 },
-  { id: 'pure-white',    name: 'Pure White',     value: '#F8FAFC',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1071 },
+  { id: 'platinum',    name: 'Platinum',     value: '#C0C0C0',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1071 },
   { id: 'black',         name: 'Black',          value: '#111111',    rarity: 'Legendary', itemType: 'name-color', weight: 0.1071 },
   { id: 'glow-gold',     name: 'Gold Fill',      value: 'glow-gold',  rarity: 'Legendary', itemType: 'pfp',        weight: 0.1071 },
   { id: 'frame-black',   name: 'Void Fill',      value: 'frame-black', rarity: 'Legendary', itemType: 'pfp',      weight: 0.1071 },
@@ -179,7 +179,7 @@ export const SEED_PRICES: Record<string, number> = {
   'name-color:bright-orange': 20,  'name-color:violet': 20,      'name-color:cyan': 20,
   'name-color:hot-pink': 35,       'name-color:gold': 35,        'name-color:lime-green': 35,
   'name-color:electric-blue': 125, 'name-color:magenta': 125,
-  'name-color:pure-white': 1200,   'name-color:black': 1200,
+  'name-color:platinum': 1200,   'name-color:black': 1200,
   'name-color:rainbow': 30000,
   // PFP Effects — Common 12, Uncommon 20, Rare 35, Epic 125, Legendary 2000, Mythic 50000
   'pfp:border-green': 12,    'pfp:border-blue': 12,    'pfp:border-red': 12,
@@ -401,7 +401,7 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 // Bump this number whenever SEED_PRICES changes — forces a one-time DB reset
 // to the new values, after which dynamic pricing takes over again.
-const SEED_VERSION = 11
+const SEED_VERSION = 12
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
