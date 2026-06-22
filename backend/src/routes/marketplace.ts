@@ -1253,6 +1253,189 @@ router.get('/users/:userId/inventory', requireAuth, async (req: AuthRequest, res
   }
 })
 
+// ── Wandering Trader ──────────────────────────────────────────────────────────
+
+const TRADER_DAILY_SELL_LIMIT  = 5
+const TRADER_DAILY_TRADE_LIMIT = 5
+
+const TRADER_MARKUP: Record<string, number> = {
+  Common: 1.5, Uncommon: 1.75, Rare: 2.0, Epic: 2.25, Legendary: 2.5, Mythic: 3.0,
+}
+
+// All items the trader stocks (no Staff, no Curse, no GOAT, no streak tags)
+const TRADER_CATALOG: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; tag?: string; tagColor?: string; value?: string }> = [
+  ...TAG_BOX_ITEMS.map(i => ({ type: 'tag' as const, id: i.id, name: i.tag, tag: i.tag, tagColor: i.tagColor, rarity: i.rarity })),
+  ...NAME_COLOR_BOX_ITEMS.map(i => ({ type: 'name-color' as const, id: i.id, name: i.name, value: i.value, rarity: i.rarity })),
+  ...PFP_EFFECT_BOX_ITEMS.map(i => ({ type: 'pfp' as const, id: i.id, name: i.name, value: i.value, rarity: i.rarity })),
+]
+
+// Items the trader will NOT buy from users
+const TRADER_NO_BUY = new Set(['Novice', 'Pro', 'Veteran', 'Legend', 'GOAT'])
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function traderSellPrice(type: string, id: string): number {
+  const key = `${type}:${id}`
+  const est = SEED_PRICES[key] ?? 0
+  return Math.floor(est * 0.5)
+}
+
+function traderBuyPrice(rarity: string, type: string, id: string): number {
+  const key = `${type}:${id}`
+  const est = SEED_PRICES[key] ?? 0
+  const multiplier = TRADER_MARKUP[rarity] ?? 2.0
+  return Math.ceil(Math.max(est, 50) * multiplier)
+}
+
+router.get('/trader/status', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { traderSellCount: true, traderSellDate: true, traderTradeCount: true, traderTradeDate: true },
+    })
+    if (!user) { res.status(404).json({ error: 'User not found' }); return }
+    const today = todayStr()
+    const sellsUsed  = user.traderSellDate  === today ? user.traderSellCount  : 0
+    const tradesUsed = user.traderTradeDate === today ? user.traderTradeCount : 0
+    res.json({
+      sellsUsed, sellsRemaining: TRADER_DAILY_SELL_LIMIT - sellsUsed,
+      tradesUsed, tradesRemaining: TRADER_DAILY_TRADE_LIMIT - tradesUsed,
+    })
+  } catch { res.status(500).json({ error: 'Failed' }) }
+})
+
+router.get('/trader/catalog', requireAuth, async (_req: AuthRequest, res: Response): Promise<void> => {
+  const catalog = TRADER_CATALOG.map(item => ({
+    ...item,
+    traderPrice: traderBuyPrice(item.rarity, item.type, item.id),
+  }))
+  res.json({ data: catalog })
+})
+
+router.post('/trader/sell', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  const { itemType, itemId } = req.body as { itemType?: string; itemId?: string }
+  if (!itemType || !itemId) { res.status(400).json({ error: 'itemType and itemId required' }); return }
+  if (!['tag', 'name-color', 'pfp'].includes(itemType)) { res.status(400).json({ error: 'Invalid itemType' }); return }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { allTags: true, ownedNameColors: true, ownedPfpEffects: true, tag: true, nameColor: true, pfpEffect: true, traderSellCount: true, traderSellDate: true },
+    })
+    if (!user) { res.status(404).json({ error: 'User not found' }); return }
+
+    const today = todayStr()
+    const sellsUsed = user.traderSellDate === today ? user.traderSellCount : 0
+    if (sellsUsed >= TRADER_DAILY_SELL_LIMIT) {
+      res.status(429).json({ error: `Trader will only buy ${TRADER_DAILY_SELL_LIMIT} items per day. Come back tomorrow.` }); return
+    }
+
+    // Build trade item to check ownership
+    const tradeItem: TradeItem = { type: itemType as 'tag' | 'name-color' | 'pfp', id: itemId, rarity: '' }
+    if (itemType === 'tag') {
+      const def = TAG_BOX_ITEMS.find(d => d.id === itemId)
+             ?? SPECIAL_TAGS.find(d => d.id === itemId)
+             ?? DEV_CURSE_ITEMS.find(d => d.id === itemId && d.itemType === 'tag')
+      if (!def) { res.status(404).json({ error: 'Item not found' }); return }
+      if ('tag' in def) { tradeItem.tag = def.tag; tradeItem.tagColor = def.tagColor }
+      tradeItem.rarity = def.rarity
+      if (TRADER_NO_BUY.has(tradeItem.tag ?? itemId)) {
+        res.status(403).json({ error: "The trader won't buy that item." }); return
+      }
+    } else if (itemType === 'name-color') {
+      const def = NAME_COLOR_BOX_ITEMS.find(d => d.id === itemId)
+             ?? DEV_CURSE_ITEMS.find(d => d.id === itemId && d.itemType === 'name-color')
+      if (!def) { res.status(404).json({ error: 'Item not found' }); return }
+      tradeItem.name = 'name' in def ? def.name : itemId
+      tradeItem.value = 'value' in def ? def.value : undefined
+      tradeItem.rarity = def.rarity
+    } else {
+      const def = PFP_EFFECT_BOX_ITEMS.find(d => d.id === itemId)
+             ?? DEV_CURSE_ITEMS.find(d => d.id === itemId && d.itemType === 'pfp')
+      if (!def) { res.status(404).json({ error: 'Item not found' }); return }
+      tradeItem.name = 'name' in def ? def.name : itemId
+      tradeItem.value = 'value' in def ? def.value : undefined
+      tradeItem.rarity = def.rarity
+    }
+
+    if (!userOwnsItem(user, tradeItem)) {
+      res.status(403).json({ error: 'You do not own this item' }); return
+    }
+
+    const payout = traderSellPrice(itemType, itemId)
+    const removeUpdates = removeItem(user, tradeItem)
+
+    await prisma.user.update({
+      where: { id: req.userId },
+      data: {
+        coins: { increment: payout },
+        traderSellCount: sellsUsed + 1,
+        traderSellDate: today,
+        ...removeUpdates,
+      },
+    })
+
+    res.json({ ok: true, payout, sellsRemaining: TRADER_DAILY_SELL_LIMIT - sellsUsed - 1 })
+  } catch { res.status(500).json({ error: 'Failed to sell to trader' }) }
+})
+
+router.post('/trader/buy', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  const { itemType, itemId } = req.body as { itemType?: string; itemId?: string }
+  if (!itemType || !itemId) { res.status(400).json({ error: 'itemType and itemId required' }); return }
+  if (!['tag', 'name-color', 'pfp'].includes(itemType)) { res.status(400).json({ error: 'Invalid itemType' }); return }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { coins: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true, tag: true, nameColor: true, pfpEffect: true, traderTradeCount: true, traderTradeDate: true },
+    })
+    if (!user) { res.status(404).json({ error: 'User not found' }); return }
+
+    const today = todayStr()
+    const tradesUsed = user.traderTradeDate === today ? user.traderTradeCount : 0
+    if (tradesUsed >= TRADER_DAILY_TRADE_LIMIT) {
+      res.status(429).json({ error: `You've reached the trader's limit of ${TRADER_DAILY_TRADE_LIMIT} trades per day.` }); return
+    }
+
+    // Find item in trader catalog
+    const catalogItem = TRADER_CATALOG.find(i => i.type === itemType && i.id === itemId)
+    if (!catalogItem) { res.status(404).json({ error: "The trader doesn't carry that item." }); return }
+
+    const price = traderBuyPrice(catalogItem.rarity, itemType, itemId)
+    if (user.coins < price) {
+      res.status(402).json({ error: `Not enough coins. Need ${price.toLocaleString()}.` }); return
+    }
+
+    const tradeItem: TradeItem = {
+      type: itemType as 'tag' | 'name-color' | 'pfp',
+      id: itemId,
+      rarity: catalogItem.rarity,
+      tag: catalogItem.tag,
+      tagColor: catalogItem.tagColor,
+      name: catalogItem.name,
+      value: catalogItem.value,
+    }
+    const addUpdates = addItem(user, tradeItem)
+
+    await prisma.user.update({
+      where: { id: req.userId },
+      data: {
+        coins: { decrement: price },
+        traderTradeCount: tradesUsed + 1,
+        traderTradeDate: today,
+        ...addUpdates,
+      },
+    })
+
+    res.json({ ok: true, price, tradesRemaining: TRADER_DAILY_TRADE_LIMIT - tradesUsed - 1 })
+  } catch { res.status(500).json({ error: 'Failed to buy from trader' }) }
+})
+
 // ── Trades — order matters: static before dynamic ─────────────────────────────
 
 router.get('/trades/incoming', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
@@ -1320,7 +1503,7 @@ router.post('/trades', requireAuth, txLimiter, async (req: AuthRequest, res: Res
 
   if (!receiverId || typeof receiverId !== 'number') { res.status(400).json({ error: 'receiverId required' }); return }
   if (receiverId === req.userId) { res.status(400).json({ error: 'Cannot trade with yourself' }); return }
-  if (!Array.isArray(senderItems) || senderItems.length === 0) { res.status(400).json({ error: 'senderItems must be a non-empty array' }); return }
+  if (!Array.isArray(senderItems)) { res.status(400).json({ error: 'senderItems must be an array' }); return }
   if (!Array.isArray(receiverItems) || receiverItems.length === 0) { res.status(400).json({ error: 'receiverItems must be a non-empty array' }); return }
 
   const hasNonTradeable = [...senderItems, ...receiverItems].some(
@@ -1348,7 +1531,7 @@ router.post('/trades', requireAuth, txLimiter, async (req: AuthRequest, res: Res
       }
     }
 
-    const removeUpdates = applyMultipleRemoves(sender, senderItems)
+    const removeUpdates = senderItems.length > 0 ? applyMultipleRemoves(sender, senderItems) : {}
 
     const trade = await prisma.$transaction(async (tx) => {
       await tx.user.update({

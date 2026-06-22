@@ -393,8 +393,20 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'Bottom 100', type: 'tag', name: 'Bottom 100', rarity: 'Common', tagColor: '#6B7280' },
 ]
 
-type Tab = 'boxes' | 'shop' | 'trade' | 'inventory' | 'leaderboard' | 'catalog'
+type Tab = 'boxes' | 'shop' | 'trade' | 'trader' | 'inventory' | 'leaderboard' | 'catalog'
 type TradeSubTab = 'new' | 'incoming' | 'sent' | 'history'
+type TraderSubTab = 'sell' | 'buy'
+
+interface TraderCatalogItem {
+  type: 'tag' | 'name-color' | 'pfp'
+  id: string
+  name: string
+  rarity: string
+  traderPrice: number
+  tag?: string
+  tagColor?: string
+  value?: string
+}
 
 function ncStyle(color: string | null | undefined, fallback?: string): React.CSSProperties {
   if (!color || color === 'rainbow' || color === 'curse') return fallback ? { color: fallback } : {}
@@ -1137,6 +1149,18 @@ export default function MarketplacePage() {
   const [tradeBusy, setTradeBusy] = useState<number | null>(null)
   const [tradeActionMsg, setTradeActionMsg] = useState<{ id: number; msg: string } | null>(null)
 
+  // Wandering Trader
+  const [traderSubTab, setTraderSubTab] = useState<TraderSubTab>('sell')
+  const [traderStatus, setTraderStatus] = useState<{ sellsUsed: number; sellsRemaining: number; tradesUsed: number; tradesRemaining: number } | null>(null)
+  const [traderCatalog, setTraderCatalog] = useState<TraderCatalogItem[]>([])
+  const [traderCatalogLoaded, setTraderCatalogLoaded] = useState(false)
+  const [traderSearch, setTraderSearch] = useState('')
+  const [traderRarityFilter, setTraderRarityFilter] = useState<string>('All')
+  const [traderSellConfirm, setTraderSellConfirm] = useState<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; payout: number } | null>(null)
+  const [traderBuyConfirm, setTraderBuyConfirm] = useState<TraderCatalogItem | null>(null)
+  const [traderBusy, setTraderBusy] = useState(false)
+  const [traderMsg, setTraderMsg] = useState('')
+
   // Item prices for hover tooltips
   const [prices, setPrices] = useState<Record<string, number>>({})
 
@@ -1224,7 +1248,13 @@ export default function MarketplacePage() {
         .catch(() => {})
         .finally(() => setLeaderboardLoading(false))
     }
-  }, [tab, fetchListings, fetchMyActiveListings, fetchTrades])
+    if (tab === 'trader') {
+      api.traderStatus().then(setTraderStatus).catch(() => {})
+      if (!traderCatalogLoaded) {
+        api.traderCatalog().then(r => { setTraderCatalog(r.data); setTraderCatalogLoaded(true) }).catch(() => {})
+      }
+    }
+  }, [tab, fetchListings, fetchMyActiveListings, fetchTrades, traderCatalogLoaded])
 
   // Scroll result card into view when a new single result appears
   useEffect(() => {
@@ -1573,7 +1603,7 @@ export default function MarketplacePage() {
   }
 
   async function handleSendTrade() {
-    if (!tradeTarget || selectedOffer.length === 0 || selectedRequest.length === 0 || sendingTrade) return
+    if (!tradeTarget || selectedRequest.length === 0 || sendingTrade) return
     if (!inv || inv.coins < 5) { setTradeMsg('Need 🪙 5 to send a trade'); return }
     setSendingTrade(true); setTradeMsg('')
     try {
@@ -1876,7 +1906,7 @@ export default function MarketplacePage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 2, marginBottom: 24, borderBottom: '1px solid var(--border)' }}>
-        {(['boxes', 'shop', 'trade', 'inventory', 'leaderboard', 'catalog'] as Tab[]).map(t => (
+        {(['boxes', 'shop', 'trade', 'trader', 'inventory', 'leaderboard', 'catalog'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '8px 16px', borderRadius: '8px 8px 0 0', border: 'none',
             background: tab === t ? 'var(--surface-2)' : 'transparent',
@@ -1892,6 +1922,7 @@ export default function MarketplacePage() {
                 <span style={{ marginLeft: 4, background: '#EF4444', color: '#fff', borderRadius: 99, fontSize: 10, fontWeight: 700, padding: '1px 5px' }}>{pendingIncoming}</span>
               )}</>
             )}
+            {t === 'trader' && '🧙 Trader'}
             {t === 'inventory' && '🎒 Inventory'}
             {t === 'leaderboard' && '🏆 Leaderboard'}
             {t === 'catalog' && '📖 Catalog'}
@@ -2391,9 +2422,14 @@ export default function MarketplacePage() {
                     </div>
                   </div>
                   {tradeMsg && <div style={{ fontSize: 12, color: tradeMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 10 }}>{tradeMsg}</div>}
+                  {selectedOffer.length === 0 && selectedRequest.length > 0 && (
+                    <div style={{ fontSize: 12, color: '#F97316', fontWeight: 600, marginBottom: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)' }}>
+                      ⚠️ You're offering nothing — this is a gift request
+                    </div>
+                  )}
                   <button onClick={() => void handleSendTrade()}
-                    disabled={sendingTrade || selectedOffer.length === 0 || selectedRequest.length === 0 || !inv || inv.coins < 5}
-                    style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 14, cursor: selectedOffer.length > 0 && selectedRequest.length > 0 ? 'pointer' : 'not-allowed', opacity: selectedOffer.length === 0 || selectedRequest.length === 0 ? 0.4 : 1 }}>
+                    disabled={sendingTrade || selectedRequest.length === 0 || !inv || inv.coins < 5}
+                    style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 14, cursor: selectedRequest.length > 0 ? 'pointer' : 'not-allowed', opacity: selectedRequest.length === 0 ? 0.4 : 1 }}>
                     {sendingTrade ? 'Sending…' : <>Send Trade — <CoinIcon size={13} style={{ margin: '0 3px' }} />5</>}
                   </button>
                 </>
@@ -2639,6 +2675,156 @@ export default function MarketplacePage() {
               )}
             </>
           )}
+        </>
+      )}
+
+      {/* ── WANDERING TRADER TAB ── */}
+      {tab === 'trader' && (
+        <>
+          {/* NPC header */}
+          <div className="ns-card" style={{ padding: '20px 22px', marginBottom: 18, background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(234,179,8,0.06) 100%)', border: '1px solid rgba(139,92,246,0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ fontSize: 48, lineHeight: 1 }}>🧙</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>The Wandering Trader</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 10 }}>
+                  I travel far and wide collecting rarities. I'll buy your items — but don't expect full value.
+                  And yes, I have <em>everything</em>, but my prices reflect my trouble.
+                </div>
+                {traderStatus && (
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ padding: '4px 12px', borderRadius: 99, background: traderStatus.sellsRemaining > 0 ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', border: `1px solid ${traderStatus.sellsRemaining > 0 ? '#22C55E55' : '#6B728055'}`, fontSize: 11, fontWeight: 700, color: traderStatus.sellsRemaining > 0 ? '#22C55E' : 'var(--text-muted)' }}>
+                      Sells: {traderStatus.sellsRemaining}/5 left today
+                    </div>
+                    <div style={{ padding: '4px 12px', borderRadius: 99, background: traderStatus.tradesRemaining > 0 ? 'rgba(139,92,246,0.12)' : 'rgba(107,114,128,0.12)', border: `1px solid ${traderStatus.tradesRemaining > 0 ? '#8B5CF655' : '#6B728055'}`, fontSize: 11, fontWeight: 700, color: traderStatus.tradesRemaining > 0 ? '#8B5CF6' : 'var(--text-muted)' }}>
+                      Buys: {traderStatus.tradesRemaining}/5 left today
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-tabs */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            {(['sell', 'buy'] as TraderSubTab[]).map(st => (
+              <button key={st} onClick={() => { setTraderSubTab(st); setTraderMsg('') }}
+                style={{ flex: 1, padding: '9px 0', borderRadius: 9, border: `1px solid ${traderSubTab === st ? 'var(--primary)' : 'var(--border)'}`, background: traderSubTab === st ? 'var(--primary)18' : 'transparent', color: traderSubTab === st ? 'var(--primary)' : 'var(--text-muted)', fontWeight: traderSubTab === st ? 700 : 500, fontSize: 13, cursor: 'pointer' }}>
+                {st === 'sell' ? '💰 Sell to Trader' : '🛒 Buy from Trader'}
+              </button>
+            ))}
+          </div>
+
+          {traderMsg && (
+            <div style={{ fontSize: 13, fontWeight: 600, color: traderMsg.startsWith('✓') ? '#22C55E' : '#EF4444', marginBottom: 14, padding: '10px 14px', borderRadius: 9, background: traderMsg.startsWith('✓') ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${traderMsg.startsWith('✓') ? '#22C55E44' : '#EF444444'}` }}>
+              {traderMsg}
+            </div>
+          )}
+
+          {/* SELL sub-tab */}
+          {traderSubTab === 'sell' && (() => {
+            const allOwned: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; tagColor?: string; value?: string }> = [
+              ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity, tagColor: t.tagColor })),
+              ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity, value: c.value })),
+              ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity, value: p.value })),
+            ].filter(i => !['GOAT', 'Novice', 'Pro', 'Veteran', 'Legend'].includes(i.id))
+
+            if (allOwned.length === 0) {
+              return <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Your inventory is empty — nothing to sell.</div>
+            }
+
+            return (
+              <>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  The trader pays <strong style={{ color: '#EAB308' }}>50% of est value</strong> for any item. Limit: 5 sells/day.
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 8 }}>
+                  {allOwned.map((item, i) => {
+                    const payout = Math.floor((prices[`${item.type}:${item.id}`] ?? 0) * 0.5)
+                    const borderColor = getRarityBorderColor(item.rarity, item.id)
+                    return (
+                      <PriceTooltip key={`${item.type}:${item.id}:${i}`} price={prices[`${item.type}:${item.id}`]}>
+                        <button
+                          onClick={() => setTraderSellConfirm({ type: item.type, id: item.id, name: item.name, rarity: item.rarity, payout })}
+                          style={{ width: '100%', aspectRatio: '1', borderRadius: 10, border: `2px solid ${borderColor}44`, background: 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: 6, transition: 'border-color 0.15s' }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor = borderColor)}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = `${borderColor}44`)}
+                        >
+                          <div style={{ fontSize: 11, fontWeight: 700, color: borderColor, textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-word' }}>
+                            {item.type === 'tag' ? `[${item.name}]` : item.name}
+                          </div>
+                          <div style={{ fontSize: 10, color: '#EAB308', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CoinIcon size={9} />{payout > 0 ? payout.toLocaleString() : '—'}
+                          </div>
+                        </button>
+                      </PriceTooltip>
+                    )
+                  })}
+                </div>
+              </>
+            )
+          })()}
+
+          {/* BUY sub-tab */}
+          {traderSubTab === 'buy' && (() => {
+            const RARITY_ORDER_BUY = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
+            const filtered = traderCatalog
+              .filter(item => traderRarityFilter === 'All' || item.rarity === traderRarityFilter)
+              .filter(item => !traderSearch || item.name.toLowerCase().includes(traderSearch.toLowerCase()))
+              .sort((a, b) => RARITY_ORDER_BUY.indexOf(a.rarity) - RARITY_ORDER_BUY.indexOf(b.rarity))
+
+            return (
+              <>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  The trader marks up all prices. The rarer, the pricier. Limit: 5 purchases/day.
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' as const }}>
+                  <input
+                    value={traderSearch}
+                    onChange={e => setTraderSearch(e.target.value)}
+                    placeholder="Search items…"
+                    style={{ flex: 1, minWidth: 140, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}
+                  />
+                  <select value={traderRarityFilter} onChange={e => setTraderRarityFilter(e.target.value)}
+                    style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
+                    <option value="All">All Rarities</option>
+                    {['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic'].map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+                {!traderCatalogLoaded ? (
+                  <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)', fontSize: 13 }}>Loading catalog…</div>
+                ) : filtered.length === 0 ? (
+                  <div className="ns-card" style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No items match</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8 }}>
+                    {filtered.map(item => {
+                      const borderColor = getRarityBorderColor(item.rarity, item.id)
+                      const canAfford = (inv?.coins ?? 0) >= item.traderPrice
+                      return (
+                        <button
+                          key={`${item.type}:${item.id}`}
+                          onClick={() => setTraderBuyConfirm(item)}
+                          style={{ width: '100%', aspectRatio: '1', borderRadius: 10, border: `2px solid ${borderColor}${canAfford ? '66' : '22'}`, background: canAfford ? 'var(--surface-2)' : 'var(--surface)', cursor: canAfford ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, padding: 6, opacity: canAfford ? 1 : 0.55, transition: 'border-color 0.15s' }}
+                          onMouseEnter={e => { if (canAfford) e.currentTarget.style.borderColor = borderColor }}
+                          onMouseLeave={e => { if (canAfford) e.currentTarget.style.borderColor = `${borderColor}66` }}
+                        >
+                          <div style={{ fontSize: 11, fontWeight: 700, color: borderColor, textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-word' }}>
+                            {item.type === 'tag' ? `[${item.name}]` : item.name}
+                          </div>
+                          <div style={{ fontSize: 10, color: canAfford ? '#EAB308' : 'var(--text-muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CoinIcon size={9} />{item.traderPrice.toLocaleString()}
+                          </div>
+                          <div style={{ fontSize: 9, color: borderColor, fontWeight: 600 }}>{item.rarity}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </>
+            )
+          })()}
         </>
       )}
 
@@ -3098,6 +3284,95 @@ export default function MarketplacePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Trader sell confirmation */}
+      {traderSellConfirm && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setTraderSellConfirm(null)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>🧙</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>Sell to Trader?</div>
+            <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>{traderSellConfirm.type === 'tag' ? `[${traderSellConfirm.name}]` : traderSellConfirm.name}</div>
+            <div style={{ fontSize: 12, color: getRarityColor(traderSellConfirm.rarity, traderSellConfirm.id), fontWeight: 700, marginBottom: 16 }}>{traderSellConfirm.rarity}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+              The trader will pay <strong style={{ color: '#EAB308', display: 'inline-flex', alignItems: 'center', gap: 3 }}><CoinIcon size={12} />{traderSellConfirm.payout > 0 ? traderSellConfirm.payout.toLocaleString() : 0}</strong>
+              {traderSellConfirm.payout === 0 && <span style={{ display: 'block', marginTop: 4, fontSize: 11, color: '#EF4444' }}>This item has no est value</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                disabled={traderBusy}
+                onClick={async () => {
+                  setTraderBusy(true)
+                  try {
+                    const r = await api.traderSell(traderSellConfirm.type, traderSellConfirm.id)
+                    setTraderSellConfirm(null)
+                    refreshInventory()
+                    api.traderStatus().then(setTraderStatus).catch(() => {})
+                    setTraderMsg(`✓ Sold! You received ${r.payout.toLocaleString()} coins.`)
+                  } catch (e) {
+                    setTraderMsg(e instanceof Error ? e.message : 'Failed to sell')
+                    setTraderSellConfirm(null)
+                  } finally { setTraderBusy(false) }
+                }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: '#EAB308', color: '#060D10', fontWeight: 700, fontSize: 13, cursor: traderBusy ? 'not-allowed' : 'pointer', opacity: traderBusy ? 0.6 : 1 }}>
+                {traderBusy ? 'Selling…' : 'Confirm Sell'}
+              </button>
+              <button onClick={() => setTraderSellConfirm(null)}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Trader buy confirmation */}
+      {traderBuyConfirm && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setTraderBuyConfirm(null)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid rgba(139,92,246,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>🧙</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>Buy from Trader?</div>
+            <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>{traderBuyConfirm.type === 'tag' ? `[${traderBuyConfirm.name}]` : traderBuyConfirm.name}</div>
+            <div style={{ fontSize: 12, color: getRarityColor(traderBuyConfirm.rarity, traderBuyConfirm.id), fontWeight: 700, marginBottom: 16 }}>{traderBuyConfirm.rarity}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>
+              Trader's price: <strong style={{ color: '#8B5CF6', display: 'inline-flex', alignItems: 'center', gap: 3 }}><CoinIcon size={12} />{traderBuyConfirm.traderPrice.toLocaleString()}</strong>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 20 }}>
+              You have <strong style={{ color: '#EAB308' }}>{(inv?.coins ?? 0).toLocaleString()}</strong> coins
+              {(inv?.coins ?? 0) < traderBuyConfirm.traderPrice && <span style={{ display: 'block', color: '#EF4444', marginTop: 2 }}>Not enough coins</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                disabled={traderBusy || (inv?.coins ?? 0) < traderBuyConfirm.traderPrice}
+                onClick={async () => {
+                  setTraderBusy(true)
+                  try {
+                    const r = await api.traderBuy(traderBuyConfirm.type, traderBuyConfirm.id)
+                    setTraderBuyConfirm(null)
+                    refreshInventory()
+                    api.traderStatus().then(setTraderStatus).catch(() => {})
+                    setTraderMsg(`✓ Purchased ${traderBuyConfirm.name} for ${r.price.toLocaleString()} coins!`)
+                  } catch (e) {
+                    setTraderMsg(e instanceof Error ? e.message : 'Failed to buy')
+                    setTraderBuyConfirm(null)
+                  } finally { setTraderBusy(false) }
+                }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: '#8B5CF6', color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: (traderBusy || (inv?.coins ?? 0) < traderBuyConfirm.traderPrice) ? 'not-allowed' : 'pointer', opacity: (traderBusy || (inv?.coins ?? 0) < traderBuyConfirm.traderPrice) ? 0.5 : 1 }}>
+                {traderBusy ? 'Buying…' : 'Confirm Purchase'}
+              </button>
+              <button onClick={() => setTraderBuyConfirm(null)}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Cooldown purchase modal */}

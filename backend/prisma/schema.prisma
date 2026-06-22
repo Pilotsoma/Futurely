@@ -88,6 +88,10 @@ model User {
   counselorChatsSent        CounselorChatMessage[]      @relation("CounselorChatCounselor")
   counselorChatsReceived    CounselorChatMessage[]      @relation("CounselorChatStudent")
   counselorChatMessagesSent CounselorChatMessage[]      @relation("CounselorChatSender")
+  traderSellCount           Int                         @default(0)
+  traderSellDate            String                      @default("")
+  traderTradeCount          Int                         @default(0)
+  traderTradeDate           String                      @default("")
 }
 
 model OAuthAccount {

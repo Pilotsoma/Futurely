@@ -713,6 +713,26 @@ export const api = {
   marketplaceLeaderboard: () =>
     request<LeaderboardData>('/api/marketplace/leaderboard'),
 
+  // ── Wandering Trader ──────────────────────────────────────────────────────────
+
+  traderStatus: () =>
+    request<{ sellsUsed: number; sellsRemaining: number; tradesUsed: number; tradesRemaining: number }>('/api/marketplace/trader/status'),
+
+  traderCatalog: () =>
+    request<{ data: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; traderPrice: number; tag?: string; tagColor?: string; value?: string }> }>('/api/marketplace/trader/catalog'),
+
+  traderSell: (itemType: 'tag' | 'name-color' | 'pfp', itemId: string) =>
+    request<{ ok: boolean; payout: number; sellsRemaining: number }>('/api/marketplace/trader/sell', {
+      method: 'POST',
+      body: JSON.stringify({ itemType, itemId }),
+    }),
+
+  traderBuy: (itemType: 'tag' | 'name-color' | 'pfp', itemId: string) =>
+    request<{ ok: boolean; price: number; tradesRemaining: number }>('/api/marketplace/trader/buy', {
+      method: 'POST',
+      body: JSON.stringify({ itemType, itemId }),
+    }),
+
   // ── Parent API ────────────────────────────────────────────────────────────────
 
   parentLinkStudent: (credentials: { districtUrl: string; username: string; password: string }) =>
