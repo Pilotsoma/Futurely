@@ -475,9 +475,10 @@ function ItemBox({ children, rarity, itemId, style, onClick }: { children: React
         gap: 8,
         padding: '8px 10px',
         borderRadius: 8,
-        background: 'var(--surface-2)',
         border: isRainbow ? '2px solid transparent' : `2px solid ${borderColor}44`,
-        ...(isRainbow ? { backgroundImage: borderColor, backgroundOrigin: 'border-box', backgroundClip: 'padding-box' } : {}),
+        background: isRainbow
+          ? 'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, #ff6b6b, #ffd43b, #69db7c, #4dabf7, #cc5de8, #ff6b6b) border-box'
+          : 'var(--surface-2)',
         ...style,
       }}
     >
@@ -2487,7 +2488,11 @@ export default function MarketplacePage() {
                                     position: 'relative' as const,
                                     borderRadius: 8,
                                     border: selCount > 0 ? `2px solid ${accentColor}` : isRainbowRarity ? '2px solid transparent' : `2px solid ${borderColor}44`,
-                                    background: selCount > 0 ? `${accentColor}18` : 'var(--surface-2)',
+                                    background: selCount > 0
+                                      ? `${accentColor}18`
+                                      : isRainbowRarity
+                                      ? 'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, #ff6b6b, #ffd43b, #69db7c, #4dabf7, #cc5de8, #ff6b6b) border-box'
+                                      : 'var(--surface-2)',
                                     padding: '8px 4px 6px',
                                     display: 'flex',
                                     flexDirection: 'column' as const,
