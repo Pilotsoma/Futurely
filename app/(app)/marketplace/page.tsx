@@ -1075,6 +1075,7 @@ export default function MarketplacePage() {
   const [tradeTarget, setTradeTarget] = useState<UserPublicInventory | null>(null)
   const [targetLoading, setTargetLoading] = useState(false)
   const [tradeInvSearch, setTradeInvSearch] = useState('')
+  const [tradeMySearch, setTradeMySearch] = useState('')
   const [selectedOffer, setSelectedOffer] = useState<TradeItem[]>([])
   const [selectedRequest, setSelectedRequest] = useState<TradeItem[]>([])
   const [sendingTrade, setSendingTrade] = useState(false)
@@ -1577,6 +1578,7 @@ export default function MarketplacePage() {
 
   const myListedIds = new Set(myActiveListings.map(l => `${l.itemType}:${l.itemId}`))
   const tradeInvQ = tradeInvSearch.trim().toLowerCase()
+  const tradeMyQ = tradeMySearch.trim().toLowerCase()
   const filteredTradeTargetTags = tradeTarget
     ? tradeTarget.tags.filter(t => !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id) && (!tradeInvQ || t.tag.toLowerCase().includes(tradeInvQ)))
     : []
@@ -2216,15 +2218,22 @@ export default function MarketplacePage() {
 
                     {/* Your inventory — what you offer */}
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 6 }}>
                         Your Items — tap to offer
                       </div>
+                      <input
+                        className="ns-input"
+                        style={{ width: '100%', height: 30, fontSize: 11, marginBottom: 8, boxSizing: 'border-box' as const, padding: '0 10px' }}
+                        placeholder="Search your items…"
+                        value={tradeMySearch}
+                        onChange={e => setTradeMySearch(e.target.value)}
+                      />
                       {(!inv || ((inv.ownedTags ?? []).length === 0 && inv.ownedNameColors.length === 0 && inv.ownedPfpEffects.length === 0)) ? (
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>No items to offer</div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`) && !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id)).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
-                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`) && !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id)).map(t => {
+                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`) && !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id) && (!tradeMyQ || t.tag.toLowerCase().includes(tradeMyQ))).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
+                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`) && !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id) && (!tradeMyQ || t.tag.toLowerCase().includes(tradeMyQ))).map(t => {
                             const item: TradeItem = { type: 'tag', id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }
                             const sel = selectedOffer.some(i => i.id === t.id && i.type === 'tag')
                             return (
@@ -2237,8 +2246,8 @@ export default function MarketplacePage() {
                               </PriceTooltip>
                             )
                           })}
-                          {(inv?.ownedNameColors ?? []).filter(c => !myListedIds.has(`name-color:${c.id}`)).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🎨 Name Colors</div>}
-                          {(inv?.ownedNameColors ?? []).filter(c => !myListedIds.has(`name-color:${c.id}`)).map(c => {
+                          {(inv?.ownedNameColors ?? []).filter(c => !myListedIds.has(`name-color:${c.id}`) && (!tradeMyQ || c.name.toLowerCase().includes(tradeMyQ))).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🎨 Name Colors</div>}
+                          {(inv?.ownedNameColors ?? []).filter(c => !myListedIds.has(`name-color:${c.id}`) && (!tradeMyQ || c.name.toLowerCase().includes(tradeMyQ))).map(c => {
                             const item: TradeItem = { type: 'name-color', id: c.id, name: c.name, value: c.value, rarity: c.rarity }
                             const sel = selectedOffer.some(i => i.id === c.id && i.type === 'name-color')
                             return (
@@ -2252,8 +2261,8 @@ export default function MarketplacePage() {
                               </PriceTooltip>
                             )
                           })}
-                          {(inv?.ownedPfpEffects ?? []).filter(p => !myListedIds.has(`pfp:${p.id}`)).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🖼️ PFP Effects</div>}
-                          {(inv?.ownedPfpEffects ?? []).filter(p => !myListedIds.has(`pfp:${p.id}`)).map(p => {
+                          {(inv?.ownedPfpEffects ?? []).filter(p => !myListedIds.has(`pfp:${p.id}`) && (!tradeMyQ || p.name.toLowerCase().includes(tradeMyQ))).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🖼️ PFP Effects</div>}
+                          {(inv?.ownedPfpEffects ?? []).filter(p => !myListedIds.has(`pfp:${p.id}`) && (!tradeMyQ || p.name.toLowerCase().includes(tradeMyQ))).map(p => {
                             const item: TradeItem = { type: 'pfp', id: p.id, name: p.name, value: p.value, rarity: p.rarity }
                             const sel = selectedOffer.some(i => i.id === p.id && i.type === 'pfp')
                             return (
