@@ -2045,7 +2045,7 @@ export default function MarketplacePage() {
                 {item.type === 'tag' ? (
                   <span className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.tag === 'GOAT' || item.tag === 'VIP' || item.tag === 'DEV' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
                 ) : item.type === 'name-color' ? (
-                  <span className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.value === 'rainbow' || item.value === 'curse') ? undefined : item.value }}>DUMMY</span>
+                  <span className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.value === 'rainbow' || item.value === 'curse') ? undefined : item.value }}>{inv?.name ?? 'Username'}</span>
                 ) : (
                   <div className={pfpClass(item.value)} style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, ...pfpStyle(item.value) }} />
                 )}
@@ -2196,7 +2196,7 @@ export default function MarketplacePage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={DUMMY_PFP}
-                    alt="DUMMY"
+                    alt={inv?.name ?? 'User'}
                     className={result.won.type === 'pfp' ? pfpClass(result.won.value) : ''}
                     style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0, ...dummyImgStyle }}
                   />
@@ -2207,18 +2207,19 @@ export default function MarketplacePage() {
                       className={result.won.type === 'name-color' && isRainbow ? 'name-rainbow' : result.won.type === 'name-color' && result.won.value === 'curse' ? 'name-curse' : ''}
                       style={{ fontSize: 13, fontWeight: 700, color: result.won.type === 'name-color' && !isRainbow && result.won.value !== 'curse' ? result.won.value : 'var(--text)' }}
                     >
-                      DUMMY
+                      {inv?.name ?? 'Username'}
                     </span>
-                    {result.won.type === 'tag' && (
+                    {result.won.type === 'tag' ? (
                       (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                         ? <VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
                         : <span className={result.won.tag === 'VIP' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tag === 'DEV' ? 'tag-rainbow' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 700, color: (result.won.tag === 'GOAT' || result.won.tag === 'VIP' || result.won.tag === 'DEV' || result.won.tagColor === 'curse') ? undefined : (result.won.tagColor ?? '#6B7280') }}>
                             [{result.won.tag}]
                           </span>
-                    )}
-                    {result.won.type !== 'tag' && (
-                      <span>[DUMMY]</span>
-                    )}
+                    ) : inv?.tag ? (
+                      (inv.tagColor === 'verified-yellow' || inv.tagColor === 'verified-blue')
+                        ? <VerifiedBadge variant={inv.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
+                        : <span style={{ fontSize: 12, fontWeight: 700, color: inv.tagColor ?? '#6B7280' }}>[{inv.tag}]</span>
+                    ) : null}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Here&apos;s a preview of your new item ✨</div>
                 </div>

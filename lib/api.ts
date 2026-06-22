@@ -1320,6 +1320,7 @@ export interface TagInventoryItem {
 }
 
 export interface InventoryData {
+  name?: string | null
   coins: number
   canClaimToday: boolean
   tag: string | null
