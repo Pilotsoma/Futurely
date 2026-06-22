@@ -90,6 +90,8 @@ model User {
   counselorChatMessagesSent CounselorChatMessage[]      @relation("CounselorChatSender")
   traderSellCount           Int                         @default(0)
   traderSellDate            String                      @default("")
+  traderBuyCount            Int                         @default(0)
+  traderBuyDate             String                      @default("")
   traderTradeCount          Int                         @default(0)
   traderTradeDate           String                      @default("")
 }

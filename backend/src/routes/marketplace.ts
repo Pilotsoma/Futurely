@@ -1255,7 +1255,8 @@ router.get('/users/:userId/inventory', requireAuth, async (req: AuthRequest, res
 
 // ── Wandering Trader ──────────────────────────────────────────────────────────
 
-const TRADER_DAILY_SELL_LIMIT  = 5
+const TRADER_DAILY_SELL_LIMIT  = 3
+const TRADER_DAILY_BUY_LIMIT   = 3
 const TRADER_DAILY_TRADE_LIMIT = 5
 
 const TRADER_MARKUP: Record<string, number> = {
@@ -1294,14 +1295,16 @@ router.get('/trader/status', requireAuth, async (req: AuthRequest, res: Response
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { traderSellCount: true, traderSellDate: true, traderTradeCount: true, traderTradeDate: true },
+      select: { traderSellCount: true, traderSellDate: true, traderBuyCount: true, traderBuyDate: true, traderTradeCount: true, traderTradeDate: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
     const today = todayStr()
     const sellsUsed  = user.traderSellDate  === today ? user.traderSellCount  : 0
+    const buysUsed   = user.traderBuyDate   === today ? user.traderBuyCount   : 0
     const tradesUsed = user.traderTradeDate === today ? user.traderTradeCount : 0
     res.json({ data: {
-      sellsUsed, sellsRemaining: TRADER_DAILY_SELL_LIMIT - sellsUsed,
+      sellsUsed,  sellsRemaining:  TRADER_DAILY_SELL_LIMIT  - sellsUsed,
+      buysUsed,   buysRemaining:   TRADER_DAILY_BUY_LIMIT   - buysUsed,
       tradesUsed, tradesRemaining: TRADER_DAILY_TRADE_LIMIT - tradesUsed,
     } })
   } catch { res.status(500).json({ error: 'Failed' }) }
@@ -1392,14 +1395,14 @@ router.post('/trader/buy', requireAuth, txLimiter, async (req: AuthRequest, res:
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { coins: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true, tag: true, nameColor: true, pfpEffect: true, traderTradeCount: true, traderTradeDate: true },
+      select: { coins: true, allTags: true, ownedNameColors: true, ownedPfpEffects: true, tag: true, nameColor: true, pfpEffect: true, traderBuyCount: true, traderBuyDate: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
     const today = todayStr()
-    const tradesUsed = user.traderTradeDate === today ? user.traderTradeCount : 0
-    if (tradesUsed >= TRADER_DAILY_TRADE_LIMIT) {
-      res.status(429).json({ error: `You've reached the trader's limit of ${TRADER_DAILY_TRADE_LIMIT} trades per day.` }); return
+    const buysUsed = user.traderBuyDate === today ? user.traderBuyCount : 0
+    if (buysUsed >= TRADER_DAILY_BUY_LIMIT) {
+      res.status(429).json({ error: `You've reached the trader's limit of ${TRADER_DAILY_BUY_LIMIT} purchases per day. Come back tomorrow.` }); return
     }
 
     // Find item in trader catalog
@@ -1426,13 +1429,13 @@ router.post('/trader/buy', requireAuth, txLimiter, async (req: AuthRequest, res:
       where: { id: req.userId },
       data: {
         coins: { decrement: price },
-        traderTradeCount: tradesUsed + 1,
-        traderTradeDate: today,
+        traderBuyCount: buysUsed + 1,
+        traderBuyDate: today,
         ...addUpdates,
       },
     })
 
-    res.json({ data: { ok: true, price, tradesRemaining: TRADER_DAILY_TRADE_LIMIT - tradesUsed - 1 } })
+    res.json({ data: { ok: true, price, buysRemaining: TRADER_DAILY_BUY_LIMIT - buysUsed - 1 } })
   } catch { res.status(500).json({ error: 'Failed to buy from trader' }) }
 })
 

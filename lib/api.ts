@@ -716,7 +716,7 @@ export const api = {
   // ── Wandering Trader ──────────────────────────────────────────────────────────
 
   traderStatus: () =>
-    request<{ sellsUsed: number; sellsRemaining: number; tradesUsed: number; tradesRemaining: number }>('/api/marketplace/trader/status'),
+    request<{ sellsUsed: number; sellsRemaining: number; buysUsed: number; buysRemaining: number; tradesUsed: number; tradesRemaining: number }>('/api/marketplace/trader/status'),
 
   traderCatalog: () =>
     request<Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; traderPrice: number; tag?: string; tagColor?: string; value?: string }>>('/api/marketplace/trader/catalog'),
@@ -728,7 +728,7 @@ export const api = {
     }),
 
   traderBuy: (itemType: 'tag' | 'name-color' | 'pfp', itemId: string) =>
-    request<{ ok: boolean; price: number; tradesRemaining: number }>('/api/marketplace/trader/buy', {
+    request<{ ok: boolean; price: number; buysRemaining: number }>('/api/marketplace/trader/buy', {
       method: 'POST',
       body: JSON.stringify({ itemType, itemId }),
     }),

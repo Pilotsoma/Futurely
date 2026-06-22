@@ -1316,7 +1316,7 @@ export default function MarketplacePage() {
 
   // Wandering Trader
   const [traderSubTab, setTraderSubTab] = useState<TraderSubTab>('sell')
-  const [traderStatus, setTraderStatus] = useState<{ sellsUsed: number; sellsRemaining: number; tradesUsed: number; tradesRemaining: number } | null>(null)
+  const [traderStatus, setTraderStatus] = useState<{ sellsUsed: number; sellsRemaining: number; buysUsed: number; buysRemaining: number; tradesUsed: number; tradesRemaining: number } | null>(null)
   const [traderCatalog, setTraderCatalog] = useState<TraderCatalogItem[]>([])
   const [traderCatalogLoaded, setTraderCatalogLoaded] = useState(false)
   const [traderSearch, setTraderSearch] = useState('')
@@ -2885,10 +2885,13 @@ export default function MarketplacePage() {
                 {traderStatus && (
                   <div style={{ display: 'flex', gap: 12 }}>
                     <div style={{ padding: '4px 12px', borderRadius: 99, background: traderStatus.sellsRemaining > 0 ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', border: `1px solid ${traderStatus.sellsRemaining > 0 ? '#22C55E55' : '#6B728055'}`, fontSize: 11, fontWeight: 700, color: traderStatus.sellsRemaining > 0 ? '#22C55E' : 'var(--text-muted)' }}>
-                      Sells: {traderStatus.sellsRemaining}/5 left today
+                      Sells: {traderStatus.sellsRemaining}/3 left today
+                    </div>
+                    <div style={{ padding: '4px 12px', borderRadius: 99, background: traderStatus.buysRemaining > 0 ? 'rgba(59,130,246,0.12)' : 'rgba(107,114,128,0.12)', border: `1px solid ${traderStatus.buysRemaining > 0 ? '#3B82F655' : '#6B728055'}`, fontSize: 11, fontWeight: 700, color: traderStatus.buysRemaining > 0 ? '#3B82F6' : 'var(--text-muted)' }}>
+                      Buys: {traderStatus.buysRemaining}/3 left today
                     </div>
                     <div style={{ padding: '4px 12px', borderRadius: 99, background: traderStatus.tradesRemaining > 0 ? 'rgba(139,92,246,0.12)' : 'rgba(107,114,128,0.12)', border: `1px solid ${traderStatus.tradesRemaining > 0 ? '#8B5CF655' : '#6B728055'}`, fontSize: 11, fontWeight: 700, color: traderStatus.tradesRemaining > 0 ? '#8B5CF6' : 'var(--text-muted)' }}>
-                      Buys: {traderStatus.tradesRemaining}/5 left today
+                      Trades: {traderStatus.tradesRemaining}/5 left today
                     </div>
                   </div>
                 )}
