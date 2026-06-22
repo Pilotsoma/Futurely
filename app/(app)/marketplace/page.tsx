@@ -120,8 +120,8 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
           item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue'
             ? <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={26} />
             : <span
-                className={item.tag === 'VIP' ? 'tag-mythic' : item.tagColor === 'curse' ? 'tag-curse' : ''}
-                style={item.tag === 'VIP' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : {
+                className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+                style={(item.tag === 'VIP' || item.tag === 'GOAT' || item.tag === 'DEV') ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : item.tagColor === 'curse' ? { fontSize: 14, fontWeight: 800, padding: '5px 10px', borderRadius: 8 } : {
                   fontSize: 14, fontWeight: 800,
                   color: item.tagColor,
                   textShadow: item.rarity === 'Legendary' ? `0 0 10px ${rarityColor}88` : undefined,
@@ -135,10 +135,10 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
         )}
         {item.type === 'name-color' && (
           <span
-            className={item.value === 'rainbow' ? 'name-rainbow' : ''}
+            className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''}
             style={{
               fontSize: 16, fontWeight: 800, letterSpacing: '0.3px',
-              color: item.value !== 'rainbow' ? item.value : undefined,
+              color: (item.value !== 'rainbow' && item.value !== 'curse') ? item.value : undefined,
               textShadow: item.rarity === 'Legendary' ? `0 0 10px ${item.value}88` : undefined,
             }}
           >
@@ -616,7 +616,7 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
                     {owner.tag && (
                       (owner.tagColor === 'verified-yellow' || owner.tagColor === 'verified-blue')
                         ? <VerifiedBadge variant={owner.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
-                        : <span className={owner.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, fontWeight: 700, color: owner.tagColor === 'curse' ? undefined : owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>
+                        : <span className={owner.tag === 'DEV' ? 'tag-rainbow' : owner.tag === 'VIP' ? 'tag-mythic' : owner.tag === 'GOAT' ? 'tag-god' : owner.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, fontWeight: 700, color: (owner.tag === 'DEV' || owner.tag === 'VIP' || owner.tag === 'GOAT' || owner.tagColor === 'curse') ? undefined : owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>
                     )}
                   </div>
                   {owner.rank === 1 && <span style={{ fontSize: 10, color: '#EAB308', fontWeight: 700, background: '#EAB30818', borderRadius: 99, padding: '2px 6px', flexShrink: 0 }}>First</span>}
@@ -702,7 +702,7 @@ function MultiSpinResultOverlay({ result, onClose }: { result: MultiBoxResult; o
               {current.tag
                 ? (current.tagColor === 'verified-yellow' || current.tagColor === 'verified-blue')
                   ? <VerifiedBadge variant={current.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={48} />
-                  : <span style={{ color: current.tagColor ?? carouselColor }}>[{current.tag}]</span>
+                  : <span className={current.tag === 'VIP' ? 'tag-mythic' : current.tag === 'GOAT' ? 'tag-god' : current.tag === 'DEV' ? 'tag-rainbow' : current.tagColor === 'curse' ? 'tag-curse' : ''} style={{ color: (current.tag === 'VIP' || current.tag === 'GOAT' || current.tag === 'DEV' || current.tagColor === 'curse') ? undefined : current.tagColor ?? carouselColor }}>[{current.tag}]</span>
                 : <span>{current.name}</span>
               }
             </div>
@@ -1742,9 +1742,9 @@ export default function MarketplacePage() {
                   {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
                 </span>
                 {item.type === 'tag' ? (
-                  <span className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.tag === 'GOAT' || item.tag === 'VIP' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
+                  <span className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.tag === 'GOAT' || item.tag === 'VIP' || item.tag === 'DEV' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
                 ) : item.type === 'name-color' ? (
-                  <span className={item.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 12, fontWeight: 800, color: item.value === 'rainbow' ? undefined : item.value }}>DUMMY</span>
+                  <span className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.value === 'rainbow' || item.value === 'curse') ? undefined : item.value }}>DUMMY</span>
                 ) : (
                   <div className={pfpClass(item.value)} style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, ...pfpStyle(item.value) }} />
                 )}
@@ -1857,11 +1857,11 @@ export default function MarketplacePage() {
             const itemPreview = result.won.type === 'tag' ? (
               (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                 ? <div style={{ marginBottom: 4 }}><VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={64} /></div>
-                : <div className={result.won.tag === 'VIP' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 22, fontWeight: 800, color: (result.won.tag === 'GOAT' || result.won.tag === 'VIP' || result.won.tagColor === 'curse') ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
+                : <div className={result.won.tag === 'VIP' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tag === 'DEV' ? 'tag-rainbow' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 22, fontWeight: 800, color: (result.won.tag === 'GOAT' || result.won.tag === 'VIP' || result.won.tag === 'DEV' || result.won.tagColor === 'curse') ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
                     [{result.won.tag}]
                   </div>
             ) : result.won.type === 'name-color' ? (
-              <div className={isRainbow ? 'name-rainbow' : ''} style={{ fontSize: 24, fontWeight: 800, color: isRainbow ? undefined : result.won.value, marginBottom: 4 }}>
+              <div className={isRainbow ? 'name-rainbow' : result.won.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 24, fontWeight: 800, color: (isRainbow || result.won.value === 'curse') ? undefined : result.won.value, marginBottom: 4 }}>
                 {result.won.name}
               </div>
             ) : (
@@ -1902,15 +1902,15 @@ export default function MarketplacePage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
                     <span
-                      className={result.won.type === 'name-color' && isRainbow ? 'name-rainbow' : ''}
-                      style={{ fontSize: 13, fontWeight: 700, color: result.won.type === 'name-color' && !isRainbow ? result.won.value : 'var(--text)' }}
+                      className={result.won.type === 'name-color' && isRainbow ? 'name-rainbow' : result.won.type === 'name-color' && result.won.value === 'curse' ? 'name-curse' : ''}
+                      style={{ fontSize: 13, fontWeight: 700, color: result.won.type === 'name-color' && !isRainbow && result.won.value !== 'curse' ? result.won.value : 'var(--text)' }}
                     >
                       DUMMY
                     </span>
                     {result.won.type === 'tag' && (
                       (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                         ? <VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
-                        : <span className={result.won.tag === 'VIP' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 700, color: result.won.tag !== 'GOAT' && result.won.tag !== 'VIP' && result.won.tagColor !== 'curse' ? (result.won.tagColor ?? '#6B7280') : undefined }}>
+                        : <span className={result.won.tag === 'VIP' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tag === 'DEV' ? 'tag-rainbow' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 700, color: (result.won.tag === 'GOAT' || result.won.tag === 'VIP' || result.won.tag === 'DEV' || result.won.tagColor === 'curse') ? undefined : (result.won.tagColor ?? '#6B7280') }}>
                             [{result.won.tag}]
                           </span>
                     )}
@@ -2042,8 +2042,8 @@ export default function MarketplacePage() {
                       by{' '}
                       <button
                         onClick={() => void openProfile(listing.seller.id)}
-                        className={listing.seller.nameColor === 'rainbow' ? 'name-rainbow' : ''}
-                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...(listing.seller.nameColor && listing.seller.nameColor !== 'rainbow' ? { color: listing.seller.nameColor } : { color: 'var(--text)' }) }}
+                        className={listing.seller.nameColor === 'rainbow' ? 'name-rainbow' : listing.seller.nameColor === 'curse' ? 'name-curse' : ''}
+                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...(listing.seller.nameColor && listing.seller.nameColor !== 'rainbow' && listing.seller.nameColor !== 'curse' ? { color: listing.seller.nameColor } : { color: 'var(--text)' }) }}
                       >
                         {listing.seller.name ?? 'Unknown'}
                       </button>
@@ -2119,7 +2119,7 @@ export default function MarketplacePage() {
                           <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0 }} />
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 600 }}>{u.name ?? 'User'}</div>
-                            {u.tag && <div style={{ fontSize: 11, color: u.tagColor ?? '#6B7280', fontWeight: 700 }}>[{u.tag}]</div>}
+                            {u.tag && <div className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'VIP' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : u.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (u.tag === 'DEV' || u.tag === 'VIP' || u.tag === 'GOAT' || u.tagColor === 'curse') ? undefined : u.tagColor ?? '#6B7280', fontWeight: 700 }}>[{u.tag}]</div>}
                           </div>
                         </button>
                       ))}
@@ -2132,8 +2132,8 @@ export default function MarketplacePage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, padding: '10px 14px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                     <div style={{ flex: 1 }}>
-                      <div className={tradeTarget.user.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(tradeTarget.user.nameColor && tradeTarget.user.nameColor !== 'rainbow' ? { color: tradeTarget.user.nameColor } : {}) }}>{tradeTarget.user.name ?? 'User'}</div>
-                      {tradeTarget.user.tag && <div className={tradeTarget.user.tag === 'DEV' ? 'tag-rainbow' : tradeTarget.user.tag === 'VIP' ? 'tag-mythic' : tradeTarget.user.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (tradeTarget.user.tag === 'DEV' || tradeTarget.user.tag === 'GOAT' || tradeTarget.user.tag === 'VIP') ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
+                      <div className={tradeTarget.user.nameColor === 'rainbow' ? 'name-rainbow' : tradeTarget.user.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...(tradeTarget.user.nameColor && tradeTarget.user.nameColor !== 'rainbow' && tradeTarget.user.nameColor !== 'curse' ? { color: tradeTarget.user.nameColor } : {}) }}>{tradeTarget.user.name ?? 'User'}</div>
+                      {tradeTarget.user.tag && <div className={tradeTarget.user.tag === 'DEV' ? 'tag-rainbow' : tradeTarget.user.tag === 'VIP' ? 'tag-mythic' : tradeTarget.user.tag === 'GOAT' ? 'tag-god' : tradeTarget.user.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (tradeTarget.user.tag === 'DEV' || tradeTarget.user.tag === 'GOAT' || tradeTarget.user.tag === 'VIP' || tradeTarget.user.tagColor === 'curse') ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
                     </div>
                     <button onClick={() => { setTradeTarget(null); setSelectedOffer([]); setSelectedRequest([]) }}
                       style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
@@ -2167,7 +2167,7 @@ export default function MarketplacePage() {
                             return (
                               <PriceTooltip key={t.id} price={prices[`tag:${t.id}`]}>
                               <ItemBox rarity={t.rarity} itemId={t.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)' }} onClick={() => toggleRequest(item)}>
-                                <span className={t.tag === 'VIP' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'VIP') ? undefined : t.tagColor }}>[{t.tag}]</span>
+                                <span className={t.tag === 'VIP' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : t.tag === 'DEV' ? 'tag-rainbow' : t.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'VIP' || t.tag === 'DEV' || t.tagColor === 'curse') ? undefined : t.tagColor }}>[{t.tag}]</span>
                                 <RarityBadge rarity={t.rarity} itemId={t.id} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
                               </ItemBox>
@@ -2181,7 +2181,7 @@ export default function MarketplacePage() {
                             return (
                               <PriceTooltip key={c.id} price={prices[`name-color:${c.id}`]}>
                               <ItemBox rarity={c.rarity} itemId={c.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)' }} onClick={() => toggleRequest(item)}>
-                                <span className={c.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 800, color: c.value === 'rainbow' ? undefined : c.value, flexShrink: 0 }}>DUMMY</span>
+                                <span className={c.value === 'rainbow' ? 'name-rainbow' : c.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 800, color: (c.value === 'rainbow' || c.value === 'curse') ? undefined : c.value, flexShrink: 0 }}>DUMMY</span>
                                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{c.name}</span>
                                 <RarityBadge rarity={c.rarity} itemId={c.id} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
@@ -2239,7 +2239,7 @@ export default function MarketplacePage() {
                             return (
                               <PriceTooltip key={t.id} price={prices[`tag:${t.id}`]}>
                               <ItemBox rarity={t.rarity} itemId={t.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)' }} onClick={() => toggleOffer(item)}>
-                                <span className={t.tag === 'VIP' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'VIP') ? undefined : t.tagColor }}>[{t.tag}]</span>
+                                <span className={t.tag === 'VIP' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : t.tag === 'DEV' ? 'tag-rainbow' : t.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'VIP' || t.tag === 'DEV' || t.tagColor === 'curse') ? undefined : t.tagColor }}>[{t.tag}]</span>
                                 <RarityBadge rarity={t.rarity} itemId={t.id} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
                               </ItemBox>
@@ -2253,7 +2253,7 @@ export default function MarketplacePage() {
                             return (
                               <PriceTooltip key={c.id} price={prices[`name-color:${c.id}`]}>
                               <ItemBox rarity={c.rarity} itemId={c.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)' }} onClick={() => toggleOffer(item)}>
-                                <span className={c.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 800, color: c.value === 'rainbow' ? undefined : c.value, flexShrink: 0 }}>DUMMY</span>
+                                <span className={c.value === 'rainbow' ? 'name-rainbow' : c.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 800, color: (c.value === 'rainbow' || c.value === 'curse') ? undefined : c.value, flexShrink: 0 }}>DUMMY</span>
                                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{c.name}</span>
                                 <RarityBadge rarity={c.rarity} itemId={c.id} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
@@ -2331,8 +2331,8 @@ export default function MarketplacePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                           <div>
-                            <span className={trade.sender.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.sender.nameColor && trade.sender.nameColor !== 'rainbow' ? { color: trade.sender.nameColor } : {}) }}>{trade.sender.name ?? 'User'}</span>
-                            {trade.sender.tag && <span className={trade.sender.tag === 'DEV' ? 'tag-rainbow' : trade.sender.tag === 'VIP' ? 'tag-mythic' : trade.sender.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.sender.tag === 'DEV' || trade.sender.tag === 'GOAT' || trade.sender.tag === 'VIP') ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
+                            <span className={trade.sender.nameColor === 'rainbow' ? 'name-rainbow' : trade.sender.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.sender.nameColor && trade.sender.nameColor !== 'rainbow' && trade.sender.nameColor !== 'curse' ? { color: trade.sender.nameColor } : {}) }}>{trade.sender.name ?? 'User'}</span>
+                            {trade.sender.tag && <span className={trade.sender.tag === 'DEV' ? 'tag-rainbow' : trade.sender.tag === 'VIP' ? 'tag-mythic' : trade.sender.tag === 'GOAT' ? 'tag-god' : trade.sender.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (trade.sender.tag === 'DEV' || trade.sender.tag === 'GOAT' || trade.sender.tag === 'VIP' || trade.sender.tagColor === 'curse') ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>{new Date(trade.createdAt).toLocaleDateString()}</span>
                         </div>
@@ -2385,8 +2385,8 @@ export default function MarketplacePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                           <div>
-                            <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.receiver.nameColor && trade.receiver.nameColor !== 'rainbow' ? { color: trade.receiver.nameColor } : {}) }}>{trade.receiver.name ?? 'User'}</span>
-                            {trade.receiver.tag && <span className={trade.receiver.tag === 'DEV' ? 'tag-rainbow' : trade.receiver.tag === 'VIP' ? 'tag-mythic' : trade.receiver.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.receiver.tag === 'DEV' || trade.receiver.tag === 'GOAT' || trade.receiver.tag === 'VIP') ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
+                            <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : trade.receiver.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.receiver.nameColor && trade.receiver.nameColor !== 'rainbow' && trade.receiver.nameColor !== 'curse' ? { color: trade.receiver.nameColor } : {}) }}>{trade.receiver.name ?? 'User'}</span>
+                            {trade.receiver.tag && <span className={trade.receiver.tag === 'DEV' ? 'tag-rainbow' : trade.receiver.tag === 'VIP' ? 'tag-mythic' : trade.receiver.tag === 'GOAT' ? 'tag-god' : trade.receiver.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (trade.receiver.tag === 'DEV' || trade.receiver.tag === 'GOAT' || trade.receiver.tag === 'VIP' || trade.receiver.tagColor === 'curse') ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#EAB308', background: '#EAB30818', padding: '2px 8px', borderRadius: 99 }}>
                             PENDING
@@ -2588,8 +2588,8 @@ export default function MarketplacePage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <button onClick={() => openProfile(entry.id)}
-                          className={entry.nameColor === 'rainbow' ? 'name-rainbow' : ''}
-                          style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(entry.nameColor && entry.nameColor !== 'rainbow' ? { color: entry.nameColor } : { color: 'var(--text)' }) }}>
+                          className={entry.nameColor === 'rainbow' ? 'name-rainbow' : entry.nameColor === 'curse' ? 'name-curse' : ''}
+                          style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(entry.nameColor && entry.nameColor !== 'rainbow' && entry.nameColor !== 'curse' ? { color: entry.nameColor } : { color: 'var(--text)' }) }}>
                           {entry.name ?? `User #${entry.id}`}
                         </button>
                         {isMe && <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: 'rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>YOU</span>}
@@ -2661,15 +2661,15 @@ export default function MarketplacePage() {
                                       style={{ fontSize: 11, fontWeight: 800, padding: '1px 3px', borderRadius: 4, border: '1.5px solid #ff0000' }}
                                     >CURSE</span>
                                   : <span
-                                      className={item.name === 'VIP' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : ''}
-                                      style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'VIP' || item.name === 'GOAT') ? undefined : item.tagColor ?? '#6B7280' }}
+                                      className={item.name === 'VIP' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : item.name === 'DEV' ? 'tag-rainbow' : ''}
+                                      style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'VIP' || item.name === 'GOAT' || item.name === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
                                     >{truncateTag(item.name ?? '')}</span>
                             )}
                           </div>
                           {/* Name */}
                           <span
-                            className={item.type === 'name-color' && item.value === 'rainbow' ? 'name-rainbow' : ''}
-                            style={{ flex: 1, fontSize: 13, fontWeight: 600, color: item.type === 'name-color' && item.value && item.value !== 'rainbow' ? item.value : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                            className={item.type === 'name-color' && item.value === 'rainbow' ? 'name-rainbow' : item.type === 'name-color' && item.value === 'curse' ? 'name-curse' : ''}
+                            style={{ flex: 1, fontSize: 13, fontWeight: 600, color: item.type === 'name-color' && item.value && item.value !== 'rainbow' && item.value !== 'curse' ? item.value : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                           >{item.name}</span>
                           <RarityBadge rarity={item.rarity} itemId={item.id} />
                           {(item.id === 'GOAT' || item.name === 'GOAT') && (
@@ -2744,13 +2744,13 @@ export default function MarketplacePage() {
                       : (profilePanel.name ?? 'Us').slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <div className={profilePanel.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 19, fontWeight: 800, marginBottom: 3, ...(profilePanel.nameColor && profilePanel.nameColor !== 'rainbow' ? { color: profilePanel.nameColor } : { color: 'var(--text)' }) }}>
+                    <div className={profilePanel.nameColor === 'rainbow' ? 'name-rainbow' : profilePanel.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 19, fontWeight: 800, marginBottom: 3, ...(profilePanel.nameColor && profilePanel.nameColor !== 'rainbow' && profilePanel.nameColor !== 'curse' ? { color: profilePanel.nameColor } : { color: 'var(--text)' }) }}>
                       {profilePanel.name ?? 'User'}
                     </div>
                     {profilePanel.tag && (
                       <span
-                        className={profilePanel.tag === 'DEV' ? 'tag-rainbow' : profilePanel.tag === 'VIP' ? 'tag-mythic' : profilePanel.tag === 'GOAT' ? 'tag-god' : ''}
-                        style={profilePanel.tag === 'DEV' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' } : profilePanel.tag === 'VIP' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4 } : profilePanel.tag === 'GOAT' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'var(--primary-dim)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
+                        className={profilePanel.tag === 'DEV' ? 'tag-rainbow' : profilePanel.tag === 'VIP' ? 'tag-mythic' : profilePanel.tag === 'GOAT' ? 'tag-god' : profilePanel.tagColor === 'curse' ? 'tag-curse' : ''}
+                        style={profilePanel.tag === 'DEV' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' } : profilePanel.tag === 'VIP' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4 } : profilePanel.tag === 'GOAT' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' } : profilePanel.tagColor === 'curse' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1.5px solid #ff0000' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'var(--primary-dim)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
                       >
                         {profilePanel.tag}
                       </span>

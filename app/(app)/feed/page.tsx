@@ -124,10 +124,10 @@ function avatarContent(user: { name: string | null; avatarUrl?: string | null })
   return initials(user)
 }
 function nameColorStyle(color: string | null | undefined): React.CSSProperties {
-  return color && color !== 'rainbow' ? { color } : {}
+  return color && color !== 'rainbow' && color !== 'curse' ? { color } : {}
 }
 function nameColorClass(color: string | null | undefined): string {
-  return color === 'rainbow' ? 'name-rainbow' : ''
+  return color === 'rainbow' ? 'name-rainbow' : color === 'curse' ? 'name-curse' : ''
 }
 
 // ── Notification row with clickable sender name ───────────────────────────────
@@ -144,8 +144,8 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
 
   const nameEl = (
     <button
-      className={isRainbowName ? 'name-rainbow' : ''}
-      style={{ background: 'none', border: 'none', padding: 0, color: isRainbowName ? undefined : (n.sender.nameColor ?? 'var(--primary)'), fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
+      className={isRainbowName ? 'name-rainbow' : n.sender.nameColor === 'curse' ? 'name-curse' : ''}
+      style={{ background: 'none', border: 'none', padding: 0, color: (isRainbowName || n.sender.nameColor === 'curse') ? undefined : (n.sender.nameColor ?? 'var(--primary)'), fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
       onClick={handleNameClick}
     >
       {name}
@@ -645,10 +645,10 @@ function DevAdminPanel({
             {allTags.map(t => {
               const isVerified = t.tagColor === 'verified-yellow' || t.tagColor === 'verified-blue'
               return (
-                <div key={`${t.tag}:${t.tagColor}`} style={{ display: 'flex', alignItems: 'center', gap: 4, background: isVerified ? 'rgba(128,128,128,0.12)' : t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`, border: `1px solid ${isVerified ? (t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0') : t.tagColor === 'grey' ? 'rgba(128,128,128,0.4)' : t.tagColor}`, borderRadius: 4, padding: '2px 6px 2px 8px' }}>
+                <div key={`${t.tag}:${t.tagColor}`} style={{ display: 'flex', alignItems: 'center', gap: 4, background: isVerified ? 'rgba(128,128,128,0.12)' : t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : t.tagColor === 'curse' ? 'rgba(255,0,0,0.08)' : `${t.tagColor}22`, border: `1px solid ${isVerified ? (t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0') : t.tagColor === 'grey' ? 'rgba(128,128,128,0.4)' : t.tagColor === 'curse' ? '#ff0000' : t.tagColor}`, borderRadius: 4, padding: '2px 6px 2px 8px' }}>
                   {isVerified
                     ? <VerifiedBadge variant={t.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
-                    : <span style={{ fontSize: 11, fontWeight: 700, color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor }}>{t.tag}</span>
+                    : <span className={t.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, fontWeight: 700, color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor === 'curse' ? undefined : t.tagColor }}>{t.tag}</span>
                   }
                   <button
                     style={{ background: 'none', border: 'none', padding: '0 0 0 2px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center' }}
@@ -909,13 +909,13 @@ function OwnTagPicker({ profile, onUpdateTag }: {
                 key={savingKey}
                 disabled={!!saving}
                 onClick={() => void handleSelect(t.tag, t.tagColor)}
-                className={isDev && isActive ? 'tag-rainbow' : isMythic && isActive ? 'tag-mythic' : isGod && isActive ? 'tag-god' : ''}
+                className={isDev && isActive ? 'tag-rainbow' : isMythic && isActive ? 'tag-mythic' : isGod && isActive ? 'tag-god' : t.tagColor === 'curse' ? 'tag-curse' : ''}
                 style={{
-                  border: `2px solid ${isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.6)' : t.tagColor) : 'transparent'}`,
-                  background: isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`) : 'var(--surface-2)',
+                  border: `2px solid ${isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.6)' : t.tagColor === 'curse' ? '#ff0000' : t.tagColor) : 'transparent'}`,
+                  background: isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : t.tagColor === 'curse' ? 'rgba(255,0,0,0.08)' : `${t.tagColor}22`) : 'var(--surface-2)',
                   borderRadius: 6, padding: '4px 10px',
                   fontSize: 12, fontWeight: 700,
-                  color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor,
+                  color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor === 'curse' ? undefined : t.tagColor,
                   cursor: saving ? 'default' : 'pointer',
                   opacity: saving === savingKey ? 0.5 : 1,
                   transition: 'all 0.15s',
@@ -1626,8 +1626,8 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
                 u.tagColor === 'verified-yellow' || u.tagColor === 'verified-blue'
                   ? <VerifiedBadge variant={u.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                   : <span
-                      className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'VIP' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : ''}
-                      style={u.tag === 'DEV' ? P.tagDev : u.tag === 'VIP' ? P.tagGod : u.tag === 'GOAT' ? P.tagGod : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
+                      className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'VIP' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : u.tagColor === 'curse' ? 'tag-curse' : ''}
+                      style={u.tag === 'DEV' ? P.tagDev : u.tag === 'VIP' ? P.tagGod : u.tag === 'GOAT' ? P.tagGod : u.tagColor === 'curse' ? { ...P.tag } : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
                     >{u.tag}</span>
               )}
             </div>
