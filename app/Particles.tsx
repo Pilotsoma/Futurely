@@ -19,55 +19,24 @@ interface Star {
   vx: number; vy: number
   radius: number
   alpha: number
-  twinklePhase: number
-  twinkleFreq: number
-  bright: boolean
-  sprite: HTMLCanvasElement
-  spikeLen: number
   color: string
+  bright: boolean
+  spikeLen: number
 }
 
-// Pre-render a star sprite: bloom halo + bright core
-function makeSprite(radius: number, color: string): HTMLCanvasElement {
-  const sz = Math.ceil(radius * 24)
-  const c = document.createElement('canvas')
-  c.width = sz; c.height = sz
-  const cx = sz / 2
-  const ctx = c.getContext('2d')!
-
-  // Parse hex color to rgb for gradient stops
-  const r = parseInt(color.slice(1, 3), 16)
-  const g = parseInt(color.slice(3, 5), 16)
-  const b = parseInt(color.slice(5, 7), 16)
-
-  // Outer bloom (large, very soft)
-  const bloom = ctx.createRadialGradient(cx, cx, 0, cx, cx, cx)
-  bloom.addColorStop(0,   `rgba(${r},${g},${b},0.9)`)
-  bloom.addColorStop(0.08,`rgba(${r},${g},${b},0.6)`)
-  bloom.addColorStop(0.25,`rgba(${r},${g},${b},0.18)`)
-  bloom.addColorStop(0.55,`rgba(${r},${g},${b},0.04)`)
-  bloom.addColorStop(1,   `rgba(${r},${g},${b},0)`)
-  ctx.fillStyle = bloom
-  ctx.fillRect(0, 0, sz, sz)
-
-  // Bright white core
-  const core = ctx.createRadialGradient(cx, cx, 0, cx, cx, radius * 1.4)
-  core.addColorStop(0,   'rgba(255,255,255,1)')
-  core.addColorStop(0.4, 'rgba(255,255,255,0.9)')
-  core.addColorStop(1,   'rgba(255,255,255,0)')
-  ctx.fillStyle = core
-  ctx.beginPath()
-  ctx.arc(cx, cx, radius * 1.4, 0, Math.PI * 2)
-  ctx.fill()
-
-  return c
+interface Meteor {
+  x: number; y: number
+  vx: number; vy: number
+  life: number    // 0 → 1 (dead)
+  alpha: number
+  length: number  // trail length in px
 }
 
 const STAR_COLORS = [
-  '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', // 40% pure white
-  '#F0F6FF', '#F0F6FF', '#F0F6FF',            // 30% near-white blue tint
-  '#B8D0FF', '#B8D0FF',                        // 20% blue-white
-  '#FFE8C0',                                   // 10% warm yellow-white
+  '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF',
+  '#EEF4FF', '#EEF4FF', '#EEF4FF',
+  '#C8DCFF', '#C8DCFF',
+  '#FFF2DC',
 ]
 
 export default function Particles({
@@ -77,10 +46,11 @@ export default function Particles({
   particleBaseSize = 100,
   moveParticlesOnHover = false,
   alphaParticles = false,
-  pixelRatio = 1,
 }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const mouseRef  = useRef({ x: -9999, y: -9999 })
+  const canvasRef  = useRef<HTMLCanvasElement>(null)
+  const mouseRef   = useRef({ x: -9999, y: -9999 })
+  const meteorRef  = useRef<Meteor | null>(null)
+  const nextMeteor = useRef(0)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -90,6 +60,7 @@ export default function Particles({
 
     let rafId: number
     let stars: Star[] = []
+    const dpr = window.devicePixelRatio || 1
 
     function dims() {
       const p = canvas!.parentElement
@@ -99,45 +70,30 @@ export default function Particles({
     function init() {
       const { w, h } = dims()
       const baseV = speed * particleSpread * 0.015
-
-      // Sprite cache by size bucket
-      const spriteCache = new Map<string, HTMLCanvasElement>()
-      function getSprite(r: number, color: string) {
-        const key = `${r.toFixed(1)}_${color}`
-        if (!spriteCache.has(key)) spriteCache.set(key, makeSprite(r, color))
-        return spriteCache.get(key)!
-      }
-
       stars = Array.from({ length: particleCount }, () => {
         const x = Math.random() * w
         const y = Math.random() * h
-        // Power-law size distribution: many small, few large
-        const t = Math.random()
-        const radius = particleBaseSize * 0.012 * (t < 0.7 ? 0.4 + t * 0.6 : 1.0 + (t - 0.7) * 5)
-        const bright = radius > particleBaseSize * 0.022
-        const color = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
-        const alpha = alphaParticles
-          ? 0.3 + Math.random() * 0.7
-          : bright ? 0.85 + Math.random() * 0.15 : 0.4 + Math.random() * 0.5
+        const t = Math.pow(Math.random(), 2.5) // power-law: many small, few large
+        const radius = particleBaseSize * 0.009 * (0.3 + t * 1.8)
+        const bright = radius > particleBaseSize * 0.016
+        const color  = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
         return {
           x, y, ox: x, oy: y,
           vx: (Math.random() - 0.5) * baseV,
           vy: (Math.random() - 0.5) * baseV,
           radius,
-          alpha,
-          twinklePhase: Math.random() * Math.PI * 2,
-          twinkleFreq: 0.4 + Math.random() * 1.2,
-          bright,
-          sprite: getSprite(radius, color),
-          spikeLen: radius * 18,
+          alpha: alphaParticles
+            ? 0.3 + Math.random() * 0.7
+            : bright ? 0.9 + Math.random() * 0.1 : 0.35 + Math.random() * 0.55,
           color,
+          bright,
+          spikeLen: radius * 14,
         }
       })
     }
 
     function resize() {
       const { w, h } = dims()
-      const dpr = pixelRatio > 0 ? pixelRatio : (window.devicePixelRatio || 1)
       canvas!.width  = w * dpr
       canvas!.height = h * dpr
       canvas!.style.width  = w + 'px'
@@ -146,14 +102,79 @@ export default function Particles({
       init()
     }
 
-    function loop() {
+    function spawnMeteor(w: number, h: number) {
+      // Start from a random top or left edge, travel diagonally down-right
+      const fromTop = Math.random() > 0.4
+      const x = fromTop ? Math.random() * w * 0.7 : 0
+      const y = fromTop ? 0 : Math.random() * h * 0.4
+      const angle = (Math.PI / 5) + Math.random() * (Math.PI / 8) // ~36–58° from horizontal
+      const spd = 380 + Math.random() * 240
+      meteorRef.current = {
+        x, y,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        life: 1,
+        alpha: 0.9 + Math.random() * 0.1,
+        length: 120 + Math.random() * 180,
+      }
+    }
+
+    function drawMeteor(m: Meteor, dt: number, w: number, h: number) {
+      // Decay life based on distance traveled
+      m.x += m.vx * dt
+      m.y += m.vy * dt
+      m.life -= dt * 0.85  // takes ~1.2s to cross and fade
+
+      if (m.life <= 0 || m.x > w + 50 || m.y > h + 50) {
+        meteorRef.current = null
+        return
+      }
+
+      const speed = Math.hypot(m.vx, m.vy)
+      const nx = m.vx / speed
+      const ny = m.vy / speed
+      const tailX = m.x - nx * m.length * (1 - m.life * 0.3)
+      const tailY = m.y - ny * m.length * (1 - m.life * 0.3)
+
+      const alpha = m.alpha * Math.min(1, m.life * 3) // fade in quickly, fade out slowly
+
+      // Trail gradient
+      const grd = ctx!.createLinearGradient(tailX, tailY, m.x, m.y)
+      grd.addColorStop(0,   'rgba(255,255,255,0)')
+      grd.addColorStop(0.6, `rgba(210,230,255,${(alpha * 0.25).toFixed(3)})`)
+      grd.addColorStop(1,   `rgba(255,255,255,${alpha.toFixed(3)})`)
+
+      ctx!.save()
+      ctx!.strokeStyle = grd
+      ctx!.lineWidth = 1.5
+      ctx!.lineCap = 'round'
+      ctx!.beginPath()
+      ctx!.moveTo(tailX, tailY)
+      ctx!.lineTo(m.x, m.y)
+      ctx!.stroke()
+
+      // Bright head glow
+      ctx!.shadowBlur = 10
+      ctx!.shadowColor = '#ffffff'
+      ctx!.globalAlpha = alpha
+      ctx!.fillStyle = '#ffffff'
+      ctx!.beginPath()
+      ctx!.arc(m.x, m.y, 1.8, 0, Math.PI * 2)
+      ctx!.fill()
+      ctx!.restore()
+    }
+
+    let lastTime = 0
+    function loop(time: number) {
+      const dt = Math.min((time - lastTime) / 1000, 0.05)
+      lastTime = time
       const { w, h } = dims()
       if (!ctx) return
       ctx.clearRect(0, 0, w, h)
       const baseV = speed * particleSpread * 0.015
 
+      // Stars
       for (const s of stars) {
-        // Mouse repulsion
         if (moveParticlesOnHover) {
           const dx = s.x - mouseRef.current.x
           const dy = s.y - mouseRef.current.y
@@ -165,10 +186,9 @@ export default function Particles({
           }
         }
 
-        // Spring return to origin
+        // Spring return
         s.vx += (s.ox - s.x) * 0.004
         s.vy += (s.oy - s.y) * 0.004
-
         s.vx *= 0.93
         s.vy *= 0.93
         if (Math.abs(s.vx) < baseV * 0.15) s.vx += (Math.random() - 0.5) * baseV * 0.08
@@ -176,50 +196,53 @@ export default function Particles({
 
         s.x += s.vx
         s.y += s.vy
-
         if (s.x < 0)  { s.x += w; s.ox += w }
         if (s.x > w)  { s.x -= w; s.ox -= w }
         if (s.y < 0)  { s.y += h; s.oy += h }
         if (s.y > h)  { s.y -= h; s.oy -= h }
 
-        const alpha = s.alpha
-
-        // Draw star sprite (bloom + core)
-        const sw = s.sprite.width
-        const sh = s.sprite.height
         ctx.save()
-        ctx.globalAlpha = alpha
-        ctx.drawImage(s.sprite, s.x - sw / 2, s.y - sh / 2)
-        ctx.restore()
+        ctx.globalAlpha = s.alpha
+        ctx.shadowBlur  = s.radius * 7
+        ctx.shadowColor = s.color
+        ctx.fillStyle   = '#ffffff'
+        ctx.beginPath()
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2)
+        ctx.fill()
 
         // Diffraction spikes for bright stars
         if (s.bright) {
-          ctx.save()
-          ctx.globalAlpha = alpha * 0.55
-          const r = parseInt(s.color.slice(1,3),16)
-          const g = parseInt(s.color.slice(3,5),16)
-          const b = parseInt(s.color.slice(5,7),16)
-          const dirs = [[1,0],[-1,0],[0,1],[0,-1]]
+          ctx.shadowBlur = 0
+          ctx.globalAlpha = s.alpha * 0.45
+          const dirs: [number, number][] = [[1,0],[-1,0],[0,1],[0,-1]]
           for (const [dx, dy] of dirs) {
-            const grd = ctx.createLinearGradient(s.x, s.y, s.x + dx * s.spikeLen, s.y + dy * s.spikeLen)
-            grd.addColorStop(0,   `rgba(255,255,255,0.9)`)
-            grd.addColorStop(0.3, `rgba(${r},${g},${b},0.4)`)
-            grd.addColorStop(1,   `rgba(${r},${g},${b},0)`)
-            ctx.strokeStyle = grd
-            ctx.lineWidth = 0.6
+            const g = ctx.createLinearGradient(s.x, s.y, s.x + dx * s.spikeLen, s.y + dy * s.spikeLen)
+            g.addColorStop(0,   'rgba(255,255,255,0.85)')
+            g.addColorStop(0.4, `rgba(200,220,255,0.3)`)
+            g.addColorStop(1,   'rgba(180,210,255,0)')
+            ctx.strokeStyle = g
+            ctx.lineWidth = 0.5
             ctx.beginPath()
             ctx.moveTo(s.x, s.y)
             ctx.lineTo(s.x + dx * s.spikeLen, s.y + dy * s.spikeLen)
             ctx.stroke()
           }
-          ctx.restore()
         }
+        ctx.restore()
       }
+
+      // Shooting stars
+      if (!meteorRef.current && time > nextMeteor.current) {
+        spawnMeteor(w, h)
+        nextMeteor.current = time + 5000 + Math.random() * 8000 // every 5–13s
+      }
+      if (meteorRef.current) drawMeteor(meteorRef.current, dt, w, h)
 
       rafId = requestAnimationFrame(loop)
     }
 
     resize()
+    nextMeteor.current = 2000 + Math.random() * 4000
     rafId = requestAnimationFrame(loop)
 
     const ro = new ResizeObserver(resize)
