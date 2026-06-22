@@ -1471,7 +1471,7 @@ router.post('/trader/trade', requireAuth, txLimiter, async (req: AuthRequest, re
     for (const raw of offerItems) {
       const tradeItem: TradeItem = { type: raw.type as 'tag' | 'name-color' | 'pfp', id: raw.id, rarity: '' }
       if (raw.type === 'tag') {
-        const def = TAG_BOX_ITEMS.find(d => d.id === raw.id) ?? SPECIAL_TAGS.find(d => d.id === raw.id)
+        const def = TAG_BOX_ITEMS.find(d => d.id === raw.id) ?? SPECIAL_TAGS.find(d => d.id === raw.id) ?? DEV_CURSE_ITEMS.find(d => d.id === raw.id && d.itemType === 'tag')
         if (!def) { res.status(404).json({ error: `Offered item not found: ${raw.id}` }); return }
         if ('tag' in def) { tradeItem.tag = def.tag; tradeItem.tagColor = def.tagColor }
         tradeItem.rarity = def.rarity
@@ -1479,11 +1479,11 @@ router.post('/trader/trade', requireAuth, txLimiter, async (req: AuthRequest, re
           res.status(403).json({ error: `The trader won't accept ${tradeItem.tag ?? raw.id}.` }); return
         }
       } else if (raw.type === 'name-color') {
-        const def = NAME_COLOR_BOX_ITEMS.find(d => d.id === raw.id)
+        const def = NAME_COLOR_BOX_ITEMS.find(d => d.id === raw.id) ?? DEV_CURSE_ITEMS.find(d => d.id === raw.id && d.itemType === 'name-color')
         if (!def) { res.status(404).json({ error: `Offered item not found: ${raw.id}` }); return }
         tradeItem.name = def.name; tradeItem.value = def.value; tradeItem.rarity = def.rarity
       } else {
-        const def = PFP_EFFECT_BOX_ITEMS.find(d => d.id === raw.id)
+        const def = PFP_EFFECT_BOX_ITEMS.find(d => d.id === raw.id) ?? DEV_CURSE_ITEMS.find(d => d.id === raw.id && d.itemType === 'pfp')
         if (!def) { res.status(404).json({ error: `Offered item not found: ${raw.id}` }); return }
         tradeItem.name = def.name; tradeItem.value = def.value; tradeItem.rarity = def.rarity
       }
