@@ -2862,24 +2862,41 @@ export default function MarketplacePage() {
                 )
               })()}
 
-              {((inv?.ownedTags ?? []).length > 0 || myActiveListings.some(l => l.itemType === 'tag')) && (
-                <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🏷️ Tags</div>
-                  {groupById(byRarity(inv?.ownedTags ?? [])).map(t =>
-                    renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag',
-                      inv?.tag === t.tag && (
-                        (t.tagColor === 'verified-yellow' || t.tagColor === 'verified-blue')
-                          ? inv?.tagColor === t.tagColor
-                          : true
-                      ), t.count)
-                  )}
-                  {myActiveListings
-                    .filter(l => l.itemType === 'tag' && !(inv?.ownedTags ?? []).some(t => t.id === l.itemId))
-                    .filter((l, i, arr) => arr.findIndex(x => x.itemId === l.itemId) === i)
-                    .map(l => renderInventoryItem({ id: l.itemId, tag: l.itemName, tagColor: l.itemValue, rarity: l.itemRarity }, 'tag', false, 0))
-                  }
-                </div>
-              )}
+              {(() => {
+                const badgeTags = (inv?.ownedTags ?? []).filter(t => t.tagColor === 'verified-yellow' || t.tagColor === 'verified-blue')
+                const badgeListings = myActiveListings.filter(l => l.itemType === 'tag' && !(inv?.ownedTags ?? []).some(t => t.id === l.itemId) && (l.itemValue === 'verified-yellow' || l.itemValue === 'verified-blue'))
+                if (badgeTags.length === 0 && badgeListings.length === 0) return null
+                return (
+                  <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🏅 Badges</div>
+                    {groupById(byRarity(badgeTags)).map(t =>
+                      renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag', false, t.count)
+                    )}
+                    {badgeListings
+                      .filter((l, i, arr) => arr.findIndex(x => x.itemId === l.itemId) === i)
+                      .map(l => renderInventoryItem({ id: l.itemId, tag: l.itemName, tagColor: l.itemValue, rarity: l.itemRarity }, 'tag', false, 0))
+                    }
+                  </div>
+                )
+              })()}
+
+              {(() => {
+                const regularTags = (inv?.ownedTags ?? []).filter(t => t.tagColor !== 'verified-yellow' && t.tagColor !== 'verified-blue')
+                const regularTagListings = myActiveListings.filter(l => l.itemType === 'tag' && !(inv?.ownedTags ?? []).some(t => t.id === l.itemId) && l.itemValue !== 'verified-yellow' && l.itemValue !== 'verified-blue')
+                if (regularTags.length === 0 && regularTagListings.length === 0) return null
+                return (
+                  <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🏷️ Tags</div>
+                    {groupById(byRarity(regularTags)).map(t =>
+                      renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag', inv?.tag === t.tag, t.count)
+                    )}
+                    {regularTagListings
+                      .filter((l, i, arr) => arr.findIndex(x => x.itemId === l.itemId) === i)
+                      .map(l => renderInventoryItem({ id: l.itemId, tag: l.itemName, tagColor: l.itemValue, rarity: l.itemRarity }, 'tag', false, 0))
+                    }
+                  </div>
+                )
+              })()}
 
               {((inv?.ownedNameColors ?? []).length > 0 || myActiveListings.some(l => l.itemType === 'name-color')) && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
