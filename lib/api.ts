@@ -708,7 +708,7 @@ export const api = {
     request<ItemSalePoint[]>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/history`),
 
   marketplaceItemOwners: (itemType: string, itemId: string) =>
-    request<ItemOwner[]>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/owners`),
+    request<ItemOwnersData>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/owners`),
 
   marketplaceLeaderboard: () =>
     request<LeaderboardData>('/api/marketplace/leaderboard'),
@@ -1351,7 +1351,10 @@ export interface ItemSalePoint { price: number; soldAt: string }
 export interface ItemOwner {
   rank: number; id: number; name: string | null
   tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null
+  qty: number
 }
+
+export interface ItemOwnersData { owners: ItemOwner[]; total: number }
 
 export interface LeaderboardEntry {
   rank: number; id: number; name: string | null

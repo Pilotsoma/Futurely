@@ -1558,44 +1558,51 @@ router.get('/item/:itemType/:itemId/owners', async (req: Request, res: Response)
     res.status(400).json({ error: 'Invalid itemType' }); return
   }
   try {
-    type OwnerRow = { id: number; name: string | null; tag: string; tagColor: string | null; nameColor: string | null; pfpEffect: string | null }
+    type OwnerRow = { id: number; name: string | null; tag: string; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; qty: bigint }
     let owners: OwnerRow[] = []
 
-    // ownedNameColors / ownedPfpEffects / allTags are stored as double-encoded JSON
-    // (JSON.stringify was called before writing to the Json field), so the Postgres
-    // column holds a JSON *string* rather than a JSON array.  #>> '{}' extracts the
-    // raw string content, then LIKE does a text scan for the target id/tag.
+    // ownedNameColors / ownedPfpEffects / allTags are stored as double-encoded JSON.
+    // #>> '{}' extracts the raw string; we count substring occurrences to get per-user qty.
     const idPattern = `%"id":"${itemId}"%`
     if (itemType === 'name-color') {
+      const needle = `"id":"${itemId}"`
       owners = await prisma.$queryRaw<OwnerRow[]>`
-        SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"
+        SELECT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect",
+          (char_length(u."ownedNameColors" #>> '{}') - char_length(replace(u."ownedNameColors" #>> '{}', ${needle}, ''))) / NULLIF(char_length(${needle}), 0) AS qty
         FROM "User" u
         WHERE (u."ownedNameColors" #>> '{}') LIKE ${idPattern}
         AND u."deletedAt" IS NULL
-        ORDER BY u.id ASC LIMIT 50`
+        ORDER BY qty DESC, u.id ASC LIMIT 50`
     } else if (itemType === 'pfp') {
+      const needle = `"id":"${itemId}"`
       owners = await prisma.$queryRaw<OwnerRow[]>`
-        SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"
+        SELECT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect",
+          (char_length(u."ownedPfpEffects" #>> '{}') - char_length(replace(u."ownedPfpEffects" #>> '{}', ${needle}, ''))) / NULLIF(char_length(${needle}), 0) AS qty
         FROM "User" u
         WHERE (u."ownedPfpEffects" #>> '{}') LIKE ${idPattern}
         AND u."deletedAt" IS NULL
-        ORDER BY u.id ASC LIMIT 50`
+        ORDER BY qty DESC, u.id ASC LIMIT 50`
     } else {
       const spinDef    = TAG_BOX_ITEMS.find(t => t.id === itemId)
       const specialDef = SPECIAL_TAGS.find(t => t.tag === itemId || t.id === itemId || t.id === itemId.toLowerCase())
       const curseDef   = DEV_CURSE_ITEMS.find(t => t.id === itemId && t.tag)
-      // Fall back to itemId itself — works when itemId IS the tag name (DEV, VIP, GOAT, Novice …)
       const tagName = spinDef?.tag ?? specialDef?.tag ?? curseDef?.tag ?? itemId
       const tagPattern = `%"tag":"${tagName}"%`
+      const needle = `"tag":"${tagName}"`
       owners = await prisma.$queryRaw<OwnerRow[]>`
-        SELECT DISTINCT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect"
+        SELECT u.id, u.name, u.tag, u."tagColor", u."nameColor", u."pfpEffect",
+          (char_length(u."allTags" #>> '{}') - char_length(replace(u."allTags" #>> '{}', ${needle}, ''))) / NULLIF(char_length(${needle}), 0) AS qty
         FROM "User" u
         WHERE (u."allTags" #>> '{}') LIKE ${tagPattern}
         AND u."deletedAt" IS NULL
-        ORDER BY u.id ASC LIMIT 50`
+        ORDER BY qty DESC, u.id ASC LIMIT 50`
     }
 
-    res.json({ data: owners.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect })) })
+    const total = owners.reduce((sum, u) => sum + Number(u.qty ?? 1), 0)
+    res.json({ data: {
+      owners: owners.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, qty: Number(u.qty ?? 1) })),
+      total,
+    }})
   } catch (err) {
     console.error('[ITEM OWNERS]', err)
     res.status(500).json({ error: 'Failed to fetch item owners' })

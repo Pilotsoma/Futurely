@@ -538,6 +538,7 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
   const [tab, setTab] = useState<'history' | 'owners'>('history')
   const [history, setHistory] = useState<ItemSalePoint[] | null>(null)
   const [owners, setOwners] = useState<ItemOwner[] | null>(null)
+  const [circulation, setCirculation] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -550,8 +551,8 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
     } else {
       if (owners !== null) { setLoading(false); return }
       api.marketplaceItemOwners(item.type, item.id)
-        .then(d => setOwners(d))
-        .catch(() => setOwners([]))
+        .then(d => { setOwners(d.owners); setCirculation(d.total) })
+        .catch(() => { setOwners([]); setCirculation(0) })
         .finally(() => setLoading(false))
     }
   }, [tab, item.type, item.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -568,7 +569,14 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
           <ItemIcon item={{ type: item.type, value: item.value }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
-            <RarityBadge rarity={item.rarity} itemId={item.id} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+              <RarityBadge rarity={item.rarity} itemId={item.id} />
+              {circulation !== null && (
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
+                  {circulation} in circulation
+                </span>
+              )}
+            </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: 4, lineHeight: 1 }}>✕</button>
         </div>
@@ -577,7 +585,7 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
           {(['history', 'owners'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: '10px 0', border: 'none', background: 'transparent', color: tab === t ? 'var(--primary)' : 'var(--text-muted)', fontWeight: tab === t ? 700 : 500, fontSize: 13, cursor: 'pointer', borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent' }}>
-              {t === 'history' ? '📈 Price History' : '👥 Owners'}
+              {t === 'history' ? '📈 Price History' : `👥 Owners${circulation !== null ? ` (${(owners ?? []).length})` : ''}`}
             </button>
           ))}
         </div>
@@ -610,7 +618,10 @@ function ItemPreviewModal({ item, onClose, onViewProfile }: { item: PreviewItem;
                         : <span className={owner.tag === 'DEV' ? 'tag-rainbow' : owner.tag === 'VIP' ? 'tag-mythic' : owner.tag === 'GOAT' ? 'tag-god' : owner.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, fontWeight: 700, color: (owner.tag === 'DEV' || owner.tag === 'VIP' || owner.tag === 'GOAT' || owner.tagColor === 'curse') ? undefined : owner.tagColor ?? '#6B7280' }}>[{owner.tag}]</span>
                     )}
                   </div>
-                  {owner.rank === 1 && <span style={{ fontSize: 10, color: '#EAB308', fontWeight: 700, background: '#EAB30818', borderRadius: 99, padding: '2px 6px', flexShrink: 0 }}>First</span>}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                    {owner.rank === 1 && <span style={{ fontSize: 10, color: '#EAB308', fontWeight: 700, background: '#EAB30818', borderRadius: 99, padding: '2px 6px' }}>First</span>}
+                    {owner.qty > 1 && <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, background: 'var(--surface-2)', borderRadius: 99, padding: '2px 6px' }}>×{owner.qty}</span>}
+                  </div>
                 </div>
               ))}
             </div>
@@ -2151,144 +2162,167 @@ export default function MarketplacePage() {
                     onChange={e => setTradeInvSearch(e.target.value)}
                   />
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-                    {/* Their inventory — what you want */}
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 10 }}>
-                        Their Items — tap to request
-                      </div>
-                      {filteredTradeTargetTags.length === 0 && filteredTradeTargetColors.length === 0 && filteredTradeTargetPfp.length === 0 ? (
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>{tradeInvQ ? 'No matching items' : 'No tradeable items'}</div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {filteredTradeTargetTags.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
-                          {filteredTradeTargetTags.map(t => {
-                            const item: TradeItem = { type: 'tag', id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }
-                            const sel = selectedRequest.some(i => i.id === t.id && i.type === 'tag')
-                            return (
-                              <PriceTooltip key={t.id} price={prices[`tag:${t.id}`]}>
-                              <ItemBox rarity={t.rarity} itemId={t.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)' }} onClick={() => toggleRequest(item)}>
-                                <span className={t.tag === 'VIP' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : t.tag === 'DEV' ? 'tag-rainbow' : t.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'VIP' || t.tag === 'DEV' || t.tagColor === 'curse') ? undefined : t.tagColor }}>[{t.tag}]</span>
-                                <RarityBadge rarity={t.rarity} itemId={t.id} />
-                                {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </ItemBox>
-                              </PriceTooltip>
-                            )
-                          })}
-                          {filteredTradeTargetColors.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🎨 Name Colors</div>}
-                          {filteredTradeTargetColors.map(c => {
-                            const item: TradeItem = { type: 'name-color', id: c.id, name: c.name, value: c.value, rarity: c.rarity }
-                            const sel = selectedRequest.some(i => i.id === c.id && i.type === 'name-color')
-                            return (
-                              <PriceTooltip key={c.id} price={prices[`name-color:${c.id}`]}>
-                              <ItemBox rarity={c.rarity} itemId={c.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)' }} onClick={() => toggleRequest(item)}>
-                                <span className={c.value === 'rainbow' ? 'name-rainbow' : c.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 800, color: (c.value === 'rainbow' || c.value === 'curse') ? undefined : c.value, flexShrink: 0 }}>DUMMY</span>
-                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{c.name}</span>
-                                <RarityBadge rarity={c.rarity} itemId={c.id} />
-                                {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </ItemBox>
-                              </PriceTooltip>
-                            )
-                          })}
-                          {filteredTradeTargetPfp.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🖼️ PFP Effects</div>}
-                          {filteredTradeTargetPfp.map(p => {
-                            const item: TradeItem = { type: 'pfp', id: p.id, name: p.name, value: p.value, rarity: p.rarity }
-                            const sel = selectedRequest.some(i => i.id === p.id && i.type === 'pfp')
-                            return (
-                              <PriceTooltip key={p.id} price={prices[`pfp:${p.id}`]}>
-                              <ItemBox rarity={p.rarity} itemId={p.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)' }} onClick={() => toggleRequest(item)}>
-                                <div className={pfpClass(p.value)} style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, ...pfpStyle(p.value) }} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{p.name}</span>
-                                <RarityBadge rarity={p.rarity} itemId={p.id} />
-                                {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </ItemBox>
-                              </PriceTooltip>
-                            )
-                          })}
-                          {selectedRequest.length > 0 && (() => {
-                            const t = selectedRequest.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
-                            return t > 0 ? (
-                              <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
-                                <CoinIcon size={11} style={{ marginRight: 3 }} />Selected: {t.toLocaleString()}
-                              </div>
-                            ) : null
-                          })()}
-                        </div>
-                      )}
-                    </div>
+                  {/* ── Trade inventory grids ── */}
+                  {(() => {
+                    // Deduplicate items by type:id, counting quantity
+                    function dedup<T extends { id: string; rarity: string }>(arr: T[]): Array<T & { qty: number }> {
+                      const map = new Map<string, T & { qty: number }>()
+                      for (const item of arr) {
+                        const key = item.id
+                        const ex = map.get(key)
+                        if (ex) ex.qty++
+                        else map.set(key, { ...item, qty: 1 })
+                      }
+                      return [...map.values()]
+                    }
 
-                    {/* Your inventory — what you offer */}
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 6 }}>
-                        Your Items — tap to offer
-                      </div>
-                      <input
-                        className="ns-input"
-                        style={{ width: '100%', height: 30, fontSize: 11, marginBottom: 8, boxSizing: 'border-box' as const, padding: '0 10px' }}
-                        placeholder="Search your items…"
-                        value={tradeMySearch}
-                        onChange={e => setTradeMySearch(e.target.value)}
-                      />
-                      {(!inv || ((inv.ownedTags ?? []).length === 0 && inv.ownedNameColors.length === 0 && inv.ownedPfpEffects.length === 0)) ? (
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>No items to offer</div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`) && !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id) && (!tradeMyQ || t.tag.toLowerCase().includes(tradeMyQ))).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
-                          {(inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`) && !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id) && (!tradeMyQ || t.tag.toLowerCase().includes(tradeMyQ))).map(t => {
-                            const item: TradeItem = { type: 'tag', id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }
-                            const sel = selectedOffer.some(i => i.id === t.id && i.type === 'tag')
+                    // Tile renderer shared by both columns
+                    function TradeGrid({ items, accentColor, onToggle, isSelected }: {
+                      items: Array<TradeItem & { qty: number }>
+                      accentColor: string
+                      onToggle: (item: TradeItem) => void
+                      isSelected: (item: TradeItem) => boolean
+                    }) {
+                      if (items.length === 0) return null
+                      return (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 6 }}>
+                          {items.map(item => {
+                            const sel = isSelected(item)
+                            const borderColor = getRarityBorderColor(item.rarity, item.id)
+                            const isRainbowRarity = RARITY_COLOR[item.rarity] === 'rainbow'
                             return (
-                              <PriceTooltip key={t.id} price={prices[`tag:${t.id}`]}>
-                              <ItemBox rarity={t.rarity} itemId={t.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)' }} onClick={() => toggleOffer(item)}>
-                                <span className={t.tag === 'VIP' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : t.tag === 'DEV' ? 'tag-rainbow' : t.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'VIP' || t.tag === 'DEV' || t.tagColor === 'curse') ? undefined : t.tagColor }}>[{t.tag}]</span>
-                                <RarityBadge rarity={t.rarity} itemId={t.id} />
-                                {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </ItemBox>
-                              </PriceTooltip>
-                            )
-                          })}
-                          {(inv?.ownedNameColors ?? []).filter(c => !myListedIds.has(`name-color:${c.id}`) && (!tradeMyQ || c.name.toLowerCase().includes(tradeMyQ))).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🎨 Name Colors</div>}
-                          {(inv?.ownedNameColors ?? []).filter(c => !myListedIds.has(`name-color:${c.id}`) && (!tradeMyQ || c.name.toLowerCase().includes(tradeMyQ))).map(c => {
-                            const item: TradeItem = { type: 'name-color', id: c.id, name: c.name, value: c.value, rarity: c.rarity }
-                            const sel = selectedOffer.some(i => i.id === c.id && i.type === 'name-color')
-                            return (
-                              <PriceTooltip key={c.id} price={prices[`name-color:${c.id}`]}>
-                              <ItemBox rarity={c.rarity} itemId={c.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)' }} onClick={() => toggleOffer(item)}>
-                                <span className={c.value === 'rainbow' ? 'name-rainbow' : c.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 800, color: (c.value === 'rainbow' || c.value === 'curse') ? undefined : c.value, flexShrink: 0 }}>DUMMY</span>
-                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>{c.name}</span>
-                                <RarityBadge rarity={c.rarity} itemId={c.id} />
-                                {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </ItemBox>
-                              </PriceTooltip>
-                            )
-                          })}
-                          {(inv?.ownedPfpEffects ?? []).filter(p => !myListedIds.has(`pfp:${p.id}`) && (!tradeMyQ || p.name.toLowerCase().includes(tradeMyQ))).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🖼️ PFP Effects</div>}
-                          {(inv?.ownedPfpEffects ?? []).filter(p => !myListedIds.has(`pfp:${p.id}`) && (!tradeMyQ || p.name.toLowerCase().includes(tradeMyQ))).map(p => {
-                            const item: TradeItem = { type: 'pfp', id: p.id, name: p.name, value: p.value, rarity: p.rarity }
-                            const sel = selectedOffer.some(i => i.id === p.id && i.type === 'pfp')
-                            return (
-                              <PriceTooltip key={p.id} price={prices[`pfp:${p.id}`]}>
-                              <ItemBox rarity={p.rarity} itemId={p.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)' }} onClick={() => toggleOffer(item)}>
-                                <div className={pfpClass(p.value)} style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, ...pfpStyle(p.value) }} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{p.name}</span>
-                                <RarityBadge rarity={p.rarity} itemId={p.id} />
-                                {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </ItemBox>
-                              </PriceTooltip>
-                            )
-                          })}
-                          {selectedOffer.length > 0 && (() => {
-                            const t = selectedOffer.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
-                            return t > 0 ? (
-                              <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
-                                <CoinIcon size={11} style={{ marginRight: 3 }} />Selected: {t.toLocaleString()}
+                              <div key={`${item.type}:${item.id}`} style={{ position: 'relative' as const }}>
+                                <div
+                                  style={{
+                                    position: 'relative' as const,
+                                    borderRadius: 8,
+                                    border: sel ? `2px solid ${accentColor}` : isRainbowRarity ? '2px solid transparent' : `2px solid ${borderColor}44`,
+                                    background: sel ? `${accentColor}18` : 'var(--surface-2)',
+                                    padding: '8px 4px 6px',
+                                    display: 'flex',
+                                    flexDirection: 'column' as const,
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    cursor: 'pointer',
+                                    minHeight: 76,
+                                  }}
+                                  onClick={() => onToggle(item)}
+                                >
+                                  {/* Qty badge */}
+                                  {item.qty > 1 && (
+                                    <span style={{ position: 'absolute' as const, top: 3, right: 3, fontSize: 9, fontWeight: 800, background: 'var(--surface)', color: 'var(--text-muted)', borderRadius: 99, padding: '1px 4px', border: '1px solid var(--border)', lineHeight: 1.4 }}>×{item.qty}</span>
+                                  )}
+                                  {/* Selected check */}
+                                  {sel && (
+                                    <span style={{ position: 'absolute' as const, top: 3, left: 4, fontSize: 11, fontWeight: 800, color: accentColor, lineHeight: 1 }}>✓</span>
+                                  )}
+                                  {/* Visual */}
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 28, width: '100%' }}>
+                                    {item.type === 'tag' ? (
+                                      <span
+                                        className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+                                        style={{ fontSize: 9, fontWeight: 800, padding: '1px 4px', borderRadius: 3, border: `1px solid ${item.tagColor === 'curse' ? '#ff0000' : (item.tag === 'GOAT' || item.tag === 'VIP' || item.tag === 'DEV') ? undefined : `${item.tagColor ?? '#6B7280'}66`}`, color: (item.tag === 'GOAT' || item.tag === 'VIP' || item.tag === 'DEV' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}
+                                      >{item.tag ?? item.id}</span>
+                                    ) : item.type === 'name-color' ? (
+                                      <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'block', flexShrink: 0, border: '2px solid var(--border)', background: item.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : item.value === 'curse' ? 'rgba(255,0,0,0.25)' : item.value }} />
+                                    ) : (
+                                      <div className={pfpClass(item.value)} style={{ width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...pfpStyle(item.value) }} />
+                                    )}
+                                  </div>
+                                  {/* Name */}
+                                  <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center' as const, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, maxWidth: '100%', padding: '0 2px' }}>
+                                    {item.name ?? item.tag ?? item.id}
+                                  </div>
+                                  <RarityBadge rarity={item.rarity} itemId={item.id} />
+                                </div>
+                                {/* Preview button */}
+                                <button
+                                  style={{ position: 'absolute' as const, bottom: 4, right: 3, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 10, cursor: 'pointer', padding: 1, lineHeight: 1, opacity: 0.7 }}
+                                  onClick={e => { e.stopPropagation(); setPreviewItem({ type: item.type, id: item.id, name: item.name ?? item.tag ?? item.id, rarity: item.rarity, value: item.value, tagColor: item.tagColor }) }}
+                                  title="View item details"
+                                >ⓘ</button>
                               </div>
-                            ) : null
-                          })()}
+                            )
+                          })}
                         </div>
-                      )}
-                    </div>
-                  </div>
+                      )
+                    }
+
+                    // Deduplicated item lists for their inventory
+                    const theirTagsDedup = dedup(filteredTradeTargetTags.map(t => ({ type: 'tag' as const, id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity, name: t.tag })))
+                    const theirColorsDedup = dedup(filteredTradeTargetColors.map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, value: c.value, rarity: c.rarity })))
+                    const theirPfpDedup = dedup(filteredTradeTargetPfp.map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, value: p.value, rarity: p.rarity })))
+
+                    // Deduplicated item lists for my inventory
+                    const myTagsRaw = (inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`) && !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id) && (!tradeMyQ || t.tag.toLowerCase().includes(tradeMyQ)))
+                    const myColorsRaw = (inv?.ownedNameColors ?? []).filter(c => !myListedIds.has(`name-color:${c.id}`) && (!tradeMyQ || c.name.toLowerCase().includes(tradeMyQ)))
+                    const myPfpRaw = (inv?.ownedPfpEffects ?? []).filter(p => !myListedIds.has(`pfp:${p.id}`) && (!tradeMyQ || p.name.toLowerCase().includes(tradeMyQ)))
+                    const myTagsDedup = dedup(myTagsRaw.map(t => ({ type: 'tag' as const, id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity, name: t.tag })))
+                    const myColorsDedup = dedup(myColorsRaw.map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, value: c.value, rarity: c.rarity })))
+                    const myPfpDedup = dedup(myPfpRaw.map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, value: p.value, rarity: p.rarity })))
+
+                    const selectedRequestTotal = selectedRequest.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
+                    const selectedOfferTotal = selectedOffer.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
+
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                        {/* Their inventory */}
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 10 }}>
+                            Their Items — tap to request
+                          </div>
+                          {theirTagsDedup.length === 0 && theirColorsDedup.length === 0 && theirPfpDedup.length === 0 ? (
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>{tradeInvQ ? 'No matching items' : 'No tradeable items'}</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                              {theirTagsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🏷️ Tags</div>}
+                              <TradeGrid items={theirTagsDedup} accentColor="var(--primary)" onToggle={item => toggleRequest(item)} isSelected={item => selectedRequest.some(i => i.id === item.id && i.type === item.type)} />
+                              {theirColorsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🎨 Colors</div>}
+                              <TradeGrid items={theirColorsDedup} accentColor="var(--primary)" onToggle={item => toggleRequest(item)} isSelected={item => selectedRequest.some(i => i.id === item.id && i.type === item.type)} />
+                              {theirPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🖼️ PFP</div>}
+                              <TradeGrid items={theirPfpDedup} accentColor="var(--primary)" onToggle={item => toggleRequest(item)} isSelected={item => selectedRequest.some(i => i.id === item.id && i.type === item.type)} />
+                              {selectedRequest.length > 0 && selectedRequestTotal > 0 && (
+                                <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, paddingTop: 6, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  <CoinIcon size={11} />Selected: {selectedRequestTotal.toLocaleString()}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Your inventory */}
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 6 }}>
+                            Your Items — tap to offer
+                          </div>
+                          <input
+                            className="ns-input"
+                            style={{ width: '100%', height: 30, fontSize: 11, marginBottom: 8, boxSizing: 'border-box' as const, padding: '0 10px' }}
+                            placeholder="Search your items…"
+                            value={tradeMySearch}
+                            onChange={e => setTradeMySearch(e.target.value)}
+                          />
+                          {myTagsDedup.length === 0 && myColorsDedup.length === 0 && myPfpDedup.length === 0 ? (
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>No items to offer</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                              {myTagsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🏷️ Tags</div>}
+                              <TradeGrid items={myTagsDedup} accentColor="#22C55E" onToggle={item => toggleOffer(item)} isSelected={item => selectedOffer.some(i => i.id === item.id && i.type === item.type)} />
+                              {myColorsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🎨 Colors</div>}
+                              <TradeGrid items={myColorsDedup} accentColor="#22C55E" onToggle={item => toggleOffer(item)} isSelected={item => selectedOffer.some(i => i.id === item.id && i.type === item.type)} />
+                              {myPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🖼️ PFP</div>}
+                              <TradeGrid items={myPfpDedup} accentColor="#22C55E" onToggle={item => toggleOffer(item)} isSelected={item => selectedOffer.some(i => i.id === item.id && i.type === item.type)} />
+                              {selectedOffer.length > 0 && selectedOfferTotal > 0 && (
+                                <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, paddingTop: 6, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  <CoinIcon size={11} />Selected: {selectedOfferTotal.toLocaleString()}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                   {/* Trade summary + send */}
                   <div className="ns-card" style={{ padding: 16, marginBottom: 12 }}>
