@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import CoinIcon from '../../../components/ui/CoinIcon'
 import VerifiedBadge from '../../../components/ui/VerifiedBadge'
@@ -1035,6 +1035,116 @@ function SpinWheelModal({
     document.body
   )
 }
+
+// ── Trader sub-components (memoized to avoid parent re-render cost) ───────────
+
+const SELL_SKIP = new Set(['GOAT', 'Novice', 'Pro', 'Veteran', 'Legend'])
+const TRADER_RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
+
+const TraderSellGrid = React.memo(function TraderSellGrid({
+  inv, prices, onSell,
+}: {
+  inv: InventoryData | null
+  prices: Record<string, number>
+  onSell: (item: { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; payout: number }) => void
+}) {
+  const items = useMemo(() => [
+    ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity })),
+    ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity })),
+    ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity })),
+  ].filter(i => !SELL_SKIP.has(i.id)), [inv])
+
+  if (items.length === 0) {
+    return <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Your inventory is empty — nothing to sell.</div>
+  }
+  return (
+    <>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+        The trader pays <strong style={{ color: '#EAB308' }}>50% of est value</strong> for any item. Limit: 5 sells/day.
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 8 }}>
+        {items.map((item, i) => {
+          const payout = Math.floor((prices[`${item.type}:${item.id}`] ?? 0) * 0.5)
+          const color = getRarityBorderColor(item.rarity, item.id)
+          return (
+            <button
+              key={`${item.type}:${item.id}:${i}`}
+              onClick={() => onSell({ type: item.type, id: item.id, name: item.name, rarity: item.rarity, payout })}
+              style={{ width: '100%', padding: '10px 6px', borderRadius: 10, border: `2px solid ${color}44`, background: 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-word' as const }}>
+                {item.type === 'tag' ? `[${item.name}]` : item.name}
+              </div>
+              <div style={{ fontSize: 10, color: '#EAB308', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CoinIcon size={9} />{payout > 0 ? payout.toLocaleString() : '—'}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </>
+  )
+})
+
+const TraderBuyGrid = React.memo(function TraderBuyGrid({
+  catalog, catalogLoaded, coins, search, rarityFilter, onSearchChange, onRarityChange, onBuy,
+}: {
+  catalog: TraderCatalogItem[]
+  catalogLoaded: boolean
+  coins: number
+  search: string
+  rarityFilter: string
+  onSearchChange: (v: string) => void
+  onRarityChange: (v: string) => void
+  onBuy: (item: TraderCatalogItem) => void
+}) {
+  const filtered = useMemo(() => catalog
+    .filter(i => rarityFilter === 'All' || i.rarity === rarityFilter)
+    .filter(i => !search || i.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => TRADER_RARITY_ORDER.indexOf(a.rarity) - TRADER_RARITY_ORDER.indexOf(b.rarity)),
+  [catalog, rarityFilter, search])
+
+  return (
+    <>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+        The trader marks up all prices. The rarer, the pricier. Limit: 5 purchases/day.
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' as const }}>
+        <input value={search} onChange={e => onSearchChange(e.target.value)} placeholder="Search items…"
+          style={{ flex: 1, minWidth: 140, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }} />
+        <select value={rarityFilter} onChange={e => onRarityChange(e.target.value)}
+          style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
+          <option value="All">All Rarities</option>
+          {TRADER_RARITY_ORDER.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+      </div>
+      {!catalogLoaded ? (
+        <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)', fontSize: 13 }}>Loading catalog…</div>
+      ) : filtered.length === 0 ? (
+        <div className="ns-card" style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No items match</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8 }}>
+          {filtered.map(item => {
+            const color = getRarityBorderColor(item.rarity, item.id)
+            const canAfford = coins >= item.traderPrice
+            return (
+              <button key={`${item.type}:${item.id}`} onClick={() => onBuy(item)}
+                style={{ width: '100%', padding: '10px 6px', borderRadius: 10, border: `2px solid ${color}${canAfford ? '66' : '22'}`, background: 'var(--surface-2)', cursor: canAfford ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: canAfford ? 1 : 0.5 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-word' as const }}>
+                  {item.type === 'tag' ? `[${item.name}]` : item.name}
+                </div>
+                <div style={{ fontSize: 10, color: canAfford ? '#EAB308' : 'var(--text-muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CoinIcon size={9} />{item.traderPrice.toLocaleString()}
+                </div>
+                <div style={{ fontSize: 9, color, fontWeight: 600 }}>{item.rarity}</div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+})
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
@@ -2727,109 +2837,21 @@ export default function MarketplacePage() {
           )}
 
           {/* SELL sub-tab */}
-          {traderSubTab === 'sell' && (() => {
-            const allOwned: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; tagColor?: string; value?: string }> = [
-              ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity, tagColor: t.tagColor })),
-              ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity, value: c.value })),
-              ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity, value: p.value })),
-            ].filter(i => !['GOAT', 'Novice', 'Pro', 'Veteran', 'Legend'].includes(i.id))
-
-            if (allOwned.length === 0) {
-              return <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Your inventory is empty — nothing to sell.</div>
-            }
-
-            return (
-              <>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  The trader pays <strong style={{ color: '#EAB308' }}>50% of est value</strong> for any item. Limit: 5 sells/day.
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 8 }}>
-                  {allOwned.map((item, i) => {
-                    const payout = Math.floor((prices[`${item.type}:${item.id}`] ?? 0) * 0.5)
-                    const borderColor = getRarityBorderColor(item.rarity, item.id)
-                    return (
-                      <PriceTooltip key={`${item.type}:${item.id}:${i}`} price={prices[`${item.type}:${item.id}`]}>
-                        <button
-                          onClick={() => setTraderSellConfirm({ type: item.type, id: item.id, name: item.name, rarity: item.rarity, payout })}
-                          style={{ width: '100%', aspectRatio: '1', borderRadius: 10, border: `2px solid ${borderColor}44`, background: 'var(--surface-2)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: 6, transition: 'border-color 0.15s' }}
-                          onMouseEnter={e => (e.currentTarget.style.borderColor = borderColor)}
-                          onMouseLeave={e => (e.currentTarget.style.borderColor = `${borderColor}44`)}
-                        >
-                          <div style={{ fontSize: 11, fontWeight: 700, color: borderColor, textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-word' }}>
-                            {item.type === 'tag' ? `[${item.name}]` : item.name}
-                          </div>
-                          <div style={{ fontSize: 10, color: '#EAB308', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <CoinIcon size={9} />{payout > 0 ? payout.toLocaleString() : '—'}
-                          </div>
-                        </button>
-                      </PriceTooltip>
-                    )
-                  })}
-                </div>
-              </>
-            )
-          })()}
+          {traderSubTab === 'sell' && <TraderSellGrid inv={inv} prices={prices} onSell={setTraderSellConfirm} />}
 
           {/* BUY sub-tab */}
-          {traderSubTab === 'buy' && (() => {
-            const RARITY_ORDER_BUY = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
-            const filtered = traderCatalog
-              .filter(item => traderRarityFilter === 'All' || item.rarity === traderRarityFilter)
-              .filter(item => !traderSearch || item.name.toLowerCase().includes(traderSearch.toLowerCase()))
-              .sort((a, b) => RARITY_ORDER_BUY.indexOf(a.rarity) - RARITY_ORDER_BUY.indexOf(b.rarity))
-
-            return (
-              <>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  The trader marks up all prices. The rarer, the pricier. Limit: 5 purchases/day.
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' as const }}>
-                  <input
-                    value={traderSearch}
-                    onChange={e => setTraderSearch(e.target.value)}
-                    placeholder="Search items…"
-                    style={{ flex: 1, minWidth: 140, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}
-                  />
-                  <select value={traderRarityFilter} onChange={e => setTraderRarityFilter(e.target.value)}
-                    style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
-                    <option value="All">All Rarities</option>
-                    {['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic'].map(r => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
-                {!traderCatalogLoaded ? (
-                  <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)', fontSize: 13 }}>Loading catalog…</div>
-                ) : filtered.length === 0 ? (
-                  <div className="ns-card" style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No items match</div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8 }}>
-                    {filtered.map(item => {
-                      const borderColor = getRarityBorderColor(item.rarity, item.id)
-                      const canAfford = (inv?.coins ?? 0) >= item.traderPrice
-                      return (
-                        <button
-                          key={`${item.type}:${item.id}`}
-                          onClick={() => setTraderBuyConfirm(item)}
-                          style={{ width: '100%', aspectRatio: '1', borderRadius: 10, border: `2px solid ${borderColor}${canAfford ? '66' : '22'}`, background: canAfford ? 'var(--surface-2)' : 'var(--surface)', cursor: canAfford ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, padding: 6, opacity: canAfford ? 1 : 0.55, transition: 'border-color 0.15s' }}
-                          onMouseEnter={e => { if (canAfford) e.currentTarget.style.borderColor = borderColor }}
-                          onMouseLeave={e => { if (canAfford) e.currentTarget.style.borderColor = `${borderColor}66` }}
-                        >
-                          <div style={{ fontSize: 11, fontWeight: 700, color: borderColor, textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-word' }}>
-                            {item.type === 'tag' ? `[${item.name}]` : item.name}
-                          </div>
-                          <div style={{ fontSize: 10, color: canAfford ? '#EAB308' : 'var(--text-muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <CoinIcon size={9} />{item.traderPrice.toLocaleString()}
-                          </div>
-                          <div style={{ fontSize: 9, color: borderColor, fontWeight: 600 }}>{item.rarity}</div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </>
-            )
-          })()}
+          {traderSubTab === 'buy' && (
+            <TraderBuyGrid
+              catalog={traderCatalog}
+              catalogLoaded={traderCatalogLoaded}
+              coins={inv?.coins ?? 0}
+              search={traderSearch}
+              rarityFilter={traderRarityFilter}
+              onSearchChange={setTraderSearch}
+              onRarityChange={setTraderRarityFilter}
+              onBuy={setTraderBuyConfirm}
+            />
+          )}
         </>
       )}
 
