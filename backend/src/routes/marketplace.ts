@@ -1647,8 +1647,12 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
       for (const item of parseJsonArr(u.ownedNameColors)) value += priceMap.get(`name-color:${(item as { id: string }).id}`) ?? 0
       for (const item of parseJsonArr(u.ownedPfpEffects)) value += priceMap.get(`pfp:${(item as { id: string }).id}`) ?? 0
       for (const t of parseTagArr(u.allTags)) {
-        const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag)
-        if (def) value += priceMap.get(`tag:${def.id}`) ?? 0
+        const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
+               ?? SPECIAL_TAGS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
+               ?? DEV_CURSE_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor && d.itemType === 'tag')
+               ?? TAG_BOX_ITEMS.find(d => d.tag === t.tag)
+        const tagId = def?.id ?? t.tag
+        value += priceMap.get(`tag:${tagId}`) ?? 0
       }
       return { id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, inventoryValue: value }
     }).sort((a, b) => b.inventoryValue - a.inventoryValue).slice(0, 15)
