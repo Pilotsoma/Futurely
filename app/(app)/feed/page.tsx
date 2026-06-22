@@ -207,6 +207,9 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
   const [following, setFollowing] = useState(false)
   const [postsLoading, setPostsLoading] = useState(true)
   const [postsError, setPostsError] = useState(false)
+  const [sendCoinAmount, setSendCoinAmount] = useState('')
+  const [sendCoinBusy, setSendCoinBusy] = useState(false)
+  const [sendCoinMsg, setSendCoinMsg] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -285,9 +288,45 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
             </div>
 
             {userId !== currentUserId && (
-              <button className={following ? 'ns-btn-ghost' : 'ns-btn-primary'} style={{ width: '100%', height: 40, marginBottom: 20, fontSize: 14 }} onClick={handleFollow}>
+              <button className={following ? 'ns-btn-ghost' : 'ns-btn-primary'} style={{ width: '100%', height: 40, marginBottom: 12, fontSize: 14 }} onClick={handleFollow}>
                 {following ? 'Following' : 'Follow'}
               </button>
+            )}
+
+            {/* Send Coins — visible to all users on other profiles */}
+            {userId !== currentUserId && (
+              <div style={{ marginBottom: 20, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    className="ns-input"
+                    style={{ flex: 1, height: 34, fontSize: 13 }}
+                    type="number"
+                    min="1"
+                    placeholder="Amount"
+                    value={sendCoinAmount}
+                    onChange={e => { setSendCoinAmount(e.target.value); setSendCoinMsg('') }}
+                  />
+                  <button
+                    style={{ background: '#EAB308', color: '#000', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: sendCoinBusy ? 'not-allowed' : 'pointer', opacity: sendCoinBusy ? 0.6 : 1 }}
+                    disabled={sendCoinBusy}
+                    onClick={async () => {
+                      const amt = parseInt(sendCoinAmount)
+                      if (isNaN(amt) || amt <= 0 || sendCoinBusy) return
+                      setSendCoinBusy(true); setSendCoinMsg('')
+                      try {
+                        await api.sendCoins(userId, amt)
+                        setSendCoinMsg(`✓ Sent ${amt} coins`)
+                        setSendCoinAmount('')
+                      } catch (e: unknown) {
+                        const msg = (e instanceof Error ? e.message : '') || 'Failed'
+                        setSendCoinMsg(msg.includes('INSUFFICIENT') ? 'Not enough coins' : 'Failed')
+                      } finally { setSendCoinBusy(false) }
+                    }}
+                  >{sendCoinBusy ? '…' : 'Send'}</button>
+                </div>
+                {sendCoinMsg && <div style={{ fontSize: 11, color: sendCoinMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{sendCoinMsg}</div>}
+              </div>
             )}
 
             {/* DEV/Admin panel */}
@@ -376,6 +415,8 @@ function DevAdminPanel({
   const [coinAmount, setCoinAmount] = useState('')
   const [coinSaving, setCoinSaving] = useState(false)
   const [targetCoins, setTargetCoins] = useState<number | null>(profile.coins ?? null)
+  const [marketGranting, setMarketGranting] = useState(false)
+  const [marketGrantMsg, setMarketGrantMsg] = useState('')
 
   useEffect(() => {
     api.feedUserProfile(currentUserId).then((p) => { setMyRole(p.role); setMyTag(p.tag); setMyAllTags(p.allTags ?? []) }).catch(() => {})
@@ -715,6 +756,22 @@ function DevAdminPanel({
             disabled={coinSaving}
           >{coinSaving ? '…' : 'Set 0'}</button>
         </div>
+      </div>
+
+      {/* Grant Market Access */}
+      <div style={{ marginTop: 12, borderTop: '1px solid rgba(34,197,94,0.15)', paddingTop: 12 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>MARKETPLACE ACCESS</p>
+        <button
+          style={{ background: '#22C55E', color: '#000', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: marketGranting ? 'not-allowed' : 'pointer', opacity: marketGranting ? 0.6 : 1 }}
+          onClick={async () => {
+            setMarketGranting(true); setMarketGrantMsg('')
+            try { await api.adminGrantMarketAccess(userId); setMarketGrantMsg('✓ Granted') }
+            catch { setMarketGrantMsg('Failed') }
+            finally { setMarketGranting(false) }
+          }}
+          disabled={marketGranting}
+        >{marketGranting ? '…' : '🔓 Grant Market Access'}</button>
+        {marketGrantMsg && <span style={{ fontSize: 11, color: marketGrantMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginLeft: 8 }}>{marketGrantMsg}</span>}
       </div>
 
       </>)}

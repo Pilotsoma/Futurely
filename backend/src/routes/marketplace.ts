@@ -1657,4 +1657,45 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
   }
 })
 
+// ── POST /coins/send — send coins to another user ────────────────────────────
+const sendCoinsSchema = z.object({
+  receiverId: z.number().int().positive(),
+  amount: z.number().int().min(1).max(100_000),
+})
+
+router.post('/coins/send', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
+  const parse = sendCoinsSchema.safeParse(req.body)
+  if (!parse.success) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid request' } })
+    return
+  }
+  const { receiverId, amount } = parse.data
+  const senderId = req.userId!
+  if (senderId === receiverId) {
+    res.status(400).json({ data: null, error: { code: 'INVALID_REQUEST', message: 'Cannot send coins to yourself' } })
+    return
+  }
+  try {
+    const sender = await prisma.user.findUnique({ where: { id: senderId }, select: { coins: true } })
+    if (!sender || sender.coins < amount) {
+      res.status(402).json({ data: null, error: { code: 'INSUFFICIENT_COINS', message: 'Not enough coins' } })
+      return
+    }
+    const receiver = await prisma.user.findUnique({ where: { id: receiverId, deletedAt: null }, select: { id: true, coins: true } })
+    if (!receiver) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
+      return
+    }
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: senderId }, data: { coins: { decrement: amount } } }),
+      prisma.user.update({ where: { id: receiverId }, data: { coins: { increment: amount } } }),
+    ])
+    const updated = await prisma.user.findUnique({ where: { id: senderId }, select: { coins: true } })
+    res.json({ data: { ok: true, newBalance: updated!.coins }, error: null })
+  } catch (err) {
+    console.error('[COINS_SEND]', err)
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to send coins' } })
+  }
+})
+
 export default router

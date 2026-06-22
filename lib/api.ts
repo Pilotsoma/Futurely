@@ -747,6 +747,9 @@ export const api = {
   adminGrantMarketAccess: (userId: number) =>
     request<{ ok: boolean }>('/api/admin/grant-market-access', { method: 'POST', body: JSON.stringify({ userId }) }),
 
+  sendCoins: (receiverId: number, amount: number) =>
+    request<{ ok: boolean; newBalance: number }>('/api/marketplace/coins/send', { method: 'POST', body: JSON.stringify({ receiverId, amount }) }),
+
   // ── Educator (Teacher + Counselor shared) ─────────────────────────────────
 
   educatorMe: () =>

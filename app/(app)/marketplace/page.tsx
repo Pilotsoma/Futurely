@@ -1074,6 +1074,7 @@ export default function MarketplacePage() {
   const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string | null; tag: string | null; tagColor: string | null }>>([])
   const [tradeTarget, setTradeTarget] = useState<UserPublicInventory | null>(null)
   const [targetLoading, setTargetLoading] = useState(false)
+  const [tradeInvSearch, setTradeInvSearch] = useState('')
   const [selectedOffer, setSelectedOffer] = useState<TradeItem[]>([])
   const [selectedRequest, setSelectedRequest] = useState<TradeItem[]>([])
   const [sendingTrade, setSendingTrade] = useState(false)
@@ -1082,6 +1083,9 @@ export default function MarketplacePage() {
   // Profile panel
   const [profilePanel, setProfilePanel] = useState<FeedUserProfile | null>(null)
   const [profilePanelLoading, setProfilePanelLoading] = useState(false)
+  const [profileSendAmount, setProfileSendAmount] = useState('')
+  const [profileSendBusy, setProfileSendBusy] = useState(false)
+  const [profileSendMsg, setProfileSendMsg] = useState('')
 
   // Item preview
   const [previewItem, setPreviewItem] = useState<PreviewItem | null>(null)
@@ -2125,18 +2129,32 @@ export default function MarketplacePage() {
                     </button>
                   </div>
 
+                  {/* Search their inventory */}
+                  <input
+                    className="ns-input"
+                    style={{ width: '100%', height: 34, fontSize: 12, marginBottom: 12, boxSizing: 'border-box' as const }}
+                    placeholder="Search their inventory…"
+                    value={tradeInvSearch}
+                    onChange={e => setTradeInvSearch(e.target.value)}
+                  />
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                     {/* Their inventory — what you want */}
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 10 }}>
                         Their Items — tap to request
                       </div>
-                      {tradeTarget.tags.filter(t => !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id)).length === 0 && tradeTarget.nameColors.length === 0 && tradeTarget.pfpEffects.length === 0 ? (
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>No tradeable items</div>
+                      {(() => {
+                        const q = tradeInvSearch.trim().toLowerCase()
+                        const filteredTags = tradeTarget.tags.filter(t => !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id) && (!q || t.tag.toLowerCase().includes(q)))
+                        const filteredColors = tradeTarget.nameColors.filter(c => !q || c.name.toLowerCase().includes(q))
+                        const filteredPfp = tradeTarget.pfpEffects.filter(p => !q || p.name.toLowerCase().includes(q))
+                        return filteredTags.length === 0 && filteredColors.length === 0 && filteredPfp.length === 0 ? (
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>{q ? 'No matching items' : 'No tradeable items'}</div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {tradeTarget.tags.filter(t => !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id)).length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
-                          {tradeTarget.tags.filter(t => !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id)).map(t => {
+                          {filteredTags.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
+                          {filteredTags.map(t => {
                             const item: TradeItem = { type: 'tag', id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }
                             const sel = selectedRequest.some(i => i.id === t.id && i.type === 'tag')
                             return (
@@ -2149,8 +2167,8 @@ export default function MarketplacePage() {
                               </PriceTooltip>
                             )
                           })}
-                          {tradeTarget.nameColors.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🎨 Name Colors</div>}
-                          {tradeTarget.nameColors.map(c => {
+                          {filteredColors.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🎨 Name Colors</div>}
+                          {filteredColors.map(c => {
                             const item: TradeItem = { type: 'name-color', id: c.id, name: c.name, value: c.value, rarity: c.rarity }
                             const sel = selectedRequest.some(i => i.id === c.id && i.type === 'name-color')
                             return (
@@ -2164,8 +2182,8 @@ export default function MarketplacePage() {
                               </PriceTooltip>
                             )
                           })}
-                          {tradeTarget.pfpEffects.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🖼️ PFP Effects</div>}
-                          {tradeTarget.pfpEffects.map(p => {
+                          {filteredPfp.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🖼️ PFP Effects</div>}
+                          {filteredPfp.map(p => {
                             const item: TradeItem = { type: 'pfp', id: p.id, name: p.name, value: p.value, rarity: p.rarity }
                             const sel = selectedRequest.some(i => i.id === p.id && i.type === 'pfp')
                             return (
@@ -2188,7 +2206,8 @@ export default function MarketplacePage() {
                             ) : null
                           })()}
                         </div>
-                      )}
+                      )
+                      })()}
                     </div>
 
                     {/* Your inventory — what you offer */}
@@ -2738,6 +2757,42 @@ export default function MarketplacePage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Send Coins — visible to all users on other profiles */}
+                {currentUserId !== null && profilePanel.id !== currentUserId && (
+                  <div style={{ borderTop: '1px solid rgba(234,179,8,0.2)', paddingTop: 14, marginTop: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input
+                        className="ns-input"
+                        style={{ flex: 1, height: 34, fontSize: 13 }}
+                        type="number"
+                        min="1"
+                        placeholder="Amount"
+                        value={profileSendAmount}
+                        onChange={e => { setProfileSendAmount(e.target.value); setProfileSendMsg('') }}
+                      />
+                      <button
+                        style={{ background: '#EAB308', color: '#000', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: profileSendBusy ? 'not-allowed' : 'pointer', opacity: profileSendBusy ? 0.6 : 1 }}
+                        disabled={profileSendBusy}
+                        onClick={async () => {
+                          const amt = parseInt(profileSendAmount)
+                          if (isNaN(amt) || amt <= 0 || profileSendBusy) return
+                          setProfileSendBusy(true); setProfileSendMsg('')
+                          try {
+                            await api.sendCoins(profilePanel.id, amt)
+                            setProfileSendMsg(`✓ Sent ${amt} coins`)
+                            setProfileSendAmount('')
+                          } catch (e: unknown) {
+                            const msg = (e instanceof Error ? e.message : '') || 'Failed'
+                            setProfileSendMsg(msg.includes('INSUFFICIENT') ? 'Not enough coins' : 'Failed')
+                          } finally { setProfileSendBusy(false) }
+                        }}
+                      >{profileSendBusy ? '…' : 'Send'}</button>
+                    </div>
+                    {profileSendMsg && <div style={{ fontSize: 11, color: profileSendMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{profileSendMsg}</div>}
+                  </div>
+                )}
 
                 {isDevUser && (
                   <div style={{ borderTop: '1px solid rgba(255,107,107,0.25)', paddingTop: 14, marginTop: 14 }}>
