@@ -1321,11 +1321,18 @@ function traderSellPrice(type: string, id: string): number {
   return Math.floor(est * 0.5)
 }
 
-function traderBuyPrice(rarity: string, type: string, id: string): number {
+function traderBuyPrice(rarity: string, type: string, id: string, livePrices?: Map<string, number>): number {
   const key = `${type}:${id}`
-  const est = SEED_PRICES[key] ?? 0
+  const est = livePrices?.get(key) ?? SEED_PRICES[key] ?? 0
   const multiplier = TRADER_MARKUP[rarity] ?? 2.0
   return Math.ceil(Math.max(est, 50) * multiplier)
+}
+
+async function fetchLivePrices(): Promise<Map<string, number>> {
+  const rows = await prisma.itemPrice.findMany({ where: { itemType: { not: 'meta' } } })
+  const map = new Map<string, number>()
+  for (const r of rows) map.set(`${r.itemType}:${r.itemId}`, r.price)
+  return map
 }
 
 router.get('/trader/status', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
@@ -1349,11 +1356,14 @@ router.get('/trader/status', requireAuth, async (req: AuthRequest, res: Response
 })
 
 router.get('/trader/catalog', requireAuth, async (_req: AuthRequest, res: Response): Promise<void> => {
-  const catalog = TRADER_CATALOG.map(item => ({
-    ...item,
-    traderPrice: traderBuyPrice(item.rarity, item.type, item.id),
-  }))
-  res.json({ data: catalog })
+  try {
+    const livePrices = await fetchLivePrices()
+    const catalog = TRADER_CATALOG.map(item => ({
+      ...item,
+      traderPrice: traderBuyPrice(item.rarity, item.type, item.id, livePrices),
+    }))
+    res.json({ data: catalog })
+  } catch { res.status(500).json({ error: 'Failed to load catalog' }) }
 })
 
 router.post('/trader/sell', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
@@ -1447,7 +1457,8 @@ router.post('/trader/buy', requireAuth, txLimiter, async (req: AuthRequest, res:
     const catalogItem = TRADER_CATALOG.find(i => i.type === itemType && i.id === itemId)
     if (!catalogItem) { res.status(404).json({ error: "The trader doesn't carry that item." }); return }
 
-    const price = traderBuyPrice(catalogItem.rarity, itemType, itemId)
+    const livePrices = await fetchLivePrices()
+    const price = traderBuyPrice(catalogItem.rarity, itemType, itemId, livePrices)
     if (user.coins < price) {
       res.status(402).json({ error: `Not enough coins. Need ${price.toLocaleString()}.` }); return
     }
@@ -1535,12 +1546,13 @@ router.post('/trader/trade', requireAuth, txLimiter, async (req: AuthRequest, re
     }
 
     // Build and validate wanted catalog items
+    const livePrices = await fetchLivePrices()
     const wantTradeItems: TradeItem[] = []
     let wantTotalPrice = 0
     for (const raw of wantItems) {
       const catalogItem = TRADER_CATALOG.find(c => c.type === raw.type && c.id === raw.id)
       if (!catalogItem) { res.status(404).json({ error: `Trader doesn't carry: ${raw.id}` }); return }
-      wantTotalPrice += traderBuyPrice(catalogItem.rarity, raw.type, raw.id)
+      wantTotalPrice += traderBuyPrice(catalogItem.rarity, raw.type, raw.id, livePrices)
       wantTradeItems.push({
         type: raw.type as 'tag' | 'name-color' | 'pfp',
         id: raw.id,
@@ -1553,7 +1565,7 @@ router.post('/trader/trade', requireAuth, txLimiter, async (req: AuthRequest, re
     }
 
     // Offered est value (full est, not 50%) must cover trader's price of received items
-    const offerEstValue = offerTradeItems.reduce((sum, item) => sum + (SEED_PRICES[`${item.type}:${item.id}`] ?? 0), 0)
+    const offerEstValue = offerTradeItems.reduce((sum, item) => sum + (livePrices.get(`${item.type}:${item.id}`) ?? SEED_PRICES[`${item.type}:${item.id}`] ?? 0), 0)
     if (offerEstValue < wantTotalPrice) {
       res.status(400).json({ error: 'Offer not enough', offerEstValue, wantTotalPrice }); return
     }
