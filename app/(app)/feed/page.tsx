@@ -114,7 +114,8 @@ function avatarContent(user: { name: string | null; avatarUrl?: string | null })
   return initials(user)
 }
 function nameColorStyle(color: string | null | undefined): React.CSSProperties {
-  return color && color !== 'rainbow' && color !== 'curse' ? { color } : {}
+  if (!color || color === 'rainbow' || color === 'curse') return {}
+  return color === '#111111' ? { color, textShadow: '0 0 6px rgba(180,180,180,0.65)' } : { color }
 }
 function nameColorClass(color: string | null | undefined): string {
   return color === 'rainbow' ? 'name-rainbow' : color === 'curse' ? 'name-curse' : ''

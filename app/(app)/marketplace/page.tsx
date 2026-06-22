@@ -396,6 +396,11 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
 type Tab = 'boxes' | 'shop' | 'trade' | 'inventory' | 'leaderboard' | 'catalog'
 type TradeSubTab = 'new' | 'incoming' | 'sent' | 'history'
 
+function ncStyle(color: string | null | undefined, fallback?: string): React.CSSProperties {
+  if (!color || color === 'rainbow' || color === 'curse') return fallback ? { color: fallback } : {}
+  return color === '#111111' ? { color, textShadow: '0 0 6px rgba(180,180,180,0.65)' } : { color }
+}
+
 function PriceTooltip({ children, price }: { children: React.ReactNode; price?: number }) {
   const [show, setShow] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -630,7 +635,7 @@ function ItemPreviewModal({ item, estValue, onClose, onViewProfile }: { item: Pr
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <button onClick={() => { onViewProfile(owner.id); onClose() }}
                       className={owner.nameColor === 'rainbow' ? 'name-rainbow' : owner.nameColor === 'curse' ? 'name-curse' : ''}
-                      style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(owner.nameColor && owner.nameColor !== 'rainbow' && owner.nameColor !== 'curse' ? { color: owner.nameColor } : { color: 'var(--text)' }) }}>
+                      style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...ncStyle(owner.nameColor, 'var(--text)') }}>
                       {owner.name ?? 'Unknown'}
                     </button>
                     {owner.tag && (
@@ -1680,7 +1685,7 @@ export default function MarketplacePage() {
           )}
         </button>
         {type !== 'tag' && (
-          <span className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''} style={{ flex: 1, fontSize: 13, fontWeight: 600, ...(type === 'name-color' && item.value !== 'rainbow' && item.value !== 'curse' ? { color: item.value } : { color: 'var(--text)' }) }}>
+          <span className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''} style={{ flex: 1, fontSize: 13, fontWeight: 600, ...(type === 'name-color' ? ncStyle(item.value, 'var(--text)') : { color: 'var(--text)' }) }}>
             {item.name ?? item.tag}
           </span>
         )}
@@ -2094,7 +2099,7 @@ export default function MarketplacePage() {
                       <button
                         onClick={e => { e.stopPropagation(); void openProfile(listing.seller.id) }}
                         className={listing.seller.nameColor === 'rainbow' ? 'name-rainbow' : listing.seller.nameColor === 'curse' ? 'name-curse' : ''}
-                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...(listing.seller.nameColor && listing.seller.nameColor !== 'rainbow' && listing.seller.nameColor !== 'curse' ? { color: listing.seller.nameColor } : { color: 'var(--text)' }) }}
+                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...ncStyle(listing.seller.nameColor, 'var(--text)') }}
                       >
                         {listing.seller.name ?? 'Unknown'}
                       </button>
@@ -2183,7 +2188,7 @@ export default function MarketplacePage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, padding: '10px 14px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                     <div style={{ flex: 1 }}>
-                      <div className={tradeTarget.user.nameColor === 'rainbow' ? 'name-rainbow' : tradeTarget.user.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...(tradeTarget.user.nameColor && tradeTarget.user.nameColor !== 'rainbow' && tradeTarget.user.nameColor !== 'curse' ? { color: tradeTarget.user.nameColor } : {}) }}>{tradeTarget.user.name ?? 'User'}</div>
+                      <div className={tradeTarget.user.nameColor === 'rainbow' ? 'name-rainbow' : tradeTarget.user.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(tradeTarget.user.nameColor) }}>{tradeTarget.user.name ?? 'User'}</div>
                       {tradeTarget.user.tag && <div className={tradeTarget.user.tag === 'DEV' ? 'tag-rainbow' : tradeTarget.user.tag === 'VIP' ? 'tag-mythic' : tradeTarget.user.tag === 'GOAT' ? 'tag-god' : tradeTarget.user.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (tradeTarget.user.tag === 'DEV' || tradeTarget.user.tag === 'GOAT' || tradeTarget.user.tag === 'VIP' || tradeTarget.user.tagColor === 'curse') ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
                     </div>
                     <button onClick={() => { setTradeTarget(null); setSelectedOffer([]); setSelectedRequest([]) }}
@@ -2410,7 +2415,7 @@ export default function MarketplacePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                           <div>
-                            <span className={trade.sender.nameColor === 'rainbow' ? 'name-rainbow' : trade.sender.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.sender.nameColor && trade.sender.nameColor !== 'rainbow' && trade.sender.nameColor !== 'curse' ? { color: trade.sender.nameColor } : {}) }}>{trade.sender.name ?? 'User'}</span>
+                            <span className={trade.sender.nameColor === 'rainbow' ? 'name-rainbow' : trade.sender.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(trade.sender.nameColor) }}>{trade.sender.name ?? 'User'}</span>
                             {trade.sender.tag && <span className={trade.sender.tag === 'DEV' ? 'tag-rainbow' : trade.sender.tag === 'VIP' ? 'tag-mythic' : trade.sender.tag === 'GOAT' ? 'tag-god' : trade.sender.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (trade.sender.tag === 'DEV' || trade.sender.tag === 'GOAT' || trade.sender.tag === 'VIP' || trade.sender.tagColor === 'curse') ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>{new Date(trade.createdAt).toLocaleDateString()}</span>
@@ -2464,7 +2469,7 @@ export default function MarketplacePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                           <div>
-                            <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : trade.receiver.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.receiver.nameColor && trade.receiver.nameColor !== 'rainbow' && trade.receiver.nameColor !== 'curse' ? { color: trade.receiver.nameColor } : {}) }}>{trade.receiver.name ?? 'User'}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : trade.receiver.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(trade.receiver.nameColor) }}>{trade.receiver.name ?? 'User'}</span>
                             {trade.receiver.tag && <span className={trade.receiver.tag === 'DEV' ? 'tag-rainbow' : trade.receiver.tag === 'VIP' ? 'tag-mythic' : trade.receiver.tag === 'GOAT' ? 'tag-god' : trade.receiver.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 11, color: (trade.receiver.tag === 'DEV' || trade.receiver.tag === 'GOAT' || trade.receiver.tag === 'VIP' || trade.receiver.tagColor === 'curse') ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#EAB308', background: '#EAB30818', padding: '2px 8px', borderRadius: 99 }}>
@@ -2668,7 +2673,7 @@ export default function MarketplacePage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <button onClick={() => openProfile(entry.id)}
                           className={entry.nameColor === 'rainbow' ? 'name-rainbow' : entry.nameColor === 'curse' ? 'name-curse' : ''}
-                          style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...(entry.nameColor && entry.nameColor !== 'rainbow' && entry.nameColor !== 'curse' ? { color: entry.nameColor } : { color: 'var(--text)' }) }}>
+                          style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', ...ncStyle(entry.nameColor, 'var(--text)') }}>
                           {entry.name ?? `User #${entry.id}`}
                         </button>
                         {isMe && <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: 'rgba(59,130,246,0.15)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>YOU</span>}
@@ -2748,7 +2753,7 @@ export default function MarketplacePage() {
                           {/* Name */}
                           <span
                             className={item.type === 'name-color' && item.value === 'rainbow' ? 'name-rainbow' : item.type === 'name-color' && item.value === 'curse' ? 'name-curse' : ''}
-                            style={{ flex: 1, fontSize: 13, fontWeight: 600, color: item.type === 'name-color' && item.value && item.value !== 'rainbow' && item.value !== 'curse' ? item.value : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                            style={{ flex: 1, fontSize: 13, fontWeight: 600, ...ncStyle(item.type === 'name-color' ? item.value : null, 'var(--text)'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                           >{item.name}</span>
                           <RarityBadge rarity={item.rarity} itemId={item.id} />
                           {(item.id === 'GOAT' || item.name === 'GOAT') && (
@@ -2824,7 +2829,7 @@ export default function MarketplacePage() {
                       : (profilePanel.name ?? 'Us').slice(0, 2).toUpperCase()}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div className={profilePanel.nameColor === 'rainbow' ? 'name-rainbow' : profilePanel.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 19, fontWeight: 800, marginBottom: 3, ...(profilePanel.nameColor && profilePanel.nameColor !== 'rainbow' && profilePanel.nameColor !== 'curse' ? { color: profilePanel.nameColor } : { color: 'var(--text)' }) }}>
+                    <div className={profilePanel.nameColor === 'rainbow' ? 'name-rainbow' : profilePanel.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 19, fontWeight: 800, marginBottom: 3, ...ncStyle(profilePanel.nameColor, 'var(--text)') }}>
                       {profilePanel.name ?? 'User'}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
