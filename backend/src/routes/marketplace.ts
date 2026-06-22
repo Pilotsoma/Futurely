@@ -170,7 +170,7 @@ export const SEED_PRICES: Record<string, number> = {
   'tag:deans-list': 35,      'tag:top-performer': 35,
   'tag:ace': 125,            'tag:genius': 125,
   'tag:mastermind': 1000,    'tag:prodigy': 1000,
-  'tag:god': 3333,
+  'tag:god': 10000,
   'tag:GOAT': 33333,
   // Name Colors — Common 12, Uncommon 20, Rare 35, Epic 125, Legendary 1200, Mythic 30000
   'name-color:forest-green': 12,   'name-color:navy-blue': 12,   'name-color:dark-red': 12,
@@ -400,7 +400,7 @@ function applyMultipleAdds(user: UserSnap, items: TradeItem[]): Record<string, s
 
 // Bump this number whenever SEED_PRICES changes — forces a one-time DB reset
 // to the new values, after which dynamic pricing takes over again.
-const SEED_VERSION = 10
+const SEED_VERSION = 11
 
 router.get('/prices', async (_req, res: Response): Promise<void> => {
   try {
