@@ -1248,13 +1248,15 @@ export default function MarketplacePage() {
         .catch(() => {})
         .finally(() => setLeaderboardLoading(false))
     }
-    if (tab === 'trader') {
-      api.traderStatus().then(setTraderStatus).catch(() => {})
-      if (!traderCatalogLoaded) {
-        api.traderCatalog().then(r => { setTraderCatalog(r.data); setTraderCatalogLoaded(true) }).catch(() => {})
-      }
+  }, [tab, fetchListings, fetchMyActiveListings, fetchTrades])
+
+  useEffect(() => {
+    if (tab !== 'trader') return
+    api.traderStatus().then(setTraderStatus).catch(() => {})
+    if (!traderCatalogLoaded) {
+      api.traderCatalog().then(r => { setTraderCatalog(r.data); setTraderCatalogLoaded(true) }).catch(() => {})
     }
-  }, [tab, fetchListings, fetchMyActiveListings, fetchTrades, traderCatalogLoaded])
+  }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll result card into view when a new single result appears
   useEffect(() => {
