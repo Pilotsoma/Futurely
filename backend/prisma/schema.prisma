@@ -361,6 +361,7 @@ model TradeOffer {
   senderItems   Json
   receiverItems Json
   status        String   @default("PENDING")
+  note          String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   sender        User     @relation("TradesSent", fields: [senderId], references: [id], onDelete: Cascade)

@@ -1529,15 +1529,27 @@ router.post('/trader/trade', requireAuth, txLimiter, async (req: AuthRequest, re
     }
     const addUpdates = applyMultipleAdds(snapAfterRemove, wantTradeItems)
 
-    await prisma.user.update({
-      where: { id: req.userId },
-      data: {
-        traderTradeCount: tradesUsed + 1,
-        traderTradeDate: today,
-        ...removeUpdates,
-        ...addUpdates,
-      },
-    })
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: req.userId },
+        data: {
+          traderTradeCount: tradesUsed + 1,
+          traderTradeDate: today,
+          ...removeUpdates,
+          ...addUpdates,
+        },
+      }),
+      prisma.tradeOffer.create({
+        data: {
+          senderId: req.userId,
+          receiverId: req.userId,
+          senderItems: JSON.stringify(offerTradeItems),
+          receiverItems: JSON.stringify(wantTradeItems),
+          status: 'ACCEPTED',
+          note: 'WANDERING_TRADER',
+        },
+      }),
+    ])
 
     res.json({ data: { ok: true, tradesRemaining: TRADER_DAILY_TRADE_LIMIT - tradesUsed - 1 } })
   } catch { res.status(500).json({ error: 'Failed to trade with trader' }) }

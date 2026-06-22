@@ -1363,6 +1363,7 @@ export interface TradeOffer {
   senderItems: TradeItem[]
   receiverItems: TradeItem[]
   status: string
+  note?: string | null
   createdAt: string
   sender: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }
   receiver: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }

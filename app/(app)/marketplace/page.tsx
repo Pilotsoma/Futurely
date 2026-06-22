@@ -2737,14 +2737,16 @@ export default function MarketplacePage() {
                 <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No completed trades yet</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {historyTrades.map(trade => (
-                    <div key={trade.id} className="ns-card" style={{ padding: 16, borderLeft: '3px solid #22C55E' }}>
+                  {historyTrades.map(trade => {
+                    const isTraderTrade = trade.note === 'WANDERING_TRADER'
+                    return (
+                    <div key={trade.id} className="ns-card" style={{ padding: 16, borderLeft: `3px solid ${isTraderTrade ? '#A855F7' : '#22C55E'}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                        <span style={{ fontSize: 16 }}>✅</span>
+                        <span style={{ fontSize: 16 }}>{isTraderTrade ? '🏕️' : '✅'}</span>
                         <span style={{ flex: 1, fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
                           {trade.sender.name ?? 'User'}
                           <span style={{ margin: '0 6px' }}>⇄</span>
-                          {trade.receiver.name ?? 'User'}
+                          {isTraderTrade ? 'Wandering Trader' : (trade.receiver.name ?? 'User')}
                         </span>
                         <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                           {new Date(trade.createdAt).toLocaleDateString()}
@@ -2752,17 +2754,18 @@ export default function MarketplacePage() {
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
                         <div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>{trade.sender.name ?? 'User'} gave</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>You gave</div>
                           {renderTradeItems(parseTradeItemsClient(trade.senderItems))}
                         </div>
                         <div style={{ fontSize: 16 }}>⇄</div>
                         <div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>{trade.receiver.name ?? 'User'} gave</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>{isTraderTrade ? 'Trader gave' : `${trade.receiver.name ?? 'User'} gave`}</div>
                           {renderTradeItems(parseTradeItemsClient(trade.receiverItems))}
                         </div>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </>
