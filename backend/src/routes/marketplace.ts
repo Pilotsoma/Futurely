@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import rateLimit from 'express-rate-limit'
+import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { requireAdmin } from '../middleware/requireAdmin'
