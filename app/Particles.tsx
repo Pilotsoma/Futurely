@@ -74,6 +74,7 @@ export default function Particles({
 
     function loop() {
       const { w, h } = dims()
+      if (!ctx) return
       ctx.clearRect(0, 0, w, h)
       const baseV = speed * particleSpread * 0.015
 
