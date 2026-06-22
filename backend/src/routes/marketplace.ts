@@ -34,7 +34,7 @@ export const TAG_BOX_ITEMS: TagItem[] = [
   { id: 'genius',         tag: 'Genius',          tagColor: '#EC4899', rarity: 'Epic',      weight: 1.85 },
   { id: 'mastermind',     tag: 'Valedictorian',   tagColor: '#F8FAFC', rarity: 'Legendary', weight: 0.5  },
   { id: 'prodigy',        tag: 'Prodigy',         tagColor: '#111111',        rarity: 'Legendary', weight: 0.5  },
-  { id: 'god',            tag: 'GOD',             tagColor: '#111111',        rarity: 'Mythic',    weight: 0.3  },
+  { id: 'god',            tag: 'VIP',             tagColor: '#111111',        rarity: 'Mythic',    weight: 0.3  },
   { id: 'verified',       tag: 'Verified',        tagColor: 'verified-yellow', rarity: 'Mythic',   weight: 0.1  },
 ]
 
@@ -43,7 +43,7 @@ const SPECIAL_TAGS: { id: string; tag: string; tagColor: string; rarity: string 
   { id: 'dev',            tag: 'DEV',      tagColor: '#ff6b6b',       rarity: 'Staff'  },
   { id: 'admin',          tag: 'Admin',    tagColor: '#EF4444',       rarity: 'Staff'  },
   { id: 'mod',            tag: 'MOD',      tagColor: '#3B82F6',       rarity: 'Staff'  },
-  { id: 'vip',            tag: 'VIP',      tagColor: '#A855F7',       rarity: 'Staff'  },
+  { id: 'vip',            tag: 'GOD',      tagColor: '#A855F7',       rarity: 'Staff'  },
   { id: 'bot',            tag: 'BOT',      tagColor: '#6B7280',       rarity: 'Staff'  },
   { id: 'verified-blue',  tag: 'Verified', tagColor: 'verified-blue', rarity: 'Mythic' },
 ]
@@ -141,7 +141,7 @@ const COSMETICS_BOX_ITEMS: CosmeticsItem[] = [
   { id: 'frame-black',   name: 'Void Fill',      value: 'frame-black', rarity: 'Legendary', itemType: 'pfp',      weight: 0.1071 },
   { id: 'fill-white',    name: 'White Fill',     value: 'fill-white', rarity: 'Legendary', itemType: 'pfp',        weight: 0.1071 },
   // ── Mythic (0.05% / 4 items = 0.0125 each) ───────────────────────────────
-  { id: 'god',           tag: 'GOD',             tagColor: '#111111', rarity: 'Mythic',    itemType: 'tag',        weight: 0.0125 },
+  { id: 'god',           tag: 'VIP',             tagColor: '#111111', rarity: 'Mythic',    itemType: 'tag',        weight: 0.0125 },
   { id: 'verified',      tag: 'Verified',        tagColor: 'verified-yellow', rarity: 'Mythic', itemType: 'tag',   weight: 0.0125 },
   { id: 'rainbow',       name: 'Rainbow RGB',    value: 'rainbow',    rarity: 'Mythic',    itemType: 'name-color', weight: 0.0125 },
   { id: 'rainbow',       name: 'Rainbow Animated', value: 'rainbow',  rarity: 'Mythic',    itemType: 'pfp',        weight: 0.0125 },

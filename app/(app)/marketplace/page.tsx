@@ -90,7 +90,7 @@ const BOX_CYCLE_PREVIEWS: Record<string, PreviewItemDef[]> = {
     { type: 'tag',        tag: 'Valedictorian', tagColor: '#F8FAFC',  rarity: 'Legendary' },
     { type: 'name-color', name: 'Magenta',      value: '#C026D3',     rarity: 'Epic'      },
     { type: 'pfp',        name: 'Gold Fill',    value: 'glow-gold',   rarity: 'Legendary' },
-    { type: 'tag',        tag: 'GOD',           tagColor: '#111111',  rarity: 'Mythic'    },
+    { type: 'tag',        tag: 'VIP',           tagColor: '#111111',  rarity: 'Mythic'    },
     { type: 'name-color', name: 'Rainbow RGB',  value: 'rainbow',     rarity: 'Mythic'    },
     { type: 'pfp',        name: 'Pink Glow',    value: 'glow-pink',   rarity: 'Epic'      },
     { type: 'tag',        tag: 'Ace',           tagColor: '#F97316',  rarity: 'Epic'      },
@@ -120,8 +120,8 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
           item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue'
             ? <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={26} />
             : <span
-                className={item.tag === 'GOD' ? 'tag-mythic' : item.tagColor === 'curse' ? 'tag-curse' : ''}
-                style={item.tag === 'GOD' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : {
+                className={item.tag === 'VIP' ? 'tag-mythic' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+                style={item.tag === 'VIP' ? { fontSize: 15, fontWeight: 900, padding: '5px 10px', borderRadius: 8 } : {
                   fontSize: 14, fontWeight: 800,
                   color: item.tagColor,
                   textShadow: item.rarity === 'Legendary' ? `0 0 10px ${rarityColor}88` : undefined,
@@ -213,7 +213,7 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'genius',         label: 'Genius (Epic)',             rarity: 'Epic',      type: 'tag', tag: 'Genius',          tagColor: '#EC4899' },
     { id: 'mastermind',     label: 'Valedictorian (Legendary)', rarity: 'Legendary', type: 'tag', tag: 'Valedictorian',   tagColor: '#F8FAFC' },
     { id: 'prodigy',        label: 'Prodigy (Legendary)',       rarity: 'Legendary', type: 'tag', tag: 'Prodigy',         tagColor: '#111111' },
-    { id: 'god',            label: 'GOD (Mythic)',              rarity: 'Mythic',    type: 'tag', tag: 'GOD',             tagColor: '#111111' },
+    { id: 'god',            label: 'VIP (Mythic)',              rarity: 'Mythic',    type: 'tag', tag: 'VIP',             tagColor: '#111111' },
     { id: 'verified',      label: 'Verified ✓ Yellow (Mythic)', rarity: 'Mythic',   type: 'tag', tag: 'Verified',         tagColor: 'verified-yellow' },
     { id: 'verified-blue', label: 'Verified ✓ Blue (Mythic)',   rarity: 'Mythic',   type: 'tag', tag: 'Verified',         tagColor: 'verified-blue' },
   ],
@@ -279,7 +279,7 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'glow-gold',      label: 'Gold Fill (Legendary)',     rarity: 'Legendary', type: 'pfp',        name: 'Gold Fill',     value: 'glow-gold' },
     { id: 'frame-black',    label: 'Void Fill (Legendary)',     rarity: 'Legendary', type: 'pfp',        name: 'Void Fill',     value: 'frame-black' },
     { id: 'fill-white',     label: 'White Fill (Legendary)',    rarity: 'Legendary', type: 'pfp',        name: 'White Fill',    value: 'fill-white' },
-    { id: 'god',            label: 'GOD (Mythic)',              rarity: 'Mythic',    type: 'tag',        tag: 'GOD',            tagColor: '#111111' },
+    { id: 'god',            label: 'VIP (Mythic)',              rarity: 'Mythic',    type: 'tag',        tag: 'VIP',            tagColor: '#111111' },
     { id: 'verified',       label: 'Verified ✓ Yellow (Mythic)', rarity: 'Mythic',  type: 'tag',        tag: 'Verified',       tagColor: 'verified-yellow' },
     { id: 'rainbow',        label: 'Rainbow RGB ✨ (Mythic)',   rarity: 'Mythic',    type: 'name-color', name: 'Rainbow RGB',   value: 'rainbow' },
     { id: 'rainbow-pfp',    label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic', type: 'pfp',       name: 'Rainbow Animated', value: 'rainbow' },
@@ -343,7 +343,7 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'genius',         type: 'tag', name: 'Genius',         rarity: 'Epic',      tagColor: '#EC4899' },
   { id: 'mastermind',     type: 'tag', name: 'Valedictorian',  rarity: 'Legendary', tagColor: '#F8FAFC' },
   { id: 'prodigy',        type: 'tag', name: 'Prodigy',        rarity: 'Legendary', tagColor: '#111111' },
-  { id: 'god',            type: 'tag', name: 'GOD',             rarity: 'Mythic',    tagColor: '#111111' },
+  { id: 'god',            type: 'tag', name: 'VIP',             rarity: 'Mythic',    tagColor: '#111111' },
   { id: 'GOAT',           type: 'tag', name: 'GOAT',            rarity: 'Mythic',    tagColor: '#EAB308' },
   { id: 'verified',       type: 'tag', name: 'Verified',        rarity: 'Mythic',    tagColor: 'verified-yellow' },
   { id: 'verified-blue',  type: 'tag', name: 'Verified (Blue)', rarity: 'Mythic',    tagColor: 'verified-blue' },
@@ -1596,10 +1596,10 @@ export default function MarketplacePage() {
             (item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue')
               ? <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
               : <span
-                  className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+                  className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
                   style={item.tagColor === 'curse'
                     ? { fontSize: 11, fontWeight: 800, padding: '1px 3px', borderRadius: 4, border: '1.5px solid #ff0000' }
-                    : { fontSize: 13, fontWeight: 700, color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+                    : { fontSize: 13, fontWeight: 700, color: (item.tag === 'VIP' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
                 >{truncateTag(item.tag ?? '')}</span>
           )}
         </button>
@@ -1617,10 +1617,10 @@ export default function MarketplacePage() {
                 </span>
               </span>
             : <span
-                className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
+                className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tag === 'DEV' ? 'tag-rainbow' : item.tagColor === 'curse' ? 'tag-curse' : ''}
                 style={item.tagColor === 'curse'
                   ? { flex: 1, fontSize: 13, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '2px 7px', borderRadius: 4, border: '1.5px solid #ff0000', display: 'inline-block', maxWidth: 'max-content' }
-                  : { flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: (item.tag === 'GOD' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
+                  : { flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: (item.tag === 'VIP' || item.tag === 'GOAT' || item.tag === 'DEV') ? undefined : item.tagColor ?? '#6B7280' }}
               >{item.tag}</span>
         )}
         <RarityBadge rarity={item.rarity} itemId={item.id} />
@@ -1715,7 +1715,7 @@ export default function MarketplacePage() {
                   {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
                 </span>
                 {item.type === 'tag' ? (
-                  <span className={item.tag === 'GOD' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.tag === 'GOAT' || item.tag === 'GOD' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
+                  <span className={item.tag === 'VIP' ? 'tag-mythic' : item.tag === 'GOAT' ? 'tag-god' : item.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.tag === 'GOAT' || item.tag === 'VIP' || item.tagColor === 'curse') ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
                 ) : item.type === 'name-color' ? (
                   <span className={item.value === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 12, fontWeight: 800, color: item.value === 'rainbow' ? undefined : item.value }}>DUMMY</span>
                 ) : (
@@ -1830,7 +1830,7 @@ export default function MarketplacePage() {
             const itemPreview = result.won.type === 'tag' ? (
               (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                 ? <div style={{ marginBottom: 4 }}><VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={64} /></div>
-                : <div className={result.won.tag === 'GOD' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 22, fontWeight: 800, color: (result.won.tag === 'GOAT' || result.won.tag === 'GOD' || result.won.tagColor === 'curse') ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
+                : <div className={result.won.tag === 'VIP' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 22, fontWeight: 800, color: (result.won.tag === 'GOAT' || result.won.tag === 'VIP' || result.won.tagColor === 'curse') ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
                     [{result.won.tag}]
                   </div>
             ) : result.won.type === 'name-color' ? (
@@ -1883,7 +1883,7 @@ export default function MarketplacePage() {
                     {result.won.type === 'tag' && (
                       (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                         ? <VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
-                        : <span className={result.won.tag === 'GOD' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 700, color: result.won.tag !== 'GOAT' && result.won.tag !== 'GOD' && result.won.tagColor !== 'curse' ? (result.won.tagColor ?? '#6B7280') : undefined }}>
+                        : <span className={result.won.tag === 'VIP' ? 'tag-mythic' : result.won.tag === 'GOAT' ? 'tag-god' : result.won.tagColor === 'curse' ? 'tag-curse' : ''} style={{ fontSize: 12, fontWeight: 700, color: result.won.tag !== 'GOAT' && result.won.tag !== 'VIP' && result.won.tagColor !== 'curse' ? (result.won.tagColor ?? '#6B7280') : undefined }}>
                             [{result.won.tag}]
                           </span>
                     )}
@@ -2106,7 +2106,7 @@ export default function MarketplacePage() {
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                     <div style={{ flex: 1 }}>
                       <div className={tradeTarget.user.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(tradeTarget.user.nameColor && tradeTarget.user.nameColor !== 'rainbow' ? { color: tradeTarget.user.nameColor } : {}) }}>{tradeTarget.user.name ?? 'User'}</div>
-                      {tradeTarget.user.tag && <div className={tradeTarget.user.tag === 'DEV' ? 'tag-rainbow' : tradeTarget.user.tag === 'GOD' ? 'tag-mythic' : tradeTarget.user.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (tradeTarget.user.tag === 'DEV' || tradeTarget.user.tag === 'GOAT' || tradeTarget.user.tag === 'GOD') ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
+                      {tradeTarget.user.tag && <div className={tradeTarget.user.tag === 'DEV' ? 'tag-rainbow' : tradeTarget.user.tag === 'VIP' ? 'tag-mythic' : tradeTarget.user.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (tradeTarget.user.tag === 'DEV' || tradeTarget.user.tag === 'GOAT' || tradeTarget.user.tag === 'VIP') ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
                     </div>
                     <button onClick={() => { setTradeTarget(null); setSelectedOffer([]); setSelectedRequest([]) }}
                       style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
@@ -2131,7 +2131,7 @@ export default function MarketplacePage() {
                             return (
                               <PriceTooltip key={t.id} price={prices[`tag:${t.id}`]}>
                               <ItemBox rarity={t.rarity} itemId={t.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`, background: sel ? 'var(--primary)12' : 'var(--surface-2)' }} onClick={() => toggleRequest(item)}>
-                                <span className={t.tag === 'GOD' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'GOD') ? undefined : t.tagColor }}>[{t.tag}]</span>
+                                <span className={t.tag === 'VIP' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'VIP') ? undefined : t.tagColor }}>[{t.tag}]</span>
                                 <RarityBadge rarity={t.rarity} itemId={t.id} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
                               </ItemBox>
@@ -2196,7 +2196,7 @@ export default function MarketplacePage() {
                             return (
                               <PriceTooltip key={t.id} price={prices[`tag:${t.id}`]}>
                               <ItemBox rarity={t.rarity} itemId={t.id} style={{ cursor: 'pointer', border: `1px solid ${sel ? '#22C55E' : 'var(--border)'}`, background: sel ? '#22C55E12' : 'var(--surface-2)' }} onClick={() => toggleOffer(item)}>
-                                <span className={t.tag === 'GOD' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'GOD') ? undefined : t.tagColor }}>[{t.tag}]</span>
+                                <span className={t.tag === 'VIP' ? 'tag-mythic' : t.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 13, fontWeight: 800, color: (t.tag === 'GOAT' || t.tag === 'VIP') ? undefined : t.tagColor }}>[{t.tag}]</span>
                                 <RarityBadge rarity={t.rarity} itemId={t.id} />
                                 {sel && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
                               </ItemBox>
@@ -2289,7 +2289,7 @@ export default function MarketplacePage() {
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                           <div>
                             <span className={trade.sender.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.sender.nameColor && trade.sender.nameColor !== 'rainbow' ? { color: trade.sender.nameColor } : {}) }}>{trade.sender.name ?? 'User'}</span>
-                            {trade.sender.tag && <span className={trade.sender.tag === 'DEV' ? 'tag-rainbow' : trade.sender.tag === 'GOD' ? 'tag-mythic' : trade.sender.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.sender.tag === 'DEV' || trade.sender.tag === 'GOAT' || trade.sender.tag === 'GOD') ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
+                            {trade.sender.tag && <span className={trade.sender.tag === 'DEV' ? 'tag-rainbow' : trade.sender.tag === 'VIP' ? 'tag-mythic' : trade.sender.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.sender.tag === 'DEV' || trade.sender.tag === 'GOAT' || trade.sender.tag === 'VIP') ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>{new Date(trade.createdAt).toLocaleDateString()}</span>
                         </div>
@@ -2343,7 +2343,7 @@ export default function MarketplacePage() {
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                           <div>
                             <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(trade.receiver.nameColor && trade.receiver.nameColor !== 'rainbow' ? { color: trade.receiver.nameColor } : {}) }}>{trade.receiver.name ?? 'User'}</span>
-                            {trade.receiver.tag && <span className={trade.receiver.tag === 'DEV' ? 'tag-rainbow' : trade.receiver.tag === 'GOD' ? 'tag-mythic' : trade.receiver.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.receiver.tag === 'DEV' || trade.receiver.tag === 'GOAT' || trade.receiver.tag === 'GOD') ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
+                            {trade.receiver.tag && <span className={trade.receiver.tag === 'DEV' ? 'tag-rainbow' : trade.receiver.tag === 'VIP' ? 'tag-mythic' : trade.receiver.tag === 'GOAT' ? 'tag-god' : ''} style={{ fontSize: 11, color: (trade.receiver.tag === 'DEV' || trade.receiver.tag === 'GOAT' || trade.receiver.tag === 'VIP') ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
                           </div>
                           <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#EAB308', background: '#EAB30818', padding: '2px 8px', borderRadius: 99 }}>
                             PENDING
@@ -2555,8 +2555,8 @@ export default function MarketplacePage() {
                         entry.tagColor === 'verified-yellow' || entry.tagColor === 'verified-blue'
                           ? <VerifiedBadge variant={entry.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />
                           : <span
-                              className={entry.tag === 'DEV' ? 'tag-rainbow' : entry.tag === 'GOD' ? 'tag-mythic' : entry.tag === 'GOAT' ? 'tag-god' : entry.tagColor === 'curse' ? 'tag-curse' : ''}
-                              style={{ fontSize: 11, fontWeight: 700, color: (entry.tag === 'DEV' || entry.tag === 'GOD' || entry.tag === 'GOAT' || entry.tagColor === 'curse') ? undefined : entry.tagColor ?? '#6B7280' }}
+                              className={entry.tag === 'DEV' ? 'tag-rainbow' : entry.tag === 'VIP' ? 'tag-mythic' : entry.tag === 'GOAT' ? 'tag-god' : entry.tagColor === 'curse' ? 'tag-curse' : ''}
+                              style={{ fontSize: 11, fontWeight: 700, color: (entry.tag === 'DEV' || entry.tag === 'VIP' || entry.tag === 'GOAT' || entry.tagColor === 'curse') ? undefined : entry.tagColor ?? '#6B7280' }}
                             >[{entry.tag}]</span>
                       )}
                     </div>
@@ -2618,8 +2618,8 @@ export default function MarketplacePage() {
                                       style={{ fontSize: 11, fontWeight: 800, padding: '1px 3px', borderRadius: 4, border: '1.5px solid #ff0000' }}
                                     >CURSE</span>
                                   : <span
-                                      className={item.name === 'GOD' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : ''}
-                                      style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'GOD' || item.name === 'GOAT') ? undefined : item.tagColor ?? '#6B7280' }}
+                                      className={item.name === 'VIP' ? 'tag-mythic' : item.name === 'GOAT' ? 'tag-god' : ''}
+                                      style={{ fontSize: 11, fontWeight: 800, color: (item.name === 'VIP' || item.name === 'GOAT') ? undefined : item.tagColor ?? '#6B7280' }}
                                     >{truncateTag(item.name ?? '')}</span>
                             )}
                           </div>
@@ -2706,8 +2706,8 @@ export default function MarketplacePage() {
                     </div>
                     {profilePanel.tag && (
                       <span
-                        className={profilePanel.tag === 'DEV' ? 'tag-rainbow' : profilePanel.tag === 'GOD' ? 'tag-mythic' : profilePanel.tag === 'GOAT' ? 'tag-god' : ''}
-                        style={profilePanel.tag === 'DEV' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' } : profilePanel.tag === 'GOD' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4 } : profilePanel.tag === 'GOAT' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'var(--primary-dim)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
+                        className={profilePanel.tag === 'DEV' ? 'tag-rainbow' : profilePanel.tag === 'VIP' ? 'tag-mythic' : profilePanel.tag === 'GOAT' ? 'tag-god' : ''}
+                        style={profilePanel.tag === 'DEV' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' } : profilePanel.tag === 'VIP' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4 } : profilePanel.tag === 'GOAT' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'var(--primary-dim)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
                       >
                         {profilePanel.tag}
                       </span>

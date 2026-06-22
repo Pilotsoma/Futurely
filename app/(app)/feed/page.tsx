@@ -237,7 +237,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
 
   const isDevTag = profile?.tag === 'DEV'
   const isGodTag = profile?.tag === 'GOAT'
-  const isMythicTag = profile?.tag === 'GOD'
+  const isMythicTag = profile?.tag === 'VIP'
 
   return createPortal(
     <div style={O.overlay} onClick={onClose}>
@@ -822,7 +822,7 @@ function OwnTagPicker({ profile, onUpdateTag }: {
             const isActive = profile.tag === t.tag && (isVerified ? profile.tagColor === t.tagColor : true)
             const isDev = t.tag === 'DEV'
             const isGod = t.tag === 'GOAT'
-            const isMythic = t.tag === 'GOD'
+            const isMythic = t.tag === 'VIP'
             if (isVerified) {
               return (
                 <button
@@ -918,7 +918,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
   const tagColor = (post.user as { tagColor?: string }).tagColor || 'grey'
   const isDevTag = post.user.tag === 'DEV'
   const isGodTag = post.user.tag === 'GOAT'
-  const isMythicTag = post.user.tag === 'GOD'
+  const isMythicTag = post.user.tag === 'VIP'
   const isFollowing = followedUsers.has(post.userId)
   const canDelete = post.userId === currentUserId || isDevUser || isModUser
   const isPinned = !!post.pinnedUntil && new Date(post.pinnedUntil) > new Date()
@@ -1444,7 +1444,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
           ) : sorted.map(c => {
             const isDevTag = c.user.tag === 'DEV'
             const isGodTag = c.user.tag === 'GOAT'
-            const isMythicTag = c.user.tag === 'GOD'
+            const isMythicTag = c.user.tag === 'VIP'
             const tagColor = c.user.tagColor || 'grey'
             return (
               <div key={c.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
@@ -1569,8 +1569,8 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
                 u.tagColor === 'verified-yellow' || u.tagColor === 'verified-blue'
                   ? <VerifiedBadge variant={u.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                   : <span
-                      className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'GOD' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : ''}
-                      style={u.tag === 'DEV' ? P.tagDev : u.tag === 'GOD' ? P.tagGod : u.tag === 'GOAT' ? P.tagGod : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
+                      className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'VIP' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : ''}
+                      style={u.tag === 'DEV' ? P.tagDev : u.tag === 'VIP' ? P.tagGod : u.tag === 'GOAT' ? P.tagGod : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
                     >{u.tag}</span>
               )}
             </div>
