@@ -1576,6 +1576,16 @@ export default function MarketplacePage() {
   // ── Render helpers ────────────────────────────────────────────────────────
 
   const myListedIds = new Set(myActiveListings.map(l => `${l.itemType}:${l.itemId}`))
+  const tradeInvQ = tradeInvSearch.trim().toLowerCase()
+  const filteredTradeTargetTags = tradeTarget
+    ? tradeTarget.tags.filter(t => !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id) && (!tradeInvQ || t.tag.toLowerCase().includes(tradeInvQ)))
+    : []
+  const filteredTradeTargetColors = tradeTarget
+    ? tradeTarget.nameColors.filter(c => !tradeInvQ || c.name.toLowerCase().includes(tradeInvQ))
+    : []
+  const filteredTradeTargetPfp = tradeTarget
+    ? tradeTarget.pfpEffects.filter(p => !tradeInvQ || p.name.toLowerCase().includes(tradeInvQ))
+    : []
 
   function renderInventoryItem(
     item: { id: string; name?: string; tag?: string; tagColor?: string; value?: string; rarity: string },
@@ -2144,17 +2154,12 @@ export default function MarketplacePage() {
                       <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 10 }}>
                         Their Items — tap to request
                       </div>
-                      {(() => {
-                        const q = tradeInvSearch.trim().toLowerCase()
-                        const filteredTags = tradeTarget.tags.filter(t => !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id) && (!q || t.tag.toLowerCase().includes(q)))
-                        const filteredColors = tradeTarget.nameColors.filter(c => !q || c.name.toLowerCase().includes(q))
-                        const filteredPfp = tradeTarget.pfpEffects.filter(p => !q || p.name.toLowerCase().includes(q))
-                        return filteredTags.length === 0 && filteredColors.length === 0 && filteredPfp.length === 0 ? (
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>{q ? 'No matching items' : 'No tradeable items'}</div>
+                      {filteredTradeTargetTags.length === 0 && filteredTradeTargetColors.length === 0 && filteredTradeTargetPfp.length === 0 ? (
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>{tradeInvQ ? 'No matching items' : 'No tradeable items'}</div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {filteredTags.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
-                          {filteredTags.map(t => {
+                          {filteredTradeTargetTags.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 2 }}>🏷️ Tags</div>}
+                          {filteredTradeTargetTags.map(t => {
                             const item: TradeItem = { type: 'tag', id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }
                             const sel = selectedRequest.some(i => i.id === t.id && i.type === 'tag')
                             return (
@@ -2167,8 +2172,8 @@ export default function MarketplacePage() {
                               </PriceTooltip>
                             )
                           })}
-                          {filteredColors.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🎨 Name Colors</div>}
-                          {filteredColors.map(c => {
+                          {filteredTradeTargetColors.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🎨 Name Colors</div>}
+                          {filteredTradeTargetColors.map(c => {
                             const item: TradeItem = { type: 'name-color', id: c.id, name: c.name, value: c.value, rarity: c.rarity }
                             const sel = selectedRequest.some(i => i.id === c.id && i.type === 'name-color')
                             return (
@@ -2182,8 +2187,8 @@ export default function MarketplacePage() {
                               </PriceTooltip>
                             )
                           })}
-                          {filteredPfp.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🖼️ PFP Effects</div>}
-                          {filteredPfp.map(p => {
+                          {filteredTradeTargetPfp.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', marginTop: 4 }}>🖼️ PFP Effects</div>}
+                          {filteredTradeTargetPfp.map(p => {
                             const item: TradeItem = { type: 'pfp', id: p.id, name: p.name, value: p.value, rarity: p.rarity }
                             const sel = selectedRequest.some(i => i.id === p.id && i.type === 'pfp')
                             return (
@@ -2206,8 +2211,7 @@ export default function MarketplacePage() {
                             ) : null
                           })()}
                         </div>
-                      )
-                      })()}
+                      )}
                     </div>
 
                     {/* Your inventory — what you offer */}
