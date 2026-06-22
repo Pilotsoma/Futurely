@@ -3,23 +3,14 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import CoinIcon from '../../../components/ui/CoinIcon'
+import VerifiedBadge from '../../../components/ui/VerifiedBadge'
+import { DevAdminPanel, ModPanel } from '../../../components/ui/DevAdminPanel'
 import {
   api, ApiError, InventoryData, BoxResult, MarketplaceItem, TagInventoryItem,
   MarketplaceListing, TradeOffer, TradeItem, UserPublicInventory, FeedUserProfile,
   getApiToken, ItemSalePoint, ItemOwner, LeaderboardData, LeaderboardEntry,
+  FeedPost,
 } from '../../../lib/api'
-
-const VERIFIED_BADGE_URL = 'https://static.vecteezy.com/system/resources/thumbnails/047/309/918/small/verified-badge-profile-icon-png.png'
-function VerifiedBadge({ variant, size = 18 }: { variant: 'yellow' | 'blue'; size?: number }) {
-  return (
-    <img
-      src={VERIFIED_BADGE_URL}
-      alt="Verified"
-      style={{ width: size, height: size, verticalAlign: 'middle', flexShrink: 0, display: 'inline-block',
-        filter: variant === 'yellow' ? 'hue-rotate(195deg) saturate(2) brightness(1.3)' : undefined }}
-    />
-  )
-}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1087,6 +1078,9 @@ export default function MarketplacePage() {
   const [profileSendAmount, setProfileSendAmount] = useState('')
   const [profileSendBusy, setProfileSendBusy] = useState(false)
   const [profileSendMsg, setProfileSendMsg] = useState('')
+  const [profileFollowing, setProfileFollowing] = useState(false)
+  const [profilePosts, setProfilePosts] = useState<FeedPost[]>([])
+  const [profilePostsLoading, setProfilePostsLoading] = useState(false)
 
   // Item preview
   const [previewItem, setPreviewItem] = useState<PreviewItem | null>(null)
@@ -1220,11 +1214,18 @@ export default function MarketplacePage() {
   async function openProfile(userId: number) {
     setProfilePanelLoading(true); setProfilePanel(null)
     setProfileMarketGranting(false); setProfileMarketMsg('')
+    setProfilePosts([]); setProfilePostsLoading(true)
     try {
       const p = await api.feedUserProfile(userId)
       setProfilePanel(p)
+      setProfileFollowing(p.isFollowing)
     } catch { /* ignore */ }
     finally { setProfilePanelLoading(false) }
+    try {
+      const postsData = await api.feedUserPosts(userId)
+      setProfilePosts(postsData.posts)
+    } catch { /* ignore */ }
+    finally { setProfilePostsLoading(false) }
   }
 
   async function handleDailyClaim() {
@@ -2733,8 +2734,9 @@ export default function MarketplacePage() {
             {profilePanelLoading && !profilePanel ? (
               <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)', fontSize: 13 }}>Loading profile…</div>
             ) : profilePanel && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+              <div style={{ maxHeight: '80vh', overflowY: 'auto', paddingRight: 2 }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
                   <div
                     className={pfpClass(profilePanel.pfpEffect)}
                     style={{ width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0, ...pfpStyle(profilePanel.pfpEffect), ...(profilePanel.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
@@ -2743,38 +2745,66 @@ export default function MarketplacePage() {
                       ? <img src={profilePanel.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                       : (profilePanel.name ?? 'Us').slice(0, 2).toUpperCase()}
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div className={profilePanel.nameColor === 'rainbow' ? 'name-rainbow' : profilePanel.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 19, fontWeight: 800, marginBottom: 3, ...(profilePanel.nameColor && profilePanel.nameColor !== 'rainbow' && profilePanel.nameColor !== 'curse' ? { color: profilePanel.nameColor } : { color: 'var(--text)' }) }}>
                       {profilePanel.name ?? 'User'}
                     </div>
-                    {profilePanel.tag && (
-                      <span
-                        className={profilePanel.tag === 'DEV' ? 'tag-rainbow' : profilePanel.tag === 'VIP' ? 'tag-mythic' : profilePanel.tag === 'GOAT' ? 'tag-god' : profilePanel.tagColor === 'curse' ? 'tag-curse' : ''}
-                        style={profilePanel.tag === 'DEV' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' } : profilePanel.tag === 'VIP' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4 } : profilePanel.tag === 'GOAT' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' } : profilePanel.tagColor === 'curse' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1.5px solid #ff0000' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'var(--primary-dim)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
-                      >
-                        {profilePanel.tag}
-                      </span>
-                    )}
-
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {(profilePanel.chatBanned || (profilePanel.chatMutedUntil && new Date(profilePanel.chatMutedUntil) > new Date())) && (
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 4, display: 'inline-block', ...(profilePanel.chatBanned ? { color: '#EF4444', background: '#EF444422', border: '1px solid #EF4444' } : { color: '#f97316', background: '#f9731622', border: '1px solid #f97316' }) }}>
+                          {profilePanel.chatBanned ? 'BANNED' : 'MUTED'}
+                        </span>
+                      )}
+                      {profilePanel.tag && (
+                        profilePanel.tagColor === 'verified-yellow' || profilePanel.tagColor === 'verified-blue'
+                          ? <VerifiedBadge variant={profilePanel.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
+                          : <span
+                              className={profilePanel.tag === 'DEV' ? 'tag-rainbow' : profilePanel.tag === 'VIP' ? 'tag-mythic' : profilePanel.tag === 'GOAT' ? 'tag-god' : profilePanel.tagColor === 'curse' ? 'tag-curse' : ''}
+                              style={profilePanel.tag === 'DEV' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' } : profilePanel.tag === 'VIP' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4 } : profilePanel.tag === 'GOAT' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' } : profilePanel.tagColor === 'curse' ? { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1.5px solid #ff0000' } : { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, color: profilePanel.tagColor ?? 'var(--primary)', background: profilePanel.tagColor ? `${profilePanel.tagColor}22` : 'var(--primary-dim)', border: `1px solid ${profilePanel.tagColor ?? 'var(--primary)'}` }}
+                            >
+                              {profilePanel.tag}
+                            </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 20, padding: '14px 0', borderTop: '1px solid var(--border)', borderBottom: isDevUser ? 'none' : '1px solid var(--border)', marginBottom: 0 }}>
+
+                {/* Stats */}
+                <div style={{ display: 'flex', gap: 16, padding: '12px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 14 }}>
                   {[
                     { label: 'Followers', value: profilePanel._count.followers },
                     { label: 'Following', value: profilePanel._count.following },
                     { label: 'Posts', value: profilePanel._count.posts },
+                    { label: 'Likes', value: profilePanel.totalLikes },
                   ].map(s => (
-                    <div key={s.label} style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{s.value}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{s.label}</div>
+                    <div key={s.label} style={{ textAlign: 'center', flex: 1 }}>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>{s.value}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{s.label}</div>
                     </div>
                   ))}
                 </div>
 
+                {/* Follow button */}
+                {currentUserId !== null && profilePanel.id !== currentUserId && (
+                  <button
+                    className={profileFollowing ? 'ns-btn-ghost' : 'ns-btn-primary'}
+                    style={{ width: '100%', height: 38, marginBottom: 12, fontSize: 14 }}
+                    onClick={async () => {
+                      try {
+                        const result = await api.feedToggleFollow(profilePanel.id)
+                        setProfileFollowing(result.following)
+                        setProfilePanel(prev => prev ? { ...prev, isFollowing: result.following, _count: { ...prev._count, followers: result.following ? prev._count.followers + 1 : prev._count.followers - 1 } } : prev)
+                      } catch { /* ignore */ }
+                    }}
+                  >
+                    {profileFollowing ? 'Following' : 'Follow'}
+                  </button>
+                )}
+
                 {/* Send Coins — visible to all users on other profiles */}
                 {currentUserId !== null && profilePanel.id !== currentUserId && (
-                  <div style={{ borderTop: '1px solid rgba(234,179,8,0.2)', paddingTop: 14, marginTop: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
+                  <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       <input
                         className="ns-input"
@@ -2807,29 +2837,52 @@ export default function MarketplacePage() {
                   </div>
                 )}
 
-                {isDevUser && (
-                  <div style={{ borderTop: '1px solid rgba(255,107,107,0.25)', paddingTop: 14, marginTop: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🔧 DEV Actions</div>
-                    <button
-                      disabled={profileMarketGranting}
-                      onClick={async () => {
-                        setProfileMarketGranting(true); setProfileMarketMsg('')
-                        try {
-                          await api.adminGrantMarketAccess(profilePanel.id)
-                          setProfileMarketMsg('✓ Market access granted')
-                        } catch { setProfileMarketMsg('Failed') }
-                        finally { setProfileMarketGranting(false) }
-                      }}
-                      style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#22C55E', color: '#000', fontWeight: 700, fontSize: 12, cursor: profileMarketGranting ? 'not-allowed' : 'pointer', opacity: profileMarketGranting ? 0.6 : 1 }}
-                    >
-                      {profileMarketGranting ? '…' : '🔓 Grant Market Access'}
-                    </button>
-                    {profileMarketMsg && (
-                      <div style={{ fontSize: 11, color: profileMarketMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 8 }}>{profileMarketMsg}</div>
-                    )}
-                  </div>
+                {/* Full DEV + MOD panels */}
+                {currentUserId !== null && (
+                  <>
+                    <DevAdminPanel
+                      profile={profilePanel}
+                      userId={profilePanel.id}
+                      currentUserId={currentUserId}
+                      onUpdateTag={u => setProfilePanel(prev => prev ? { ...prev, tag: u.tag, tagColor: u.tagColor, allTags: u.allTags ?? prev.allTags } : prev)}
+                      onUpdateBan={banned => setProfilePanel(prev => prev ? { ...prev, chatBanned: banned } : prev)}
+                      onUpdateMute={mu => setProfilePanel(prev => prev ? { ...prev, chatMutedUntil: mu } : prev)}
+                      onUpdateRole={role => setProfilePanel(prev => prev ? { ...prev, role } : prev)}
+                      onDeleted={() => setProfilePanel(null)}
+                    />
+                    <ModPanel
+                      userId={profilePanel.id}
+                      currentUserId={currentUserId}
+                      profile={profilePanel}
+                      onUpdateMute={mu => setProfilePanel(prev => prev ? { ...prev, chatMutedUntil: mu } : prev)}
+                    />
+                  </>
                 )}
-              </>
+
+                {/* Posts */}
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Posts</p>
+                  {profilePostsLoading ? (
+                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading posts…</div>
+                  ) : profilePosts.length === 0 ? (
+                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No posts yet.</div>
+                  ) : profilePosts.map(post => (
+                    <div key={post.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--text)', whiteSpace: 'pre-wrap' as const }}>{post.body}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, fontSize: 11 }}>
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          {Math.floor((Date.now() - new Date(post.createdAt).getTime()) / 86400000) === 0
+                            ? Math.floor((Date.now() - new Date(post.createdAt).getTime()) / 3600000) === 0
+                              ? `${Math.floor((Date.now() - new Date(post.createdAt).getTime()) / 60000)}m ago`
+                              : `${Math.floor((Date.now() - new Date(post.createdAt).getTime()) / 3600000)}h ago`
+                            : `${Math.floor((Date.now() - new Date(post.createdAt).getTime()) / 86400000)}d ago`}
+                        </span>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>♡ {post._count.likes}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>,
