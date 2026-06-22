@@ -15,6 +15,7 @@ interface Props {
 
 interface Particle {
   x: number; y: number
+  ox: number; oy: number   // origin — where this star lives
   vx: number; vy: number
   radius: number
   color: string
@@ -51,15 +52,19 @@ export default function Particles({
     function init() {
       const { w, h } = dims()
       const baseV = speed * particleSpread * 0.015
-      particles = Array.from({ length: particleCount }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * baseV,
-        vy: (Math.random() - 0.5) * baseV,
-        radius: particleBaseSize * 0.025 * (0.5 + Math.random() * 1.0),
-        color: particleColors[Math.floor(Math.random() * particleColors.length)],
-        alpha: alphaParticles ? 0.2 + Math.random() * 0.8 : 0.5 + Math.random() * 0.5,
-      }))
+      particles = Array.from({ length: particleCount }, () => {
+        const x = Math.random() * w
+        const y = Math.random() * h
+        return {
+          x, y,
+          ox: x, oy: y,
+          vx: (Math.random() - 0.5) * baseV,
+          vy: (Math.random() - 0.5) * baseV,
+          radius: particleBaseSize * 0.018 * (0.4 + Math.random() * 0.8),
+          color: particleColors[Math.floor(Math.random() * particleColors.length)],
+          alpha: alphaParticles ? 0.2 + Math.random() * 0.8 : 0.4 + Math.random() * 0.6,
+        }
+      })
     }
 
     function resize() {
@@ -79,31 +84,44 @@ export default function Particles({
       const baseV = speed * particleSpread * 0.015
 
       for (const p of particles) {
+        // Mouse repulsion
         if (moveParticlesOnHover) {
           const dx = p.x - mouseRef.current.x
           const dy = p.y - mouseRef.current.y
           const dist = Math.hypot(dx, dy)
           if (dist < 160 && dist > 0) {
-            const f = ((160 - dist) / 160) * 0.25
+            const f = ((160 - dist) / 160) * 0.22
             p.vx += (dx / dist) * f
             p.vy += (dy / dist) * f
           }
         }
 
-        p.vx *= 0.98
-        p.vy *= 0.98
-        if (Math.abs(p.vx) < baseV * 0.2) p.vx += (Math.random() - 0.5) * baseV * 0.1
-        if (Math.abs(p.vy) < baseV * 0.2) p.vy += (Math.random() - 0.5) * baseV * 0.1
+        // Spring back toward origin
+        p.vx += (p.ox - p.x) * 0.004
+        p.vy += (p.oy - p.y) * 0.004
+
+        // Dampen
+        p.vx *= 0.94
+        p.vy *= 0.94
+
+        // Keep minimum drift so stars don't freeze
+        if (Math.abs(p.vx) < baseV * 0.15) p.vx += (Math.random() - 0.5) * baseV * 0.08
+        if (Math.abs(p.vy) < baseV * 0.15) p.vy += (Math.random() - 0.5) * baseV * 0.08
 
         p.x += p.vx
         p.y += p.vy
-        if (p.x < 0) p.x += w
-        if (p.x > w) p.x -= w
-        if (p.y < 0) p.y += h
-        if (p.y > h) p.y -= h
 
+        // Wrap — also update origin to same side so spring stays stable
+        if (p.x < 0)  { p.x += w; p.ox += w }
+        if (p.x > w)  { p.x -= w; p.ox -= w }
+        if (p.y < 0)  { p.y += h; p.oy += h }
+        if (p.y > h)  { p.y -= h; p.oy -= h }
+
+        // Draw with soft glow
         ctx.save()
         ctx.globalAlpha = p.alpha
+        ctx.shadowBlur = p.radius * 5
+        ctx.shadowColor = p.color
         ctx.fillStyle = p.color
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)

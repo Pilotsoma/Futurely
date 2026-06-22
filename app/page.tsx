@@ -75,7 +75,7 @@ export default function LandingPage() {
       <div style={{ position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
         <Particles
           particleColors={['#ffffff']}
-          particleCount={200}
+          particleCount={350}
           particleSpread={10}
           speed={0.1}
           particleBaseSize={100}
