@@ -124,6 +124,22 @@ export default function GameRoomPage() {
       .finally(() => setLoading(false))
   }, [code])
 
+  // ── Lobby polling — refresh participants every 3s as WS fallback ────────
+  useEffect(() => {
+    if (phase !== 'lobby') return
+    const interval = setInterval(() => {
+      api.getGame(code).then(s => {
+        if (s.status !== 'WAITING') return
+        setSession(prev => {
+          if (!prev) return s
+          // Only update participants to avoid stomping other state
+          return { ...prev, participants: s.participants }
+        })
+      }).catch(() => {})
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [code, phase])
+
   // ── Timer ────────────────────────────────────────────────────────────────
   function startTimer(seconds: number) {
     if (timerRef.current) clearInterval(timerRef.current)
