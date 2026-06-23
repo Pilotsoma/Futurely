@@ -1518,7 +1518,7 @@ export default function MarketplacePage() {
     if (freeSpinCooldownUntil && new Date() < freeSpinCooldownUntil) return
     if (freeSpinAdCountdown !== null) return
     setFreeSpinResult(null)
-    setFreeSpinAdCountdown(15)
+    setFreeSpinAdCountdown(5)
     const interval = setInterval(() => {
       setFreeSpinAdCountdown(prev => {
         if (prev === null || prev <= 1) { clearInterval(interval); return 0 }
@@ -2228,7 +2228,7 @@ export default function MarketplacePage() {
                   <span style={{ fontSize: 18, fontWeight: 800, color: '#EAB308' }}>{freeSpinAdCountdown}s</span>
                 </div>
                 <div style={{ height: 4, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', background: '#EAB308', borderRadius: 99, width: `${((15 - (freeSpinAdCountdown ?? 0)) / 15) * 100}%`, transition: 'width 1s linear' }} />
+                  <div style={{ height: '100%', background: '#EAB308', borderRadius: 99, width: `${((5 - (freeSpinAdCountdown ?? 0)) / 5) * 100}%`, transition: 'width 1s linear' }} />
                 </div>
               </div>
             )}
