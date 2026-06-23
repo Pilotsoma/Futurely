@@ -21,6 +21,7 @@ model User {
   allTags                  Json                     @default("[]")
   coins                    Int                      @default(0)
   lastCoinClaim            DateTime?
+  lastFreeSpin             DateTime?
   nameColor                String?
   pfpEffect                String?
   badge                    String?

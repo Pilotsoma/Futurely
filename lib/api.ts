@@ -632,6 +632,9 @@ export const api = {
       body: JSON.stringify({ streak: streak ?? 1 }),
     }),
 
+  marketplaceFreeSpin: () =>
+    request<{ coins: number; reward: number; rarity: string }>('/api/marketplace/free-spin', { method: 'POST' }),
+
   marketplaceInventory: () =>
     request<InventoryData>('/api/marketplace/inventory'),
 

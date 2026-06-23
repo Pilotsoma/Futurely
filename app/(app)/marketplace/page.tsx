@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import Script from 'next/script'
 import { createPortal } from 'react-dom'
 import CoinIcon from '../../../components/ui/CoinIcon'
 import VerifiedBadge from '../../../components/ui/VerifiedBadge'
@@ -1349,6 +1350,11 @@ export default function MarketplacePage() {
   const [tradeOfferItems, setTradeOfferItems] = useState<Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string }>>([])
   const [tradeWantItems, setTradeWantItems] = useState<TraderCatalogItem[]>([])
 
+  // Free spin (ad-rewarded)
+  const [freeSpinCooldownUntil, setFreeSpinCooldownUntil] = useState<Date | null>(null)
+  const [freeSpinBusy, setFreeSpinBusy] = useState(false)
+  const [freeSpinResult, setFreeSpinResult] = useState<{ reward: number; rarity: string } | null>(null)
+
   // Item prices for hover tooltips
   const [prices, setPrices] = useState<Record<string, number>>({})
 
@@ -1505,6 +1511,30 @@ export default function MarketplacePage() {
       const r = await api.marketplaceDailyClaim()
       setInv(prev => prev ? { ...prev, coins: r.coins, canClaimToday: false } : prev)
     } catch { /* ignore */ }
+  }
+
+  function handleFreeSpin() {
+    if (freeSpinBusy) return
+    if (freeSpinCooldownUntil && new Date() < freeSpinCooldownUntil) return
+    setFreeSpinBusy(true)
+    setFreeSpinResult(null)
+    // Adsterra Social Bar fires automatically — we just call the endpoint directly
+    // (Social Bar is a persistent widget; reward is granted on button press)
+    api.marketplaceFreeSpin()
+      .then(r => {
+        setInv(prev => prev ? { ...prev, coins: r.coins } : prev)
+        setFreeSpinResult({ reward: r.reward, rarity: r.rarity })
+        setFreeSpinCooldownUntil(new Date(Date.now() + 6 * 60 * 60 * 1000))
+      })
+      .catch((err: unknown) => {
+        if (err && typeof err === 'object' && 'message' in err) {
+          try {
+            const parsed = JSON.parse((err as { message: string }).message)
+            if (parsed?.nextSpin) setFreeSpinCooldownUntil(new Date(parsed.nextSpin))
+          } catch { /* ignore */ }
+        }
+      })
+      .finally(() => setFreeSpinBusy(false))
   }
 
   async function doOpenBoxAPI(boxType: BoxType, quantity = 1): Promise<BoxResult | MultiBoxResult | null> {
@@ -2110,6 +2140,8 @@ export default function MarketplacePage() {
 
   return (
     <div className="fade-up" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
+      <Script src="https://pl29870426.effectivecpmnetwork.com/41/a7/aa/41a7aaacedda5b47cbb4eb287398d724.js" strategy="lazyOnload" />
+
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>Spend your coins</p>
@@ -2134,6 +2166,38 @@ export default function MarketplacePage() {
           </div>
         )}
       </div>
+
+      {/* Free Spin */}
+      {(() => {
+        const onCooldown = !!freeSpinCooldownUntil && new Date() < freeSpinCooldownUntil
+        const RARITY_COLORS: Record<string, string> = { Common: '#6B7280', Uncommon: '#3B82F6', Rare: '#8B5CF6', Epic: '#F97316', Legendary: '#FFFFFF', Mythic: '#EAB308' }
+        const rc = freeSpinResult ? (RARITY_COLORS[freeSpinResult.rarity] ?? '#EAB308') : '#EAB308'
+        return (
+          <div className="ns-card" style={{ padding: 18, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, border: '1px solid rgba(234,179,8,0.2)' }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: '#EAB308', marginBottom: 2 }}>Free Spin</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 0 }}>Watch an ad • Win coins • Every 6 hours</p>
+              {freeSpinResult && (
+                <p style={{ fontSize: 13, fontWeight: 700, color: rc, marginTop: 6 }}>
+                  +{freeSpinResult.reward.toLocaleString()} coins — <span style={{ color: rc }}>{freeSpinResult.rarity}</span>!
+                </p>
+              )}
+              {onCooldown && !freeSpinResult && (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Next spin available at {freeSpinCooldownUntil!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleFreeSpin}
+              disabled={onCooldown || freeSpinBusy}
+              style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: onCooldown ? 'var(--surface-2)' : '#EAB308', color: onCooldown ? 'var(--text-muted)' : '#000', fontWeight: 700, fontSize: 14, cursor: onCooldown || freeSpinBusy ? 'not-allowed' : 'pointer', opacity: onCooldown ? 0.6 : 1, flexShrink: 0 }}
+            >
+              {freeSpinBusy ? 'Spinning…' : onCooldown ? 'On Cooldown' : '🎰 Free Spin'}
+            </button>
+          </div>
+        )
+      })()}
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 2, marginBottom: 24, borderBottom: '1px solid var(--border)' }}>

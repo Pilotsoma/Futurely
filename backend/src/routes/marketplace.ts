@@ -484,6 +484,56 @@ router.post('/daily-coins', requireAuth, async (req: AuthRequest, res: Response)
   }
 })
 
+// ── Free Spin (ad-rewarded coin spin, once per 6 hours) ──────────────────────
+
+const FREE_SPIN_TIERS: { label: string; rarity: string; coins: number; weight: number }[] = [
+  { label: 'Common',    rarity: 'Common',    coins: 25,    weight: 60    },
+  { label: 'Uncommon',  rarity: 'Uncommon',  coins: 50,    weight: 25    },
+  { label: 'Rare',      rarity: 'Rare',      coins: 100,   weight: 10.25 },
+  { label: 'Epic',      rarity: 'Epic',      coins: 300,   weight: 3.95  },
+  { label: 'Legendary', rarity: 'Legendary', coins: 1000,  weight: 0.75  },
+  { label: 'Mythic',    rarity: 'Mythic',    coins: 2500,  weight: 0.05  },
+]
+
+const FREE_SPIN_COOLDOWN_MS = 6 * 60 * 60 * 1000 // 6 hours
+
+router.post('/free-spin', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { coins: true, lastFreeSpin: true },
+    })
+    if (!user) { res.status(404).json({ error: 'User not found' }); return }
+
+    const now = Date.now()
+    if (user.lastFreeSpin && now - user.lastFreeSpin.getTime() < FREE_SPIN_COOLDOWN_MS) {
+      const nextSpin = new Date(user.lastFreeSpin.getTime() + FREE_SPIN_COOLDOWN_MS)
+      res.status(429).json({ error: 'Cooldown active', nextSpin: nextSpin.toISOString() })
+      return
+    }
+
+    // Weighted random roll
+    const total = FREE_SPIN_TIERS.reduce((s, t) => s + t.weight, 0)
+    let r = Math.random() * total
+    let result = FREE_SPIN_TIERS[FREE_SPIN_TIERS.length - 1]
+    for (const tier of FREE_SPIN_TIERS) {
+      r -= tier.weight
+      if (r <= 0) { result = tier; break }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: { coins: { increment: result.coins }, lastFreeSpin: new Date() },
+      select: { coins: true },
+    })
+
+    res.json({ data: { coins: updated.coins, reward: result.coins, rarity: result.rarity } })
+  } catch {
+    res.status(500).json({ error: 'Failed to process free spin' })
+  }
+})
+
 // ── Inventory ─────────────────────────────────────────────────────────────────
 
 function isdDisplayName(districtUrl: string): string {
