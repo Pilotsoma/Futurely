@@ -587,11 +587,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
       {/* Unbox section */}
       {isUnbox && post.unboxItemName && (
         (() => {
-          const unboxAccent = post.unboxItemType === 'tag' && post.unboxItemTagColor
-            ? post.unboxItemTagColor
-            : post.unboxItemType === 'name-color' && post.unboxItemValue && post.unboxItemValue !== 'rainbow'
-              ? post.unboxItemValue
-              : post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'
+          const unboxAccent = '#EAB308'
           return (
         <div style={{ border: `1px solid ${unboxAccent}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${unboxAccent}0d` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
