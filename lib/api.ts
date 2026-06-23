@@ -952,6 +952,15 @@ export const api = {
       body: JSON.stringify({ inviteCode: inviteCode.toUpperCase() }),
     }),
 
+  classroomPosts: (classroomId: number, page = 1) =>
+    request<ClassroomPost[]>(`/api/students/classrooms/${classroomId}/posts?page=${page}`),
+
+  classroomCreatePost: (classroomId: number, body: string) =>
+    request<ClassroomPost>(`/api/students/classrooms/${classroomId}/posts`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+
   studentActionItems: () =>
     request<StudentActionItem[]>('/api/students/action-items'),
 
@@ -1614,6 +1623,21 @@ export interface ClassroomAssignment {
 export interface ClassroomDetail extends StudentClassroom {
   assignments: ClassroomAssignment[]
   memberships: Array<{ id: number; student: { id: number; name: string | null } }>
+}
+
+export interface ClassroomPost {
+  id: number
+  classroomId: number
+  body: string
+  createdAt: string
+  author: {
+    id: number
+    name: string | null
+    tag: string | null
+    tagColor: string | null
+    nameColor: string | null
+    avatarUrl: string | null
+  }
 }
 
 export interface StudentActionItem {

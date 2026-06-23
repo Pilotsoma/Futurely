@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { api, ClassroomDetail } from '../../../../lib/api'
+import { api, ClassroomDetail, ClassroomPost } from '../../../../lib/api'
 
 function isOverdue(dueDate: string) {
   return new Date(dueDate) < new Date()
@@ -11,6 +11,16 @@ function isOverdue(dueDate: string) {
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function timeAgo(d: string) {
+  const diff = Date.now() - new Date(d).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
 }
 
 export default function ClassroomDetailPage() {
@@ -22,6 +32,14 @@ export default function ClassroomDetailPage() {
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState<string | null>(null)
 
+  // Posts state
+  const [posts, setPosts]           = useState<ClassroomPost[]>([])
+  const [postsLoading, setPostsLoading] = useState(true)
+  const [postBody, setPostBody]     = useState('')
+  const [posting, setPosting]       = useState(false)
+  const [postError, setPostError]   = useState<string | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
   useEffect(() => {
     if (isNaN(id)) { router.replace('/classroom'); return }
     api.studentClassroomDetail(id)
@@ -29,6 +47,31 @@ export default function ClassroomDetailPage() {
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load classroom'))
       .finally(() => setLoading(false))
   }, [id, router])
+
+  useEffect(() => {
+    if (isNaN(id)) return
+    api.classroomPosts(id)
+      .then(data => setPosts(data ?? []))
+      .catch(() => setPosts([]))
+      .finally(() => setPostsLoading(false))
+  }, [id])
+
+  async function handlePost() {
+    const trimmed = postBody.trim()
+    if (!trimmed || posting) return
+    setPosting(true)
+    setPostError(null)
+    try {
+      const newPost = await api.classroomCreatePost(id, trimmed)
+      setPosts(prev => [newPost, ...prev])
+      setPostBody('')
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : 'Failed to post')
+    } finally {
+      setPosting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -71,6 +114,78 @@ export default function ClassroomDetailPage() {
           <span style={S.pill}>{classroom.memberships.length} student{classroom.memberships.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
+
+      {/* Classroom Feed */}
+      <section style={{ marginBottom: 32 }}>
+        <h2 style={S.sectionLabel}>Classroom Feed</h2>
+
+        {/* Composer */}
+        <div className="ns-card" style={{ padding: '14px 16px', marginBottom: 16 }}>
+          <textarea
+            ref={textareaRef}
+            value={postBody}
+            onChange={e => {
+              setPostBody(e.target.value)
+              e.target.style.height = 'auto'
+              e.target.style.height = e.target.scrollHeight + 'px'
+            }}
+            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { void handlePost() } }}
+            placeholder="Share something with your class…"
+            maxLength={500}
+            rows={2}
+            style={{ width: '100%', resize: 'none', background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: 'var(--text)', fontFamily: 'inherit', lineHeight: 1.5, overflow: 'hidden' }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{postBody.length}/500</span>
+            <button
+              onClick={() => void handlePost()}
+              disabled={!postBody.trim() || posting}
+              style={{ padding: '6px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: postBody.trim() && !posting ? 'pointer' : 'not-allowed', background: postBody.trim() && !posting ? 'var(--primary)' : 'var(--surface-2)', color: postBody.trim() && !posting ? '#fff' : 'var(--text-muted)', border: 'none', transition: 'all 0.15s' }}
+            >
+              {posting ? 'Posting…' : 'Post'}
+            </button>
+          </div>
+          {postError && <p style={{ fontSize: 12, color: 'var(--error)', margin: '6px 0 0' }}>{postError}</p>}
+        </div>
+
+        {/* Posts list */}
+        {postsLoading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[1, 2].map(i => <div key={i} className="shimmer" style={{ height: 72, borderRadius: 12 }} />)}
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="ns-card" style={{ padding: '28px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+            No posts yet — be the first to share something!
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {posts.map(p => (
+              <div key={p.id} className="ns-card" style={{ padding: '14px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--primary)', flexShrink: 0, overflow: 'hidden' }}>
+                    {p.author.avatarUrl
+                      ? <img src={p.author.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : (p.author.name?.[0] ?? 'S').toUpperCase()
+                    }
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: p.author.nameColor ?? 'var(--text)' }}>
+                      {p.author.name ?? 'Student'}
+                    </span>
+                    {p.author.tag && (
+                      <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                        {p.author.tag}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{timeAgo(p.createdAt)}</span>
+                </div>
+                <p style={{ fontSize: 14, color: 'var(--text)', margin: 0, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{p.body}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Upcoming assignments */}
       <section style={{ marginBottom: 32 }}>

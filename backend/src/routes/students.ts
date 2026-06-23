@@ -334,6 +334,104 @@ router.get('/classrooms/:id', requireAuth, async (req: AuthRequest, res: Respons
   }
 })
 
+// ── GET /students/classrooms/:id/posts ──
+router.get('/classrooms/:id/posts', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const classroomId = parseInt(req.params.id)
+  if (isNaN(classroomId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid classroom id' } })
+    return
+  }
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  try {
+    const membership = await prisma.classroomMembership.findUnique({
+      where: { classroomId_studentId: { classroomId, studentId: req.userId } },
+    })
+    if (!membership) {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'You are not a member of this classroom' } })
+      return
+    }
+    const page  = Math.max(1, parseInt(req.query.page as string) || 1)
+    const limit = 20
+    const posts = await prisma.classroomPost.findMany({
+      where: { classroomId },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            tag: true,
+            tagColor: true,
+            nameColor: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    })
+    res.json({ data: posts, error: null })
+  } catch (err: unknown) {
+    logger.error('student_classroom_posts_list_error', { studentId: req.userId, classroomId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch posts' } })
+  }
+})
+
+// ── POST /students/classrooms/:id/posts ──
+const createClassroomPostSchema = z.object({
+  body: z.string().min(1).max(500),
+})
+
+router.post('/classrooms/:id/posts', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const classroomId = parseInt(req.params.id)
+  if (isNaN(classroomId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid classroom id' } })
+    return
+  }
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const parse = createClassroomPostSchema.safeParse(req.body)
+  if (!parse.success) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid body' } })
+    return
+  }
+  try {
+    const membership = await prisma.classroomMembership.findUnique({
+      where: { classroomId_studentId: { classroomId, studentId: req.userId } },
+    })
+    if (!membership) {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'You are not a member of this classroom' } })
+      return
+    }
+    const post = await prisma.classroomPost.create({
+      data: { classroomId, authorId: req.userId, body: parse.data.body },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            tag: true,
+            tagColor: true,
+            nameColor: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    })
+    sendToUser(req.userId, 'CLASSROOM_POST', { classroomId, post })
+    logger.info('classroom_post_created', { authorId: req.userId, classroomId, postId: post.id })
+    res.status(201).json({ data: post, error: null })
+  } catch (err: unknown) {
+    logger.error('student_classroom_post_create_error', { studentId: req.userId, classroomId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to create post' } })
+  }
+})
+
 // ── GET /students/action-items ──
 router.get('/action-items', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) {

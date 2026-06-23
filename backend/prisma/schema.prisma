@@ -89,6 +89,7 @@ model User {
   counselorChatsSent        CounselorChatMessage[]      @relation("CounselorChatCounselor")
   counselorChatsReceived    CounselorChatMessage[]      @relation("CounselorChatStudent")
   counselorChatMessagesSent CounselorChatMessage[]      @relation("CounselorChatSender")
+  classroomPostsAuthored    ClassroomPost[]             @relation("ClassroomPostAuthor")
   traderSellCount           Int                         @default(0)
   traderSellDate            String                      @default("")
   traderBuyCount            Int                         @default(0)
@@ -478,6 +479,7 @@ model Classroom {
   educator    User                  @relation("ClassroomEducator", fields: [educatorId], references: [id], onDelete: Cascade)
   memberships ClassroomMembership[]
   assignments EducatorAssignment[]
+  posts       ClassroomPost[]
 }
 
 model ClassroomMembership {
@@ -504,6 +506,16 @@ model EducatorAssignment {
   updatedAt   DateTime  @updatedAt
   classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   creator     User      @relation("EducatorAssignmentCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+}
+
+model ClassroomPost {
+  id          Int       @id @default(autoincrement())
+  classroomId Int
+  authorId    Int
+  body        String
+  createdAt   DateTime  @default(now())
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  author      User      @relation("ClassroomPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
 }
 
 model EducatorCoinGrant {
