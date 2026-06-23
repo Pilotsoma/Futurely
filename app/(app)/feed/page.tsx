@@ -425,27 +425,25 @@ function OwnTagPicker({ profile, onUpdateTag }: {
             const isGod = t.tag === 'GOAT'
             const isMythic = t.tag === 'VIP'
             if (isVerified) {
+              // Verified checkmarks are badges, not equippable tags — show as read-only
               return (
-                <button
+                <span
                   key={savingKey}
-                  disabled={!!saving}
-                  onClick={() => void handleSelect(t.tag, t.tagColor)}
+                  title="This is a badge — it displays automatically and cannot be equipped as a tag"
                   style={{
-                    border: `2px solid ${isActive ? (t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0') : 'transparent'}`,
-                    background: 'var(--surface-2)',
-                    borderRadius: 6, padding: '4px 8px',
                     display: 'inline-flex', alignItems: 'center', gap: 5,
-                    cursor: saving ? 'default' : 'pointer',
-                    opacity: saving === savingKey ? 0.5 : 1,
-                    transition: 'all 0.15s',
+                    background: 'var(--surface-2)',
+                    border: `1px solid ${t.tagColor === 'verified-yellow' ? '#EAB30840' : '#1D9BF040'}`,
+                    borderRadius: 6, padding: '4px 8px',
+                    opacity: 0.6, cursor: 'default',
                   }}
                 >
                   <VerifiedBadge variant={t.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
                   <span style={{ fontSize: 12, fontWeight: 700, color: t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0' }}>
-                    {saving === savingKey ? '…' : (t.tagColor === 'verified-yellow' ? 'Verified' : 'Verified (Blue)')}
+                    {t.tagColor === 'verified-yellow' ? 'Verified' : 'Verified (Blue)'}
                   </span>
-                  {isActive && <span style={{ fontSize: 10 }}>✓</span>}
-                </button>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>badge</span>
+                </span>
               )
             }
             return (
