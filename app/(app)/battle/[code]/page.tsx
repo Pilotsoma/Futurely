@@ -12,8 +12,9 @@ const PROJ_R = 5
 const PLAYER_SPEED = 200
 const PROJ_SPEED = 600
 const PROJ_MAX_DIST = 750
-const POSITION_HZ = 20   // send position updates per second
+const POSITION_HZ = 20
 const AMMO_PER_CORRECT = 5
+const ZOOM = 0.62  // fraction of world units shown — lower = more zoomed out
 
 const PLAYER_COLORS = [
   '#e74c3c', '#3498db', '#f39c12', '#2ecc71',
@@ -489,10 +490,10 @@ export default function BattlePage() {
     const canvas = canvasRef.current
     if (!canvas) return
     const cw = canvas.width, ch = canvas.height
-    const camX = Math.max(0, Math.min(me.x - cw / 2, WORLD_W - cw))
-    const camY = Math.max(0, Math.min(me.y - ch / 2, WORLD_H - ch))
-    const mx = mousePosRef.current.x + camX
-    const my = mousePosRef.current.y + camY
+    const camX = Math.max(0, Math.min(me.x - cw / (2 * ZOOM), WORLD_W - cw / ZOOM))
+    const camY = Math.max(0, Math.min(me.y - ch / (2 * ZOOM), WORLD_H - ch / ZOOM))
+    const mx = mousePosRef.current.x / ZOOM + camX
+    const my = mousePosRef.current.y / ZOOM + camY
     const angle = Math.atan2(my - me.y, mx - me.x)
     const projId = `${gs.myId}_${Date.now()}`
 
@@ -539,10 +540,10 @@ export default function BattlePage() {
         }
 
         const cw = canvas!.width, ch = canvas!.height
-        const camX = Math.max(0, Math.min(me.x - cw / 2, WORLD_W - cw))
-        const camY = Math.max(0, Math.min(me.y - ch / 2, WORLD_H - ch))
-        const wx = mousePosRef.current.x + camX
-        const wy = mousePosRef.current.y + camY
+        const camX = Math.max(0, Math.min(me.x - cw / (2 * ZOOM), WORLD_W - cw / ZOOM))
+        const camY = Math.max(0, Math.min(me.y - ch / (2 * ZOOM), WORLD_H - ch / ZOOM))
+        const wx = mousePosRef.current.x / ZOOM + camX
+        const wy = mousePosRef.current.y / ZOOM + camY
         me.angle = Math.atan2(wy - me.y, wx - me.x)
 
         // Send position at fixed interval
@@ -585,76 +586,71 @@ export default function BattlePage() {
 
       // ── Render ──────────────────────────────────────────────────────────
       const cw = canvas!.width, ch = canvas!.height
-      const camX = me ? Math.max(0, Math.min(me.x - cw / 2, WORLD_W - cw)) : 0
-      const camY = me ? Math.max(0, Math.min(me.y - ch / 2, WORLD_H - ch)) : 0
+      const viewW = cw / ZOOM, viewH = ch / ZOOM
+      const camX = me ? Math.max(0, Math.min(me.x - viewW / 2, WORLD_W - viewW)) : 0
+      const camY = me ? Math.max(0, Math.min(me.y - viewH / 2, WORLD_H - viewH)) : 0
 
       ctx!.clearRect(0, 0, cw, ch)
-      drawGround(ctx!, camX, camY, cw, ch, () => 0)
 
-      // Sort world objects by y for depth
+      ctx!.save()
+      ctx!.scale(ZOOM, ZOOM)
+
+      drawGround(ctx!, camX, camY, viewW, viewH, () => 0)
+
       const sorted = [...gs.world].sort((a, b) => (a.y + (a.h ?? a.r ?? 0)) - (b.y + (b.h ?? b.r ?? 0)))
+      const pad = 120
 
-      // Draw non-bush first
       for (const o of sorted) {
         if (o.type === 'bush') continue
         const sx = o.x - camX, sy = o.y - camY
-        const pad = 100
-        if (sx < -pad || sx > cw + pad || sy < -pad || sy > ch + pad) continue
+        if (sx < -pad || sx > viewW + pad || sy < -pad || sy > viewH + pad) continue
         if (o.type === 'house') drawHouse(ctx!, o, camX, camY)
         else if (o.type === 'tree') drawTree(ctx!, o, camX, camY)
         else if (o.type === 'rock') drawRock(ctx!, o, camX, camY)
       }
 
-      // Draw players (sorted by y)
       const playersSorted = [...gs.players.values()].filter(p => p.alive).sort((a, b) => a.y - b.y)
       for (const p of playersSorted) {
         const sx = p.x - camX, sy = p.y - camY
-        if (sx < -60 || sx > cw + 60 || sy < -60 || sy > ch + 60) continue
+        if (sx < -60 || sx > viewW + 60 || sy < -60 || sy > viewH + 60) continue
         const inBush = isInBush(p.x, p.y, gs.world)
         drawPlayer(ctx!, p, p.userId === gs.myId, inBush, sx, sy)
       }
 
-      // Draw bushes on top of players (for hiding)
       for (const o of sorted) {
         if (o.type !== 'bush') continue
         const sx = o.x - camX, sy = o.y - camY
-        if (sx < -100 || sx > cw + 100 || sy < -100 || sy > ch + 100) continue
+        if (sx < -pad || sx > viewW + pad || sy < -pad || sy > viewH + pad) continue
         drawBush(ctx!, o, camX, camY)
       }
 
-      // Draw projectiles
       for (const proj of gs.projectiles) {
         drawProjectile(ctx!, proj, camX, camY)
       }
 
-      // Draw trajectory preview for local player
       if (me && me.alive && ammoRef.current > 0) {
         drawTrajectory(ctx!, me.x, me.y, me.angle, camX, camY, gs.world)
       }
 
-      // ── HUD ─────────────────────────────────────────────────────────────
-      // Ammo counter (top-left)
-      ctx!.fillStyle = 'rgba(0,0,0,0.55)'
-      ctx!.beginPath(); ctx!.roundRect(12, 12, 110, 42, 10); ctx!.fill()
-      ctx!.fillStyle = '#f97316'
-      ctx!.font = 'bold 13px system-ui,sans-serif'
-      ctx!.textAlign = 'left'
-      ctx!.textBaseline = 'middle'
-      ctx!.fillText('AMMO', 22, 27)
-      ctx!.fillStyle = ammoRef.current > 0 ? '#fff' : '#ef4444'
-      ctx!.font = 'bold 20px system-ui,sans-serif'
-      ctx!.fillText(String(ammoRef.current), 22, 45)
+      ctx!.restore()
 
-      // Alive counter (top-right)
-      ctx!.fillStyle = 'rgba(0,0,0,0.55)'
-      ctx!.beginPath(); ctx!.roundRect(cw - 122, 12, 110, 42, 10); ctx!.fill()
+      // ── HUD (drawn at 1:1 scale after restore) ───────────────────────────
+      const aliveCount = [...gs.players.values()].filter(p => p.alive).length
+      ctx!.font = 'bold 12px system-ui,sans-serif'
+      ctx!.textBaseline = 'middle'
+
+      // Ammo pill (top-left)
+      ctx!.fillStyle = 'rgba(0,0,0,0.62)'
+      ctx!.beginPath(); ctx!.roundRect(10, 10, 80, 24, 7); ctx!.fill()
+      ctx!.fillStyle = ammoRef.current > 0 ? '#f97316' : '#ef4444'
+      ctx!.textAlign = 'center'
+      ctx!.fillText(`Ammo  ${ammoRef.current}`, 50, 22)
+
+      // Alive pill (top-right)
+      ctx!.fillStyle = 'rgba(0,0,0,0.62)'
+      ctx!.beginPath(); ctx!.roundRect(cw - 90, 10, 80, 24, 7); ctx!.fill()
       ctx!.fillStyle = '#22c55e'
-      ctx!.font = 'bold 13px system-ui,sans-serif'
-      ctx!.textAlign = 'right'
-      ctx!.fillText('ALIVE', cw - 22, 27)
-      ctx!.fillStyle = '#fff'
-      ctx!.font = 'bold 20px system-ui,sans-serif'
-      ctx!.fillText(String([...gs.players.values()].filter(p => p.alive).length), cw - 22, 45)
+      ctx!.fillText(`${aliveCount} alive`, cw - 50, 22)
     }
 
     rafRef.current = requestAnimationFrame(loop)
@@ -825,7 +821,7 @@ export default function BattlePage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0, width: 420 }}>
             {q.options.map((opt, i) => {
-              const isSelected = selectedAnswer === opt
+              const isSelected = selectedAnswer === String(i)
               const isResult = answerResult !== null && isSelected
               const bg = isResult
                 ? answerResult === 'correct' ? '#166534' : '#7f1d1d'
@@ -836,7 +832,7 @@ export default function BattlePage() {
               return (
                 <button
                   key={i}
-                  onClick={() => void handleAnswer(opt)}
+                  onClick={() => void handleAnswer(String(i))}
                   disabled={submitting || answerResult !== null}
                   style={{
                     padding: '10px 14px', borderRadius: 10, background: bg, border: `1.5px solid ${border}`,
