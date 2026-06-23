@@ -43,10 +43,10 @@ export function DevAdminPanel({
   const isOwnProfile = userId === currentUserId
 
   useEffect(() => {
-    if (!canManage) return
+    if (!canManage || !isOwnProfile) return
     setStatsLoading(true)
     api.feedDevStats().then(d => { setDevStats(d); setStatsLoading(false) }).catch(() => setStatsLoading(false))
-  }, [canManage])
+  }, [canManage, isOwnProfile])
 
   if (!canManage) return null
 

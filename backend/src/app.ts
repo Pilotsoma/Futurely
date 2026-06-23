@@ -22,6 +22,7 @@ if (!process.env.CREDENTIAL_ENCRYPTION_KEY) {
 
 import express from 'express'
 import cors from 'cors'
+import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
@@ -55,6 +56,9 @@ const isProd = process.env.NODE_ENV === 'production'
 // Behind a reverse proxy (Render, Railway, Fly.io) req.ip is X-Forwarded-For.
 // trust proxy=1 tells Express to trust one hop, making rate-limit IP accurate.
 if (isProd) app.set('trust proxy', 1)
+
+// ── Gzip compression — dramatically reduces Neon egress / bandwidth ──────────
+app.use(compression())
 
 // ── Security headers ────────────────────────────────────────────────────────
 // crossOriginResourcePolicy is 'same-site': this is a pure JSON API with no

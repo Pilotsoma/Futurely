@@ -2032,7 +2032,12 @@ router.get('/item/:itemType/:itemId/owners', async (req: Request, res: Response)
 
 // ── Leaderboards ──────────────────────────────────────────────────────────────
 
+let leaderboardCache: { data: unknown; expiresAt: number } | null = null
+
 router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response): Promise<void> => {
+  if (leaderboardCache && Date.now() < leaderboardCache.expiresAt) {
+    res.json({ data: leaderboardCache.data }); return
+  }
   try {
     const userSelect = { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, badge: true }
 
@@ -2077,13 +2082,13 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
       return { id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, inventoryValue: value }
     }).sort((a, b) => b.inventoryValue - a.inventoryValue).slice(0, 15)
 
-    res.json({
-      data: {
-        coins: coinsRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, value: u.coins })),
-        streak: streakRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, value: u.loginStreak })),
-        inventory: withValue.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, value: u.inventoryValue })),
-      },
-    })
+    const leaderboardData = {
+      coins: coinsRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, value: u.coins })),
+      streak: streakRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, value: u.loginStreak })),
+      inventory: withValue.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, value: u.inventoryValue })),
+    }
+    leaderboardCache = { data: leaderboardData, expiresAt: Date.now() + 2 * 60 * 1000 }
+    res.json({ data: leaderboardData })
   } catch (err) {
     console.error('[LEADERBOARD]', err)
     res.status(500).json({ error: 'Failed to fetch leaderboard' })

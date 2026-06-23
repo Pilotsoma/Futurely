@@ -1109,7 +1109,12 @@ router.put('/users/:id/role', requireAdmin, async (req: AuthRequest, res: Respon
 });
 
 /* ---------- DEV: Platform Stats (total coins + inventory value) ---------- */
+let devStatsCache: { data: { totalCoins: number; totalInventoryValue: number; userCount: number }; expiresAt: number } | null = null
+
 router.get('/dev-stats', requireAdmin, async (req: AuthRequest, res: Response) => {
+  if (devStatsCache && Date.now() < devStatsCache.expiresAt) {
+    res.json({ data: devStatsCache.data }); return
+  }
   try {
     const [coinsAgg, allUsers, itemPrices] = await Promise.all([
       prisma.user.aggregate({ _sum: { coins: true }, where: {} }),
@@ -1150,7 +1155,9 @@ router.get('/dev-stats', requireAdmin, async (req: AuthRequest, res: Response) =
       for (const p of pfps) totalInventoryValue += dynamicPrices[`pfp:${p.id}`] ?? SEED_PRICES[`pfp:${p.id}`] ?? 0;
     }
 
-    res.json({ data: { totalCoins, totalInventoryValue, userCount: allUsers.length } });
+    const result = { totalCoins, totalInventoryValue, userCount: allUsers.length }
+    devStatsCache = { data: result, expiresAt: Date.now() + 5 * 60 * 1000 }
+    res.json({ data: result });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch dev stats' });
   }
