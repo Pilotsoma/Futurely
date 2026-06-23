@@ -2140,7 +2140,7 @@ export default function MarketplacePage() {
 
   return (
     <div className="fade-up" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
-      <Script src="https://pl29870426.effectivecpmnetwork.com/41/a7/aa/41a7aaacedda5b47cbb4eb287398d724.js" strategy="lazyOnload" />
+      <Script src="https://quge5.com/88/tag.min.js" data-zone="252935" async data-cfasync="false" strategy="lazyOnload" />
 
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
