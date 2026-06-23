@@ -6,6 +6,7 @@ import { filterContent, recordViolation } from '../lib/contentFilter';
 import { SEED_PRICES, TAG_BOX_ITEMS, SPECIAL_TAGS, DEV_CURSE_ITEMS } from './marketplace';
 import { AuthRequest } from '../middleware/auth';
 import { requireAdmin, requireMod, hasDevPowers } from '../middleware/requireAdmin';
+import { checkDevCoinLimit } from '../lib/devCoinLimit';
 
 // Keyed by authenticated userId so shared NAT IPs don't block other users.
 const userKey = (req: Request): string => String((req as AuthRequest).userId ?? req.ip ?? 'anon')
@@ -1164,9 +1165,6 @@ router.get('/dev-stats', requireAdmin, async (req: AuthRequest, res: Response) =
 });
 
 /* ---------- DEV: Adjust user coins ---------- */
-const DEV_COIN_ADD_LIMIT = 10_000
-const devCoinAddedToday = new Map<number, { date: string; total: number }>()
-
 router.put('/users/:id/coins', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const targetId = parseInt(req.params.id);
@@ -1176,16 +1174,9 @@ router.put('/users/:id/coins', requireAdmin, async (req: AuthRequest, res: Respo
       return res.status(400).json({ error: 'amount must be a non-negative number' });
     }
 
-    // Enforce 10K/day add limit per DEV
     if (action === 'add' && amount) {
-      const todayUTC = new Date().toISOString().slice(0, 10)
-      const entry = devCoinAddedToday.get(req.userId!)
-      const todayTotal = entry?.date === todayUTC ? entry.total : 0
-      if (todayTotal + amount > DEV_COIN_ADD_LIMIT) {
-        const remaining = Math.max(0, DEV_COIN_ADD_LIMIT - todayTotal)
-        return res.status(429).json({ error: `Daily add limit is ${DEV_COIN_ADD_LIMIT.toLocaleString()} coins. You have ${remaining.toLocaleString()} remaining today.` })
-      }
-      devCoinAddedToday.set(req.userId!, { date: todayUTC, total: todayTotal + amount })
+      const err = checkDevCoinLimit(req.userId!, amount)
+      if (err) return res.status(429).json({ error: err })
     }
 
     const target = await prisma.user.findUnique({ where: { id: targetId }, select: { coins: true } });

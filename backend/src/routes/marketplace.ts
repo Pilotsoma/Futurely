@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { requireAdmin } from '../middleware/requireAdmin'
+import { checkDevCoinLimit } from '../lib/devCoinLimit'
 import { sendToUser, broadcast } from '../lib/websocket'
 
 // User-keyed limiter for coin-spending / inventory-mutating actions.
@@ -1014,6 +1015,8 @@ router.post('/admin/grant', requireAdmin, async (req: AuthRequest, res: Response
 
     if (type === 'coins') {
       if (typeof amount !== 'number' || amount < 0) { res.status(400).json({ error: 'amount must be a non-negative number' }); return }
+      const limitErr = checkDevCoinLimit(req.userId!, amount)
+      if (limitErr) { res.status(429).json({ error: limitErr }); return }
       const updated = await prisma.user.update({ where: { id: req.userId }, data: { coins: { increment: amount } }, select: { coins: true } })
       res.json({ data: { coins: updated.coins } })
 
