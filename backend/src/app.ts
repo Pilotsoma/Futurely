@@ -42,6 +42,8 @@ import educatorRouter from './routes/educator'
 import counselorRouter from './routes/counselor'
 import adminRouter from './routes/admin'
 import schoolsRouter from './routes/schools'
+import setsRouter from './routes/sets'
+import gamesRouter from './routes/games'
 import { requireAuth } from './middleware/auth'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
@@ -298,6 +300,8 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/educator', devBypass, educatorRouter)
   app.use('/counselor', devBypass, counselorRouter)
   app.use('/admin', devBypass, adminRouter)
+  app.use('/sets', devBypass, setsRouter)
+  app.use('/games', devBypass, gamesRouter)
 } else {
   app.use('/assignments', requireAuth, assignmentsRouter)
   app.use('/students', requireAuth, studentsRouter)
@@ -312,6 +316,8 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/educator', requireAuth, educatorRouter)
   app.use('/counselor', requireAuth, counselorRouter)
   app.use('/admin', requireAuth, adminRouter)
+  app.use('/sets', requireAuth, setsRouter)
+  app.use('/games', requireAuth, gamesRouter)
 }
 
 app.use('/parent', authLimiter, parentRouter)

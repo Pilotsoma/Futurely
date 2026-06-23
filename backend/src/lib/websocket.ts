@@ -21,3 +21,14 @@ export const sendToUser = (userId: number, event: string, data: unknown) => {
     if (ws.readyState === WebSocket.OPEN) ws.send(message)
   })
 }
+
+export const sendToSession = (participantUserIds: number[], event: string, data: unknown) => {
+  const message = JSON.stringify({ event, data })
+  participantUserIds.forEach(userId => {
+    const connections = userClients.get(userId)
+    if (!connections) return
+    connections.forEach(ws => {
+      if (ws.readyState === WebSocket.OPEN) ws.send(message)
+    })
+  })
+}

@@ -90,6 +90,9 @@ model User {
   counselorChatsReceived    CounselorChatMessage[]      @relation("CounselorChatStudent")
   counselorChatMessagesSent CounselorChatMessage[]      @relation("CounselorChatSender")
   classroomPostsAuthored    ClassroomPost[]             @relation("ClassroomPostAuthor")
+  questionSetsCreated       QuestionSet[]               @relation("QuestionSetCreator")
+  gameSessionsHosted        GameSession[]               @relation("GameSessionHost")
+  gameParticipations        GameParticipant[]           @relation("GameParticipants")
   traderSellCount           Int                         @default(0)
   traderSellDate            String                      @default("")
   traderBuyCount            Int                         @default(0)
@@ -621,4 +624,86 @@ model CounselorChatMessage {
   sender      User?    @relation("CounselorChatSender", fields: [senderId], references: [id], onDelete: SetNull)
 
   @@index([counselorId, studentId, createdAt])
+}
+
+// ── Review Game ──────────────────────────────────────────────────────────────
+
+model QuestionSet {
+  id          Int       @id @default(autoincrement())
+  creatorId   Int
+  title       String
+  description String?
+  subject     String?
+  visibility  String    @default("PRIVATE")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  creator     User      @relation("QuestionSetCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  sessions    GameSession[]
+
+  @@index([creatorId])
+  @@index([visibility])
+}
+
+model Question {
+  id            Int         @id @default(autoincrement())
+  setId         Int
+  orderIndex    Int         @default(0)
+  questionText  String
+  questionType  String      @default("MULTIPLE_CHOICE")
+  options       Json
+  correctAnswer String
+  timeLimit     Int         @default(20)
+  set           QuestionSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  answers       GameAnswer[]
+
+  @@index([setId, orderIndex])
+}
+
+model GameSession {
+  id              Int               @id @default(autoincrement())
+  setId           Int
+  hostId          Int
+  joinCode        String            @unique
+  status          String            @default("WAITING")
+  currentQuestion Int               @default(0)
+  createdAt       DateTime          @default(now())
+  set             QuestionSet       @relation(fields: [setId], references: [id])
+  host            User              @relation("GameSessionHost", fields: [hostId], references: [id], onDelete: Cascade)
+  participants    GameParticipant[]
+  answers         GameAnswer[]
+
+  @@index([hostId])
+  @@index([status])
+}
+
+model GameParticipant {
+  id        Int         @id @default(autoincrement())
+  sessionId Int
+  userId    Int
+  score     Int         @default(0)
+  joinedAt  DateTime    @default(now())
+  session   GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User        @relation("GameParticipants", fields: [userId], references: [id], onDelete: Cascade)
+  answers   GameAnswer[]
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+}
+
+model GameAnswer {
+  id            Int             @id @default(autoincrement())
+  sessionId     Int
+  participantId Int
+  questionId    Int
+  answer        String
+  isCorrect     Boolean
+  timeMs        Int             @default(0)
+  createdAt     DateTime        @default(now())
+  session       GameSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participant   GameParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  question      Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([participantId, questionId])
+  @@index([sessionId, questionId])
 }

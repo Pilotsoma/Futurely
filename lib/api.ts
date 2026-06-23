@@ -961,6 +961,47 @@ export const api = {
       body: JSON.stringify({ body }),
     }),
 
+  // ── Question Sets ──────────────────────────────────────────────────────────
+  sets: (params?: { q?: string; subject?: string; mine?: boolean }) => {
+    const qs = new URLSearchParams()
+    if (params?.q) qs.set('q', params.q)
+    if (params?.subject) qs.set('subject', params.subject)
+    if (params?.mine) qs.set('mine', 'true')
+    return request<QuestionSet[]>(`/api/sets?${qs.toString()}`)
+  },
+  createSet: (data: { title: string; description?: string | null; subject?: string | null; visibility: 'PUBLIC' | 'PRIVATE'; questions?: QuestionInput[] }) =>
+    request<QuestionSetWithQuestions>('/api/sets', { method: 'POST', body: JSON.stringify(data) }),
+  getSet: (id: number) =>
+    request<QuestionSetWithQuestions>(`/api/sets/${id}`),
+  updateSet: (id: number, data: Partial<{ title: string; description: string | null; subject: string | null; visibility: 'PUBLIC' | 'PRIVATE' }>) =>
+    request<QuestionSetWithQuestions>(`/api/sets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteSet: (id: number) =>
+    request<{ id: number }>(`/api/sets/${id}`, { method: 'DELETE' }),
+  addQuestion: (setId: number, q: QuestionInput) =>
+    request<Question>(`/api/sets/${setId}/questions`, { method: 'POST', body: JSON.stringify(q) }),
+  updateQuestion: (setId: number, qid: number, q: Partial<QuestionInput>) =>
+    request<Question>(`/api/sets/${setId}/questions/${qid}`, { method: 'PUT', body: JSON.stringify(q) }),
+  deleteQuestion: (setId: number, qid: number) =>
+    request<{ id: number }>(`/api/sets/${setId}/questions/${qid}`, { method: 'DELETE' }),
+  reorderQuestions: (setId: number, order: number[]) =>
+    request<{ ok: boolean }>(`/api/sets/${setId}/questions/reorder`, { method: 'PUT', body: JSON.stringify({ order }) }),
+
+  // ── Game Sessions ──────────────────────────────────────────────────────────
+  createGame: (setId: number) =>
+    request<GameSession>('/api/games', { method: 'POST', body: JSON.stringify({ setId }) }),
+  getGame: (code: string) =>
+    request<GameSession>(`/api/games/${code.toUpperCase()}`),
+  joinGame: (code: string) =>
+    request<GameSession>(`/api/games/${code.toUpperCase()}/join`, { method: 'POST' }),
+  startGame: (code: string) =>
+    request<GameSession>(`/api/games/${code.toUpperCase()}/start`, { method: 'POST' }),
+  submitAnswer: (code: string, data: { questionId: number; answer: string; timeMs: number }) =>
+    request<{ isCorrect: boolean; pointsEarned: number }>(`/api/games/${code.toUpperCase()}/answer`, { method: 'POST', body: JSON.stringify(data) }),
+  revealResults: (code: string) =>
+    request<{ ok: boolean }>(`/api/games/${code.toUpperCase()}/reveal`, { method: 'POST' }),
+  nextQuestion: (code: string) =>
+    request<{ status: string; questionIndex?: number }>(`/api/games/${code.toUpperCase()}/next`, { method: 'POST' }),
+
   studentActionItems: () =>
     request<StudentActionItem[]>('/api/students/action-items'),
 
@@ -1690,4 +1731,67 @@ export interface EducatorRequest {
   status: 'PENDING' | 'APPROVED' | 'DENIED'
   createdAt: string
   user: { id: number; name: string | null; email: string }
+}
+
+// ── Review Game types ───────────────────────────────────────────────────────
+
+export interface QuestionInput {
+  questionText: string
+  questionType: 'MULTIPLE_CHOICE' | 'TRUE_FALSE'
+  options: string[]
+  correctAnswer: string
+  timeLimit?: number
+}
+
+export interface Question {
+  id: number
+  setId: number
+  orderIndex: number
+  questionText: string
+  questionType: 'MULTIPLE_CHOICE' | 'TRUE_FALSE'
+  options: string[]
+  correctAnswer: string
+  timeLimit: number
+}
+
+export interface QuestionSet {
+  id: number
+  creatorId: number
+  title: string
+  description: string | null
+  subject: string | null
+  visibility: 'PUBLIC' | 'PRIVATE'
+  createdAt: string
+  updatedAt: string
+  creator: { id: number; name: string | null }
+  _count?: { questions: number }
+}
+
+export interface QuestionSetWithQuestions extends QuestionSet {
+  questions: Question[]
+}
+
+export interface GameParticipant {
+  id: number
+  sessionId: number
+  userId: number
+  score: number
+  joinedAt: string
+  user: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; avatarUrl: string | null }
+}
+
+export interface GameSession {
+  id: number
+  setId: number
+  hostId: number
+  joinCode: string
+  status: 'WAITING' | 'ACTIVE' | 'FINISHED'
+  currentQuestion: number
+  createdAt: string
+  set: {
+    title: string
+    questions: Array<{ id: number; questionText: string; questionType: string; options: string[]; timeLimit: number; correctAnswer?: string }>
+  }
+  host: { id: number; name: string | null }
+  participants: GameParticipant[]
 }
