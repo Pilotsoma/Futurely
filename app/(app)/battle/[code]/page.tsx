@@ -297,7 +297,10 @@ export default function BattlePage() {
   const lastPosSendRef = useRef<number>(0)
 
   const [session, setSession] = useState<GameSession | null>(null)
-  const [myId, setMyId] = useState<number | null>(null)
+  const [myId, setMyId] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null
+    try { return (JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { id?: number } | null)?.id ?? null } catch { return null }
+  })
   const [loading, setLoading] = useState(true)
   const [phase, setPhase] = useState<'lobby' | 'playing' | 'eliminated' | 'won' | 'lost'>('lobby')
   const [ammo, setAmmo] = useState(10)
@@ -316,6 +319,9 @@ export default function BattlePage() {
   const qIndexRef = useRef(0)
   const sessionRef = useRef<GameSession | null>(null)
 
+  // Keep gsRef.myId in sync with state
+  useEffect(() => { gsRef.current.myId = myId }, [myId])
+
   // ── Load session ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!code) return
@@ -329,6 +335,22 @@ export default function BattlePage() {
       setLoading(false)
     }).catch(() => router.replace('/play'))
   }, [code, router])
+
+  // ── Lobby poll — keep participant count fresh ──────────────────────────────
+  useEffect(() => {
+    if (!code || phase !== 'lobby') return
+    const interval = setInterval(() => {
+      api.getGame(code.toUpperCase()).then(s => {
+        setSession(prev => prev ? { ...prev, participants: s.participants, status: s.status } : prev)
+        sessionRef.current = s
+        if (s.status === 'ACTIVE') {
+          initMyPlayer(gsRef.current.myId ?? -1)
+        }
+      }).catch(() => {})
+    }, 3000)
+    return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, phase])
 
   // ── WS setup ─────────────────────────────────────────────────────────────
   useEffect(() => {
