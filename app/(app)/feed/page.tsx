@@ -453,13 +453,13 @@ function OwnTagPicker({ profile, onUpdateTag }: {
                 key={savingKey}
                 disabled={!!saving}
                 onClick={() => void handleSelect(t.tag, t.tagColor)}
-                className={isDev && isActive ? 'tag-rainbow' : isMythic && isActive ? 'tag-mythic' : isGod && isActive ? 'tag-god' : t.tagColor === 'curse' ? 'tag-curse' : ''}
+                className={tagCssClass(t.tag, t.tagColor)}
                 style={{
-                  border: `2px solid ${isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.6)' : t.tagColor === 'curse' ? '#ff0000' : t.tagColor) : 'transparent'}`,
-                  background: isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : t.tagColor === 'curse' ? 'rgba(255,0,0,0.08)' : `${t.tagColor}22`) : 'var(--surface-2)',
+                  border: `2px solid ${isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.6)' : t.tagColor === 'curse' ? '#ff0000' : isAnimatedTag(t.tag) ? 'rgba(255,255,255,0.4)' : t.tagColor) : 'transparent'}`,
+                  background: isActive && !isAnimatedTag(t.tag) ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : t.tagColor === 'curse' ? 'rgba(255,0,0,0.08)' : `${t.tagColor}22`) : undefined,
                   borderRadius: 6, padding: '4px 10px',
                   fontSize: 12, fontWeight: 700,
-                  color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor === 'curse' ? undefined : t.tagColor,
+                  color: isAnimatedTag(t.tag) ? undefined : t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor === 'curse' ? undefined : t.tagColor,
                   cursor: saving ? 'default' : 'pointer',
                   opacity: saving === savingKey ? 0.5 : 1,
                   transition: 'all 0.15s',
