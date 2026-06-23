@@ -1354,6 +1354,7 @@ export default function MarketplacePage() {
   const [freeSpinCooldownUntil, setFreeSpinCooldownUntil] = useState<Date | null>(null)
   const [freeSpinBusy, setFreeSpinBusy] = useState(false)
   const [freeSpinResult, setFreeSpinResult] = useState<{ reward: number; rarity: string } | null>(null)
+  const [freeSpinAdCountdown, setFreeSpinAdCountdown] = useState<number | null>(null) // null = not watching, 0 = ready to spin
 
   // Item prices for hover tooltips
   const [prices, setPrices] = useState<Record<string, number>>({})
@@ -1513,13 +1514,23 @@ export default function MarketplacePage() {
     } catch { /* ignore */ }
   }
 
-  function handleFreeSpin() {
-    if (freeSpinBusy) return
+  function handleWatchAd() {
     if (freeSpinCooldownUntil && new Date() < freeSpinCooldownUntil) return
-    setFreeSpinBusy(true)
+    if (freeSpinAdCountdown !== null) return
     setFreeSpinResult(null)
-    // Adsterra Social Bar fires automatically — we just call the endpoint directly
-    // (Social Bar is a persistent widget; reward is granted on button press)
+    setFreeSpinAdCountdown(15)
+    const interval = setInterval(() => {
+      setFreeSpinAdCountdown(prev => {
+        if (prev === null || prev <= 1) { clearInterval(interval); return 0 }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  function handleFreeSpin() {
+    if (freeSpinBusy || freeSpinAdCountdown !== 0) return
+    setFreeSpinBusy(true)
+    setFreeSpinAdCountdown(null)
     api.marketplaceFreeSpin()
       .then(r => {
         setInv(prev => prev ? { ...prev, coins: r.coins } : prev)
@@ -2170,31 +2181,57 @@ export default function MarketplacePage() {
       {/* Free Spin */}
       {(() => {
         const onCooldown = !!freeSpinCooldownUntil && new Date() < freeSpinCooldownUntil
+        const watching = freeSpinAdCountdown !== null && freeSpinAdCountdown > 0
+        const adDone = freeSpinAdCountdown === 0
         const RARITY_COLORS: Record<string, string> = { Common: '#6B7280', Uncommon: '#3B82F6', Rare: '#8B5CF6', Epic: '#F97316', Legendary: '#FFFFFF', Mythic: '#EAB308' }
         const rc = freeSpinResult ? (RARITY_COLORS[freeSpinResult.rarity] ?? '#EAB308') : '#EAB308'
         return (
-          <div className="ns-card" style={{ padding: 18, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, border: '1px solid rgba(234,179,8,0.2)' }}>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: '#EAB308', marginBottom: 2 }}>Free Spin</p>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 0 }}>Watch an ad • Win coins • Every 6 hours</p>
-              {freeSpinResult && (
-                <p style={{ fontSize: 13, fontWeight: 700, color: rc, marginTop: 6 }}>
-                  +{freeSpinResult.reward.toLocaleString()} coins — <span style={{ color: rc }}>{freeSpinResult.rarity}</span>!
-                </p>
+          <div className="ns-card" style={{ padding: 18, marginBottom: 20, border: '1px solid rgba(234,179,8,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: '#EAB308', marginBottom: 2 }}>Free Spin</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 0 }}>Watch an ad • Win coins • Every 6 hours</p>
+                {freeSpinResult && (
+                  <p style={{ fontSize: 13, fontWeight: 700, color: rc, marginTop: 6 }}>
+                    +{freeSpinResult.reward.toLocaleString()} coins — <span style={{ color: rc }}>{freeSpinResult.rarity}</span>!
+                  </p>
+                )}
+                {onCooldown && !freeSpinResult && (
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Next spin at {freeSpinCooldownUntil!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+              </div>
+              {!watching && !adDone && (
+                <button
+                  onClick={handleWatchAd}
+                  disabled={onCooldown}
+                  style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: onCooldown ? 'var(--surface-2)' : '#EAB308', color: onCooldown ? 'var(--text-muted)' : '#000', fontWeight: 700, fontSize: 14, cursor: onCooldown ? 'not-allowed' : 'pointer', opacity: onCooldown ? 0.6 : 1, flexShrink: 0 }}
+                >
+                  {onCooldown ? 'On Cooldown' : '▶ Watch Ad'}
+                </button>
               )}
-              {onCooldown && !freeSpinResult && (
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                  Next spin available at {freeSpinCooldownUntil!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
+              {adDone && (
+                <button
+                  onClick={handleFreeSpin}
+                  disabled={freeSpinBusy}
+                  style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: '#EAB308', color: '#000', fontWeight: 700, fontSize: 14, cursor: freeSpinBusy ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                >
+                  {freeSpinBusy ? 'Spinning…' : '🎰 Spin Now!'}
+                </button>
               )}
             </div>
-            <button
-              onClick={handleFreeSpin}
-              disabled={onCooldown || freeSpinBusy}
-              style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: onCooldown ? 'var(--surface-2)' : '#EAB308', color: onCooldown ? 'var(--text-muted)' : '#000', fontWeight: 700, fontSize: 14, cursor: onCooldown || freeSpinBusy ? 'not-allowed' : 'pointer', opacity: onCooldown ? 0.6 : 1, flexShrink: 0 }}
-            >
-              {freeSpinBusy ? 'Spinning…' : onCooldown ? 'On Cooldown' : '🎰 Free Spin'}
-            </button>
+            {watching && (
+              <div style={{ marginTop: 14, background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Watching ad… your spin unlocks in</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: '#EAB308' }}>{freeSpinAdCountdown}s</span>
+                </div>
+                <div style={{ height: 4, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', background: '#EAB308', borderRadius: 99, width: `${((15 - (freeSpinAdCountdown ?? 0)) / 15) * 100}%`, transition: 'width 1s linear' }} />
+                </div>
+              </div>
+            )}
           </div>
         )
       })()}
