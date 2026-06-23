@@ -458,15 +458,24 @@ export default function BattlePage() {
     }
     const kd = (e: KeyboardEvent) => onKey(e, true)
     const ku = (e: KeyboardEvent) => onKey(e, false)
+    // Track mouse at window level so aim works even when cursor leaves canvas
+    const onMouseMove = (e: MouseEvent) => {
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect) return
+      mousePosRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }
     window.addEventListener('keydown', kd)
     window.addEventListener('keyup', ku)
-    return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku) }
+    window.addEventListener('mousemove', onMouseMove)
+    return () => {
+      window.removeEventListener('keydown', kd)
+      window.removeEventListener('keyup', ku)
+      window.removeEventListener('mousemove', onMouseMove)
+    }
   }, [])
 
-  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current?.getBoundingClientRect()
-    if (!rect) return
-    mousePosRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+  const handleCanvasMouseMove = useCallback((_e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Tracking is handled at window level; this prop kept for cursor style only
   }, [])
 
   const handleCanvasClick = useCallback(() => {
