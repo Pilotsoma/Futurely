@@ -1535,8 +1535,8 @@ export default function StudyFeedPage() {
 
       {tab === 'social' || tab === 'following' ? (
         <>
-          {/* Network switcher — only on Social tab, only if HAC linked */}
-          {tab === 'social' && isdCode && (
+          {/* Network switcher — visible to everyone on Social tab */}
+          {tab === 'social' && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               {(['global', 'isd'] as const).map(net => (
                 <button
@@ -1558,7 +1558,7 @@ export default function StudyFeedPage() {
                     transition: 'all 0.15s',
                   }}
                 >
-                  {net === 'global' ? '🌐 Global' : `🏫 ${isdDisplayName ?? 'My ISD'}`}
+                  {net === 'global' ? '🌐 Global' : '🏫 ISD'}
                 </button>
               ))}
             </div>
@@ -1580,7 +1580,7 @@ export default function StudyFeedPage() {
               {!showGiveawayForm ? (
                 <>
                   <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, height: 'auto', minHeight: 80, fontSize: 14, lineHeight: 1.6, padding: 14 }}
-                    placeholder={network === 'isd' ? `Post to ${isdDisplayName ?? 'your ISD'}…` : 'What are you studying today?'}
+                    placeholder={network === 'isd' ? 'Post to your ISD…' : 'What are you studying today?'}
                     value={newPostBody}
                     onChange={e => { setNewPostBody(e.target.value); if (postError) setPostError(null) }}
                     rows={3}
@@ -1735,6 +1735,13 @@ export default function StudyFeedPage() {
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Something went wrong on the server. Try refreshing.</p>
                 {feedError && typeof feedError === 'string' && <p style={{ fontSize: 11, color: '#EF4444', marginBottom: 16, fontFamily: 'monospace', background: 'var(--surface-2)', padding: '6px 10px', borderRadius: 6, wordBreak: 'break-all' }}>{feedError}</p>}
                 <button className="ns-btn-ghost" style={{ fontSize: 13 }} onClick={() => { setLoading(true); void loadPosts(1) }}>Retry</button>
+              </div>
+            ) : network === 'isd' && !isdCode ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ fontSize: 40, marginBottom: 16 }}>🏫</div>
+                <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Link your school to see ISD posts</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>Connect your school portal in Settings to view and post in your district feed.</p>
+                <a href="/settings" style={{ display: 'inline-block', padding: '9px 22px', borderRadius: 20, background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>Go to Settings</a>
               </div>
             ) : posts.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px' }}>
