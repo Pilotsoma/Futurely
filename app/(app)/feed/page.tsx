@@ -631,9 +631,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                       {post.unboxItemName}
                     </span>
               ) : (
-                post.user.tag
-                  ? <span className={tagCssClass(post.user.tag, post.user.tagColor)} style={isAnimatedTag(post.user.tag) ? { ...P.tag } : post.user.tagColor === 'curse' ? { ...P.tag, border: '1px solid #ff0000' } : { ...P.tag, color: post.user.tagColor || '#6B7280', border: `1px solid ${post.user.tagColor || 'rgba(107,114,128,0.4)'}`, background: post.user.tagColor ? `${post.user.tagColor}22` : 'rgba(107,114,128,0.12)' }}>{post.user.tag}</span>
-                  : <span style={{ ...P.tag, color: '#6B7280', border: '1px solid rgba(107,114,128,0.4)', background: 'rgba(107,114,128,0.12)' }}>Student</span>
+                <span style={{ ...P.tag, color: '#6B7280', border: '1px solid rgba(107,114,128,0.4)', background: 'rgba(107,114,128,0.12)' }}>TAG</span>
               )}
             </div>
           </div>

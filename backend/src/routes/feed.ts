@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { broadcast, sendToUser } from '../lib/websocket';
 import { filterContent, recordViolation } from '../lib/contentFilter';
-import { SEED_PRICES, TAG_BOX_ITEMS } from './marketplace';
+import { SEED_PRICES, TAG_BOX_ITEMS, SPECIAL_TAGS, DEV_CURSE_ITEMS } from './marketplace';
 import { AuthRequest } from '../middleware/auth';
 import { requireAdmin, requireMod, hasDevPowers } from '../middleware/requireAdmin';
 
@@ -1128,20 +1128,26 @@ router.get('/dev-stats', requireAdmin, async (req: AuthRequest, res: Response) =
       dynamicPrices[`${row.itemType}:${row.itemId}`] = row.price;
     }
 
+    function parseArr<T>(raw: unknown): T[] {
+      if (Array.isArray(raw)) return raw as T[]
+      try { return JSON.parse(String(raw ?? '[]')) } catch { return [] }
+    }
+
     let totalInventoryValue = 0;
     for (const user of allUsers) {
-      try {
-        const tags = JSON.parse((user.allTags as string) || '[]') as Array<{ tag: string }>;
-        const colors = JSON.parse((user.ownedNameColors as string) || '[]') as Array<{ id: string }>;
-        const pfps = JSON.parse((user.ownedPfpEffects as string) || '[]') as Array<{ id: string }>;
-        for (const t of tags) {
-          const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag);
-          const itemId = def?.id ?? t.tag.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-          totalInventoryValue += dynamicPrices[`tag:${itemId}`] ?? SEED_PRICES[`tag:${itemId}`] ?? 0;
-        }
-        for (const c of colors) totalInventoryValue += dynamicPrices[`name-color:${c.id}`] ?? SEED_PRICES[`name-color:${c.id}`] ?? 0;
-        for (const p of pfps) totalInventoryValue += dynamicPrices[`pfp:${p.id}`] ?? SEED_PRICES[`pfp:${p.id}`] ?? 0;
-      } catch { /* malformed JSON — skip */ }
+      const tags = parseArr<{ tag: string; tagColor?: string }>(user.allTags);
+      const colors = parseArr<{ id: string }>(user.ownedNameColors);
+      const pfps = parseArr<{ id: string }>(user.ownedPfpEffects);
+      for (const t of tags) {
+        const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
+               ?? SPECIAL_TAGS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
+               ?? DEV_CURSE_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor && d.itemType === 'tag')
+               ?? TAG_BOX_ITEMS.find(d => d.tag === t.tag)
+        const itemId = def?.id ?? t.tag
+        totalInventoryValue += dynamicPrices[`tag:${itemId}`] ?? SEED_PRICES[`tag:${itemId}`] ?? 0;
+      }
+      for (const c of colors) totalInventoryValue += dynamicPrices[`name-color:${c.id}`] ?? SEED_PRICES[`name-color:${c.id}`] ?? 0;
+      for (const p of pfps) totalInventoryValue += dynamicPrices[`pfp:${p.id}`] ?? SEED_PRICES[`pfp:${p.id}`] ?? 0;
     }
 
     res.json({ data: { totalCoins, totalInventoryValue, userCount: allUsers.length } });

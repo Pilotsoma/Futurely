@@ -40,7 +40,7 @@ export const TAG_BOX_ITEMS: TagItem[] = [
 ]
 
 // Special role/staff tags — not in loot boxes, only grantable by DEV/ADMIN
-const SPECIAL_TAGS: { id: string; tag: string; tagColor: string; rarity: string }[] = [
+export const SPECIAL_TAGS: { id: string; tag: string; tagColor: string; rarity: string }[] = [
   { id: 'dev',            tag: 'DEV',      tagColor: '#ff6b6b',       rarity: 'Staff'  },
   { id: 'admin',          tag: 'Admin',    tagColor: '#EF4444',       rarity: 'Staff'  },
   { id: 'mod',            tag: 'MOD',      tagColor: '#3B82F6',       rarity: 'Staff'  },
@@ -148,7 +148,7 @@ const COSMETICS_BOX_ITEMS: CosmeticsItem[] = [
   { id: 'rainbow',       name: 'Rainbow Animated', value: 'rainbow',  rarity: 'Mythic',    itemType: 'pfp',        weight: 0.0125 },
 ]
 // Common: 33332+33332+33333 = 99997 (99.997%) | Curse: 1×3 = 3 (0.001% each) | Total: 100000
-const DEV_CURSE_ITEMS: DevCurseItem[] = [
+export const DEV_CURSE_ITEMS: DevCurseItem[] = [
   { id: 'learner',    name: 'Learner',    tag: 'Learner',    tagColor: '#94A3B8', rarity: 'Common', itemType: 'tag', weight: 33332 },
   { id: 'c-student',  name: 'C Student',  tag: 'C Student',  tagColor: '#78716C', rarity: 'Common', itemType: 'tag', weight: 33332 },
   { id: 'bottom-100', name: 'Bottom 100', tag: 'Bottom 100', tagColor: '#6B7280', rarity: 'Common', itemType: 'tag', weight: 33333 },
