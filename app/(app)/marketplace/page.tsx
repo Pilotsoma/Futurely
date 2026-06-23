@@ -1461,6 +1461,7 @@ export default function MarketplacePage() {
   const [freeSpinCooldownUntil, setFreeSpinCooldownUntil] = useState<Date | null>(null)
   const [freeSpinResult, setFreeSpinResult] = useState<{ reward: number; rarity: string } | null>(null)
   const [freeSpinOpen, setFreeSpinOpen] = useState(false)
+  const [freeSpinCountdown, setFreeSpinCountdown] = useState('')
 
   // Item prices for hover tooltips
   const [prices, setPrices] = useState<Record<string, number>>({})
@@ -1483,6 +1484,7 @@ export default function MarketplacePage() {
       .then(d => {
         setInv(d)
         if (d.marketplaceAccess) setStreak(prev => Math.max(prev ?? 0, 3))
+        if (d.nextFreeSpin) setFreeSpinCooldownUntil(new Date(d.nextFreeSpin))
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -1517,6 +1519,27 @@ export default function MarketplacePage() {
       }
     } catch { /* ignore */ }
   }, [])
+
+  useEffect(() => {
+    function fmt(ms: number) {
+      const s = Math.floor(ms / 1000)
+      const h = Math.floor(s / 3600)
+      const m = Math.floor((s % 3600) / 60)
+      const sec = s % 60
+      if (h > 0) return `${h}h ${m}m ${sec}s`
+      if (m > 0) return `${m}m ${sec}s`
+      return `${sec}s`
+    }
+    const tick = () => {
+      if (!freeSpinCooldownUntil) { setFreeSpinCountdown(''); return }
+      const ms = freeSpinCooldownUntil.getTime() - Date.now()
+      if (ms <= 0) { setFreeSpinCooldownUntil(null); setFreeSpinCountdown(''); return }
+      setFreeSpinCountdown(fmt(ms))
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [freeSpinCooldownUntil])
 
   const fetchListings = useCallback(() => {
     setListingsLoading(true)
@@ -2269,9 +2292,9 @@ export default function MarketplacePage() {
                   +{freeSpinResult.reward.toLocaleString()} coins — {freeSpinResult.rarity}!
                 </p>
               )}
-              {onCooldown && (
+              {onCooldown && freeSpinCountdown && (
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                  Next spin at {freeSpinCooldownUntil!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  Next spin in <strong style={{ color: 'var(--text)' }}>{freeSpinCountdown}</strong>
                 </p>
               )}
             </div>

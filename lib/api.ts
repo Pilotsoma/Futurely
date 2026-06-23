@@ -1391,6 +1391,7 @@ export interface InventoryData {
   ownedNameColors: MarketplaceItem[]
   ownedPfpEffects: MarketplaceItem[]
   marketplaceAccess?: boolean
+  nextFreeSpin?: string | null
   isdCode?: string | null
   isdDisplayName?: string | null
 }

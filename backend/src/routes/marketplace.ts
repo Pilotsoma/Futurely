@@ -549,12 +549,13 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { name: true, coins: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, badge: true, ownedNameColors: true, ownedPfpEffects: true, lastCoinClaim: true, allTags: true, marketplaceAccess: true, schoolConnection: { select: { districtUrl: true } } },
+      select: { name: true, coins: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, badge: true, ownedNameColors: true, ownedPfpEffects: true, lastCoinClaim: true, lastFreeSpin: true, allTags: true, marketplaceAccess: true, schoolConnection: { select: { districtUrl: true } } },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
     const todayUTC = new Date().toISOString().slice(0, 10)
     const canClaimToday = !user.lastCoinClaim || user.lastCoinClaim.toISOString().slice(0, 10) !== todayUTC
+    const nextFreeSpin = user.lastFreeSpin ? new Date(user.lastFreeSpin.getTime() + FREE_SPIN_COOLDOWN_MS) : null
 
     const rawTags = parseTagArr(user.allTags)
     const ownedTags = rawTags.map(t => {
@@ -581,6 +582,7 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
         ownedNameColors: parseJsonArr(user.ownedNameColors),
         ownedPfpEffects: parseJsonArr(user.ownedPfpEffects),
         marketplaceAccess: user.marketplaceAccess,
+        nextFreeSpin: nextFreeSpin && nextFreeSpin > new Date() ? nextFreeSpin.toISOString() : null,
         isdCode,
         isdDisplayName: isdCode ? isdDisplayName(isdCode) : null,
       },
