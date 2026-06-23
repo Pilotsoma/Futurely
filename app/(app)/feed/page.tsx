@@ -571,7 +571,10 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
               >{isFollowing ? 'Following' : 'Follow'}</button>
             )}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{timeAgo(post.createdAt)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{timeAgo(post.createdAt)}</span>
+            {post.network === 'isd' && <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 4, padding: '1px 5px' }}>🏫 ISD</span>}
+          </div>
         </div>
         {canDelete && (
           <button style={P.deleteBtn} onClick={() => onDelete(post.id)}>
@@ -1225,6 +1228,9 @@ export default function StudyFeedPage() {
   const [gwItemId, setGwItemId] = useState('')
   const [creatingGw, setCreatingGw] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
+  const [network, setNetwork] = useState<'global' | 'isd'>('global')
+  const [isdCode, setIsdCode] = useState<string | null>(null)
+  const [isdDisplayName, setIsdDisplayName] = useState<string | null>(null)
 
   const [viewPostId, setViewPostId] = useState<number | null>(null)
 
@@ -1264,10 +1270,10 @@ export default function StudyFeedPage() {
     }
   }, [searchParams])
 
-  const loadPosts = useCallback(async (p: number) => {
+  const loadPosts = useCallback(async (p: number, net?: 'global' | 'isd') => {
     if (p > 1) setLoadingMore(true)
     try {
-      const data = await api.feedPosts(p, 20)
+      const data = await api.feedPosts(p, 20, net ?? network)
       setFeedError(false)
       if (p === 1) setPosts(data.posts)
       else setPosts((prev) => [...prev, ...data.posts])
@@ -1306,6 +1312,7 @@ export default function StudyFeedPage() {
             const activeMute = !!p.chatMutedUntil && new Date(p.chatMutedUntil) > new Date()
             setIsMuted(activeMute)
             setMutedUntil(p.chatMutedUntil)
+            if (p.isdCode) { setIsdCode(p.isdCode); setIsdDisplayName(p.isdDisplayName ?? null) }
             setStatusLoaded(true)
           }).catch(() => { setStatusLoaded(true) })
         } else {
@@ -1333,7 +1340,23 @@ export default function StudyFeedPage() {
         try {
           const msg = JSON.parse(e.data as string) as { event: string; data: FeedPost }
           if (msg.event === 'NEW_POST') {
-            setPosts(prev => [{ ...msg.data, likedByMe: false, enteredByMe: false }, ...prev])
+            // Only add the post if it belongs to the currently selected network
+            setNetwork(currentNetwork => {
+              const postNetwork = msg.data.network ?? 'global'
+              if (postNetwork === currentNetwork) {
+                if (currentNetwork === 'isd') {
+                  setIsdCode(currentIsd => {
+                    if (msg.data.isdCode === currentIsd) {
+                      setPosts(prev => [{ ...msg.data, likedByMe: false, enteredByMe: false }, ...prev])
+                    }
+                    return currentIsd
+                  })
+                } else {
+                  setPosts(prev => [{ ...msg.data, likedByMe: false, enteredByMe: false }, ...prev])
+                }
+              }
+              return currentNetwork
+            })
           }
         } catch { /* ignore */ }
       }
@@ -1366,7 +1389,7 @@ export default function StudyFeedPage() {
     setPostError(null)
     setPosting(true)
     try {
-      const post = await api.feedCreatePost(newPostBody.trim())
+      const post = await api.feedCreatePost(newPostBody.trim(), network)
       setPosts(prev => [{ ...post, likedByMe: false }, ...prev])
       setNewPostBody('')
     } catch (err) {
@@ -1518,6 +1541,35 @@ export default function StudyFeedPage() {
 
       {tab === 'social' || tab === 'following' ? (
         <>
+          {/* Network switcher — only on Social tab, only if HAC linked */}
+          {tab === 'social' && isdCode && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              {(['global', 'isd'] as const).map(net => (
+                <button
+                  key={net}
+                  onClick={() => {
+                    if (net !== network) {
+                      setNetwork(net)
+                      setPage(1)
+                      setLoading(true)
+                      setPosts([])
+                      void loadPosts(1, net)
+                    }
+                  }}
+                  style={{
+                    padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    border: `1.5px solid ${net === network ? 'var(--primary)' : 'var(--border)'}`,
+                    background: net === network ? 'var(--primary)' : 'var(--surface-2)',
+                    color: net === network ? '#fff' : 'var(--text-secondary)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {net === 'global' ? '🌐 Global' : `🏫 ${isdDisplayName ?? 'My ISD'}`}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* New post composer / muted notice */}
           {isMuted ? (
             <div className="ns-card" style={{ padding: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1534,7 +1586,7 @@ export default function StudyFeedPage() {
               {!showGiveawayForm ? (
                 <>
                   <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, height: 'auto', minHeight: 80, fontSize: 14, lineHeight: 1.6, padding: 14 }}
-                    placeholder="What are you studying today?"
+                    placeholder={network === 'isd' ? `Post to ${isdDisplayName ?? 'your ISD'}…` : 'What are you studying today?'}
                     value={newPostBody}
                     onChange={e => { setNewPostBody(e.target.value); if (postError) setPostError(null) }}
                     rows={3}

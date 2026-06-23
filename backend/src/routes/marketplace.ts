@@ -486,12 +486,20 @@ router.post('/daily-coins', requireAuth, async (req: AuthRequest, res: Response)
 
 // ── Inventory ─────────────────────────────────────────────────────────────────
 
+function isdDisplayName(districtUrl: string): string {
+  const sub = districtUrl.split('.')[0] ?? districtUrl
+  return sub
+    .replace(/isd$/i, ' ISD')
+    .replace(/^(.)/, c => c.toUpperCase())
+    .trim()
+}
+
 router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { name: true, coins: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, badge: true, ownedNameColors: true, ownedPfpEffects: true, lastCoinClaim: true, allTags: true, marketplaceAccess: true },
+      select: { name: true, coins: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, badge: true, ownedNameColors: true, ownedPfpEffects: true, lastCoinClaim: true, allTags: true, marketplaceAccess: true, schoolConnection: { select: { districtUrl: true } } },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
@@ -508,6 +516,7 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
       return { id: def?.id ?? t.tag, tag: t.tag, tagColor: def?.tagColor ?? t.tagColor, rarity: def?.rarity ?? streakMeta?.rarity ?? 'Common' }
     })
 
+    const isdCode = user.schoolConnection?.districtUrl ?? null
     res.json({
       data: {
         name: user.name,
@@ -522,6 +531,8 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
         ownedNameColors: parseJsonArr(user.ownedNameColors),
         ownedPfpEffects: parseJsonArr(user.ownedPfpEffects),
         marketplaceAccess: user.marketplaceAccess,
+        isdCode,
+        isdDisplayName: isdCode ? isdDisplayName(isdCode) : null,
       },
     })
   } catch {

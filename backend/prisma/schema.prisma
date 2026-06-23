@@ -215,6 +215,8 @@ model Post {
   unboxItemRarity   String?
   unboxItemEstValue Int?
   unboxItemTagColor String?
+  network          String          @default("global")
+  isdCode          String?
   pinnedUntil      DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt

@@ -162,6 +162,7 @@ router.get('/posts', async (req: Request, res: Response) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const network = (req.query.network as string) || 'global';
     const userId = (req as any).userId as number;
     const now = new Date();
     const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -169,9 +170,19 @@ router.get('/posts', async (req: Request, res: Response) => {
     // Auto-draw any giveaways that have expired (isolated — must not crash the feed)
     await autoDrawExpiredGiveaways().catch(err => console.error('[feed] autoDrawExpiredGiveaways failed:', err));
 
+    // For ISD network, resolve requesting user's district
+    let isdCode: string | null = null;
+    if (network === 'isd') {
+      const sc = await prisma.schoolConnection.findUnique({ where: { userId }, select: { districtUrl: true } });
+      if (!sc) return res.status(403).json({ error: 'You must link your HAC to access the ISD feed.' });
+      isdCode = sc.districtUrl;
+    }
+
     // Social feed: last 24h posts + currently-pinned posts (all types expire after 24h)
     const allPosts = await prisma.post.findMany({
       where: {
+        network,
+        ...(network === 'isd' && isdCode ? { isdCode } : {}),
         OR: [
           { createdAt: { gte: cutoff } },
           { pinnedUntil: { gt: now } },
@@ -242,7 +253,8 @@ router.get('/posts', async (req: Request, res: Response) => {
 router.post('/posts', postCreateLimiter, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as number;
-    const { body } = req.body as { body?: string };
+    const { body, network: rawNetwork } = req.body as { body?: string; network?: string };
+    const network = rawNetwork === 'isd' ? 'isd' : 'global';
     if (!body?.trim()) return res.status(400).json({ error: 'Body is required' });
 
     const poster = await prisma.user.findUnique({ where: { id: userId } });
@@ -261,8 +273,16 @@ router.post('/posts', postCreateLimiter, async (req: Request, res: Response) => 
       return res.status(400).json({ error: contentCheck.reason });
     }
 
+    // Resolve ISD code if posting to ISD network
+    let isdCode: string | undefined;
+    if (network === 'isd') {
+      const sc = await prisma.schoolConnection.findUnique({ where: { userId }, select: { districtUrl: true } });
+      if (!sc) return res.status(403).json({ error: 'You must link your HAC to post in the ISD feed.' });
+      isdCode = sc.districtUrl;
+    }
+
     const post = await prisma.post.create({
-      data: { body: body.trim(), userId },
+      data: { body: body.trim(), userId, network, ...(isdCode ? { isdCode } : {}) },
       include: {
         user: { select: USER_SELECT },
         likes: { select: { userId: true } },
@@ -826,10 +846,14 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
   try {
     const targetId = parseInt(req.params.id);
     const userId = (req as any).userId as number;
+    const isSelf = targetId === userId;
     const [profile, requesterIsDev] = await Promise.all([
       prisma.user.findUnique({
         where: { id: targetId },
-        include: { _count: { select: { followers: true, following: true, posts: true } } },
+        include: {
+          _count: { select: { followers: true, following: true, posts: true } },
+          ...(isSelf ? { schoolConnection: { select: { districtUrl: true } } } : {}),
+        },
       }),
       hasDevPowers(userId),
     ]);
@@ -846,7 +870,8 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
     if (profile.chatBanned) { effectiveTag = 'BANNED'; effectiveTagColor = '#EF4444'; }
     else if (profile.chatMutedUntil && profile.chatMutedUntil > new Date()) { effectiveTag = 'MUTED'; effectiveTagColor = '#f97316'; }
 
-    const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, allTags: rawAllTags, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; allTags: string };
+    const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, allTags: rawAllTags, schoolConnection: sc, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; allTags: string; schoolConnection?: { districtUrl: string } | null };
+    const isdCode = sc?.districtUrl ?? null;
     res.json({
       data: {
         ...rest,
@@ -855,6 +880,7 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
         allTags: parseAllTags(rawAllTags || '[]'),
         totalLikes,
         isFollowing: !!isFollowingRow,
+        ...(isSelf ? { isdCode, isdDisplayName: isdCode ? isdCode.split('.')[0].replace(/isd$/i, ' ISD').replace(/^(.)/, (c: string) => c.toUpperCase()).trim() : null } : {}),
         ...(requesterIsDev ? { coins: (profile as any).coins ?? 0 } : {}),
       },
     });

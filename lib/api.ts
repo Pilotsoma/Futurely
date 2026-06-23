@@ -329,14 +329,14 @@ export const api = {
 
   // ── Study Feed ──────────────────────────────────────────────────────────────
 
-  feedPosts: (page = 1, limit = 20) =>
+  feedPosts: (page = 1, limit = 20, network: 'global' | 'isd' = 'global') =>
     request<{
       posts: FeedPost[]
       total: number
       page: number
       pageSize: number
       hasMore: boolean
-    }>(`/api/feed/posts?page=${page}&limit=${limit}`),
+    }>(`/api/feed/posts?page=${page}&limit=${limit}&network=${network}`),
 
   feedFollowingPosts: (page = 1, limit = 20) =>
     request<{
@@ -347,10 +347,10 @@ export const api = {
       hasMore: boolean
     }>(`/api/feed/posts/following?page=${page}&limit=${limit}`),
 
-  feedCreatePost: (body: string) =>
+  feedCreatePost: (body: string, network: 'global' | 'isd' = 'global') =>
     request<FeedPost>('/api/feed/posts', {
       method: 'POST',
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, network }),
     }),
 
   feedDeletePost: (postId: number) =>
@@ -1269,6 +1269,8 @@ export interface FeedPost {
   unboxItemRarity: string | null
   unboxItemEstValue: number | null
   unboxItemTagColor: string | null
+  network: string
+  isdCode: string | null
   _count: { likes: number; comments: number; giveawayEntries: number }
 }
 
@@ -1302,6 +1304,8 @@ export interface FeedUserProfile {
   allTags: Array<{ tag: string; tagColor: string }>
   _count: { followers: number; following: number; posts: number }
   coins?: number
+  isdCode?: string | null
+  isdDisplayName?: string | null
 }
 
 export interface MarketplaceItem {
@@ -1332,6 +1336,8 @@ export interface InventoryData {
   ownedNameColors: MarketplaceItem[]
   ownedPfpEffects: MarketplaceItem[]
   marketplaceAccess?: boolean
+  isdCode?: string | null
+  isdDisplayName?: string | null
 }
 
 export interface BoxResult {
