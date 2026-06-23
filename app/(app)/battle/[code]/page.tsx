@@ -14,7 +14,9 @@ const PROJ_SPEED = 600
 const PROJ_MAX_DIST = 750
 const POSITION_HZ = 20
 const AMMO_PER_CORRECT = 5
-const ZOOM = 0.62  // fraction of world units shown — lower = more zoomed out
+const ZOOM = 0.38  // fraction of world units shown — lower = more zoomed out
+const MINIMAP_SIZE = 130
+const MINIMAP_SCALE = MINIMAP_SIZE / WORLD_W
 
 const PLAYER_COLORS = [
   '#e74c3c', '#3498db', '#f39c12', '#2ecc71',
@@ -288,6 +290,7 @@ export default function BattlePage() {
   const router = useRouter()
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const canvasRectRef = useRef<DOMRect | null>(null)
   const gsRef = useRef<GameStateRef>({ players: new Map(), projectiles: [], myId: null, world: [] })
   const keysRef = useRef<Set<string>>(new Set())
   const mousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -453,25 +456,32 @@ export default function BattlePage() {
 
   // ── Input setup ───────────────────────────────────────────────────────────
   useEffect(() => {
+    // Cache the canvas rect — recomputing getBoundingClientRect on every
+    // mousemove event causes layout reflow jitter; invalidate on resize only
+    const updateRect = () => {
+      canvasRectRef.current = canvasRef.current?.getBoundingClientRect() ?? null
+    }
+    updateRect()
     const onKey = (e: KeyboardEvent, down: boolean) => {
       keysRef.current[down ? 'add' : 'delete'](e.key.toLowerCase())
       if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault()
     }
     const kd = (e: KeyboardEvent) => onKey(e, true)
     const ku = (e: KeyboardEvent) => onKey(e, false)
-    // Track mouse at window level so aim works even when cursor leaves canvas
     const onMouseMove = (e: MouseEvent) => {
-      const rect = canvasRef.current?.getBoundingClientRect()
+      const rect = canvasRectRef.current
       if (!rect) return
       mousePosRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
     }
     window.addEventListener('keydown', kd)
     window.addEventListener('keyup', ku)
     window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('resize', updateRect)
     return () => {
       window.removeEventListener('keydown', kd)
       window.removeEventListener('keyup', ku)
       window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('resize', updateRect)
     }
   }, [])
 
@@ -634,7 +644,7 @@ export default function BattlePage() {
 
       ctx!.restore()
 
-      // ── HUD (drawn at 1:1 scale after restore) ───────────────────────────
+      // ── HUD + Minimap (1:1 scale after restore) ──────────────────────────
       const aliveCount = [...gs.players.values()].filter(p => p.alive).length
       ctx!.font = 'bold 12px system-ui,sans-serif'
       ctx!.textBaseline = 'middle'
@@ -651,13 +661,72 @@ export default function BattlePage() {
       ctx!.beginPath(); ctx!.roundRect(cw - 90, 10, 80, 24, 7); ctx!.fill()
       ctx!.fillStyle = '#22c55e'
       ctx!.fillText(`${aliveCount} alive`, cw - 50, 22)
+
+      // ── Minimap (bottom-right) ────────────────────────────────────────────
+      const mmX = cw - MINIMAP_SIZE - 10
+      const mmY = ch - MINIMAP_SIZE - 10
+
+      // Background
+      ctx!.fillStyle = 'rgba(10,14,10,0.78)'
+      ctx!.strokeStyle = 'rgba(255,255,255,0.18)'
+      ctx!.lineWidth = 1
+      ctx!.beginPath(); ctx!.roundRect(mmX, mmY, MINIMAP_SIZE, MINIMAP_SIZE, 6); ctx!.fill(); ctx!.stroke()
+
+      // World objects (tiny)
+      for (const o of gs.world) {
+        const ox = mmX + o.x * MINIMAP_SCALE
+        const oy = mmY + o.y * MINIMAP_SCALE
+        if (o.type === 'house') {
+          ctx!.fillStyle = '#7a4820'
+          ctx!.fillRect(ox, oy, Math.max(2, o.w! * MINIMAP_SCALE), Math.max(2, o.h! * MINIMAP_SCALE))
+        } else if (o.type === 'tree') {
+          ctx!.fillStyle = '#1a5c12'
+          ctx!.beginPath(); ctx!.arc(ox, oy, Math.max(1.5, o.r! * MINIMAP_SCALE), 0, Math.PI * 2); ctx!.fill()
+        } else if (o.type === 'rock') {
+          ctx!.fillStyle = '#555'
+          ctx!.beginPath(); ctx!.arc(ox, oy, Math.max(1, o.r! * MINIMAP_SCALE), 0, Math.PI * 2); ctx!.fill()
+        } else if (o.type === 'bush') {
+          ctx!.fillStyle = '#174d13'
+          ctx!.beginPath(); ctx!.arc(ox, oy, Math.max(1, o.r! * MINIMAP_SCALE * 0.6), 0, Math.PI * 2); ctx!.fill()
+        }
+      }
+
+      // Viewport rectangle
+      ctx!.strokeStyle = 'rgba(255,255,255,0.35)'
+      ctx!.lineWidth = 1
+      ctx!.strokeRect(
+        mmX + camX * MINIMAP_SCALE,
+        mmY + camY * MINIMAP_SCALE,
+        (cw / ZOOM) * MINIMAP_SCALE,
+        (ch / ZOOM) * MINIMAP_SCALE,
+      )
+
+      // Players
+      for (const [uid, p] of gs.players) {
+        if (!p.alive) continue
+        const px = mmX + p.x * MINIMAP_SCALE
+        const py = mmY + p.y * MINIMAP_SCALE
+        const isMe = uid === gs.myId
+        ctx!.fillStyle = p.color
+        ctx!.beginPath(); ctx!.arc(px, py, isMe ? 3.5 : 2.5, 0, Math.PI * 2); ctx!.fill()
+        if (isMe) {
+          ctx!.strokeStyle = '#fff'
+          ctx!.lineWidth = 1.5
+          ctx!.stroke()
+        }
+      }
+
+      // Minimap border (draw again on top)
+      ctx!.strokeStyle = 'rgba(255,255,255,0.22)'
+      ctx!.lineWidth = 1
+      ctx!.beginPath(); ctx!.roundRect(mmX, mmY, MINIMAP_SIZE, MINIMAP_SIZE, 6); ctx!.stroke()
     }
 
     rafRef.current = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafRef.current)
   }, [phase, session])
 
-  // Canvas resize observer
+  // Canvas resize observer — also invalidates cached rect
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -665,6 +734,7 @@ export default function BattlePage() {
       for (const entry of entries) {
         canvas.width = entry.contentRect.width
         canvas.height = entry.contentRect.height
+        canvasRectRef.current = canvas.getBoundingClientRect()
       }
     })
     obs.observe(canvas)
