@@ -17,6 +17,20 @@ const wss = new WebSocketServer({ server })
 wss.on('connection', (ws) => {
   clients.add(ws)
   let authedUserId: number | null = null
+  // Cache the battle code on this WS connection so BATTLE_* messages work
+  // even if playerSessions hasn't been populated yet (race with BATTLE_READY).
+  let connBattleCode: string | null = null
+
+  async function ensureRegistered(code: string) {
+    if (playerSessions.has(authedUserId!)) return
+    const session = await prisma.gameSession.findUnique({
+      where: { joinCode: code },
+      include: { participants: { select: { userId: true } } },
+    })
+    if (session) {
+      registerBattlePlayers([session.hostId, ...session.participants.map(p => p.userId)], code)
+    }
+  }
 
   ws.on('message', async (raw) => {
     try {
@@ -37,6 +51,7 @@ wss.on('connection', (ws) => {
 
       if (msg.type === 'BATTLE_READY') {
         const code = String(msg.code ?? '').toUpperCase()
+        connBattleCode = code
         const session = await prisma.gameSession.findUnique({
           where: { joinCode: code },
           include: { participants: { select: { userId: true } } },
@@ -48,9 +63,13 @@ wss.on('connection', (ws) => {
         return
       }
 
+      // For BATTLE_* messages, resolve code from playerSessions or the cached connBattleCode
+      const resolveCode = () => playerSessions.get(authedUserId!) ?? connBattleCode
+
       if (msg.type === 'BATTLE_POSITION') {
-        const code = playerSessions.get(authedUserId)
+        const code = resolveCode()
         if (!code) return
+        await ensureRegistered(code)
         sendToSessionExcept(code, authedUserId, 'BATTLE_POSITION', {
           userId: authedUserId,
           x: msg.x,
@@ -61,8 +80,9 @@ wss.on('connection', (ws) => {
       }
 
       if (msg.type === 'BATTLE_FIRE') {
-        const code = playerSessions.get(authedUserId)
+        const code = resolveCode()
         if (!code) return
+        await ensureRegistered(code)
         sendToSessionExcept(code, authedUserId, 'BATTLE_FIRE', {
           userId: authedUserId,
           x: msg.x,
@@ -74,11 +94,19 @@ wss.on('connection', (ws) => {
       }
 
       if (msg.type === 'BATTLE_HIT') {
-        const code = playerSessions.get(authedUserId)
+        const code = resolveCode()
         if (!code) return
+        await ensureRegistered(code)
         const targetId = Number(msg.targetUserId)
         const alive = sessionAlive.get(code)
-        if (!alive || !alive.has(targetId)) return
+        // If target isn't in alive set yet, add them and then process the hit
+        if (!alive) return
+        if (!alive.has(targetId)) {
+          // Target registered after game-start — add them to alive set
+          await ensureRegistered(code)
+          const refreshedAlive = sessionAlive.get(code)
+          if (!refreshedAlive?.has(targetId)) return
+        }
         alive.delete(targetId)
         sendToAllInSession(code, 'BATTLE_ELIMINATED', { userId: targetId, eliminatedBy: authedUserId })
         if (alive.size === 1) {

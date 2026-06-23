@@ -354,6 +354,9 @@ export default function BattlePage() {
         setSession(prev => prev ? { ...prev, participants: s.participants, status: s.status } : prev)
         sessionRef.current = s
         if (s.status === 'ACTIVE') {
+          // Re-send BATTLE_READY so backend has the fully-populated participant
+          // list at game-start time (not the partial list from lobby join time).
+          wsRef.current?.send(JSON.stringify({ type: 'BATTLE_READY', code: code!.toUpperCase() }))
           initMyPlayer(gsRef.current.myId ?? -1)
         }
       }).catch(() => {})
@@ -383,8 +386,12 @@ export default function BattlePage() {
           gsRef.current.myId = data.userId
           // Register in battle session
           ws.send(JSON.stringify({ type: 'BATTLE_READY', code: code.toUpperCase() }))
-          // Init my player at spawn position
-          initMyPlayer(data.userId)
+          // Only start the game if it's already ACTIVE (i.e. rejoining mid-game).
+          // If it's still PENDING, stay in lobby — the lobby poll will call
+          // initMyPlayer once the host clicks Start.
+          if (sessionRef.current?.status === 'ACTIVE') {
+            initMyPlayer(data.userId)
+          }
         }
 
         if (event === 'BATTLE_POSITION') {
@@ -523,7 +530,7 @@ export default function BattlePage() {
 
   // ── Game loop ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (phase !== 'playing' || !session) return
+    if ((phase !== 'playing' && phase !== 'eliminated') || !session) return
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
