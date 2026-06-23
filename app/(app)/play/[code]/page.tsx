@@ -108,6 +108,12 @@ export default function GameRoomPage() {
 
   const isHost = session?.hostId === myId
 
+  // Refs so interval callback always reads current values without needing deps
+  const phaseRef    = useRef<Phase>('lobby')
+  const qIndexRef   = useRef(0)
+  phaseRef.current  = phase
+  qIndexRef.current = questionIndex
+
   // ── Load initial session ─────────────────────────────────────────────────
   useEffect(() => {
     api.getGame(code)
@@ -124,21 +130,58 @@ export default function GameRoomPage() {
       .finally(() => setLoading(false))
   }, [code])
 
-  // ── Lobby polling — refresh participants every 3s as WS fallback ────────
+  // ── Universal polling fallback — covers all phases, 3 s cadence ──────────
+  // WS drives instant updates; this catches anything WS drops (auth race,
+  // reconnects, missed events). Stops only when the game is finished.
   useEffect(() => {
-    if (phase !== 'lobby') return
     const interval = setInterval(() => {
+      const curPhase  = phaseRef.current
+      const curQIndex = qIndexRef.current
+      if (curPhase === 'finished') return
+
       api.getGame(code).then(s => {
-        if (s.status !== 'WAITING') return
-        setSession(prev => {
-          if (!prev) return s
-          // Only update participants to avoid stomping other state
-          return { ...prev, participants: s.participants }
-        })
+        // Always keep participant list fresh
+        setSession(prev => prev ? { ...prev, participants: s.participants } : prev)
+
+        // Lobby → detect game start
+        if (curPhase === 'lobby' && s.status === 'ACTIVE') {
+          const q = s.set.questions[s.currentQuestion]
+          if (!q) return
+          setLiveQ(q as LiveQuestion)
+          setPhase('question')
+          setQuestionIndex(s.currentQuestion)
+          setTotalQ(s.set.questions.length)
+          setSelected(null); setAnswerResult(null); setAnswerCount(0); setShowResults(false)
+          startTimer(q.timeLimit)
+          return
+        }
+
+        // Question / results → detect host advancing to next question
+        if ((curPhase === 'question' || curPhase === 'results') && s.status === 'ACTIVE' && s.currentQuestion > curQIndex) {
+          const q = s.set.questions[s.currentQuestion]
+          if (!q) return
+          setLiveQ(q as LiveQuestion)
+          setPhase('question')
+          setQuestionIndex(s.currentQuestion)
+          setSelected(null); setAnswerResult(null); setAnswerCount(0); setResults(null); setShowResults(false)
+          startTimer(q.timeLimit)
+          return
+        }
+
+        // Any active phase → detect game ended
+        if (s.status === 'FINISHED') {
+          const board = [...s.participants]
+            .sort((a, b) => b.score - a.score)
+            .map((p, i) => ({ rank: i + 1, userId: p.userId, name: p.user.name, score: p.score, tag: p.user.tag, tagColor: p.user.tagColor, nameColor: p.user.nameColor }))
+          setFinalBoard(board)
+          setPhase('finished')
+          if (timerRef.current) clearInterval(timerRef.current)
+        }
       }).catch(() => {})
     }, 3000)
+
     return () => clearInterval(interval)
-  }, [code, phase])
+  }, [code])
 
   // ── Timer ────────────────────────────────────────────────────────────────
   function startTimer(seconds: number) {
