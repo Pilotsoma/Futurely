@@ -14,8 +14,8 @@ const PROJ_SPEED = 600
 const PROJ_MAX_DIST = 750
 const POSITION_HZ = 20
 const AMMO_PER_CORRECT = 5
-const ZOOM = 0.38  // fraction of world units shown — lower = more zoomed out
-const MINIMAP_SIZE = 130
+const ZOOM = 0.38
+const MINIMAP_SIZE = 86
 const MINIMAP_SCALE = MINIMAP_SIZE / WORLD_W
 
 const PLAYER_COLORS = [
@@ -290,7 +290,6 @@ export default function BattlePage() {
   const router = useRouter()
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const canvasRectRef = useRef<DOMRect | null>(null)
   const gsRef = useRef<GameStateRef>({ players: new Map(), projectiles: [], myId: null, world: [] })
   const keysRef = useRef<Set<string>>(new Set())
   const mousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -456,32 +455,24 @@ export default function BattlePage() {
 
   // ── Input setup ───────────────────────────────────────────────────────────
   useEffect(() => {
-    // Cache the canvas rect — recomputing getBoundingClientRect on every
-    // mousemove event causes layout reflow jitter; invalidate on resize only
-    const updateRect = () => {
-      canvasRectRef.current = canvasRef.current?.getBoundingClientRect() ?? null
-    }
-    updateRect()
     const onKey = (e: KeyboardEvent, down: boolean) => {
       keysRef.current[down ? 'add' : 'delete'](e.key.toLowerCase())
       if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault()
     }
     const kd = (e: KeyboardEvent) => onKey(e, true)
     const ku = (e: KeyboardEvent) => onKey(e, false)
+    // Store raw viewport coords — canvas rect is read once per frame in the
+    // game loop so it's always current (layout shifts from question panel etc.)
     const onMouseMove = (e: MouseEvent) => {
-      const rect = canvasRectRef.current
-      if (!rect) return
-      mousePosRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      mousePosRef.current = { x: e.clientX, y: e.clientY }
     }
     window.addEventListener('keydown', kd)
     window.addEventListener('keyup', ku)
     window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('resize', updateRect)
     return () => {
       window.removeEventListener('keydown', kd)
       window.removeEventListener('keyup', ku)
       window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('resize', updateRect)
     }
   }, [])
 
@@ -502,8 +493,9 @@ export default function BattlePage() {
     const cw = canvas.width, ch = canvas.height
     const camX = Math.max(0, Math.min(me.x - cw / (2 * ZOOM), WORLD_W - cw / ZOOM))
     const camY = Math.max(0, Math.min(me.y - ch / (2 * ZOOM), WORLD_H - ch / ZOOM))
-    const mx = mousePosRef.current.x / ZOOM + camX
-    const my = mousePosRef.current.y / ZOOM + camY
+    const cr = canvas.getBoundingClientRect()
+    const mx = (mousePosRef.current.x - cr.left) / ZOOM + camX
+    const my = (mousePosRef.current.y - cr.top) / ZOOM + camY
     const angle = Math.atan2(my - me.y, mx - me.x)
     const projId = `${gs.myId}_${Date.now()}`
 
@@ -552,8 +544,10 @@ export default function BattlePage() {
         const cw = canvas!.width, ch = canvas!.height
         const camX = Math.max(0, Math.min(me.x - cw / (2 * ZOOM), WORLD_W - cw / ZOOM))
         const camY = Math.max(0, Math.min(me.y - ch / (2 * ZOOM), WORLD_H - ch / ZOOM))
-        const wx = mousePosRef.current.x / ZOOM + camX
-        const wy = mousePosRef.current.y / ZOOM + camY
+        // Convert raw viewport coords → canvas-local → world (once per frame)
+        const cr = canvas!.getBoundingClientRect()
+        const wx = (mousePosRef.current.x - cr.left) / ZOOM + camX
+        const wy = (mousePosRef.current.y - cr.top) / ZOOM + camY
         me.angle = Math.atan2(wy - me.y, wx - me.x)
 
         // Send position at fixed interval
@@ -726,7 +720,7 @@ export default function BattlePage() {
     return () => cancelAnimationFrame(rafRef.current)
   }, [phase, session])
 
-  // Canvas resize observer — also invalidates cached rect
+  // Canvas resize observer
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -734,7 +728,6 @@ export default function BattlePage() {
       for (const entry of entries) {
         canvas.width = entry.contentRect.width
         canvas.height = entry.contentRect.height
-        canvasRectRef.current = canvas.getBoundingClientRect()
       }
     })
     obs.observe(canvas)
