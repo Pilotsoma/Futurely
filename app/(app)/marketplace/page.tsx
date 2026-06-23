@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import Script from 'next/script'
 import { createPortal } from 'react-dom'
 import CoinIcon from '../../../components/ui/CoinIcon'
 import VerifiedBadge from '../../../components/ui/VerifiedBadge'
@@ -839,6 +838,114 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
   )
 }
 
+const FREE_SPIN_SEGMENTS = [
+  { rarity: 'Common',    coins: 25,    weight: 60,    color: '#6B7280' },
+  { rarity: 'Uncommon',  coins: 50,    weight: 25,    color: '#3B82F6' },
+  { rarity: 'Rare',      coins: 100,   weight: 10.25, color: '#8B5CF6' },
+  { rarity: 'Epic',      coins: 300,   weight: 3.95,  color: '#F97316' },
+  { rarity: 'Legendary', coins: 1000,  weight: 0.75,  color: '#FACC15' },
+  { rarity: 'Mythic',    coins: 2500,  weight: 0.05,  color: '#EAB308' },
+]
+
+function FreeSpinModal({ onClose, onDone }: { onClose: () => void; onDone: (reward: number, rarity: string) => void }) {
+  const [phase, setPhase] = useState<'ready' | 'spinning'>('ready')
+  const [pointerAngle, setPointerAngle] = useState(0)
+  const [spinDuration, setSpinDuration] = useState(0)
+
+  const segments = useMemo(() => {
+    let cum = 0
+    return FREE_SPIN_SEGMENTS.map(s => {
+      const sweep = (s.weight / 100) * 360
+      const seg = { ...s, start: cum, end: cum + sweep }
+      cum += sweep
+      return seg
+    })
+  }, [])
+
+  const CX = 150, CY = 150, R = 130
+
+  function segPath(start: number, end: number) {
+    const toXY = (deg: number) => {
+      const rad = (deg - 90) * (Math.PI / 180)
+      return { x: CX + R * Math.cos(rad), y: CY + R * Math.sin(rad) }
+    }
+    const s = toXY(start), e = toXY(end)
+    const large = end - start > 180 ? 1 : 0
+    return `M ${CX} ${CY} L ${s.x.toFixed(3)} ${s.y.toFixed(3)} A ${R} ${R} 0 ${large} 1 ${e.x.toFixed(3)} ${e.y.toFixed(3)} Z`
+  }
+
+  async function handleSpin() {
+    if (phase !== 'ready') return
+    setPhase('spinning')
+    try {
+      const r = await api.marketplaceFreeSpin()
+      const wonSeg = segments.find(s => s.rarity === r.rarity) ?? segments[0]
+      const segSize = wonSeg.end - wonSeg.start
+      const margin = Math.min(segSize * 0.15, 5)
+      const landAngle = wonSeg.start + margin + Math.random() * Math.max(0, segSize - margin * 2)
+      const finalAngle = 5 * 360 + landAngle
+      setSpinDuration(4000)
+      setPointerAngle(finalAngle)
+      setTimeout(() => { onDone(r.reward, r.rarity); onClose() }, 4300)
+    } catch {
+      setPhase('ready')
+    }
+  }
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={phase === 'ready' ? onClose : undefined}>
+      <div className="ns-card" style={{ padding: 32, maxWidth: 380, width: '92%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>🎰 Free Spin</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Win coins — available every 6 hours</div>
+
+        <div style={{ width: 300, height: 300 }}>
+          <svg width={300} height={300} viewBox="0 0 300 300">
+            {segments.map(seg => (
+              <path key={seg.rarity} d={segPath(seg.start, seg.end)} fill={seg.color} stroke="var(--surface)" strokeWidth={1} />
+            ))}
+            <g style={{ transformOrigin: `${CX}px ${CY}px`, transform: `rotate(${pointerAngle}deg)`, transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none' }}>
+              <polygon points={`${CX},${CY - 32} ${CX - 7},${CY - 20} ${CX + 7},${CY - 20}`} fill="#EF4444" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }} />
+            </g>
+            <circle cx={CX} cy={CY} r={22} fill="#EF4444" stroke="#000" strokeWidth={2} />
+            {/* Coin labels on each segment */}
+            {segments.map(seg => {
+              const midAngle = ((seg.start + seg.end) / 2 - 90) * (Math.PI / 180)
+              const labelR = R * 0.65
+              const x = CX + labelR * Math.cos(midAngle)
+              const y = CY + labelR * Math.sin(midAngle)
+              return (
+                <text key={seg.rarity} x={x} y={y} textAnchor="middle" dominantBaseline="middle"
+                  fill="#fff" fontSize={seg.coins >= 1000 ? 9 : 11} fontWeight="800"
+                  style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))' }}>
+                  {seg.coins >= 1000 ? `${seg.coins / 1000}k` : seg.coins}
+                </text>
+              )
+            })}
+          </svg>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', justifyContent: 'center' }}>
+          {segments.map(seg => (
+            <div key={seg.rarity} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: seg.color, display: 'inline-block', flexShrink: 0 }} />
+              <span style={{ color: seg.color, fontWeight: 700 }}>{seg.rarity}</span>
+              <span style={{ color: 'var(--text-muted)' }}>{seg.coins.toLocaleString()} 🪙</span>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={() => void handleSpin()} disabled={phase === 'spinning'}
+          style={{ padding: '13px 44px', borderRadius: 12, border: 'none', background: phase === 'ready' ? '#EAB308' : 'var(--surface-2)', color: phase === 'ready' ? '#000' : 'var(--text-muted)', fontWeight: 800, fontSize: 16, cursor: phase === 'ready' ? 'pointer' : 'not-allowed' }}>
+          {phase === 'spinning' ? 'Spinning…' : 'Spin!'}
+        </button>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 function SpinWheelModal({
   box,
   inv,
@@ -1350,11 +1457,10 @@ export default function MarketplacePage() {
   const [tradeOfferItems, setTradeOfferItems] = useState<Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string }>>([])
   const [tradeWantItems, setTradeWantItems] = useState<TraderCatalogItem[]>([])
 
-  // Free spin (ad-rewarded)
+  // Free spin
   const [freeSpinCooldownUntil, setFreeSpinCooldownUntil] = useState<Date | null>(null)
-  const [freeSpinBusy, setFreeSpinBusy] = useState(false)
   const [freeSpinResult, setFreeSpinResult] = useState<{ reward: number; rarity: string } | null>(null)
-  const [freeSpinAdCountdown, setFreeSpinAdCountdown] = useState<number | null>(null) // null = not watching, 0 = ready to spin
+  const [freeSpinOpen, setFreeSpinOpen] = useState(false)
 
   // Item prices for hover tooltips
   const [prices, setPrices] = useState<Record<string, number>>({})
@@ -1514,38 +1620,10 @@ export default function MarketplacePage() {
     } catch { /* ignore */ }
   }
 
-  function handleWatchAd() {
-    if (freeSpinCooldownUntil && new Date() < freeSpinCooldownUntil) return
-    if (freeSpinAdCountdown !== null) return
-    setFreeSpinResult(null)
-    setFreeSpinAdCountdown(5)
-    const interval = setInterval(() => {
-      setFreeSpinAdCountdown(prev => {
-        if (prev === null || prev <= 1) { clearInterval(interval); return 0 }
-        return prev - 1
-      })
-    }, 1000)
-  }
-
-  function handleFreeSpin() {
-    if (freeSpinBusy || freeSpinAdCountdown !== 0) return
-    setFreeSpinBusy(true)
-    setFreeSpinAdCountdown(null)
-    api.marketplaceFreeSpin()
-      .then(r => {
-        setInv(prev => prev ? { ...prev, coins: r.coins } : prev)
-        setFreeSpinResult({ reward: r.reward, rarity: r.rarity })
-        setFreeSpinCooldownUntil(new Date(Date.now() + 6 * 60 * 60 * 1000))
-      })
-      .catch((err: unknown) => {
-        if (err && typeof err === 'object' && 'message' in err) {
-          try {
-            const parsed = JSON.parse((err as { message: string }).message)
-            if (parsed?.nextSpin) setFreeSpinCooldownUntil(new Date(parsed.nextSpin))
-          } catch { /* ignore */ }
-        }
-      })
-      .finally(() => setFreeSpinBusy(false))
+  function handleFreeSpinDone(reward: number, rarity: string) {
+    setFreeSpinResult({ reward, rarity })
+    setFreeSpinCooldownUntil(new Date(Date.now() + 6 * 60 * 60 * 1000))
+    api.marketplaceInventory().then(d => setInv(d)).catch(() => {})
   }
 
   async function doOpenBoxAPI(boxType: BoxType, quantity = 1): Promise<BoxResult | MultiBoxResult | null> {
@@ -2151,8 +2229,6 @@ export default function MarketplacePage() {
 
   return (
     <div className="fade-up" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
-      <Script src="https://quge5.com/88/tag.min.js" data-zone="252935" async data-cfasync="false" strategy="lazyOnload" />
-
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>Spend your coins</p>
@@ -2181,57 +2257,31 @@ export default function MarketplacePage() {
       {/* Free Spin */}
       {(() => {
         const onCooldown = !!freeSpinCooldownUntil && new Date() < freeSpinCooldownUntil
-        const watching = freeSpinAdCountdown !== null && freeSpinAdCountdown > 0
-        const adDone = freeSpinAdCountdown === 0
-        const RARITY_COLORS: Record<string, string> = { Common: '#6B7280', Uncommon: '#3B82F6', Rare: '#8B5CF6', Epic: '#F97316', Legendary: '#FFFFFF', Mythic: '#EAB308' }
+        const RARITY_COLORS: Record<string, string> = { Common: '#6B7280', Uncommon: '#3B82F6', Rare: '#8B5CF6', Epic: '#F97316', Legendary: '#FACC15', Mythic: '#EAB308' }
         const rc = freeSpinResult ? (RARITY_COLORS[freeSpinResult.rarity] ?? '#EAB308') : '#EAB308'
         return (
-          <div className="ns-card" style={{ padding: 18, marginBottom: 20, border: '1px solid rgba(234,179,8,0.2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: '#EAB308', marginBottom: 2 }}>Free Spin</p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 0 }}>Watch an ad • Win coins • Every 6 hours</p>
-                {freeSpinResult && (
-                  <p style={{ fontSize: 13, fontWeight: 700, color: rc, marginTop: 6 }}>
-                    +{freeSpinResult.reward.toLocaleString()} coins — <span style={{ color: rc }}>{freeSpinResult.rarity}</span>!
-                  </p>
-                )}
-                {onCooldown && !freeSpinResult && (
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                    Next spin at {freeSpinCooldownUntil!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                )}
-              </div>
-              {!watching && !adDone && (
-                <button
-                  onClick={handleWatchAd}
-                  disabled={onCooldown}
-                  style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: onCooldown ? 'var(--surface-2)' : '#EAB308', color: onCooldown ? 'var(--text-muted)' : '#000', fontWeight: 700, fontSize: 14, cursor: onCooldown ? 'not-allowed' : 'pointer', opacity: onCooldown ? 0.6 : 1, flexShrink: 0 }}
-                >
-                  {onCooldown ? 'On Cooldown' : '▶ Watch Ad'}
-                </button>
+          <div className="ns-card" style={{ padding: 18, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, border: '1px solid rgba(234,179,8,0.2)' }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: '#EAB308', marginBottom: 2 }}>Free Spin</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Win coins • Every 6 hours</p>
+              {freeSpinResult && (
+                <p style={{ fontSize: 13, fontWeight: 700, color: rc, marginTop: 4 }}>
+                  +{freeSpinResult.reward.toLocaleString()} coins — {freeSpinResult.rarity}!
+                </p>
               )}
-              {adDone && (
-                <button
-                  onClick={handleFreeSpin}
-                  disabled={freeSpinBusy}
-                  style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: '#EAB308', color: '#000', fontWeight: 700, fontSize: 14, cursor: freeSpinBusy ? 'not-allowed' : 'pointer', flexShrink: 0 }}
-                >
-                  {freeSpinBusy ? 'Spinning…' : '🎰 Spin Now!'}
-                </button>
+              {onCooldown && (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Next spin at {freeSpinCooldownUntil!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
               )}
             </div>
-            {watching && (
-              <div style={{ marginTop: 14, background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Watching ad… your spin unlocks in</span>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: '#EAB308' }}>{freeSpinAdCountdown}s</span>
-                </div>
-                <div style={{ height: 4, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', background: '#EAB308', borderRadius: 99, width: `${((5 - (freeSpinAdCountdown ?? 0)) / 5) * 100}%`, transition: 'width 1s linear' }} />
-                </div>
-              </div>
-            )}
+            <button
+              onClick={() => { setFreeSpinResult(null); setFreeSpinOpen(true) }}
+              disabled={onCooldown}
+              style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: onCooldown ? 'var(--surface-2)' : '#EAB308', color: onCooldown ? 'var(--text-muted)' : '#000', fontWeight: 700, fontSize: 14, cursor: onCooldown ? 'not-allowed' : 'pointer', opacity: onCooldown ? 0.6 : 1, flexShrink: 0 }}
+            >
+              {onCooldown ? 'On Cooldown' : '🎰 Free Spin'}
+            </button>
           </div>
         )
       })()}
@@ -4005,6 +4055,13 @@ export default function MarketplacePage() {
           </div>
         </div>,
         document.body
+      )}
+
+      {freeSpinOpen && (
+        <FreeSpinModal
+          onClose={() => setFreeSpinOpen(false)}
+          onDone={handleFreeSpinDone}
+        />
       )}
     </div>
   )
