@@ -290,7 +290,12 @@ export default function BattlePage() {
   const router = useRouter()
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  // Cached canvas top-left — only needs updating on resize or phase change,
+  // NOT every frame. Calling getBoundingClientRect() in rAF flushes layout.
+  const canvasRectRef = useRef<{ left: number; top: number }>({ left: 0, top: 0 })
   const gsRef = useRef<GameStateRef>({ players: new Map(), projectiles: [], myId: null, world: [] })
+  // Pre-sorted world (set once at load, never changes)
+  const sortedWorldRef = useRef<WorldObj[]>([])
   const keysRef = useRef<Set<string>>(new Set())
   const mousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const lastPosRef = useRef<{ x: number; y: number; angle: number }>({ x: 0, y: 0, angle: 0 })
@@ -335,6 +340,8 @@ export default function BattlePage() {
       setQuestions(s.set.questions)
       const world = generateWorld(s.id)
       gsRef.current.world = world
+      // Pre-sort once at load — never re-sort in the render loop
+      sortedWorldRef.current = [...world].sort((a, b) => (a.y + (a.h ?? a.r ?? 0)) - (b.y + (b.h ?? b.r ?? 0)))
       setLoading(false)
     }).catch(() => router.replace('/play'))
   }, [code, router])
@@ -382,8 +389,15 @@ export default function BattlePage() {
 
         if (event === 'BATTLE_POSITION') {
           const gs = gsRef.current
-          const p = gs.players.get(data.userId)
-          if (p) { p.x = data.x; p.y = data.y; p.angle = data.angle }
+          let p = gs.players.get(data.userId as number)
+          if (!p) {
+            // Player wasn't in the map when game started (timing race) — add them now
+            const idx = gs.players.size % PLAYER_COLORS.length
+            p = { userId: data.userId as number, name: 'Player', color: PLAYER_COLORS[idx], x: data.x as number, y: data.y as number, angle: data.angle as number, alive: true }
+            gs.players.set(data.userId as number, p)
+          } else {
+            p.x = data.x as number; p.y = data.y as number; p.angle = data.angle as number
+          }
         }
 
         if (event === 'BATTLE_FIRE') {
@@ -544,10 +558,10 @@ export default function BattlePage() {
         const cw = canvas!.width, ch = canvas!.height
         const camX = Math.max(0, Math.min(me.x - cw / (2 * ZOOM), WORLD_W - cw / ZOOM))
         const camY = Math.max(0, Math.min(me.y - ch / (2 * ZOOM), WORLD_H - ch / ZOOM))
-        // Convert raw viewport coords → canvas-local → world (once per frame)
-        const cr = canvas!.getBoundingClientRect()
-        const wx = (mousePosRef.current.x - cr.left) / ZOOM + camX
-        const wy = (mousePosRef.current.y - cr.top) / ZOOM + camY
+        // Use cached canvas rect — no layout reflow every frame
+        const { left: crLeft, top: crTop } = canvasRectRef.current
+        const wx = (mousePosRef.current.x - crLeft) / ZOOM + camX
+        const wy = (mousePosRef.current.y - crTop) / ZOOM + camY
         me.angle = Math.atan2(wy - me.y, wx - me.x)
 
         // Send position at fixed interval
@@ -601,7 +615,7 @@ export default function BattlePage() {
 
       drawGround(ctx!, camX, camY, viewW, viewH, () => 0)
 
-      const sorted = [...gs.world].sort((a, b) => (a.y + (a.h ?? a.r ?? 0)) - (b.y + (b.h ?? b.r ?? 0)))
+      const sorted = sortedWorldRef.current
       const pad = 120
 
       for (const o of sorted) {
@@ -666,25 +680,6 @@ export default function BattlePage() {
       ctx!.lineWidth = 1
       ctx!.beginPath(); ctx!.roundRect(mmX, mmY, MINIMAP_SIZE, MINIMAP_SIZE, 6); ctx!.fill(); ctx!.stroke()
 
-      // World objects (tiny)
-      for (const o of gs.world) {
-        const ox = mmX + o.x * MINIMAP_SCALE
-        const oy = mmY + o.y * MINIMAP_SCALE
-        if (o.type === 'house') {
-          ctx!.fillStyle = '#7a4820'
-          ctx!.fillRect(ox, oy, Math.max(2, o.w! * MINIMAP_SCALE), Math.max(2, o.h! * MINIMAP_SCALE))
-        } else if (o.type === 'tree') {
-          ctx!.fillStyle = '#1a5c12'
-          ctx!.beginPath(); ctx!.arc(ox, oy, Math.max(1.5, o.r! * MINIMAP_SCALE), 0, Math.PI * 2); ctx!.fill()
-        } else if (o.type === 'rock') {
-          ctx!.fillStyle = '#555'
-          ctx!.beginPath(); ctx!.arc(ox, oy, Math.max(1, o.r! * MINIMAP_SCALE), 0, Math.PI * 2); ctx!.fill()
-        } else if (o.type === 'bush') {
-          ctx!.fillStyle = '#174d13'
-          ctx!.beginPath(); ctx!.arc(ox, oy, Math.max(1, o.r! * MINIMAP_SCALE * 0.6), 0, Math.PI * 2); ctx!.fill()
-        }
-      }
-
       // Viewport rectangle
       ctx!.strokeStyle = 'rgba(255,255,255,0.35)'
       ctx!.lineWidth = 1
@@ -728,11 +723,26 @@ export default function BattlePage() {
       for (const entry of entries) {
         canvas.width = entry.contentRect.width
         canvas.height = entry.contentRect.height
+        // Update cached rect whenever the canvas is resized
+        const r = canvas.getBoundingClientRect()
+        canvasRectRef.current = { left: r.left, top: r.top }
       }
     })
     obs.observe(canvas)
     return () => obs.disconnect()
   }, [])
+
+  // Refresh cached canvas rect when phase changes (question panel appears/disappears, shifting layout)
+  useEffect(() => {
+    const update = () => {
+      const r = canvasRef.current?.getBoundingClientRect()
+      if (r) canvasRectRef.current = { left: r.left, top: r.top }
+    }
+    // rAF ensures the layout has settled before we sample
+    const id = requestAnimationFrame(update)
+    window.addEventListener('resize', update)
+    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', update) }
+  }, [phase])
 
   // ── Answer question ───────────────────────────────────────────────────────
   async function handleAnswer(answer: string) {
