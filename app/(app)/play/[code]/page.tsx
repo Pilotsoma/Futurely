@@ -118,6 +118,7 @@ export default function GameRoomPage() {
   useEffect(() => {
     api.getGame(code)
       .then(s => {
+        if (s.type === 'BATTLE') { router.replace(`/battle/${code}`); return }
         setSession(s)
         if (s.status === 'ACTIVE') {
           const q = s.set.questions[s.currentQuestion]

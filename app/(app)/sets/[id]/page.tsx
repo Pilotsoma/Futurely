@@ -147,6 +147,17 @@ export default function SetDetailPage() {
     }
   }
 
+  async function handleHostBattle() {
+    setHosting(true); setHostError(null)
+    try {
+      const session = await api.createBattleGame(id)
+      router.push(`/battle/${session.joinCode}`)
+    } catch (e) {
+      setHostError(e instanceof Error ? e.message : 'Failed')
+      setHosting(false)
+    }
+  }
+
   if (loading) return <div style={S.page}>{[1,2,3].map(i => <div key={i} className="shimmer" style={{ height: 72, borderRadius: 12, marginBottom: 10 }} />)}</div>
   if (error || !set) return <div style={S.page}><p style={{ color: 'var(--error)' }}>{error ?? 'Set not found'}</p><Link href="/sets" style={{ color: 'var(--primary)', fontSize: 13 }}>← Back</Link></div>
 
@@ -172,9 +183,12 @@ export default function SetDetailPage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+              <button onClick={() => void handleHostBattle()} disabled={hosting || set.questions.length === 0} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 20, background: set.questions.length > 0 ? '#7c3aed' : 'var(--surface-2)', color: set.questions.length > 0 ? '#fff' : 'var(--text-muted)', border: 'none', fontSize: 13, fontWeight: 700, cursor: set.questions.length > 0 ? 'pointer' : 'not-allowed' }}>
+                🏹 {hosting ? 'Starting…' : 'Host Battle'}
+              </button>
               <button onClick={() => void handleHost()} disabled={hosting || set.questions.length === 0} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 20, background: set.questions.length > 0 ? 'var(--primary)' : 'var(--surface-2)', color: set.questions.length > 0 ? '#fff' : 'var(--text-muted)', border: 'none', fontSize: 13, fontWeight: 700, cursor: set.questions.length > 0 ? 'pointer' : 'not-allowed' }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                {hosting ? 'Starting…' : 'Host Game'}
+                {hosting ? 'Starting…' : 'Host Quiz'}
               </button>
               {isOwner && <button onClick={() => setMode('edit')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 20, background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
             </div>

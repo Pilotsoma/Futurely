@@ -44,7 +44,7 @@ const sessionInclude = {
 // ── POST /games — create session (host) ─────────────────────────────────────
 router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } }); return }
-  const parse = z.object({ setId: z.number().int().positive() }).safeParse(req.body)
+  const parse = z.object({ setId: z.number().int().positive(), type: z.enum(['QUIZ', 'BATTLE']).default('QUIZ') }).safeParse(req.body)
   if (!parse.success) { res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'setId required' } }); return }
   try {
     const set = await prisma.questionSet.findUnique({ where: { id: parse.data.setId }, select: { id: true, creatorId: true, visibility: true, _count: { select: { questions: true } } } })
@@ -53,7 +53,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
     if (set._count.questions === 0) { res.status(400).json({ data: null, error: { code: 'EMPTY_SET', message: 'Add at least one question before hosting' } }); return }
     const joinCode = await uniqueCode()
     const session = await prisma.gameSession.create({
-      data: { setId: parse.data.setId, hostId: req.userId, joinCode },
+      data: { setId: parse.data.setId, hostId: req.userId, joinCode, type: parse.data.type },
       include: sessionInclude,
     })
     res.status(201).json({ data: session, error: null })

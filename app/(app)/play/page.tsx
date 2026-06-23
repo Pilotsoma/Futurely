@@ -17,8 +17,12 @@ export default function PlayPage() {
     if (trimmed.length !== 6) { setJoinError('Enter the 6-character game code'); return }
     setJoining(true); setJoinError(null)
     try {
-      await api.joinGame(trimmed)
-      router.push(`/play/${trimmed}`)
+      const session = await api.joinGame(trimmed)
+      if (session.type === 'BATTLE') {
+        router.push(`/battle/${trimmed}`)
+      } else {
+        router.push(`/play/${trimmed}`)
+      }
     } catch (e) {
       setJoinError(e instanceof Error ? e.message : 'Game not found')
       setJoining(false)

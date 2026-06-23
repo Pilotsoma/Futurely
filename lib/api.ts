@@ -989,6 +989,8 @@ export const api = {
   // ── Game Sessions ──────────────────────────────────────────────────────────
   createGame: (setId: number) =>
     request<GameSession>('/api/games', { method: 'POST', body: JSON.stringify({ setId }) }),
+  createBattleGame: (setId: number) =>
+    request<GameSession>('/api/games', { method: 'POST', body: JSON.stringify({ setId, type: 'BATTLE' }) }),
   getGame: (code: string) =>
     request<GameSession>(`/api/games/${code.toUpperCase()}`),
   joinGame: (code: string) =>
@@ -1786,6 +1788,7 @@ export interface GameSession {
   hostId: number
   joinCode: string
   status: 'WAITING' | 'ACTIVE' | 'FINISHED'
+  type: 'QUIZ' | 'BATTLE'
   currentQuestion: number
   createdAt: string
   set: {

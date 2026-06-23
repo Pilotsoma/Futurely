@@ -82,7 +82,7 @@ function QuestionEditor({ q, index, onChange, onDelete }: { q: QDraft; index: nu
 }
 
 // ── Set card ────────────────────────────────────────────────────────────────
-function SetCard({ set, isOwner, onDelete, onHost }: { set: QuestionSet; isOwner: boolean; onDelete?: () => void; onHost?: () => void }) {
+function SetCard({ set, isOwner, onDelete, onHost, onHostBattle }: { set: QuestionSet; isOwner: boolean; onDelete?: () => void; onHost?: () => void; onHostBattle?: () => void }) {
   const router = useRouter()
   return (
     <div className="ns-card" style={{ padding: '16px 18px', cursor: 'pointer' }} onClick={() => router.push(`/sets/${set.id}`)}>
@@ -104,8 +104,13 @@ function SetCard({ set, isOwner, onDelete, onHost }: { set: QuestionSet; isOwner
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+          {onHostBattle && (
+            <button onClick={onHostBattle} style={{ ...S.iconBtn, background: '#7c3aed', color: '#fff', border: 'none', gap: 4, padding: '7px 10px', fontSize: 11, fontWeight: 700 }} title="Host battle royale">
+              🏹
+            </button>
+          )}
           {onHost && (
-            <button onClick={onHost} style={{ ...S.iconBtn, background: 'var(--primary)', color: '#fff', border: 'none' }} title="Host game">
+            <button onClick={onHost} style={{ ...S.iconBtn, background: 'var(--primary)', color: '#fff', border: 'none' }} title="Host quiz game">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             </button>
           )}
@@ -207,6 +212,17 @@ export default function SetsPage() {
     }
   }
 
+  async function handleHostBattle(setId: number) {
+    setHostingSet(setId); setHostError(null)
+    try {
+      const session = await api.createBattleGame(setId)
+      router.push(`/battle/${session.joinCode}`)
+    } catch (e) {
+      setHostError(e instanceof Error ? e.message : 'Failed to host battle')
+      setHostingSet(null)
+    }
+  }
+
   const myId = (() => { try { const u = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { id?: number } | null; return u?.id ?? null } catch { return null } })()
 
   return (
@@ -260,6 +276,7 @@ export default function SetsPage() {
                   isOwner={set.creatorId === myId}
                   onDelete={set.creatorId === myId ? () => void handleDelete(set.id) : undefined}
                   onHost={hostingSet === set.id ? undefined : () => void handleHost(set.id)}
+                  onHostBattle={hostingSet === set.id ? undefined : () => void handleHostBattle(set.id)}
                 />
               ))}
             </div>

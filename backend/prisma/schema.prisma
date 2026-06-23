@@ -666,6 +666,7 @@ model GameSession {
   hostId          Int
   joinCode        String            @unique
   status          String            @default("WAITING")
+  type            String            @default("QUIZ")
   currentQuestion Int               @default(0)
   createdAt       DateTime          @default(now())
   set             QuestionSet       @relation(fields: [setId], references: [id])
