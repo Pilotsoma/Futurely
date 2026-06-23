@@ -440,7 +440,7 @@ function OwnTagPicker({ profile, onUpdateTag }: {
                 >
                   <VerifiedBadge variant={t.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
                   <span style={{ fontSize: 12, fontWeight: 700, color: t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0' }}>
-                    {t.tagColor === 'verified-yellow' ? 'Verified' : 'Verified (Blue)'}
+                    {t.tagColor === 'verified-yellow' ? 'Verified' : 'Partner'}
                   </span>
                   <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>badge</span>
                 </span>

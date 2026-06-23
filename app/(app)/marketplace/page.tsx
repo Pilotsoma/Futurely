@@ -220,7 +220,7 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'prodigy',        label: 'Prodigy (Legendary)',       rarity: 'Legendary', type: 'tag', tag: 'Prodigy',         tagColor: '#111111' },
     { id: 'god',            label: 'VIP (Mythic)',              rarity: 'Mythic',    type: 'tag', tag: 'VIP',             tagColor: '#111111' },
     { id: 'verified',      label: 'Verified ✓ Yellow (Mythic)', rarity: 'Mythic',   type: 'tag', tag: 'Verified',         tagColor: 'verified-yellow' },
-    { id: 'verified-blue', label: 'Verified ✓ Blue (Mythic)',   rarity: 'Mythic',   type: 'tag', tag: 'Verified',         tagColor: 'verified-blue' },
+    { id: 'verified-blue', label: 'Partner ✓ Blue (Mythic)',   rarity: 'Mythic',   type: 'tag', tag: 'Verified',         tagColor: 'verified-blue' },
   ],
   'name-color': [
     { id: 'forest-green',  label: 'Forest Green (Common)',    rarity: 'Common',    type: 'name-color', name: 'Forest Green',  value: '#15803D' },
@@ -351,7 +351,7 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'god',            type: 'tag', name: 'VIP',             rarity: 'Mythic',    tagColor: '#111111' },
   { id: 'GOAT',           type: 'tag', name: 'GOAT',            rarity: 'Mythic',    tagColor: '#EAB308' },
   { id: 'verified',       type: 'tag', name: 'Verified',        rarity: 'Mythic',    tagColor: 'verified-yellow' },
-  { id: 'verified-blue',  type: 'tag', name: 'Verified (Blue)', rarity: 'Mythic',    tagColor: 'verified-blue' },
+  { id: 'verified-blue',  type: 'tag', name: 'Partner', rarity: 'Mythic',    tagColor: 'verified-blue' },
   // ── Streak Tags (soulbound) ──
   { id: 'novice',   type: 'tag', name: 'Novice',   rarity: 'Streak', tagColor: '#22C55E' },
   { id: 'pro',      type: 'tag', name: 'Pro',      rarity: 'Streak', tagColor: '#3B82F6' },
@@ -1939,7 +1939,7 @@ export default function MarketplacePage() {
             ? <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7 }}>
                 <VerifiedBadge variant={item.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
                 <span style={{ fontSize: 13, fontWeight: 700, color: item.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0' }}>
-                  {item.tagColor === 'verified-yellow' ? 'Verified' : 'Verified (Blue)'}
+                  {item.tagColor === 'verified-yellow' ? 'Verified' : 'Partner'}
                 </span>
               </span>
             : <span
