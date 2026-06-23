@@ -31,6 +31,7 @@ export function DevAdminPanel({
   const [statsLoading, setStatsLoading] = useState(false)
   const [coinAmount, setCoinAmount] = useState('')
   const [coinSaving, setCoinSaving] = useState(false)
+  const [coinError, setCoinError] = useState('')
   const [targetCoins, setTargetCoins] = useState<number | null>(profile.coins ?? null)
   const [marketGranting, setMarketGranting] = useState(false)
   const [marketGrantMsg, setMarketGrantMsg] = useState('')
@@ -148,11 +149,15 @@ export function DevAdminPanel({
     const amount = action === 'zero' ? 0 : parseInt(coinAmount)
     if (action !== 'zero' && (isNaN(amount) || amount <= 0)) return
     setCoinSaving(true)
+    setCoinError('')
     try {
       const result = await api.feedAdjustCoins(userId, action, action !== 'zero' ? amount : undefined)
       setTargetCoins(result.coins)
       if (action !== 'zero') setCoinAmount('')
-    } catch { /* ignore */ }
+    } catch (err: unknown) {
+      const msg = (err as { message?: string })?.message ?? ''
+      setCoinError(msg || 'Failed to adjust coins')
+    }
     finally { setCoinSaving(false) }
   }
 
@@ -333,6 +338,7 @@ export function DevAdminPanel({
           <button style={{ background: '#EF4444', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={() => void handleCoinAction('remove')} disabled={coinSaving}>{coinSaving ? '…' : '− Remove'}</button>
           <button style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid #EF4444', borderRadius: 6, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={() => void handleCoinAction('zero')} disabled={coinSaving}>{coinSaving ? '…' : 'Set 0'}</button>
         </div>
+        {coinError && <p style={{ fontSize: 11, color: '#EF4444', marginTop: 6, fontWeight: 600 }}>{coinError}</p>}
       </div>
 
       <div style={{ marginTop: 12, borderTop: '1px solid rgba(34,197,94,0.15)', paddingTop: 12 }}>
