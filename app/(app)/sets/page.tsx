@@ -249,7 +249,7 @@ export default function SetsPage() {
             </div>
           ) : sets.length === 0 ? (
             <div className="ns-card" style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              {tab === 'mine' ? "You haven't created any sets yet. Click "Create" to get started." : 'No public sets found. Try a different search.'}
+              {tab === 'mine' ? "You haven't created any sets yet. Click ‘Create’ to get started." : 'No public sets found. Try a different search.'}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
