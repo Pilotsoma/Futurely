@@ -606,9 +606,9 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)' }}>
             {/* Avatar: pfp type uses won effect, others use default */}
             {post.unboxItemType === 'pfp' ? (
-              <div className={pfpClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemValue) }}>{(post.user.name?.[0] ?? 'U').toUpperCase()}</div>
+              <div className={pfpClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemValue) }}>U</div>
             ) : (
-              <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>{(post.user.name?.[0] ?? 'U').toUpperCase()}</div>
+              <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>U</div>
             )}
             {/* Name + tag row */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
@@ -620,7 +620,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
               <span
                 className={post.unboxItemType === 'name-color' ? nameColorClass(post.unboxItemValue) : ''}
                 style={{ fontSize: 13, fontWeight: 800, ...(post.unboxItemType === 'name-color' ? nameColorStyle(post.unboxItemValue) : { color: 'var(--text)' }) }}
-              >{post.user.name ?? 'User'}</span>
+              >Username</span>
               {post.unboxItemType === 'tag' ? (
                 post.unboxItemTagColor === 'verified-yellow' || post.unboxItemTagColor === 'verified-blue'
                   ? <VerifiedBadge variant={post.unboxItemTagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={18} />

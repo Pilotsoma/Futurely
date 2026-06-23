@@ -583,12 +583,7 @@ async function autoPostUnbox(
       },
     })
 
-    broadcast('NEW_POST', {
-      ...newPost,
-      user: { ...postUser, name: 'Username', tag: null, tagColor: null, nameColor: null },
-      likedByMe: false,
-      enteredByMe: false,
-    })
+    broadcast('NEW_POST', { ...newPost, user: postUser, likedByMe: false, enteredByMe: false })
     console.log(`[autoPostUnbox] ✓ Post created for user ${userId}: ${itemRarity} ${itemName}`)
   } catch (e) {
     console.error('[autoPostUnbox] Failed for user', userId, e)

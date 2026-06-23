@@ -234,12 +234,9 @@ router.get('/posts', async (req: Request, res: Response) => {
     const postsOut = paged.map(post => {
       const { _score, user, giveawayEntries, ...rest } = post;
       const { _count: _uc, ...userRest } = user;
-      const feedUser = post.type === 'UNBOX'
-        ? { ...toFeedUser(userRest), name: 'Username', tag: null, tagColor: null, nameColor: null }
-        : toFeedUser(userRest);
       return {
         ...rest,
-        user: feedUser,
+        user: toFeedUser(userRest),
         likedByMe: post.likes.some(l => l.userId === userId),
         enteredByMe: post.giveawayEntries.some(e => e.userId === userId),
       };
@@ -397,9 +394,7 @@ router.get('/posts/following', async (req: Request, res: Response) => {
 
     const postsOut = posts.map(p => ({
       ...p,
-      user: p.type === 'UNBOX'
-        ? { ...toFeedUser(p.user), name: 'Username', tag: null, tagColor: null, nameColor: null }
-        : toFeedUser(p.user),
+      user: toFeedUser(p.user),
       likedByMe: p.likes.some(l => l.userId === userId),
     }));
 
@@ -437,10 +432,7 @@ router.get('/posts/:id', async (req: Request, res: Response) => {
       likedByMe: c.commentLikes.some((l: { userId: number }) => l.userId === requesterId),
       _count: { likes: c.commentLikes.length },
     }));
-    const postUser = post.type === 'UNBOX'
-      ? { ...toFeedUser(post.user), name: 'Username', tag: null, tagColor: null, nameColor: null }
-      : toFeedUser(post.user);
-    res.json({ data: { ...post, user: postUser, comments: commentsWithMeta } });
+    res.json({ data: { ...post, user: toFeedUser(post.user), comments: commentsWithMeta } });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch post' });
   }
@@ -922,9 +914,7 @@ router.get('/users/:id/posts', async (req: Request, res: Response) => {
     ]);
     const postsOut = posts.map(p => ({
       ...p,
-      user: p.type === 'UNBOX'
-        ? { ...toFeedUser(p.user), name: 'Username', tag: null, tagColor: null, nameColor: null }
-        : toFeedUser(p.user),
+      user: toFeedUser(p.user),
       likedByMe: p.likes.some((l: { userId: number }) => l.userId === requesterId),
       enteredByMe: (p.giveawayEntries as { userId: number }[]).some(e => e.userId === requesterId),
     }));
