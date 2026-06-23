@@ -290,9 +290,6 @@ export default function BattlePage() {
   const router = useRouter()
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  // Cached canvas top-left — only needs updating on resize or phase change,
-  // NOT every frame. Calling getBoundingClientRect() in rAF flushes layout.
-  const canvasRectRef = useRef<{ left: number; top: number }>({ left: 0, top: 0 })
   const gsRef = useRef<GameStateRef>({ players: new Map(), projectiles: [], myId: null, world: [] })
   // Pre-sorted world (set once at load, never changes)
   const sortedWorldRef = useRef<WorldObj[]>([])
@@ -360,7 +357,7 @@ export default function BattlePage() {
           initMyPlayer(gsRef.current.myId ?? -1)
         }
       }).catch(() => {})
-    }, 3000)
+    }, 1000)
     return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, phase])
@@ -482,10 +479,13 @@ export default function BattlePage() {
     }
     const kd = (e: KeyboardEvent) => onKey(e, true)
     const ku = (e: KeyboardEvent) => onKey(e, false)
-    // Store raw viewport coords — canvas rect is read once per frame in the
-    // game loop so it's always current (layout shifts from question panel etc.)
+    // Compute canvas-relative coords on every mousemove (getBoundingClientRect
+    // in a mousemove handler is fine — not called 60×/s like rAF).
     const onMouseMove = (e: MouseEvent) => {
-      mousePosRef.current = { x: e.clientX, y: e.clientY }
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const r = canvas.getBoundingClientRect()
+      mousePosRef.current = { x: e.clientX - r.left, y: e.clientY - r.top }
     }
     window.addEventListener('keydown', kd)
     window.addEventListener('keyup', ku)
@@ -501,7 +501,7 @@ export default function BattlePage() {
     // Tracking is handled at window level; this prop kept for cursor style only
   }, [])
 
-  const handleCanvasClick = useCallback(() => {
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (phaseRef.current !== 'playing') return
     if (ammoRef.current <= 0) return
     const gs = gsRef.current
@@ -514,9 +514,10 @@ export default function BattlePage() {
     const cw = canvas.width, ch = canvas.height
     const camX = Math.max(0, Math.min(me.x - cw / (2 * ZOOM), WORLD_W - cw / ZOOM))
     const camY = Math.max(0, Math.min(me.y - ch / (2 * ZOOM), WORLD_H - ch / ZOOM))
-    const cr = canvas.getBoundingClientRect()
-    const mx = (mousePosRef.current.x - cr.left) / ZOOM + camX
-    const my = (mousePosRef.current.y - cr.top) / ZOOM + camY
+    // Use click event coords directly — always accurate, no stale rect
+    const r = canvas.getBoundingClientRect()
+    const mx = (e.clientX - r.left) / ZOOM + camX
+    const my = (e.clientY - r.top) / ZOOM + camY
     const angle = Math.atan2(my - me.y, mx - me.x)
     const projId = `${gs.myId}_${Date.now()}`
 
@@ -565,10 +566,9 @@ export default function BattlePage() {
         const cw = canvas!.width, ch = canvas!.height
         const camX = Math.max(0, Math.min(me.x - cw / (2 * ZOOM), WORLD_W - cw / ZOOM))
         const camY = Math.max(0, Math.min(me.y - ch / (2 * ZOOM), WORLD_H - ch / ZOOM))
-        // Use cached canvas rect — no layout reflow every frame
-        const { left: crLeft, top: crTop } = canvasRectRef.current
-        const wx = (mousePosRef.current.x - crLeft) / ZOOM + camX
-        const wy = (mousePosRef.current.y - crTop) / ZOOM + camY
+        // mousePosRef stores canvas-relative coords (set in mousemove handler)
+        const wx = mousePosRef.current.x / ZOOM + camX
+        const wy = mousePosRef.current.y / ZOOM + camY
         me.angle = Math.atan2(wy - me.y, wx - me.x)
 
         // Send position at fixed interval
@@ -730,26 +730,11 @@ export default function BattlePage() {
       for (const entry of entries) {
         canvas.width = entry.contentRect.width
         canvas.height = entry.contentRect.height
-        // Update cached rect whenever the canvas is resized
-        const r = canvas.getBoundingClientRect()
-        canvasRectRef.current = { left: r.left, top: r.top }
       }
     })
     obs.observe(canvas)
     return () => obs.disconnect()
   }, [])
-
-  // Refresh cached canvas rect when phase changes (question panel appears/disappears, shifting layout)
-  useEffect(() => {
-    const update = () => {
-      const r = canvasRef.current?.getBoundingClientRect()
-      if (r) canvasRectRef.current = { left: r.left, top: r.top }
-    }
-    // rAF ensures the layout has settled before we sample
-    const id = requestAnimationFrame(update)
-    window.addEventListener('resize', update)
-    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', update) }
-  }, [phase])
 
   // ── Answer question ───────────────────────────────────────────────────────
   async function handleAnswer(answer: string) {
@@ -788,8 +773,12 @@ export default function BattlePage() {
     if (!session) return
     try {
       await api.startGame(session.joinCode)
-      // Host triggers BATTLE_READY for everyone via the start endpoint
+      // Re-fetch so sessionRef has all current participants before initMyPlayer
+      const fresh = await api.getGame(session.joinCode)
+      sessionRef.current = fresh
+      setSession(fresh)
       wsRef.current?.send(JSON.stringify({ type: 'BATTLE_READY', code: session.joinCode }))
+      initMyPlayer(gsRef.current.myId ?? -1)
     } catch { /* ignore */ }
   }
 
