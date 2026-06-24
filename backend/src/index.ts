@@ -3,7 +3,7 @@ import { logger } from './common/logger'
 import { WebSocketServer } from 'ws'
 import http from 'http'
 import jwt from 'jsonwebtoken'
-import { clients, userClients, playerSessions, sessionPlayers, sessionAlive, registerBattlePlayers, sendToSessionExcept, sendToAllInSession } from './lib/websocket'
+import { clients, userClients, playerSessions, sessionPlayers, sessionAlive, sessionHealth, sessionAmmo, sessionStartTime, registerBattlePlayers, sendToUser, sendToSessionExcept, sendToAllInSession, BATTLE_START_HP, BATTLE_START_AMMO, BATTLE_MAX_AMMO, BATTLE_AMMO_REWARD } from './lib/websocket'
 import { prisma } from './lib/prisma'
 
 const PORT = Number(process.env.PORT ?? '3001')
@@ -72,49 +72,80 @@ wss.on('connection', (ws) => {
         await ensureRegistered(code)
         sendToSessionExcept(code, authedUserId, 'BATTLE_POSITION', {
           userId: authedUserId,
-          x: msg.x,
-          y: msg.y,
-          angle: msg.angle,
+          x: msg.x, y: msg.y, z: msg.z,
+          rotY: msg.rotY,
         })
         return
       }
 
-      if (msg.type === 'BATTLE_FIRE') {
-        const code = resolveCode()
-        if (!code) return
-        await ensureRegistered(code)
-        sendToSessionExcept(code, authedUserId, 'BATTLE_FIRE', {
-          userId: authedUserId,
-          x: msg.x,
-          y: msg.y,
-          angle: msg.angle,
-          projId: msg.projId,
-        })
-        return
-      }
-
-      if (msg.type === 'BATTLE_HIT') {
+      if (msg.type === 'BATTLE_DAMAGE') {
         const code = resolveCode()
         if (!code) return
         await ensureRegistered(code)
         const targetId = Number(msg.targetUserId)
+        const damage = Math.min(50, Math.max(1, Number(msg.damage) || 25))
+        const healthMap = sessionHealth.get(code)
         const alive = sessionAlive.get(code)
-        // If target isn't in alive set yet, add them and then process the hit
-        if (!alive) return
-        if (!alive.has(targetId)) {
-          // Target registered after game-start — add them to alive set
-          await ensureRegistered(code)
-          const refreshedAlive = sessionAlive.get(code)
-          if (!refreshedAlive?.has(targetId)) return
+        if (!healthMap || !alive || !alive.has(targetId)) return
+        const currentHp = healthMap.get(targetId) ?? BATTLE_START_HP
+        const newHp = Math.max(0, currentHp - damage)
+        healthMap.set(targetId, newHp)
+        sendToAllInSession(code, 'BATTLE_PLAYER_HEALTH', { userId: targetId, hp: newHp })
+        if (newHp === 0) {
+          alive.delete(targetId)
+          sendToAllInSession(code, 'BATTLE_ELIMINATED', { userId: targetId, eliminatedBy: authedUserId })
+          if (alive.size === 1) {
+            const winnerId = [...alive][0]
+            sendToAllInSession(code, 'BATTLE_WIN', { userId: winnerId })
+            sessionPlayers.delete(code); sessionAlive.delete(code)
+            sessionHealth.delete(code); sessionAmmo.delete(code); sessionStartTime.delete(code)
+          }
         }
-        alive.delete(targetId)
-        sendToAllInSession(code, 'BATTLE_ELIMINATED', { userId: targetId, eliminatedBy: authedUserId })
-        if (alive.size === 1) {
-          const winnerId = [...alive][0]
-          sendToAllInSession(code, 'BATTLE_WIN', { userId: winnerId })
-          sessionPlayers.delete(code)
-          sessionAlive.delete(code)
-        }
+        return
+      }
+
+      if (msg.type === 'BATTLE_NEED_AMMO') {
+        const code = resolveCode()
+        if (!code) return
+        try {
+          const session = await prisma.gameSession.findUnique({
+            where: { joinCode: code },
+            include: { set: { select: { questions: { select: { id: true, questionText: true, options: true, correctAnswer: true }, orderBy: { orderIndex: 'asc' } } } } },
+          })
+          if (!session) return
+          const questions = session.set.questions
+          if (!questions.length) return
+          const idx = Math.floor(Math.random() * questions.length)
+          const q = questions[idx]!
+          sendToUser(authedUserId, 'BATTLE_QUESTION', {
+            questionId: q.id,
+            questionText: q.questionText,
+            options: q.options,
+          })
+        } catch { /* ignore */ }
+        return
+      }
+
+      if (msg.type === 'BATTLE_ANSWER') {
+        const code = resolveCode()
+        if (!code) return
+        try {
+          const questionId = Number(msg.questionId)
+          const answer = String(msg.answer ?? '')
+          const q = await prisma.question.findUnique({ where: { id: questionId }, select: { correctAnswer: true } })
+          if (!q) return
+          const isCorrect = q.correctAnswer === answer
+          if (isCorrect) {
+            const ammoMap = sessionAmmo.get(code)
+            if (!ammoMap) return
+            const current = ammoMap.get(authedUserId) ?? BATTLE_START_AMMO
+            const newAmmo = Math.min(BATTLE_MAX_AMMO, current + BATTLE_AMMO_REWARD)
+            ammoMap.set(authedUserId, newAmmo)
+            sendToUser(authedUserId, 'BATTLE_AMMO', { ammo: newAmmo, correct: true })
+          } else {
+            sendToUser(authedUserId, 'BATTLE_AMMO', { ammo: sessionAmmo.get(code)?.get(authedUserId) ?? 0, correct: false })
+          }
+        } catch { /* ignore */ }
         return
       }
     } catch {

@@ -37,14 +37,27 @@ export const sendToSession = (participantUserIds: number[], event: string, data:
 export const playerSessions = new Map<number, string>()          // userId → joinCode
 export const sessionPlayers = new Map<string, Set<number>>()     // joinCode → Set<userId>
 export const sessionAlive   = new Map<string, Set<number>>()     // joinCode → alive userId set
+export const sessionHealth  = new Map<string, Map<number, number>>() // joinCode → userId → hp
+export const sessionAmmo    = new Map<string, Map<number, number>>() // joinCode → userId → ammo
+export const sessionStartTime = new Map<string, number>()        // joinCode → startTime ms
+
+export const BATTLE_START_HP   = 100
+export const BATTLE_START_AMMO = 10
+export const BATTLE_MAX_AMMO   = 30
+export const BATTLE_AMMO_REWARD = 5
 
 export function registerBattlePlayers(userIds: number[], code: string) {
   if (!sessionPlayers.has(code)) sessionPlayers.set(code, new Set())
   if (!sessionAlive.has(code))   sessionAlive.set(code, new Set())
+  if (!sessionHealth.has(code))  sessionHealth.set(code, new Map())
+  if (!sessionAmmo.has(code))    sessionAmmo.set(code, new Map())
+  if (!sessionStartTime.has(code)) sessionStartTime.set(code, Date.now())
   userIds.forEach(uid => {
     playerSessions.set(uid, code)
     sessionPlayers.get(code)!.add(uid)
     sessionAlive.get(code)!.add(uid)
+    if (!sessionHealth.get(code)!.has(uid)) sessionHealth.get(code)!.set(uid, BATTLE_START_HP)
+    if (!sessionAmmo.get(code)!.has(uid))   sessionAmmo.get(code)!.set(uid, BATTLE_START_AMMO)
   })
 }
 

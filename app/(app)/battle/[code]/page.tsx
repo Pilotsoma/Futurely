@@ -1,376 +1,121 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { api, GameSession, getApiToken } from '../../../../lib/api'
+import { api, GameSession, GameParticipant, getApiToken } from '../../../../lib/api'
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const WORLD_W = 2400
-const WORLD_H = 2400
-const PLAYER_R = 16
-const PROJ_R = 5
-const PLAYER_SPEED = 200
-const PROJ_SPEED = 600
-const PROJ_MAX_DIST = 750
-const POSITION_HZ = 20
-const AMMO_PER_CORRECT = 5
-const ZOOM = 0.38
-const MINIMAP_SIZE = 86
-const MINIMAP_SCALE = MINIMAP_SIZE / WORLD_W
+const WORLD_SIZE    = 2400
+const PLAYER_SPEED  = 8
+const PLAYER_HEIGHT = 1.8
+const EYE_HEIGHT    = 1.6
+const GRAVITY       = 0.5
+const JUMP_FORCE    = 12
+const TERRAIN_SEGS  = 80
+const TERRAIN_SEED  = 42
+const ZONE_INITIAL  = 1100
+const ZONE_FINAL    = 80
+const ZONE_DURATION = 180_000 // 3 min to fully close
+const POS_HZ        = 20
+const DAMAGE_PER_HIT = 25
+const START_AMMO    = 10
 
-const PLAYER_COLORS = [
-  '#e74c3c', '#3498db', '#f39c12', '#2ecc71',
-  '#9b59b6', '#1abc9c', '#e67e22', '#ff5252',
-]
+const PLAYER_COLORS = ['#e74c3c','#3498db','#f39c12','#2ecc71','#9b59b6','#1abc9c','#e67e22','#ff5252']
 
-const SPAWN_POSITIONS = [
-  { x: 380, y: 380 }, { x: 2020, y: 380 }, { x: 380, y: 2020 }, { x: 2020, y: 2020 },
-  { x: 1200, y: 280 }, { x: 1200, y: 2120 }, { x: 280, y: 1200 }, { x: 2120, y: 1200 },
-]
+// ── Terrain ──────────────────────────────────────────────────────────────────
+function terrainH(wx: number, wz: number): number {
+  const x = wx / WORLD_SIZE, z = wz / WORLD_SIZE
+  return (
+    Math.sin(x * 6.2 + TERRAIN_SEED) * Math.cos(z * 5.8) * 28 +
+    Math.sin(x * 13 + 1.3) * Math.cos(z * 11 + 0.7) * 14 +
+    Math.sin(x * 27 + 2.1) * Math.cos(z * 23 + 1.9) * 6 +
+    Math.sin(x * 52) * Math.cos(z * 48 + 0.5) * 2
+  )
+}
+
+// ── Building seed list ───────────────────────────────────────────────────────
+function seededRng(seed: number) {
+  let s = seed
+  return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff }
+}
+
+interface Building { x: number; z: number; w: number; d: number; h: number }
+function genBuildings(): Building[] {
+  const rng = seededRng(TERRAIN_SEED + 1)
+  const list: Building[] = []
+  const margin = 200
+  for (let i = 0; i < 30; i++) {
+    const x = (rng() * (WORLD_SIZE - margin * 2) + margin) - WORLD_SIZE / 2
+    const z = (rng() * (WORLD_SIZE - margin * 2) + margin) - WORLD_SIZE / 2
+    list.push({ x, z, w: rng() * 40 + 15, d: rng() * 40 + 15, h: rng() * 20 + 8 })
+  }
+  return list
+}
+const BUILDINGS = genBuildings()
 
 // ── Types ────────────────────────────────────────────────────────────────────
-interface WorldObj {
-  type: 'house' | 'tree' | 'rock' | 'bush'
-  x: number; y: number
-  w?: number; h?: number
-  r?: number
-  solid: boolean
+interface RemotePlayer {
+  userId: number; name: string; color: string
+  x: number; y: number; z: number; rotY: number
+  hp: number; alive: boolean
 }
 
-interface PlayerState {
-  userId: number
-  name: string
-  color: string
-  x: number; y: number
-  angle: number
-  alive: boolean
-}
+interface KillEntry { killer: string; victim: string; ts: number }
 
-interface Projectile {
-  id: string
-  ownerId: number
-  x: number; y: number
-  vx: number; vy: number
-  dist: number
-}
-
-interface GameStateRef {
-  players: Map<number, PlayerState>
-  projectiles: Projectile[]
-  myId: number | null
-  world: WorldObj[]
-}
-
-// ── Seeded RNG ───────────────────────────────────────────────────────────────
-function mulberry32(seed: number) {
-  return function () {
-    let t = (seed += 0x6d2b79f5)
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-// ── World generation ─────────────────────────────────────────────────────────
-function generateWorld(seed: number): WorldObj[] {
-  const rng = mulberry32(seed)
-  const objs: WorldObj[] = []
-  const m = 250
-
-  for (let i = 0; i < 8; i++) {
-    const w = 70 + rng() * 60, h = 60 + rng() * 50
-    objs.push({ type: 'house', x: m + rng() * (WORLD_W - 2 * m - w), y: m + rng() * (WORLD_H - 2 * m - h), w, h, solid: true })
-  }
-  for (let i = 0; i < 22; i++) {
-    objs.push({ type: 'tree', x: m + rng() * (WORLD_W - 2 * m), y: m + rng() * (WORLD_H - 2 * m), r: 18 + rng() * 14, solid: true })
-  }
-  for (let i = 0; i < 14; i++) {
-    objs.push({ type: 'rock', x: m + rng() * (WORLD_W - 2 * m), y: m + rng() * (WORLD_H - 2 * m), r: 10 + rng() * 16, solid: true })
-  }
-  for (let i = 0; i < 28; i++) {
-    objs.push({ type: 'bush', x: m + rng() * (WORLD_W - 2 * m), y: m + rng() * (WORLD_H - 2 * m), r: 24 + rng() * 20, solid: false })
-  }
-  return objs
-}
-
-// ── Collision helpers ────────────────────────────────────────────────────────
-function circleVsRect(cx: number, cy: number, cr: number, rx: number, ry: number, rw: number, rh: number): boolean {
-  const nearX = Math.max(rx, Math.min(cx, rx + rw))
-  const nearY = Math.max(ry, Math.min(cy, ry + rh))
-  const dx = cx - nearX, dy = cy - nearY
-  return dx * dx + dy * dy < cr * cr
-}
-
-function circleVsCircle(ax: number, ay: number, ar: number, bx: number, by: number, br: number): boolean {
-  const dx = ax - bx, dy = ay - by
-  const r = ar + br
-  return dx * dx + dy * dy < r * r
-}
-
-function playerCollides(x: number, y: number, world: WorldObj[]): boolean {
-  for (const o of world) {
-    if (!o.solid) continue
-    if (o.type === 'house') { if (circleVsRect(x, y, PLAYER_R, o.x, o.y, o.w!, o.h!)) return true }
-    else { if (circleVsCircle(x, y, PLAYER_R, o.x, o.y, o.r!)) return true }
-  }
-  if (x < PLAYER_R || x > WORLD_W - PLAYER_R || y < PLAYER_R || y > WORLD_H - PLAYER_R) return true
-  return false
-}
-
-function projCollides(x: number, y: number, world: WorldObj[]): boolean {
-  for (const o of world) {
-    if (!o.solid) continue
-    if (o.type === 'house') { if (circleVsRect(x, y, PROJ_R, o.x, o.y, o.w!, o.h!)) return true }
-    else { if (circleVsCircle(x, y, PROJ_R, o.x, o.y, o.r!)) return true }
-  }
-  if (x < 0 || x > WORLD_W || y < 0 || y > WORLD_H) return true
-  return false
-}
-
-function isInBush(x: number, y: number, world: WorldObj[]): boolean {
-  for (const o of world) {
-    if (o.type !== 'bush') continue
-    const dx = x - o.x, dy = y - o.y
-    if (dx * dx + dy * dy < o.r! * o.r!) return true
-  }
-  return false
-}
-
-// ── Drawing functions ────────────────────────────────────────────────────────
-function drawGround(ctx: CanvasRenderingContext2D, camX: number, camY: number, cw: number, ch: number, rng: () => number) {
-  ctx.fillStyle = '#3d7a2a'
-  ctx.fillRect(0, 0, cw, ch)
-  // Tiled grass patches
-  const patchSize = 120
-  const startX = Math.floor(camX / patchSize) * patchSize
-  const startY = Math.floor(camY / patchSize) * patchSize
-  for (let wx = startX; wx < camX + cw + patchSize; wx += patchSize) {
-    for (let wy = startY; wy < camY + ch + patchSize; wy += patchSize) {
-      const hash = ((wx * 1337 + wy * 7919) & 0xffffff) / 0xffffff
-      if (hash < 0.35) {
-        ctx.fillStyle = hash < 0.15 ? '#3a7228' : '#428030'
-        ctx.fillRect(wx - camX, wy - camY, patchSize, patchSize)
-      }
-    }
-  }
-}
-
-function drawHouse(ctx: CanvasRenderingContext2D, o: WorldObj, camX: number, camY: number) {
-  const sx = o.x - camX, sy = o.y - camY
-  const w = o.w!, h = o.h!
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.22)'
-  ctx.fillRect(sx + 8, sy + 8, w, h)
-  // Walls
-  ctx.fillStyle = '#d4b896'
-  ctx.fillRect(sx, sy, w, h)
-  ctx.strokeStyle = '#b89870'
-  ctx.lineWidth = 1.5
-  ctx.strokeRect(sx, sy, w, h)
-  // Roof
-  ctx.fillStyle = '#7a3a18'
-  ctx.beginPath()
-  ctx.moveTo(sx - 6, sy)
-  ctx.lineTo(sx + w / 2, sy - 22)
-  ctx.lineTo(sx + w + 6, sy)
-  ctx.closePath()
-  ctx.fill()
-  ctx.strokeStyle = '#5a2a0c'
-  ctx.lineWidth = 1
-  ctx.stroke()
-  // Door
-  const dw = 14, dh = 20
-  ctx.fillStyle = '#3a1f0a'
-  ctx.fillRect(sx + w / 2 - dw / 2, sy + h - dh, dw, dh)
-  // Windows
-  ctx.fillStyle = 'rgba(160,220,255,0.55)'
-  ctx.fillRect(sx + 8, sy + 12, 16, 12)
-  ctx.fillRect(sx + w - 24, sy + 12, 16, 12)
-  ctx.strokeStyle = '#5a4030'
-  ctx.lineWidth = 1
-  ctx.strokeRect(sx + 8, sy + 12, 16, 12)
-  ctx.strokeRect(sx + w - 24, sy + 12, 16, 12)
-}
-
-function drawTree(ctx: CanvasRenderingContext2D, o: WorldObj, camX: number, camY: number) {
-  const sx = o.x - camX, sy = o.y - camY, r = o.r!
-  ctx.fillStyle = 'rgba(0,0,0,0.2)'
-  ctx.beginPath(); ctx.ellipse(sx + 4, sy + r * 0.4, r * 0.8, r * 0.4, 0, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = '#5a3010'
-  ctx.fillRect(sx - 4, sy + r * 0.3, 8, r * 0.5)
-  ctx.fillStyle = '#1e6b14'
-  ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = '#28901a'
-  ctx.beginPath(); ctx.arc(sx - r * 0.25, sy - r * 0.2, r * 0.55, 0, Math.PI * 2); ctx.fill()
-}
-
-function drawRock(ctx: CanvasRenderingContext2D, o: WorldObj, camX: number, camY: number) {
-  const sx = o.x - camX, sy = o.y - camY, r = o.r!
-  ctx.fillStyle = 'rgba(0,0,0,0.18)'
-  ctx.beginPath(); ctx.ellipse(sx + 3, sy + r * 0.5, r * 0.9, r * 0.4, 0, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = '#888'
-  ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = '#aaa'
-  ctx.beginPath(); ctx.arc(sx - r * 0.2, sy - r * 0.2, r * 0.45, 0, Math.PI * 2); ctx.fill()
-  ctx.strokeStyle = '#666'
-  ctx.lineWidth = 1.5
-  ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.stroke()
-}
-
-function drawBush(ctx: CanvasRenderingContext2D, o: WorldObj, camX: number, camY: number) {
-  const sx = o.x - camX, sy = o.y - camY, r = o.r!
-  ctx.globalAlpha = 0.88
-  ctx.fillStyle = '#196b14'
-  ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = '#22921a'
-  ctx.beginPath(); ctx.arc(sx - r * 0.25, sy - r * 0.15, r * 0.7, 0, Math.PI * 2); ctx.fill()
-  ctx.beginPath(); ctx.arc(sx + r * 0.2, sy - r * 0.1, r * 0.6, 0, Math.PI * 2); ctx.fill()
-  ctx.globalAlpha = 1
-}
-
-function drawPlayer(ctx: CanvasRenderingContext2D, p: PlayerState, isLocal: boolean, inBush: boolean, sx: number, sy: number) {
-  const alpha = inBush && !isLocal ? 0.3 : 1
-  ctx.globalAlpha = alpha
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.28)'
-  ctx.beginPath(); ctx.ellipse(sx + 3, sy + 6, PLAYER_R, PLAYER_R * 0.45, 0, 0, Math.PI * 2); ctx.fill()
-  // Body
-  ctx.fillStyle = p.color
-  ctx.beginPath(); ctx.arc(sx, sy, PLAYER_R, 0, Math.PI * 2); ctx.fill()
-  // Rim
-  ctx.strokeStyle = isLocal ? '#fff' : 'rgba(0,0,0,0.5)'
-  ctx.lineWidth = isLocal ? 3 : 1.5
-  ctx.stroke()
-  // Aim direction nub
-  const nx = sx + Math.cos(p.angle) * (PLAYER_R + 8)
-  const ny = sy + Math.sin(p.angle) * (PLAYER_R + 8)
-  ctx.fillStyle = isLocal ? '#fff' : 'rgba(255,255,255,0.7)'
-  ctx.beginPath(); ctx.arc(nx, ny, 4, 0, Math.PI * 2); ctx.fill()
-  // Name tag
-  ctx.globalAlpha = Math.max(alpha, 0.6)
-  ctx.font = 'bold 11px system-ui,sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'bottom'
-  ctx.fillStyle = '#fff'
-  ctx.fillText(p.name.slice(0, 12), sx, sy - PLAYER_R - 3)
-  ctx.globalAlpha = 1
-}
-
-function drawProjectile(ctx: CanvasRenderingContext2D, proj: Projectile, camX: number, camY: number) {
-  const sx = proj.x - camX, sy = proj.y - camY
-  ctx.shadowColor = '#ff8c00'
-  ctx.shadowBlur = 10
-  ctx.fillStyle = '#f97316'
-  ctx.beginPath(); ctx.arc(sx, sy, PROJ_R, 0, Math.PI * 2); ctx.fill()
-  ctx.shadowBlur = 0
-  // Stone texture
-  ctx.fillStyle = '#d97706'
-  ctx.beginPath(); ctx.arc(sx - 1.5, sy - 1.5, PROJ_R * 0.45, 0, Math.PI * 2); ctx.fill()
-}
-
-function drawTrajectory(ctx: CanvasRenderingContext2D, ox: number, oy: number, angle: number, camX: number, camY: number, world: WorldObj[]) {
-  const DOT_COUNT = 12
-  const DOT_SPACING = 55
-  ctx.fillStyle = 'rgba(249,115,22,0.6)'
-  for (let i = 1; i <= DOT_COUNT; i++) {
-    const d = i * DOT_SPACING
-    const wx = ox + Math.cos(angle) * d
-    const wy = oy + Math.sin(angle) * d
-    if (projCollides(wx, wy, world)) break
-    const alpha = 0.7 - (i / DOT_COUNT) * 0.55
-    ctx.globalAlpha = alpha
-    ctx.beginPath(); ctx.arc(wx - camX, wy - camY, 3.5, 0, Math.PI * 2); ctx.fill()
-  }
-  ctx.globalAlpha = 1
+interface Question {
+  questionId: number; questionText: string
+  options: { A: string; B: string; C: string; D: string } | string[]
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function BattlePage() {
   const { code } = useParams<{ code: string }>()
   const router = useRouter()
-
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const gsRef = useRef<GameStateRef>({ players: new Map(), projectiles: [], myId: null, world: [] })
-  // Pre-sorted world (set once at load, never changes)
-  const sortedWorldRef = useRef<WorldObj[]>([])
-  const keysRef = useRef<Set<string>>(new Set())
-  const mousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
-  const lastPosRef = useRef<{ x: number; y: number; angle: number }>({ x: 0, y: 0, angle: 0 })
-  const wsRef = useRef<WebSocket | null>(null)
-  const rafRef = useRef<number>(0)
-  const lastTimeRef = useRef<number>(0)
-  const lastPosSendRef = useRef<number>(0)
-
   const [session, setSession] = useState<GameSession | null>(null)
-  const [myId, setMyId] = useState<number | null>(() => {
-    if (typeof window === 'undefined') return null
-    try { return (JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { id?: number } | null)?.id ?? null } catch { return null }
-  })
-  const [loading, setLoading] = useState(true)
-  const [phase, setPhase] = useState<'lobby' | 'playing' | 'eliminated' | 'won' | 'lost'>('lobby')
-  const [ammo, setAmmo] = useState(10)
-  const [aliveCount, setAliveCount] = useState(0)
-  const [winner, setWinner] = useState<string | null>(null)
-  const [killMsg, setKillMsg] = useState<string | null>(null)
-  const phaseRef = useRef<'lobby' | 'playing' | 'eliminated' | 'won' | 'lost'>('lobby')
-  const ammoRef = useRef(10)
+  const [phase, setPhase] = useState<'lobby' | 'battle' | 'dead' | 'won' | 'ended'>('lobby')
+  const [error, setError] = useState('')
 
-  // Question state
-  const [questions, setQuestions] = useState<Array<{ id: number; questionText: string; options: string[]; correctAnswer?: string }>>([])
-  const [qIndex, setQIndex] = useState(0)
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
-  const [answerResult, setAnswerResult] = useState<'correct' | 'wrong' | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const qIndexRef = useRef(0)
-  const sessionRef = useRef<GameSession | null>(null)
+  // HUD state
+  const [hp, setHp] = useState(100)
+  const [ammo, setAmmo] = useState(START_AMMO)
+  const [kills, setKills] = useState<KillEntry[]>([])
+  const [question, setQuestion] = useState<Question | null>(null)
+  const [qFeedback, setQFeedback] = useState<'correct' | 'wrong' | null>(null)
+  const [zoneRadius, setZoneRadius] = useState(ZONE_INITIAL)
+  const [playersAlive, setPlayersAlive] = useState(0)
+  const [winnerName, setWinnerName] = useState('')
 
-  // Keep gsRef.myId in sync with state
-  useEffect(() => { gsRef.current.myId = myId }, [myId])
+  const canvasRef   = useRef<HTMLCanvasElement>(null)
+  const gameRef     = useRef<GameEngine | null>(null)
+  const wsRef       = useRef<WebSocket | null>(null)
+  const myUserIdRef = useRef<number>(0)
+  const myNameRef   = useRef<string>('You')
+  const startTimeRef = useRef<number>(0)
+  const ammoRef     = useRef(START_AMMO)
+  const hpRef       = useRef(100)
 
-  // ── Load session ──────────────────────────────────────────────────────────
+  // keep refs in sync
+  useEffect(() => { ammoRef.current = ammo }, [ammo])
+  useEffect(() => { hpRef.current = hp }, [hp])
+
+  // ── Load session ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!code) return
-    api.getGame(code.toUpperCase()).then(s => {
-      if (s.type !== 'BATTLE') { router.replace(`/play/${code}`); return }
+    api.getGame(code).then(s => {
       setSession(s)
-      sessionRef.current = s
-      setQuestions(s.set.questions)
-      const world = generateWorld(s.id)
-      gsRef.current.world = world
-      // Pre-sort once at load — never re-sort in the render loop
-      sortedWorldRef.current = [...world].sort((a, b) => (a.y + (a.h ?? a.r ?? 0)) - (b.y + (b.h ?? b.r ?? 0)))
-      setLoading(false)
-    }).catch(() => router.replace('/play'))
-  }, [code, router])
+      setPlayersAlive(s.participants.length)
+    }).catch(() => setError('Game not found'))
+    api.me().then(me => { myUserIdRef.current = me.id; myNameRef.current = me.name ?? 'You' }).catch(() => {})
+  }, [code])
 
-  // ── Lobby poll — keep participant count fresh ──────────────────────────────
-  useEffect(() => {
-    if (!code || phase !== 'lobby') return
-    const interval = setInterval(() => {
-      api.getGame(code.toUpperCase()).then(s => {
-        setSession(prev => prev ? { ...prev, participants: s.participants, status: s.status } : prev)
-        sessionRef.current = s
-        if (s.status === 'ACTIVE') {
-          // Re-send BATTLE_READY so backend has the fully-populated participant
-          // list at game-start time (not the partial list from lobby join time).
-          wsRef.current?.send(JSON.stringify({ type: 'BATTLE_READY', code: code!.toUpperCase() }))
-          initMyPlayer(gsRef.current.myId ?? -1)
-        }
-      }).catch(() => {})
-    }, 1000)
-    return () => clearInterval(interval)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code, phase])
-
-  // ── WS setup ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!session) return
-    const token = getApiToken()
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://api.futurely.app'
-    const ws = new WebSocket(wsUrl)
+  // ── WebSocket ─────────────────────────────────────────────────────────────
+  const connectWs = useCallback(() => {
+    const backendWs = process.env.NEXT_PUBLIC_WS_URL ?? (typeof window !== 'undefined' ? window.location.origin.replace(/^http/, 'ws').replace(':3000', ':3001') : 'ws://localhost:3001')
+    const ws = new WebSocket(backendWs)
     wsRef.current = ws
 
     ws.onopen = () => {
+      const token = getApiToken()
       if (token) ws.send(JSON.stringify({ type: 'AUTH', token }))
     }
 
@@ -379,547 +124,702 @@ export default function BattlePage() {
         const { event, data } = JSON.parse(e.data)
 
         if (event === 'AUTH_OK') {
-          setMyId(data.userId)
-          gsRef.current.myId = data.userId
-          // Register in battle session
-          ws.send(JSON.stringify({ type: 'BATTLE_READY', code: code.toUpperCase() }))
-          // Only start the game if it's already ACTIVE (i.e. rejoining mid-game).
-          // If it's still PENDING, stay in lobby — the lobby poll will call
-          // initMyPlayer once the host clicks Start.
-          if (sessionRef.current?.status === 'ACTIVE') {
-            initMyPlayer(data.userId)
-          }
+          ws.send(JSON.stringify({ type: 'BATTLE_READY', code }))
         }
 
-        if (event === 'BATTLE_POSITION') {
-          const gs = gsRef.current
-          let p = gs.players.get(data.userId as number)
-          if (!p) {
-            // Player wasn't in the map when game started (timing race) — add them now
-            const idx = gs.players.size % PLAYER_COLORS.length
-            p = { userId: data.userId as number, name: 'Player', color: PLAYER_COLORS[idx], x: data.x as number, y: data.y as number, angle: data.angle as number, alive: true }
-            gs.players.set(data.userId as number, p)
-          } else {
-            p.x = data.x as number; p.y = data.y as number; p.angle = data.angle as number
-          }
+        if (event === 'BATTLE_POSITION' && gameRef.current) {
+          gameRef.current.updateRemotePlayer(data.userId, data.x, data.y, data.z, data.rotY)
         }
 
-        if (event === 'BATTLE_FIRE') {
-          const angle = data.angle as number
-          gsRef.current.projectiles.push({
-            id: data.projId as string,
-            ownerId: data.userId as number,
-            x: data.x as number, y: data.y as number,
-            vx: Math.cos(angle), vy: Math.sin(angle),
-            dist: 0,
-          })
+        if (event === 'BATTLE_PLAYER_HEALTH' && gameRef.current) {
+          gameRef.current.updateRemotePlayerHp(data.userId, data.hp)
+          if (data.hp <= 0) {
+            setPlayersAlive(p => Math.max(0, p - 1))
+          }
         }
 
         if (event === 'BATTLE_ELIMINATED') {
-          const gs = gsRef.current
-          const p = gs.players.get(data.userId)
-          if (p) { p.alive = false }
-          const alive = [...gs.players.values()].filter(pl => pl.alive)
-          setAliveCount(alive.length)
-          if (data.userId === gs.myId) {
-            phaseRef.current = 'eliminated'
-            setPhase('eliminated')
+          const engine = gameRef.current
+          const killerName = engine?.getPlayerName(data.eliminatedBy) ?? 'Someone'
+          const victimName = engine?.getPlayerName(data.userId) ?? 'Player'
+          setKills(k => [...k.slice(-4), { killer: killerName, victim: victimName, ts: Date.now() }])
+          if (data.userId === myUserIdRef.current) {
+            setPhase('dead')
+            gameRef.current?.destroy()
           }
-          const killerName = gs.players.get(data.eliminatedBy as number)?.name ?? 'Someone'
-          const victimName = p?.name ?? 'A player'
-          setKillMsg(`${killerName} eliminated ${victimName}!`)
-          setTimeout(() => setKillMsg(null), 3000)
         }
 
         if (event === 'BATTLE_WIN') {
-          const gs = gsRef.current
-          const winnerName = gs.players.get(data.userId as number)?.name ?? 'A player'
-          setWinner(winnerName)
-          if (data.userId === gs.myId) {
-            phaseRef.current = 'won'; setPhase('won')
-          } else {
-            phaseRef.current = 'lost'; setPhase('lost')
-          }
+          const isMe = data.userId === myUserIdRef.current
+          setWinnerName(isMe ? myNameRef.current : (gameRef.current?.getPlayerName(data.userId) ?? 'Someone'))
+          setPhase(isMe ? 'won' : 'ended')
+          gameRef.current?.destroy()
+        }
+
+        if (event === 'BATTLE_QUESTION') {
+          setQuestion(data)
+          setQFeedback(null)
+        }
+
+        if (event === 'BATTLE_AMMO') {
+          setAmmo(data.ammo)
+          setQFeedback(data.correct ? 'correct' : 'wrong')
+          if (data.correct) setTimeout(() => { setQuestion(null); setQFeedback(null) }, 800)
+          else setTimeout(() => setQFeedback(null), 1200)
+        }
+
+        if (event === 'GAME_STARTED') {
+          startTimeRef.current = Date.now()
+          setPhase('battle')
         }
       } catch { /* ignore */ }
     }
 
-    return () => { ws.close() }
-  }, [session, code])
+    ws.onclose = () => setTimeout(connectWs, 3000)
+  }, [code])
 
-  function initMyPlayer(userId: number) {
-    const s = sessionRef.current
-    if (!s) return
-    const allIds = [s.hostId, ...s.participants.map(p => p.userId)]
-    const myIndex = allIds.indexOf(userId)
-    const spawnIdx = Math.max(0, myIndex) % SPAWN_POSITIONS.length
-    const spawn = SPAWN_POSITIONS[spawnIdx]
+  useEffect(() => { connectWs(); return () => wsRef.current?.close() }, [connectWs])
 
-    const gs = gsRef.current
-    allIds.forEach((uid, i) => {
-      const sp = SPAWN_POSITIONS[i % SPAWN_POSITIONS.length]
-      const participant = s.participants.find(p => p.userId === uid) ?? { userId: uid, user: { name: uid === s.hostId ? s.host.name : 'Player', nameColor: null } }
-      const name = uid === s.hostId
-        ? (s.host.name ?? 'Host')
-        : (participant as { user: { name: string | null } }).user?.name ?? 'Player'
-      gs.players.set(uid, { userId: uid, name: name ?? 'Player', color: PLAYER_COLORS[i % PLAYER_COLORS.length], x: sp.x, y: sp.y, angle: 0, alive: true })
-    })
+  // ── Zone timer ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'battle') return
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTimeRef.current
+      const t = Math.min(1, elapsed / ZONE_DURATION)
+      setZoneRadius(ZONE_INITIAL + (ZONE_FINAL - ZONE_INITIAL) * t)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [phase])
 
-    lastPosRef.current = { x: spawn.x, y: spawn.y, angle: 0 }
-    setAliveCount(allIds.length)
-    phaseRef.current = 'playing'
-    setPhase('playing')
+  // ── Start game (host) ─────────────────────────────────────────────────────
+  async function handleStart() {
+    if (!code) return
+    try { await api.startGame(code) } catch (e) { setError(e instanceof Error ? e.message : 'Failed') }
   }
 
-  // ── Input setup ───────────────────────────────────────────────────────────
+  // ── Init Three.js after phase → battle ───────────────────────────────────
   useEffect(() => {
-    const onKey = (e: KeyboardEvent, down: boolean) => {
-      keysRef.current[down ? 'add' : 'delete'](e.key.toLowerCase())
-      if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault()
-    }
-    const kd = (e: KeyboardEvent) => onKey(e, true)
-    const ku = (e: KeyboardEvent) => onKey(e, false)
-    // Compute canvas-relative coords on every mousemove (getBoundingClientRect
-    // in a mousemove handler is fine — not called 60×/s like rAF).
-    const onMouseMove = (e: MouseEvent) => {
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const r = canvas.getBoundingClientRect()
-      mousePosRef.current = { x: e.clientX - r.left, y: e.clientY - r.top }
-    }
-    window.addEventListener('keydown', kd)
-    window.addEventListener('keyup', ku)
-    window.addEventListener('mousemove', onMouseMove)
-    return () => {
-      window.removeEventListener('keydown', kd)
-      window.removeEventListener('keyup', ku)
-      window.removeEventListener('mousemove', onMouseMove)
-    }
-  }, [])
+    if (phase !== 'battle' || !canvasRef.current) return
 
-  const handleCanvasMouseMove = useCallback((_e: React.MouseEvent<HTMLCanvasElement>) => {
-    // Tracking is handled at window level; this prop kept for cursor style only
-  }, [])
-
-  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (phaseRef.current !== 'playing') return
-    if (ammoRef.current <= 0) return
-    const gs = gsRef.current
-    if (!gs.myId) return
-    const me = gs.players.get(gs.myId)
-    if (!me || !me.alive) return
-
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const cw = canvas.width, ch = canvas.height
-    const camX = Math.max(0, Math.min(me.x - cw / (2 * ZOOM), WORLD_W - cw / ZOOM))
-    const camY = Math.max(0, Math.min(me.y - ch / (2 * ZOOM), WORLD_H - ch / ZOOM))
-    // Use click event coords directly — always accurate, no stale rect
-    const r = canvas.getBoundingClientRect()
-    const mx = (e.clientX - r.left) / ZOOM + camX
-    const my = (e.clientY - r.top) / ZOOM + camY
-    const angle = Math.atan2(my - me.y, mx - me.x)
-    const projId = `${gs.myId}_${Date.now()}`
-
-    gs.projectiles.push({ id: projId, ownerId: gs.myId, x: me.x, y: me.y, vx: Math.cos(angle), vy: Math.sin(angle), dist: 0 })
-
-    ammoRef.current -= 1
-    setAmmo(a => a - 1)
-
-    wsRef.current?.send(JSON.stringify({ type: 'BATTLE_FIRE', x: me.x, y: me.y, angle, projId }))
-  }, [])
-
-  // ── Game loop ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if ((phase !== 'playing' && phase !== 'eliminated') || !session) return
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    function loop(ts: number) {
-      rafRef.current = requestAnimationFrame(loop)
-      const dt = Math.min((ts - lastTimeRef.current) / 1000, 0.05)
-      lastTimeRef.current = ts
-
-      const gs = gsRef.current
-      const me = gs.myId ? gs.players.get(gs.myId) : null
-
-      // ── Update ──────────────────────────────────────────────────────────
-      if (me && me.alive) {
-        const keys = keysRef.current
-        let dx = 0, dy = 0
-        if (keys.has('w') || keys.has('arrowup')) dy -= 1
-        if (keys.has('s') || keys.has('arrowdown')) dy += 1
-        if (keys.has('a') || keys.has('arrowleft')) dx -= 1
-        if (keys.has('d') || keys.has('arrowright')) dx += 1
-
-        if (dx !== 0 || dy !== 0) {
-          const len = Math.sqrt(dx * dx + dy * dy)
-          dx /= len; dy /= len
-          const nx = me.x + dx * PLAYER_SPEED * dt
-          const ny = me.y + dy * PLAYER_SPEED * dt
-          if (!playerCollides(nx, me.y, gs.world)) me.x = nx
-          if (!playerCollides(me.x, ny, gs.world)) me.y = ny
-        }
-
-        const cw = canvas!.width, ch = canvas!.height
-        const camX = Math.max(0, Math.min(me.x - cw / (2 * ZOOM), WORLD_W - cw / ZOOM))
-        const camY = Math.max(0, Math.min(me.y - ch / (2 * ZOOM), WORLD_H - ch / ZOOM))
-        // mousePosRef stores canvas-relative coords (set in mousemove handler)
-        const wx = mousePosRef.current.x / ZOOM + camX
-        const wy = mousePosRef.current.y / ZOOM + camY
-        me.angle = Math.atan2(wy - me.y, wx - me.x)
-
-        // Send position at fixed interval
-        const now = Date.now()
-        if (now - lastPosSendRef.current > 1000 / POSITION_HZ) {
-          lastPosSendRef.current = now
-          wsRef.current?.send(JSON.stringify({ type: 'BATTLE_POSITION', x: me.x, y: me.y, angle: me.angle }))
-        }
-      }
-
-      // Update projectiles
-      for (let i = gs.projectiles.length - 1; i >= 0; i--) {
-        const proj = gs.projectiles[i]
-        const step = PROJ_SPEED * dt
-        proj.x += proj.vx * step
-        proj.y += proj.vy * step
-        proj.dist += step
-
-        if (proj.dist > PROJ_MAX_DIST || projCollides(proj.x, proj.y, gs.world)) {
-          gs.projectiles.splice(i, 1)
-          continue
-        }
-
-        // Hit detection (only for my projectiles)
-        if (proj.ownerId === gs.myId) {
-          let hit = false
-          for (const [uid, player] of gs.players) {
-            if (uid === gs.myId || !player.alive) continue
-            const dx = proj.x - player.x, dy = proj.y - player.y
-            if (dx * dx + dy * dy < (PLAYER_R + PROJ_R) * (PLAYER_R + PROJ_R)) {
-              hit = true
-              gs.projectiles.splice(i, 1)
-              wsRef.current?.send(JSON.stringify({ type: 'BATTLE_HIT', targetUserId: uid, projId: proj.id }))
-              break
-            }
-          }
-          if (hit) continue
-        }
-      }
-
-      // ── Render ──────────────────────────────────────────────────────────
-      const cw = canvas!.width, ch = canvas!.height
-      const viewW = cw / ZOOM, viewH = ch / ZOOM
-      const camX = me ? Math.max(0, Math.min(me.x - viewW / 2, WORLD_W - viewW)) : 0
-      const camY = me ? Math.max(0, Math.min(me.y - viewH / 2, WORLD_H - viewH)) : 0
-
-      ctx!.clearRect(0, 0, cw, ch)
-
-      ctx!.save()
-      ctx!.scale(ZOOM, ZOOM)
-
-      drawGround(ctx!, camX, camY, viewW, viewH, () => 0)
-
-      const sorted = sortedWorldRef.current
-      const pad = 120
-
-      for (const o of sorted) {
-        if (o.type === 'bush') continue
-        const sx = o.x - camX, sy = o.y - camY
-        if (sx < -pad || sx > viewW + pad || sy < -pad || sy > viewH + pad) continue
-        if (o.type === 'house') drawHouse(ctx!, o, camX, camY)
-        else if (o.type === 'tree') drawTree(ctx!, o, camX, camY)
-        else if (o.type === 'rock') drawRock(ctx!, o, camX, camY)
-      }
-
-      const playersSorted = [...gs.players.values()].filter(p => p.alive).sort((a, b) => a.y - b.y)
-      for (const p of playersSorted) {
-        const sx = p.x - camX, sy = p.y - camY
-        if (sx < -60 || sx > viewW + 60 || sy < -60 || sy > viewH + 60) continue
-        const inBush = isInBush(p.x, p.y, gs.world)
-        drawPlayer(ctx!, p, p.userId === gs.myId, inBush, sx, sy)
-      }
-
-      for (const o of sorted) {
-        if (o.type !== 'bush') continue
-        const sx = o.x - camX, sy = o.y - camY
-        if (sx < -pad || sx > viewW + pad || sy < -pad || sy > viewH + pad) continue
-        drawBush(ctx!, o, camX, camY)
-      }
-
-      for (const proj of gs.projectiles) {
-        drawProjectile(ctx!, proj, camX, camY)
-      }
-
-      if (me && me.alive && ammoRef.current > 0) {
-        drawTrajectory(ctx!, me.x, me.y, me.angle, camX, camY, gs.world)
-      }
-
-      ctx!.restore()
-
-      // ── HUD + Minimap (1:1 scale after restore) ──────────────────────────
-      const aliveCount = [...gs.players.values()].filter(p => p.alive).length
-      ctx!.font = 'bold 12px system-ui,sans-serif'
-      ctx!.textBaseline = 'middle'
-
-      // Ammo pill (top-left)
-      ctx!.fillStyle = 'rgba(0,0,0,0.62)'
-      ctx!.beginPath(); ctx!.roundRect(10, 10, 80, 24, 7); ctx!.fill()
-      ctx!.fillStyle = ammoRef.current > 0 ? '#f97316' : '#ef4444'
-      ctx!.textAlign = 'center'
-      ctx!.fillText(`Ammo  ${ammoRef.current}`, 50, 22)
-
-      // Alive pill (top-right)
-      ctx!.fillStyle = 'rgba(0,0,0,0.62)'
-      ctx!.beginPath(); ctx!.roundRect(cw - 90, 10, 80, 24, 7); ctx!.fill()
-      ctx!.fillStyle = '#22c55e'
-      ctx!.fillText(`${aliveCount} alive`, cw - 50, 22)
-
-      // ── Minimap (bottom-right) ────────────────────────────────────────────
-      const mmX = cw - MINIMAP_SIZE - 10
-      const mmY = ch - MINIMAP_SIZE - 10
-
-      // Background
-      ctx!.fillStyle = 'rgba(10,14,10,0.78)'
-      ctx!.strokeStyle = 'rgba(255,255,255,0.18)'
-      ctx!.lineWidth = 1
-      ctx!.beginPath(); ctx!.roundRect(mmX, mmY, MINIMAP_SIZE, MINIMAP_SIZE, 6); ctx!.fill(); ctx!.stroke()
-
-      // Viewport rectangle
-      ctx!.strokeStyle = 'rgba(255,255,255,0.35)'
-      ctx!.lineWidth = 1
-      ctx!.strokeRect(
-        mmX + camX * MINIMAP_SCALE,
-        mmY + camY * MINIMAP_SCALE,
-        (cw / ZOOM) * MINIMAP_SCALE,
-        (ch / ZOOM) * MINIMAP_SCALE,
-      )
-
-      // Players
-      for (const [uid, p] of gs.players) {
-        if (!p.alive) continue
-        const px = mmX + p.x * MINIMAP_SCALE
-        const py = mmY + p.y * MINIMAP_SCALE
-        const isMe = uid === gs.myId
-        ctx!.fillStyle = p.color
-        ctx!.beginPath(); ctx!.arc(px, py, isMe ? 3.5 : 2.5, 0, Math.PI * 2); ctx!.fill()
-        if (isMe) {
-          ctx!.strokeStyle = '#fff'
-          ctx!.lineWidth = 1.5
-          ctx!.stroke()
-        }
-      }
-
-      // Minimap border (draw again on top)
-      ctx!.strokeStyle = 'rgba(255,255,255,0.22)'
-      ctx!.lineWidth = 1
-      ctx!.beginPath(); ctx!.roundRect(mmX, mmY, MINIMAP_SIZE, MINIMAP_SIZE, 6); ctx!.stroke()
-    }
-
-    rafRef.current = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(rafRef.current)
+    const engine = new GameEngine(
+      canvasRef.current,
+      myUserIdRef.current,
+      myNameRef.current,
+      session?.participants ?? [],
+      (x, y, z, rotY) => {
+        wsRef.current?.send(JSON.stringify({ type: 'BATTLE_POSITION', x, y, z, rotY }))
+      },
+      (targetId, damage) => {
+        wsRef.current?.send(JSON.stringify({ type: 'BATTLE_DAMAGE', targetUserId: targetId, damage }))
+      },
+      () => {
+        // Request question when out of ammo
+        wsRef.current?.send(JSON.stringify({ type: 'BATTLE_NEED_AMMO' }))
+      },
+      (newHp) => setHp(newHp),
+      (newAmmo) => setAmmo(newAmmo),
+      ammoRef,
+      hpRef,
+    )
+    gameRef.current = engine
+    return () => { engine.destroy(); gameRef.current = null }
   }, [phase, session])
 
-  // Canvas resize observer
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const obs = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        canvas.width = entry.contentRect.width
-        canvas.height = entry.contentRect.height
-      }
-    })
-    obs.observe(canvas)
-    return () => obs.disconnect()
-  }, [])
-
-  // ── Answer question ───────────────────────────────────────────────────────
-  async function handleAnswer(answer: string) {
-    if (submitting || answerResult !== null) return
-    const q = questions[qIndexRef.current]
-    if (!q || !session) return
-    setSelectedAnswer(answer)
-    setSubmitting(true)
-    try {
-      const result = await api.submitAnswer(session.joinCode, { questionId: q.id, answer, timeMs: 0 })
-      setAnswerResult(result.isCorrect ? 'correct' : 'wrong')
-      if (result.isCorrect) {
-        ammoRef.current += AMMO_PER_CORRECT
-        setAmmo(a => a + AMMO_PER_CORRECT)
-        setTimeout(() => {
-          const next = qIndexRef.current + 1 < questions.length ? qIndexRef.current + 1 : 0
-          qIndexRef.current = next
-          setQIndex(next)
-          setSelectedAnswer(null)
-          setAnswerResult(null)
-          setSubmitting(false)
-        }, 1200)
-      } else {
-        setTimeout(() => { setSelectedAnswer(null); setAnswerResult(null); setSubmitting(false) }, 1200)
-      }
-    } catch {
-      setSubmitting(false)
-    }
+  // ── Answer question ──────────────────────────────────────────────────────
+  function handleAnswer(answer: string) {
+    if (!question || qFeedback) return
+    wsRef.current?.send(JSON.stringify({ type: 'BATTLE_ANSWER', questionId: question.questionId, answer }))
   }
 
-  const q = questions[qIndex]
-  const OPTION_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#22c55e']
-
-  // ── Start the battle (host only) ───────────────────────────────────────────
-  async function handleStartBattle() {
-    if (!session) return
-    try {
-      await api.startGame(session.joinCode)
-      // Re-fetch so sessionRef has all current participants before initMyPlayer
-      const fresh = await api.getGame(session.joinCode)
-      sessionRef.current = fresh
-      setSession(fresh)
-      wsRef.current?.send(JSON.stringify({ type: 'BATTLE_READY', code: session.joinCode }))
-      initMyPlayer(gsRef.current.myId ?? -1)
-    } catch { /* ignore */ }
-  }
-
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#111', color: '#fff', fontSize: 16, fontWeight: 700 }}>
-      Loading battle...
+  // ── Render ────────────────────────────────────────────────────────────────
+  if (error) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a0f', color: '#fff', fontSize: 18 }}>
+      {error} — <button onClick={() => router.back()} style={{ marginLeft: 12, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, textDecoration: 'underline' }}>Go back</button>
     </div>
   )
 
+  if (phase === 'lobby') return <LobbyScreen session={session} onStart={handleStart} myId={myUserIdRef.current} />
+
+  if (phase === 'dead') return (
+    <div style={overlay}>
+      <div style={card}>
+        <div style={{ fontSize: 56, marginBottom: 8 }}>💀</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: '#ef4444', marginBottom: 8 }}>Eliminated</div>
+        <div style={{ color: '#9ca3af', marginBottom: 24 }}>Better luck next time</div>
+        <button onClick={() => router.push('/sets')} style={btn}>Back to Sets</button>
+      </div>
+    </div>
+  )
+
+  if (phase === 'won') return (
+    <div style={overlay}>
+      <div style={card}>
+        <div style={{ fontSize: 56, marginBottom: 8 }}>🏆</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: '#fbbf24', marginBottom: 8 }}>Victory Royale!</div>
+        <div style={{ color: '#9ca3af', marginBottom: 24 }}>You are the last one standing</div>
+        <button onClick={() => router.push('/sets')} style={btn}>Back to Sets</button>
+      </div>
+    </div>
+  )
+
+  if (phase === 'ended') return (
+    <div style={overlay}>
+      <div style={card}>
+        <div style={{ fontSize: 40, marginBottom: 8 }}>🎮</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Game Over</div>
+        <div style={{ color: '#fbbf24', marginBottom: 24 }}>{winnerName} won the match</div>
+        <button onClick={() => router.push('/sets')} style={btn}>Back to Sets</button>
+      </div>
+    </div>
+  )
+
+  // Battle HUD
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0d0d0d', overflow: 'hidden' }}>
-      {/* ── Game Canvas ────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        <canvas
-          ref={canvasRef}
-          style={{ display: 'block', width: '100%', height: '100%', cursor: phase === 'playing' ? 'crosshair' : 'default' }}
-          onMouseMove={handleCanvasMouseMove}
-          onClick={handleCanvasClick}
-        />
+    <div style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}>
+      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
 
-        {/* Kill feed message */}
-        {killMsg && (
-          <div style={{ position: 'absolute', top: 70, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', color: '#f97316', padding: '8px 20px', borderRadius: 20, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
-            {killMsg}
-          </div>
-        )}
-
-        {/* Lobby overlay */}
-        {phase === 'lobby' && session && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: '#1a1a2e', border: '1px solid #333', borderRadius: 20, padding: '40px 50px', textAlign: 'center', maxWidth: 420, width: '90%' }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>🏹</div>
-              <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: '0 0 8px' }}>Battle Royale</h1>
-              <p style={{ fontSize: 13, color: '#888', margin: '0 0 24px' }}>{session.set.title}</p>
-              <div style={{ background: '#111', borderRadius: 12, padding: '12px 20px', marginBottom: 24 }}>
-                <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>JOIN CODE</div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#f97316', letterSpacing: '0.2em' }}>{session.joinCode}</div>
-              </div>
-              <div style={{ fontSize: 13, color: '#aaa', marginBottom: 20 }}>
-                {session.participants.length + 1} player{session.participants.length !== 0 ? 's' : ''} joined
-              </div>
-              {myId === session.hostId ? (
-                <button
-                  onClick={() => void handleStartBattle()}
-                  style={{ padding: '14px 36px', borderRadius: 14, background: '#f97316', border: 'none', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}
-                >
-                  Start Battle
-                </button>
-              ) : (
-                <div style={{ fontSize: 13, color: '#888' }}>Waiting for host to start...</div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Eliminated overlay */}
-        {phase === 'eliminated' && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 64, marginBottom: 12 }}>💀</div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: '#ef4444', marginBottom: 8 }}>You were eliminated!</div>
-              <div style={{ fontSize: 14, color: '#888' }}>Keep answering questions to spectate</div>
-            </div>
-          </div>
-        )}
-
-        {/* Win overlay */}
-        {phase === 'won' && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 72, marginBottom: 16 }}>🏆</div>
-              <div style={{ fontSize: 32, fontWeight: 900, color: '#f59e0b', marginBottom: 8 }}>You Won!</div>
-              <div style={{ fontSize: 15, color: '#aaa', marginBottom: 28 }}>Last player standing</div>
-              <button onClick={() => router.push('/play')} style={{ padding: '12px 32px', borderRadius: 14, background: '#f59e0b', border: 'none', color: '#000', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
-                Play Again
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Loss overlay */}
-        {phase === 'lost' && winner && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 64, marginBottom: 16 }}>🎮</div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', marginBottom: 8 }}>{winner} wins!</div>
-              <div style={{ fontSize: 14, color: '#888', marginBottom: 28 }}>Better luck next time</div>
-              <button onClick={() => router.push('/play')} style={{ padding: '12px 32px', borderRadius: 14, background: '#6366f1', border: 'none', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
-                Play Again
-              </button>
-            </div>
-          </div>
-        )}
+      {/* Crosshair */}
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+        <div style={{ width: 2, height: 14, background: 'rgba(255,255,255,0.9)', margin: '0 auto' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 14, height: 2, background: 'rgba(255,255,255,0.9)' }} />
+          <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.9)' }} />
+          <div style={{ width: 14, height: 2, background: 'rgba(255,255,255,0.9)' }} />
+        </div>
+        <div style={{ width: 2, height: 14, background: 'rgba(255,255,255,0.9)', margin: '0 auto' }} />
       </div>
 
-      {/* ── Question Panel ─────────────────────────────────────────────────── */}
-      {(phase === 'playing' || phase === 'eliminated') && q && (
-        <div style={{ height: 170, background: '#111', borderTop: '1px solid #222', padding: '14px 20px', display: 'flex', gap: 16, alignItems: 'center', flexShrink: 0 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#f97316', background: '#1f1005', padding: '3px 10px', borderRadius: 10 }}>
-                +{AMMO_PER_CORRECT} AMMO
-              </span>
-              <span style={{ fontSize: 12, color: '#666' }}>Q{qIndex + 1} of {questions.length}</span>
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.4, marginBottom: 10, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
-              {q.questionText}
-            </div>
+      {/* Bottom HUD */}
+      <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 20, alignItems: 'flex-end' }}>
+        {/* HP */}
+        <div style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(255,255,255,0.1)', minWidth: 120 }}>
+          <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, marginBottom: 4 }}>HEALTH</div>
+          <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
+            <div style={{ height: '100%', width: `${hp}%`, background: hp > 50 ? '#22c55e' : hp > 25 ? '#f59e0b' : '#ef4444', borderRadius: 3, transition: 'width 0.2s, background 0.3s' }} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0, width: 420 }}>
-            {q.options.map((opt, i) => {
-              const isSelected = selectedAnswer === String(i)
-              const isResult = answerResult !== null && isSelected
-              const bg = isResult
-                ? answerResult === 'correct' ? '#166534' : '#7f1d1d'
-                : isSelected ? '#1e40af' : '#1c1c1c'
-              const border = isResult
-                ? answerResult === 'correct' ? '#22c55e' : '#ef4444'
-                : isSelected ? '#3b82f6' : '#2a2a2a'
-              return (
-                <button
-                  key={i}
-                  onClick={() => void handleAnswer(String(i))}
-                  disabled={submitting || answerResult !== null}
-                  style={{
-                    padding: '10px 14px', borderRadius: 10, background: bg, border: `1.5px solid ${border}`,
-                    color: '#fff', fontSize: 12, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer',
-                    textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 6, background: OPTION_COLORS[i], color: '#fff', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
-                    {['A','B','C','D'][i]}
-                  </span>
-                  {opt}
+          <div style={{ fontSize: 18, fontWeight: 800, color: hp > 50 ? '#22c55e' : hp > 25 ? '#f59e0b' : '#ef4444' }}>{hp}</div>
+        </div>
+
+        {/* Ammo */}
+        <div style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(255,255,255,0.1)', minWidth: 100 }}>
+          <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, marginBottom: 4 }}>AMMO</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: ammo > 0 ? '#fff' : '#ef4444' }}>
+            {ammo} <span style={{ fontSize: 12, color: '#6b7280' }}>/ 30</span>
+          </div>
+          {ammo === 0 && <div style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700 }}>ANSWER Q FOR AMMO</div>}
+        </div>
+
+        {/* Players alive */}
+        <div style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, marginBottom: 4 }}>ALIVE</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>{playersAlive}</div>
+        </div>
+      </div>
+
+      {/* Zone indicator top-right */}
+      <div style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', borderRadius: 10, padding: '8px 14px', border: '1px solid rgba(239,68,68,0.3)' }}>
+        <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, marginBottom: 2 }}>ZONE</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>⌀ {Math.round(zoneRadius * 2)}m</div>
+      </div>
+
+      {/* Kill feed top-left */}
+      <div style={{ position: 'absolute', top: 20, left: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {kills.filter(k => Date.now() - k.ts < 5000).map((k, i) => (
+          <div key={i} style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#fff', fontWeight: 600 }}>
+            <span style={{ color: '#fbbf24' }}>{k.killer}</span>
+            <span style={{ color: '#6b7280', margin: '0 6px' }}>eliminated</span>
+            <span style={{ color: '#ef4444' }}>{k.victim}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Controls hint */}
+      <div style={{ position: 'absolute', bottom: 24, right: 20, background: 'rgba(0,0,0,0.5)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: '#6b7280', lineHeight: 1.8 }}>
+        WASD · Move &nbsp;|&nbsp; Mouse · Look &nbsp;|&nbsp; Click · Shoot &nbsp;|&nbsp; Click canvas to lock
+      </div>
+
+      {/* Question panel */}
+      {question && (
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(10,10,20,0.95)', backdropFilter: 'blur(16px)', borderRadius: 16, padding: 28, border: '1px solid rgba(99,102,241,0.4)', width: 360, maxWidth: '90vw', zIndex: 100 }}>
+          <div style={{ fontSize: 11, color: '#6366f1', fontWeight: 700, marginBottom: 8 }}>⚡ ANSWER FOR +5 AMMO</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16, lineHeight: 1.4 }}>{question.questionText}</div>
+          {qFeedback && (
+            <div style={{ textAlign: 'center', fontSize: 16, fontWeight: 800, color: qFeedback === 'correct' ? '#22c55e' : '#ef4444', marginBottom: 12 }}>
+              {qFeedback === 'correct' ? '✓ Correct! +5 ammo' : '✗ Wrong!'}
+            </div>
+          )}
+          {!qFeedback && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {(Array.isArray(question.options)
+                ? question.options.map((o, i) => ({ key: ['A','B','C','D'][i] ?? String(i), val: o }))
+                : Object.entries(question.options as Record<string,string>).map(([k,v]) => ({ key: k, val: v }))
+              ).map(({ key, val }) => (
+                <button key={key} onClick={() => handleAnswer(key)}
+                  style={{ padding: '10px 8px', borderRadius: 10, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.1)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
+                  <span style={{ color: '#6366f1', fontWeight: 800, marginRight: 6 }}>{key}.</span>{val}
                 </button>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
   )
+}
+
+// ── Lobby Screen ─────────────────────────────────────────────────────────────
+function LobbyScreen({ session, onStart, myId }: { session: GameSession | null; onStart: () => void; myId: number }) {
+  const isHost = session?.hostId === myId
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a0f' }}>
+      <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 32, width: 360, textAlign: 'center' }}>
+        <div style={{ fontSize: 32, marginBottom: 8 }}>🎯</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginBottom: 4 }}>{session?.set?.title ?? 'Battle Royale'}</div>
+        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>Code: <span style={{ color: '#6366f1', fontWeight: 700 }}>{session?.joinCode}</span></div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 700, marginBottom: 8 }}>PLAYERS ({session?.participants?.length ?? 0})</div>
+          {session?.participants?.map((p: GameParticipant) => (
+            <div key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, marginBottom: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: PLAYER_COLORS[p.userId % PLAYER_COLORS.length] ?? '#6366f1' }} />
+              <span style={{ color: '#fff', fontSize: 13 }}>{p.user?.name ?? 'Player'}</span>
+              {p.userId === session.hostId && <span style={{ marginLeft: 'auto', fontSize: 10, color: '#fbbf24', fontWeight: 700 }}>HOST</span>}
+            </div>
+          ))}
+        </div>
+        {isHost
+          ? <button onClick={onStart} style={{ ...btn, width: '100%' }}>Start Battle</button>
+          : <div style={{ color: '#6b7280', fontSize: 13 }}>Waiting for host to start…</div>
+        }
+      </div>
+    </div>
+  )
+}
+
+// ── Shared styles ─────────────────────────────────────────────────────────────
+const overlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }
+const card: React.CSSProperties = { background: 'rgba(15,15,25,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: 40, textAlign: 'center', minWidth: 280 }
+const btn: React.CSSProperties = { background: '#6366f1', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 28px', fontWeight: 700, fontSize: 15, cursor: 'pointer' }
+
+// ── Game Engine (Three.js) ───────────────────────────────────────────────────
+class GameEngine {
+  private scene!: import('three').Scene
+  private camera!: import('three').PerspectiveCamera
+  private renderer!: import('three').WebGLRenderer
+  private terrain!: import('three').Mesh
+  private playerMeshes = new Map<number, import('three').Group>()
+  private playerNames = new Map<number, string>()
+  private playerHps = new Map<number, number>()
+  private nameLabels = new Map<number, HTMLDivElement>()
+  private labelContainer!: HTMLDivElement
+  private keys = new Set<string>()
+  private yaw = 0
+  private pitch = 0
+  private velY = 0
+  private px = 0; private py = 50; private pz = 0
+  private pointerLocked = false
+  private animId = 0
+  private lastTime = 0
+  private destroyed = false
+  private three!: typeof import('three')
+  private THREE_CSS!: any
+  private buildingMeshes: import('three').Mesh[] = []
+  private onPosition: (x: number, y: number, z: number, rotY: number) => void
+  private onDamage: (targetId: number, damage: number) => void
+  private onNeedAmmo: () => void
+  private onHpChange: (hp: number) => void
+  private onAmmoChange: (ammo: number) => void
+  private ammoRef: React.MutableRefObject<number>
+  private hpRef: React.MutableRefObject<number>
+  private myHp = 100
+  private myAmmo: number
+  private canvas: HTMLCanvasElement
+  private myId: number
+  private raycaster!: import('three').Raycaster
+  private shootCooldown = 0
+  private posInterval = 0
+  private needAmmoSent = false
+
+  constructor(
+    canvas: HTMLCanvasElement,
+    myId: number,
+    myName: string,
+    participants: GameParticipant[],
+    onPosition: (x: number, y: number, z: number, rotY: number) => void,
+    onDamage: (targetId: number, damage: number) => void,
+    onNeedAmmo: () => void,
+    onHpChange: (hp: number) => void,
+    onAmmoChange: (ammo: number) => void,
+    ammoRef: React.MutableRefObject<number>,
+    hpRef: React.MutableRefObject<number>,
+  ) {
+    this.canvas = canvas
+    this.myId = myId
+    this.onPosition = onPosition
+    this.onDamage = onDamage
+    this.onNeedAmmo = onNeedAmmo
+    this.onHpChange = onHpChange
+    this.onAmmoChange = onAmmoChange
+    this.ammoRef = ammoRef
+    this.hpRef = hpRef
+    this.myAmmo = START_AMMO
+
+    // Store participant names
+    participants.forEach(p => {
+      if (p.userId !== myId) {
+        this.playerNames.set(p.userId, p.user?.name ?? `Player ${p.userId}`)
+        this.playerHps.set(p.userId, 100)
+      }
+
+    })
+    this.playerNames.set(myId, myName)
+
+    this.init()
+  }
+
+  private async init() {
+    const THREE = await import('three')
+    this.three = THREE
+    this.raycaster = new THREE.Raycaster()
+    await this.buildScene()
+    this.setupInput()
+    this.startLoop()
+
+    // Broadcast position every 1/20s
+    this.posInterval = window.setInterval(() => {
+      this.onPosition(this.px, this.py, this.pz, this.yaw)
+    }, 1000 / POS_HZ)
+  }
+
+  private async buildScene() {
+    const THREE = this.three
+    const W = this.canvas.clientWidth || window.innerWidth
+    const H = this.canvas.clientHeight || window.innerHeight
+
+    // Renderer
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true })
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    this.renderer.setSize(W, H)
+    this.renderer.shadowMap.enabled = true
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping
+    this.renderer.toneMappingExposure = 1.2
+
+    // Scene
+    this.scene = new THREE.Scene()
+    this.scene.background = new THREE.Color(0x87ceeb)
+    this.scene.fog = new THREE.Fog(0x87ceeb, 200, 800)
+
+    // Camera
+    this.camera = new THREE.PerspectiveCamera(80, W / H, 0.1, 1200)
+
+    // Lights
+    const sun = new THREE.DirectionalLight(0xfff5e0, 1.6)
+    sun.position.set(300, 500, 200)
+    sun.castShadow = true
+    sun.shadow.mapSize.set(2048, 2048)
+    sun.shadow.camera.near = 1
+    sun.shadow.camera.far = 1500
+    sun.shadow.camera.left = -600
+    sun.shadow.camera.right = 600
+    sun.shadow.camera.top = 600
+    sun.shadow.camera.bottom = -600
+    this.scene.add(sun)
+    this.scene.add(new THREE.AmbientLight(0x6080c0, 0.7))
+
+    // Terrain
+    const geo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, TERRAIN_SEGS, TERRAIN_SEGS)
+    geo.rotateX(-Math.PI / 2)
+    const pos = geo.attributes.position as import('three').BufferAttribute
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i)
+      pos.setY(i, terrainH(x, z))
+    }
+    geo.computeVertexNormals()
+    const terrMat = new THREE.MeshLambertMaterial({ color: 0x4a7c3f })
+    this.terrain = new THREE.Mesh(geo, terrMat)
+    this.terrain.receiveShadow = true
+    this.scene.add(this.terrain)
+
+    // Zone danger ring (outer red circle on terrain)
+    const ringGeo = new THREE.RingGeometry(ZONE_INITIAL - 4, ZONE_INITIAL, 64)
+    ringGeo.rotateX(-Math.PI / 2)
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xff2222, side: THREE.DoubleSide, transparent: true, opacity: 0.5 })
+    const ring = new THREE.Mesh(ringGeo, ringMat)
+    ring.position.y = 2
+    this.scene.add(ring)
+
+    // Buildings
+    BUILDINGS.forEach(b => {
+      const gy = terrainH(b.x, b.z)
+      const bGeo = new THREE.BoxGeometry(b.w, b.h, b.d)
+      const bMat = new THREE.MeshLambertMaterial({ color: 0x8b7355 + Math.floor(Math.random() * 0x111111) })
+      const mesh = new THREE.Mesh(bGeo, bMat)
+      mesh.position.set(b.x, gy + b.h / 2, b.z)
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      this.scene.add(mesh)
+      this.buildingMeshes.push(mesh)
+
+      // Roof trim
+      const roofGeo = new THREE.BoxGeometry(b.w + 0.5, 0.5, b.d + 0.5)
+      const roofMat = new THREE.MeshLambertMaterial({ color: 0x5c4a2a })
+      const roof = new THREE.Mesh(roofGeo, roofMat)
+      roof.position.set(b.x, gy + b.h + 0.25, b.z)
+      this.scene.add(roof)
+    })
+
+    // Label container for nametags
+    this.labelContainer = document.createElement('div')
+    this.labelContainer.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden'
+    this.canvas.parentElement?.appendChild(this.labelContainer)
+
+    // Spawn player
+    this.px = 0; this.pz = 0
+    this.py = terrainH(0, 0) + EYE_HEIGHT + 2
+
+    // Resize observer
+    const ro = new ResizeObserver(() => {
+      if (this.destroyed) return
+      const w = this.canvas.clientWidth, h = this.canvas.clientHeight
+      this.renderer.setSize(w, h)
+      this.camera.aspect = w / h
+      this.camera.updateProjectionMatrix()
+    })
+    ro.observe(this.canvas)
+  }
+
+  private makePlayerMesh(userId: number): import('three').Group {
+    const THREE = this.three
+    const color = PLAYER_COLORS[userId % PLAYER_COLORS.length]
+    const group = new THREE.Group()
+    // Body
+    const bodyGeo = new THREE.CylinderGeometry(0.38, 0.38, 1.3, 8)
+    const bodyMat = new THREE.MeshLambertMaterial({ color })
+    const body = new THREE.Mesh(bodyGeo, bodyMat)
+    body.position.y = 0.65
+    body.castShadow = true
+    group.add(body)
+    // Head
+    const headGeo = new THREE.SphereGeometry(0.35, 8, 8)
+    const headMat = new THREE.MeshLambertMaterial({ color })
+    const head = new THREE.Mesh(headGeo, headMat)
+    head.position.y = 1.65
+    head.castShadow = true
+    group.add(head)
+    return group
+  }
+
+  private makeNameLabel(name: string, hp: number, color: string): HTMLDivElement {
+    const div = document.createElement('div')
+    div.style.cssText = `position:absolute;transform:translateX(-50%);pointer-events:none;text-align:center;`
+    div.innerHTML = `
+      <div style="background:rgba(0,0,0,0.75);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:700;color:${color};white-space:nowrap;margin-bottom:3px">${name}</div>
+      <div style="width:50px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto">
+        <div id="hpbar" style="height:100%;width:${hp}%;background:${hp > 50 ? '#22c55e' : hp > 25 ? '#f59e0b' : '#ef4444'};border-radius:2px;transition:width 0.2s"></div>
+      </div>
+    `
+    this.labelContainer.appendChild(div)
+    return div
+  }
+
+  updateRemotePlayer(userId: number, x: number, y: number, z: number, rotY: number) {
+    if (this.destroyed || userId === this.myId) return
+    if (!this.playerMeshes.has(userId)) {
+      const mesh = this.makePlayerMesh(userId)
+      this.scene.add(mesh)
+      this.playerMeshes.set(userId, mesh)
+      const name = this.playerNames.get(userId) ?? `Player ${userId}`
+      const color = PLAYER_COLORS[userId % PLAYER_COLORS.length]!
+      const label = this.makeNameLabel(name, 100, color)
+      this.nameLabels.set(userId, label)
+    }
+    const mesh = this.playerMeshes.get(userId)!
+    mesh.position.set(x, y - EYE_HEIGHT + PLAYER_HEIGHT / 2, z)
+    mesh.rotation.y = rotY
+  }
+
+  updateRemotePlayerHp(userId: number, hp: number) {
+    this.playerHps.set(userId, hp)
+    const label = this.nameLabels.get(userId)
+    if (label) {
+      const bar = label.querySelector('#hpbar') as HTMLElement
+      if (bar) {
+        bar.style.width = `${hp}%`
+        bar.style.background = hp > 50 ? '#22c55e' : hp > 25 ? '#f59e0b' : '#ef4444'
+      }
+    }
+    if (hp <= 0) {
+      const mesh = this.playerMeshes.get(userId)
+      if (mesh) { this.scene.remove(mesh); this.playerMeshes.delete(userId) }
+      const label2 = this.nameLabels.get(userId)
+      if (label2) { label2.remove(); this.nameLabels.delete(userId) }
+    }
+  }
+
+  getPlayerName(userId: number): string {
+    return this.playerNames.get(userId) ?? `Player ${userId}`
+  }
+
+  private getTerrainHeightAt(x: number, z: number): number {
+    return terrainH(x, z)
+  }
+
+  private checkBuildingCollision(nx: number, nz: number): boolean {
+    for (const b of BUILDINGS) {
+      const hw = b.w / 2 + 0.5, hd = b.d / 2 + 0.5
+      if (nx > b.x - hw && nx < b.x + hw && nz > b.z - hd && nz < b.z + hd) return true
+    }
+    return false
+  }
+
+  private shoot() {
+    if (this.shootCooldown > 0) return
+    if (this.ammoRef.current <= 0) {
+      if (!this.needAmmoSent) { this.needAmmoSent = true; this.onNeedAmmo() }
+      return
+    }
+    this.needAmmoSent = false
+    this.shootCooldown = 0.15
+
+    const newAmmo = Math.max(0, this.ammoRef.current - 1)
+    this.onAmmoChange(newAmmo)
+
+    // Raycast from camera center
+    const THREE = this.three
+    this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
+    const targets: import('three').Object3D[] = []
+    this.playerMeshes.forEach(g => g.traverse(c => targets.push(c)))
+    const hits = this.raycaster.intersectObjects(targets, true)
+    if (hits.length > 0) {
+      // Find which player was hit
+      for (const [uid, group] of this.playerMeshes) {
+        let found = false
+        group.traverse(c => { if (c === hits[0]!.object) found = true })
+        if (found) {
+          this.onDamage(uid, DAMAGE_PER_HIT)
+          break
+        }
+      }
+    }
+
+    // Muzzle flash
+    this.showMuzzleFlash()
+  }
+
+  private showMuzzleFlash() {
+    const flash = document.createElement('div')
+    flash.style.cssText = 'position:absolute;inset:0;background:rgba(255,200,100,0.08);pointer-events:none;z-index:50'
+    this.canvas.parentElement?.appendChild(flash)
+    setTimeout(() => flash.remove(), 60)
+  }
+
+  private setupInput() {
+    const onKey = (e: KeyboardEvent, down: boolean) => {
+      this.keys[down ? 'add' : 'delete'](e.code)
+    }
+    window.addEventListener('keydown', e => onKey(e, true))
+    window.addEventListener('keyup', e => onKey(e, false))
+
+    this.canvas.addEventListener('click', () => {
+      if (!this.pointerLocked) {
+        this.canvas.requestPointerLock()
+      } else {
+        this.shoot()
+      }
+    })
+
+    document.addEventListener('pointerlockchange', () => {
+      this.pointerLocked = document.pointerLockElement === this.canvas
+    })
+
+    document.addEventListener('mousemove', (e) => {
+      if (!this.pointerLocked) return
+      this.yaw   -= e.movementX * 0.002
+      this.pitch -= e.movementY * 0.002
+      this.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, this.pitch))
+    })
+  }
+
+  private startLoop() {
+    const loop = (now: number) => {
+      if (this.destroyed) return
+      const dt = Math.min((now - this.lastTime) / 1000, 0.05)
+      this.lastTime = now
+      this.update(dt)
+      this.updateLabels()
+      this.renderer.render(this.scene, this.camera)
+      this.animId = requestAnimationFrame(loop)
+    }
+    this.animId = requestAnimationFrame(loop)
+  }
+
+  private update(dt: number) {
+    const THREE = this.three
+    if (this.shootCooldown > 0) this.shootCooldown -= dt
+
+    // Movement direction from yaw
+    const sinY = Math.sin(this.yaw), cosY = Math.cos(this.yaw)
+    let dx = 0, dz = 0
+    if (this.keys.has('KeyW') || this.keys.has('ArrowUp'))    { dx -= sinY; dz -= cosY }
+    if (this.keys.has('KeyS') || this.keys.has('ArrowDown'))  { dx += sinY; dz += cosY }
+    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft'))  { dx -= cosY; dz += sinY }
+    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) { dx += cosY; dz -= sinY }
+    const len = Math.sqrt(dx * dx + dz * dz)
+    if (len > 0) { dx /= len; dz /= len }
+
+    const nx = this.px + dx * PLAYER_SPEED * dt * 60
+    const nz = this.pz + dz * PLAYER_SPEED * dt * 60
+
+    // Clamp to world bounds
+    const half = WORLD_SIZE / 2 - 10
+    const cx = Math.max(-half, Math.min(half, nx))
+    const cz = Math.max(-half, Math.min(half, nz))
+
+    if (!this.checkBuildingCollision(cx, this.pz)) this.px = cx
+    if (!this.checkBuildingCollision(this.px, cz)) this.pz = cz
+
+    // Gravity + terrain follow
+    const groundY = this.getTerrainHeightAt(this.px, this.pz) + EYE_HEIGHT
+    this.velY -= GRAVITY * dt * 60
+    this.py += this.velY * dt
+    if (this.py < groundY) { this.py = groundY; this.velY = 0 }
+
+    // Jump
+    if ((this.keys.has('Space') || this.keys.has('KeyJ')) && this.py <= groundY + 0.1) {
+      this.velY = JUMP_FORCE
+    }
+
+    // Update camera
+    this.camera.position.set(this.px, this.py, this.pz)
+    this.camera.rotation.order = 'YXZ'
+    this.camera.rotation.y = this.yaw
+    this.camera.rotation.x = this.pitch
+  }
+
+  private updateLabels() {
+    const THREE = this.three
+    const W = this.canvas.clientWidth, H = this.canvas.clientHeight
+    this.nameLabels.forEach((label, userId) => {
+      const mesh = this.playerMeshes.get(userId)
+      if (!mesh) return
+      const pos3 = mesh.position.clone()
+      pos3.y += 2.2
+      pos3.project(this.camera)
+      if (pos3.z > 1) { label.style.display = 'none'; return }
+      const sx = (pos3.x * 0.5 + 0.5) * W
+      const sy = (-pos3.y * 0.5 + 0.5) * H
+      label.style.display = 'block'
+      label.style.left = `${sx}px`
+      label.style.top = `${sy}px`
+    })
+  }
+
+  destroy() {
+    this.destroyed = true
+    cancelAnimationFrame(this.animId)
+    clearInterval(this.posInterval)
+    if (document.pointerLockElement === this.canvas) document.exitPointerLock()
+    this.labelContainer?.remove()
+    this.renderer?.dispose()
+  }
 }
