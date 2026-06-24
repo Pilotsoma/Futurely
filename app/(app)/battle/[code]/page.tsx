@@ -6,7 +6,7 @@ import { api, GameSession, GameParticipant, getApiToken } from '../../../../lib/
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const WORLD_SIZE    = 2400
-const PLAYER_SPEED  = 8
+const PLAYER_SPEED  = 6
 const PLAYER_HEIGHT = 1.8
 const EYE_HEIGHT    = 1.6
 const GRAVITY       = 0.5
@@ -761,8 +761,8 @@ class GameEngine {
 
     document.addEventListener('mousemove', (e) => {
       if (!this.pointerLocked) return
-      this.yaw   -= e.movementX * 0.002
-      this.pitch -= e.movementY * 0.002
+      this.yaw   -= e.movementX * 0.003
+      this.pitch -= e.movementY * 0.003
       this.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, this.pitch))
     })
   }
@@ -794,8 +794,8 @@ class GameEngine {
     const len = Math.sqrt(dx * dx + dz * dz)
     if (len > 0) { dx /= len; dz /= len }
 
-    const nx = this.px + dx * PLAYER_SPEED * dt * 60
-    const nz = this.pz + dz * PLAYER_SPEED * dt * 60
+    const nx = this.px + dx * PLAYER_SPEED * dt
+    const nz = this.pz + dz * PLAYER_SPEED * dt
 
     // Clamp to world bounds
     const half = WORLD_SIZE / 2 - 10
