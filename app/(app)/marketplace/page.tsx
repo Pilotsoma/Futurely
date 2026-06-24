@@ -1389,6 +1389,7 @@ export default function MarketplacePage() {
   const [listingMsg, setListingMsg] = useState('')
   const [myActiveListings, setMyActiveListings] = useState<MarketplaceListing[]>([])
   const [cancellingListing, setCancellingListing] = useState<number | null>(null)
+  const [shopSubTab, setShopSubTab] = useState<'browse' | 'my-listings'>('browse')
 
   // Trade — new
   const [tradeSearch, setTradeSearch] = useState('')
@@ -2082,28 +2083,14 @@ export default function MarketplacePage() {
           <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 99, padding: '1px 7px' }}>x{count}</span>
         )}
 
-        {isListed ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 }}><CoinIcon size={11} />{listing?.price}</span>
-            {/* If user still has an unlisted copy, let them equip it */}
-            {count >= 1 && (
-              <button
-                onClick={() => void handleEquip(type, isEquipped ? null : item.id)}
-                disabled={!!equipping}
-                style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${isEquipped ? 'var(--border)' : 'var(--primary)'}`, background: isEquipped ? 'var(--surface-2)' : 'transparent', color: isEquipped ? 'var(--text-muted)' : 'var(--primary)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-              >
-                {isEquipped ? 'Unequip' : 'Equip'}
-              </button>
-            )}
-            <button
-              onClick={() => listing && void handleCancelListing(listing.id)}
-              disabled={cancellingListing === listing?.id}
-              style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #EF4444', background: 'transparent', color: '#EF4444', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-            >
-              Delist
-            </button>
-          </div>
-        ) : (
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const, justifyContent: 'flex-end' }}>
+          {/* "X listed" info chip — no delist here, go to My Listings tab */}
+          {isListed && (
+            <span style={{ fontSize: 10, color: '#6366f1', fontWeight: 700, background: '#6366f115', border: '1px solid #6366f133', borderRadius: 99, padding: '2px 7px', whiteSpace: 'nowrap' as const }}>
+              {myActiveListings.filter(l => l.itemType === type && l.itemId === item.id).length} listed
+            </span>
+          )}
+          {count > 0 && (
           <div style={{ display: 'flex', gap: 6 }}>
             {type === 'tag' && item.tagColor === 'verified-yellow' ? (
               <button
@@ -2169,6 +2156,7 @@ export default function MarketplacePage() {
             </button>
           </div>
         )}
+        </div>
       </div>
       </PriceTooltip>
     )
@@ -2481,80 +2469,137 @@ export default function MarketplacePage() {
       {/* ── SHOP TAB ── */}
       {tab === 'shop' && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)' }}>
-              User Listings — sorted by value
-            </p>
-            <button onClick={fetchListings} disabled={listingsLoading}
-              style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-              {listingsLoading ? 'Refreshing…' : '↻ Refresh'}
-            </button>
+          {/* Sub-tab nav */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid var(--border)' }}>
+            {(['browse', 'my-listings'] as const).map(st => (
+              <button
+                key={st}
+                onClick={() => setShopSubTab(st)}
+                style={{ padding: '8px 18px', borderRadius: '8px 8px 0 0', border: 'none', borderBottom: shopSubTab === st ? '2px solid var(--primary)' : '2px solid transparent', background: 'transparent', color: shopSubTab === st ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginBottom: -1 }}
+              >
+                {st === 'browse' ? '🏪 Browse' : `📋 My Listings${myActiveListings.length > 0 ? ` (${myActiveListings.length})` : ''}`}
+              </button>
+            ))}
           </div>
 
-          {listingsLoading && listings.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading listings…</div>
-          ) : listings.length === 0 ? (
-            <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              No active listings yet — go to Inventory to list your items
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
-              {listings.map(listing => {
-                const isMine = myActiveListings.some(l => l.id === listing.id)
-                const msg = buyMsg?.id === listing.id ? buyMsg.msg : null
-                const rarityColor = getRarityColor(listing.itemRarity, listing.itemId)
-                const canAfford = !!inv && inv.coins >= listing.price
-                return (
-                  <PriceTooltip key={listing.id} price={prices[`${listing.itemType}:${listing.itemId}`]}>
-                  <div
-                    className="ns-card"
-                    style={{ padding: '12px 12px 10px', display: 'flex', flexDirection: 'column', gap: 8, border: `1px solid ${rarityColor}33`, borderTop: `3px solid ${rarityColor}`, cursor: 'pointer' }}
-                    onClick={() => setPreviewItem({ type: listing.itemType as 'tag' | 'name-color' | 'pfp', id: listing.itemId, name: listing.itemName, rarity: listing.itemRarity, value: listing.itemValue })}
-                  >
-                    {/* Icon + rarity */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <ItemIcon item={{ type: listing.itemType, itemValue: listing.itemValue, itemType: listing.itemType, itemId: listing.itemId }} />
-                      <RarityBadge rarity={listing.itemRarity} itemId={listing.itemId} />
-                    </div>
-                    {/* Item name */}
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{listing.itemName}</div>
-                    {/* Seller */}
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                      by{' '}
-                      <button
-                        onClick={e => { e.stopPropagation(); void openProfile(listing.seller.id) }}
-                        className={listing.seller.nameColor === 'rainbow' ? 'name-rainbow' : listing.seller.nameColor === 'curse' ? 'name-curse' : ''}
-                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...ncStyle(listing.seller.nameColor, 'var(--text)') }}
+          {shopSubTab === 'browse' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)' }}>
+                  User Listings — sorted by value
+                </p>
+                <button onClick={fetchListings} disabled={listingsLoading}
+                  style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+                  {listingsLoading ? 'Refreshing…' : '↻ Refresh'}
+                </button>
+              </div>
+
+              {listingsLoading && listings.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading listings…</div>
+              ) : listings.length === 0 ? (
+                <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                  No active listings yet — go to Inventory to list your items
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
+                  {listings.map(listing => {
+                    const isMine = myActiveListings.some(l => l.id === listing.id)
+                    const msg = buyMsg?.id === listing.id ? buyMsg.msg : null
+                    const rarityColor = getRarityColor(listing.itemRarity, listing.itemId)
+                    const canAfford = !!inv && inv.coins >= listing.price
+                    return (
+                      <PriceTooltip key={listing.id} price={prices[`${listing.itemType}:${listing.itemId}`]}>
+                      <div
+                        className="ns-card"
+                        style={{ padding: '12px 12px 10px', display: 'flex', flexDirection: 'column', gap: 8, border: `1px solid ${rarityColor}33`, borderTop: `3px solid ${rarityColor}`, cursor: 'pointer' }}
+                        onClick={() => setPreviewItem({ type: listing.itemType as 'tag' | 'name-color' | 'pfp', id: listing.itemId, name: listing.itemName, rarity: listing.itemRarity, value: listing.itemValue })}
                       >
-                        {listing.seller.name ?? 'Unknown'}
-                      </button>
-                    </div>
-                    {/* Price + action */}
-                    <div style={{ marginTop: 'auto' as const, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 15, fontWeight: 800, color: '#EAB308' }}>
-                        <CoinIcon size={13} />{listing.price.toLocaleString()}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <ItemIcon item={{ type: listing.itemType, itemValue: listing.itemValue, itemType: listing.itemType, itemId: listing.itemId }} />
+                          <RarityBadge rarity={listing.itemRarity} itemId={listing.itemId} />
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{listing.itemName}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                          by{' '}
+                          <button
+                            onClick={e => { e.stopPropagation(); void openProfile(listing.seller.id) }}
+                            className={listing.seller.nameColor === 'rainbow' ? 'name-rainbow' : listing.seller.nameColor === 'curse' ? 'name-curse' : ''}
+                            style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...ncStyle(listing.seller.nameColor, 'var(--text)') }}
+                          >
+                            {listing.seller.name ?? 'Unknown'}
+                          </button>
+                        </div>
+                        <div style={{ marginTop: 'auto' as const, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 15, fontWeight: 800, color: '#EAB308' }}>
+                            <CoinIcon size={13} />{listing.price.toLocaleString()}
+                          </div>
+                          {msg ? (
+                            <div style={{ fontSize: 10, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 700 }}>{msg}</div>
+                          ) : isMine ? (
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic' }}>Your listing</span>
+                          ) : (
+                            <button
+                              onClick={e => { e.stopPropagation(); void handleBuyListing(listing.id) }}
+                              disabled={!!buyingId || !canAfford}
+                              style={{ padding: '4px 10px', borderRadius: 7, border: 'none', background: !canAfford ? 'var(--surface-2)' : 'var(--primary)', color: !canAfford ? 'var(--text-muted)' : '#060D10', fontWeight: 700, fontSize: 11, cursor: !canAfford ? 'not-allowed' : 'pointer', opacity: !canAfford ? 0.5 : 1 }}>
+                              {buyingId === listing.id ? '…' : 'Buy'}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      {msg ? (
-                        <div style={{ fontSize: 10, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 700 }}>{msg}</div>
-                      ) : isMine ? (
-                        <button onClick={e => { e.stopPropagation(); void handleCancelListing(listing.id) }} disabled={cancellingListing === listing.id}
-                          style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #EF4444', background: 'transparent', color: '#EF4444', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                      </PriceTooltip>
+                    )
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {shopSubTab === 'my-listings' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)' }}>
+                  Your active listings
+                </p>
+                <button onClick={() => { fetchMyActiveListings(); fetchListings() }} style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+                  ↻ Refresh
+                </button>
+              </div>
+
+              {myActiveListings.length === 0 ? (
+                <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                  You have no active listings. Go to <strong>Inventory</strong> to list an item.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {myActiveListings.map(listing => {
+                    const rarityColor = getRarityColor(listing.itemRarity, listing.itemId)
+                    return (
+                      <div key={listing.id} className="ns-card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', border: `1px solid ${rarityColor}33`, borderLeft: `4px solid ${rarityColor}` }}>
+                        <ItemIcon item={{ type: listing.itemType, itemValue: listing.itemValue, itemType: listing.itemType, itemId: listing.itemId }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{listing.itemName}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                            <RarityBadge rarity={listing.itemRarity} itemId={listing.itemId} />
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{listing.itemType}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 15, fontWeight: 800, color: '#EAB308', flexShrink: 0 }}>
+                          <CoinIcon size={13} />{listing.price.toLocaleString()}
+                        </div>
+                        <button
+                          onClick={() => void handleCancelListing(listing.id)}
+                          disabled={cancellingListing === listing.id}
+                          style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #EF4444', background: 'transparent', color: '#EF4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                        >
                           {cancellingListing === listing.id ? '…' : 'Delist'}
                         </button>
-                      ) : (
-                        <button
-                          onClick={e => { e.stopPropagation(); void handleBuyListing(listing.id) }}
-                          disabled={!!buyingId || !canAfford}
-                          style={{ padding: '4px 10px', borderRadius: 7, border: 'none', background: !canAfford ? 'var(--surface-2)' : 'var(--primary)', color: !canAfford ? 'var(--text-muted)' : '#060D10', fontWeight: 700, fontSize: 11, cursor: !canAfford ? 'not-allowed' : 'pointer', opacity: !canAfford ? 0.5 : 1 }}>
-                          {buyingId === listing.id ? '…' : 'Buy'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  </PriceTooltip>
-                )
-              })}
-            </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )}
         </>
       )}
