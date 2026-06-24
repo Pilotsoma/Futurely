@@ -148,7 +148,7 @@ export function DevAdminPanel({
     if (coinSaving) return
     const amount = action === 'zero' ? 0 : parseInt(coinAmount)
     if (action !== 'zero' && (isNaN(amount) || amount <= 0)) return
-    if (action === 'add' && amount > 10_000) { setCoinError('Single add cannot exceed 10,000 coins.'); return }
+    if (action === 'add' && amount > 10_000 && isOwnProfile) { setCoinError('Single add cannot exceed 10,000 coins (daily limit).'); return }
     setCoinSaving(true)
     setCoinError('')
     try {
@@ -331,8 +331,8 @@ export function DevAdminPanel({
             style={{ flex: 1, minWidth: 80, height: 34, fontSize: 12 }}
             type="number"
             min="0"
-            max="10000"
-            placeholder="Amount (max 10k/day)"
+            max={isOwnProfile ? 10000 : undefined}
+            placeholder={isOwnProfile ? 'Amount (max 10k/day)' : 'Amount'}
             value={coinAmount}
             onChange={e => setCoinAmount(e.target.value)}
           />
