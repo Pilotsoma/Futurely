@@ -1286,14 +1286,16 @@ router.post('/listings/:id/buy', requireAuth, txLimiter, async (req: AuthRequest
       prisma.marketplaceListing.update({ where: { id: listingId }, data: { status: 'SOLD', buyerId: req.userId } }),
     ])
 
-    // Update estimated price: rolling average of current price and actual sale price
+    // Update estimated price: true average of all sales this calendar month
     try {
-      const current = await prisma.itemPrice.findUnique({
-        where: { itemType_itemId: { itemType: listing.itemType, itemId: listing.itemId } },
+      const startOfMonth = new Date()
+      startOfMonth.setUTCDate(1)
+      startOfMonth.setUTCHours(0, 0, 0, 0)
+      const monthlySales = await prisma.marketplaceListing.findMany({
+        where: { itemType: listing.itemType, itemId: listing.itemId, status: 'SOLD', updatedAt: { gte: startOfMonth } },
+        select: { price: true },
       })
-      const seedKey = `${listing.itemType}:${listing.itemId}`
-      const currentPrice = current?.price ?? SEED_PRICES[seedKey] ?? listing.price
-      const newPrice = Math.round((currentPrice + listing.price) / 2)
+      const newPrice = Math.round(monthlySales.reduce((s, r) => s + r.price, 0) / monthlySales.length)
       await prisma.itemPrice.upsert({
         where: { itemType_itemId: { itemType: listing.itemType, itemId: listing.itemId } },
         create: { itemType: listing.itemType, itemId: listing.itemId, price: newPrice },
@@ -1962,11 +1964,14 @@ router.get('/item/:itemType/:itemId/history', async (req: Request, res: Response
     res.status(400).json({ error: 'Invalid itemType' }); return
   }
   try {
+    const startOfMonth = new Date()
+    startOfMonth.setUTCDate(1)
+    startOfMonth.setUTCHours(0, 0, 0, 0)
     const sales = await prisma.marketplaceListing.findMany({
-      where: { itemType, itemId, status: 'SOLD' },
+      where: { itemType, itemId, status: 'SOLD', updatedAt: { gte: startOfMonth } },
       select: { price: true, updatedAt: true },
       orderBy: { updatedAt: 'asc' },
-      take: 100,
+      take: 500,
     })
     res.json({ data: sales.map(s => ({ price: s.price, soldAt: s.updatedAt.toISOString() })) })
   } catch {
