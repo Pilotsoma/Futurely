@@ -2106,7 +2106,7 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
 // ── POST /coins/send — send coins to another user ────────────────────────────
 const sendCoinsSchema = z.object({
   receiverId: z.number().int().positive(),
-  amount: z.number().int().min(1).max(100_000),
+  amount: z.number().int().min(1),
 })
 
 router.post('/coins/send', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
