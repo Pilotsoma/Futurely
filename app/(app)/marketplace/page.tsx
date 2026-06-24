@@ -2613,7 +2613,7 @@ export default function MarketplacePage() {
                           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--text)', cursor: 'pointer', textAlign: 'left' as const }}>
                           <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0 }} />
                           <div>
-                            <div style={{ fontSize: 13, fontWeight: 600 }}>Username</div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{u.name ?? 'Unknown'}</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                               {u.tag && <div className={tagCssClass(u.tag, u.tagColor)} style={{ fontSize: 11, color: isAnimatedTag(u.tag) || u.tagColor === 'curse' ? undefined : u.tagColor ?? '#6B7280', fontWeight: 700 }}>[{u.tag}]</div>}
                               {(u.badge === 'verified-yellow' || u.badge === 'verified-blue') && <VerifiedBadge variant={u.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
@@ -2630,7 +2630,7 @@ export default function MarketplacePage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, padding: '10px 14px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                     <div style={{ flex: 1 }}>
-                      <div className={tradeTarget.user.nameColor === 'rainbow' ? 'name-rainbow' : tradeTarget.user.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(tradeTarget.user.nameColor) }}>Username</div>
+                      <div className={tradeTarget.user.nameColor === 'rainbow' ? 'name-rainbow' : tradeTarget.user.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(tradeTarget.user.nameColor) }}>{tradeTarget.user.name ?? 'Unknown'}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         {tradeTarget.user.tag && <div className={tagCssClass(tradeTarget.user.tag, tradeTarget.user.tagColor)} style={{ fontSize: 11, color: isAnimatedTag(tradeTarget.user.tag) || tradeTarget.user.tagColor === 'curse' ? undefined : tradeTarget.user.tagColor ?? '#6B7280', fontWeight: 700 }}>[{tradeTarget.user.tag}]</div>}
                         {(tradeTarget.user.badge === 'verified-yellow' || tradeTarget.user.badge === 'verified-blue') && <VerifiedBadge variant={tradeTarget.user.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
@@ -2874,7 +2874,7 @@ export default function MarketplacePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                           <div>
-                            <span className={trade.sender.nameColor === 'rainbow' ? 'name-rainbow' : trade.sender.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(trade.sender.nameColor) }}>Username</span>
+                            <span className={trade.sender.nameColor === 'rainbow' ? 'name-rainbow' : trade.sender.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(trade.sender.nameColor) }}>{trade.sender.name ?? 'Unknown'}</span>
                             {trade.sender.tag && <span className={tagCssClass(trade.sender.tag, trade.sender.tagColor)} style={{ fontSize: 11, color: isAnimatedTag(trade.sender.tag) || trade.sender.tagColor === 'curse' ? undefined : trade.sender.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.sender.tag}]</span>}
                             {(trade.sender.badge === 'verified-yellow' || trade.sender.badge === 'verified-blue') && <VerifiedBadge variant={trade.sender.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                           </div>
@@ -2929,7 +2929,7 @@ export default function MarketplacePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)' }} />
                           <div>
-                            <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : trade.receiver.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(trade.receiver.nameColor) }}>Username</span>
+                            <span style={{ fontSize: 13, fontWeight: 700 }}>To: </span><span className={trade.receiver.nameColor === 'rainbow' ? 'name-rainbow' : trade.receiver.nameColor === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 700, ...ncStyle(trade.receiver.nameColor) }}>{trade.receiver.name ?? 'Unknown'}</span>
                             {trade.receiver.tag && <span className={tagCssClass(trade.receiver.tag, trade.receiver.tagColor)} style={{ fontSize: 11, color: isAnimatedTag(trade.receiver.tag) || trade.receiver.tagColor === 'curse' ? undefined : trade.receiver.tagColor ?? '#6B7280', fontWeight: 700, marginLeft: 6 }}>[{trade.receiver.tag}]</span>}
                             {(trade.receiver.badge === 'verified-yellow' || trade.receiver.badge === 'verified-blue') && <VerifiedBadge variant={trade.receiver.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={14} />}
                           </div>
