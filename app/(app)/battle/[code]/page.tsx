@@ -362,7 +362,7 @@ export default function BattlePage() {
 
       {/* Controls hint */}
       <div style={{ position: 'absolute', bottom: 24, right: 20, background: 'rgba(0,0,0,0.5)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: '#6b7280', lineHeight: 1.8 }}>
-        WASD · Move &nbsp;|&nbsp; Mouse · Look &nbsp;|&nbsp; Click · Shoot &nbsp;|&nbsp; Click canvas to lock
+        WASD · Move &nbsp;|&nbsp; Mouse · Look &nbsp;|&nbsp; Click · Shoot &nbsp;|&nbsp; Q · Question &nbsp;|&nbsp; Click canvas to lock
       </div>
 
       {/* Question panel */}
@@ -744,7 +744,13 @@ class GameEngine {
     const onKey = (e: KeyboardEvent, down: boolean) => {
       this.keys[down ? 'add' : 'delete'](e.code)
     }
-    window.addEventListener('keydown', e => onKey(e, true))
+    window.addEventListener('keydown', e => {
+      onKey(e, true)
+      if (e.code === 'KeyQ') {
+        this.needAmmoSent = false
+        this.onNeedAmmo()
+      }
+    })
     window.addEventListener('keyup', e => onKey(e, false))
 
     this.canvas.addEventListener('click', () => {
