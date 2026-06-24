@@ -1174,7 +1174,7 @@ router.put('/users/:id/coins', requireAdmin, async (req: AuthRequest, res: Respo
       return res.status(400).json({ error: 'amount must be a non-negative number' });
     }
 
-    if (action === 'add' && amount) {
+    if (action === 'add' && amount && targetId === req.userId) {
       const err = checkDevCoinLimit(req.userId!, amount)
       if (err) return res.status(429).json({ error: err })
     }
