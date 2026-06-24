@@ -98,87 +98,114 @@ export default function BattlePage() {
   useEffect(() => { ammoRef.current = ammo }, [ammo])
   useEffect(() => { hpRef.current = hp }, [hp])
 
+  const phaseRef = useRef<'lobby' | 'battle' | 'dead' | 'won' | 'ended'>('lobby')
+  phaseRef.current = phase
+
   // ── Load session ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!code) return
     api.getGame(code).then(s => {
       setSession(s)
       setPlayersAlive(s.participants.length)
+      // If we land on a game already started (e.g. rejoining), go straight to battle
+      if (s.status === 'ACTIVE') { startTimeRef.current = Date.now(); setPhase('battle') }
     }).catch(() => setError('Game not found'))
     api.me().then(me => { myUserIdRef.current = me.id; myNameRef.current = me.name ?? 'You' }).catch(() => {})
   }, [code])
 
-  // ── WebSocket ─────────────────────────────────────────────────────────────
-  const connectWs = useCallback(() => {
-    const backendWs = process.env.NEXT_PUBLIC_WS_URL ?? (typeof window !== 'undefined' ? window.location.origin.replace(/^http/, 'ws').replace(':3000', ':3001') : 'ws://localhost:3001')
-    const ws = new WebSocket(backendWs)
-    wsRef.current = ws
-
-    ws.onopen = () => {
-      const token = getApiToken()
-      if (token) ws.send(JSON.stringify({ type: 'AUTH', token }))
-    }
-
-    ws.onmessage = (e) => {
-      try {
-        const { event, data } = JSON.parse(e.data)
-
-        if (event === 'AUTH_OK') {
-          ws.send(JSON.stringify({ type: 'BATTLE_READY', code }))
-        }
-
-        if (event === 'BATTLE_POSITION' && gameRef.current) {
-          gameRef.current.updateRemotePlayer(data.userId, data.x, data.y, data.z, data.rotY)
-        }
-
-        if (event === 'BATTLE_PLAYER_HEALTH' && gameRef.current) {
-          gameRef.current.updateRemotePlayerHp(data.userId, data.hp)
-          if (data.hp <= 0) {
-            setPlayersAlive(p => Math.max(0, p - 1))
-          }
-        }
-
-        if (event === 'BATTLE_ELIMINATED') {
-          const engine = gameRef.current
-          const killerName = engine?.getPlayerName(data.eliminatedBy) ?? 'Someone'
-          const victimName = engine?.getPlayerName(data.userId) ?? 'Player'
-          setKills(k => [...k.slice(-4), { killer: killerName, victim: victimName, ts: Date.now() }])
-          if (data.userId === myUserIdRef.current) {
-            setPhase('dead')
-            gameRef.current?.destroy()
-          }
-        }
-
-        if (event === 'BATTLE_WIN') {
-          const isMe = data.userId === myUserIdRef.current
-          setWinnerName(isMe ? myNameRef.current : (gameRef.current?.getPlayerName(data.userId) ?? 'Someone'))
-          setPhase(isMe ? 'won' : 'ended')
-          gameRef.current?.destroy()
-        }
-
-        if (event === 'BATTLE_QUESTION') {
-          setQuestion(data)
-          setQFeedback(null)
-        }
-
-        if (event === 'BATTLE_AMMO') {
-          setAmmo(data.ammo)
-          setQFeedback(data.correct ? 'correct' : 'wrong')
-          if (data.correct) setTimeout(() => { setQuestion(null); setQFeedback(null) }, 800)
-          else setTimeout(() => setQFeedback(null), 1200)
-        }
-
-        if (event === 'GAME_STARTED') {
+  // ── Polling — updates player list in lobby and catches missed GAME_STARTED ─
+  useEffect(() => {
+    if (!code) return
+    const interval = setInterval(() => {
+      if (phaseRef.current !== 'lobby') return
+      api.getGame(code).then(s => {
+        setSession(prev => prev ? { ...prev, participants: s.participants } : s)
+        if (s.status === 'ACTIVE') {
           startTimeRef.current = Date.now()
           setPhase('battle')
         }
-      } catch { /* ignore */ }
-    }
-
-    ws.onclose = () => setTimeout(connectWs, 3000)
+      }).catch(() => {})
+    }, 3000)
+    return () => clearInterval(interval)
   }, [code])
 
-  useEffect(() => { connectWs(); return () => wsRef.current?.close() }, [connectWs])
+  // ── WebSocket ─────────────────────────────────────────────────────────────
+  const handleWsMessage = useCallback((e: MessageEvent) => {
+    try {
+      const { event, data } = JSON.parse(e.data as string)
+
+      if (event === 'AUTH_OK') {
+        wsRef.current?.send(JSON.stringify({ type: 'BATTLE_READY', code }))
+      }
+
+      if (event === 'GAME_PLAYER_JOINED') {
+        const d = data as { participants: GameParticipant[] }
+        setSession(prev => prev ? { ...prev, participants: d.participants } : prev)
+      }
+
+      if (event === 'GAME_STARTED') {
+        startTimeRef.current = Date.now()
+        setPhase('battle')
+      }
+
+      if (event === 'BATTLE_POSITION' && gameRef.current) {
+        gameRef.current.updateRemotePlayer(data.userId, data.x, data.y, data.z, data.rotY)
+      }
+
+      if (event === 'BATTLE_PLAYER_HEALTH' && gameRef.current) {
+        gameRef.current.updateRemotePlayerHp(data.userId, data.hp)
+        if (data.hp <= 0) setPlayersAlive(p => Math.max(0, p - 1))
+      }
+
+      if (event === 'BATTLE_ELIMINATED') {
+        const engine = gameRef.current
+        const killerName = engine?.getPlayerName(data.eliminatedBy) ?? 'Someone'
+        const victimName = engine?.getPlayerName(data.userId) ?? 'Player'
+        setKills(k => [...k.slice(-4), { killer: killerName, victim: victimName, ts: Date.now() }])
+        if (data.userId === myUserIdRef.current) {
+          setPhase('dead')
+          gameRef.current?.destroy()
+        }
+      }
+
+      if (event === 'BATTLE_WIN') {
+        const isMe = data.userId === myUserIdRef.current
+        setWinnerName(isMe ? myNameRef.current : (gameRef.current?.getPlayerName(data.userId) ?? 'Someone'))
+        setPhase(isMe ? 'won' : 'ended')
+        gameRef.current?.destroy()
+      }
+
+      if (event === 'BATTLE_QUESTION') {
+        setQuestion(data)
+        setQFeedback(null)
+      }
+
+      if (event === 'BATTLE_AMMO') {
+        setAmmo(data.ammo)
+        setQFeedback(data.correct ? 'correct' : 'wrong')
+        if (data.correct) setTimeout(() => { setQuestion(null); setQFeedback(null) }, 800)
+        else setTimeout(() => setQFeedback(null), 1200)
+      }
+    } catch { /* ignore */ }
+  }, [code])
+
+  useEffect(() => {
+    const token = getApiToken()
+    if (!token) return
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+    const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws')
+    let ws: WebSocket, dead = false
+    function connect() {
+      if (dead) return
+      ws = new WebSocket(wsBase)
+      wsRef.current = ws
+      ws.onopen = () => ws.send(JSON.stringify({ type: 'AUTH', token }))
+      ws.onmessage = handleWsMessage
+      ws.onclose = () => { if (!dead) setTimeout(connect, 3000) }
+    }
+    connect()
+    return () => { dead = true; ws?.close() }
+  }, [handleWsMessage])
 
   // ── Zone timer ───────────────────────────────────────────────────────────
   useEffect(() => {
