@@ -465,6 +465,12 @@ class GameEngine {
   private shootCooldown = 0
   private posInterval = 0
   private needAmmoSent = false
+  private vmGroup!: import('three').Group
+  private vmBand!: import('three').Mesh
+  private vmPouch!: import('three').Mesh
+  private vmShooting = false
+  private vmAnimTime = 0
+  private readonly VM_ANIM_DUR = 0.18
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -508,6 +514,7 @@ class GameEngine {
     this.three = THREE
     this.raycaster = new THREE.Raycaster()
     await this.buildScene()
+    this.buildViewmodel()
     this.setupInput()
     this.startLoop()
 
@@ -649,6 +656,66 @@ class GameEngine {
     return div
   }
 
+  private buildViewmodel() {
+    const THREE = this.three
+    // Camera must be in scene for its children to render
+    this.scene.add(this.camera)
+
+    const group = new THREE.Group()
+    const woodMat  = new THREE.MeshLambertMaterial({ color: 0x7B4A2D })
+    const skinMat  = new THREE.MeshLambertMaterial({ color: 0xDEB887 })
+    const bandMat  = new THREE.MeshLambertMaterial({ color: 0x1a1a1a })
+    const stoneMat = new THREE.MeshLambertMaterial({ color: 0x888888 })
+
+    // ── Hand ─────────────────────────────────────────────────────────────────
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.13, 0.19), skinMat)
+    group.add(palm)
+    // Thumb stub
+    const thumb = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.018, 0.09, 5), skinMat)
+    thumb.position.set(-0.064, 0.028, -0.05)
+    thumb.rotation.z = 0.7
+    group.add(thumb)
+    // Fingers hint
+    const fingers = new THREE.Mesh(new THREE.BoxGeometry(0.086, 0.062, 0.08), skinMat)
+    fingers.position.set(0, 0.01, -0.13)
+    group.add(fingers)
+
+    // ── Slingshot handle ─────────────────────────────────────────────────────
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.26, 7), woodMat)
+    handle.position.set(0, 0.19, 0)
+    group.add(handle)
+
+    // ── Y-fork arms ──────────────────────────────────────────────────────────
+    const forkGeo = new THREE.CylinderGeometry(0.015, 0.02, 0.22, 6)
+    const leftFork = new THREE.Mesh(forkGeo, woodMat)
+    leftFork.position.set(-0.072, 0.37, -0.072)
+    leftFork.rotation.set(0.36, 0, -0.5)
+    group.add(leftFork)
+    const rightFork = new THREE.Mesh(forkGeo, woodMat)
+    rightFork.position.set(0.072, 0.37, -0.072)
+    rightFork.rotation.set(0.36, 0, 0.5)
+    group.add(rightFork)
+
+    // ── Elastic band ─────────────────────────────────────────────────────────
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.21, 4), bandMat)
+    band.rotation.z = Math.PI / 2
+    band.position.set(0, 0.45, -0.17)
+    this.vmBand = band
+    group.add(band)
+
+    // ── Stone / pouch ─────────────────────────────────────────────────────────
+    const pouch = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 5), stoneMat)
+    pouch.position.set(0, 0.45, -0.17)
+    this.vmPouch = pouch
+    group.add(pouch)
+
+    // Position: right side, bottom, forward in camera space
+    group.position.set(0.3, -0.31, -0.5)
+    group.rotation.set(0, -0.15, 0)
+    this.vmGroup = group
+    this.camera.add(group)
+  }
+
   updateRemotePlayer(userId: number, x: number, y: number, z: number, rotY: number) {
     if (this.destroyed || userId === this.myId) return
     if (!this.playerMeshes.has(userId)) {
@@ -707,6 +774,8 @@ class GameEngine {
     }
     this.needAmmoSent = false
     this.shootCooldown = 0.15
+    this.vmShooting = true
+    this.vmAnimTime = 0
 
     const newAmmo = Math.max(0, this.ammoRef.current - 1)
     this.onAmmoChange(newAmmo)
@@ -789,6 +858,23 @@ class GameEngine {
   private update(dt: number) {
     const THREE = this.three
     if (this.shootCooldown > 0) this.shootCooldown -= dt
+
+    // ── Slingshot shoot animation ────────────────────────────────────────────
+    if (this.vmShooting && this.vmBand && this.vmPouch && this.vmGroup) {
+      this.vmAnimTime += dt
+      const t = Math.min(1, this.vmAnimTime / this.VM_ANIM_DUR)
+      // pull back 0→0.3, snap forward 0.3→1.0
+      const pull = t < 0.3 ? t / 0.3 : 1 - (t - 0.3) / 0.7
+      this.vmBand.position.z  = -0.17 + pull * 0.13
+      this.vmPouch.position.z = -0.17 + pull * 0.13
+      this.vmGroup.rotation.x = pull * 0.09
+      if (t >= 1) {
+        this.vmShooting = false
+        this.vmBand.position.z  = -0.17
+        this.vmPouch.position.z = -0.17
+        this.vmGroup.rotation.x = 0
+      }
+    }
 
     // Movement direction from yaw
     const sinY = Math.sin(this.yaw), cosY = Math.cos(this.yaw)
