@@ -839,7 +839,7 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
 }
 
 const FREE_SPIN_SEGMENTS = [
-  { rarity: 'Common',    coins: 25,    weight: 60,    color: '#6B7280' },
+  { rarity: 'Common',    coins: 25,    weight: 60,    color: '#22C55E' },
   { rarity: 'Uncommon',  coins: 50,    weight: 25,    color: '#3B82F6' },
   { rarity: 'Rare',      coins: 100,   weight: 10.25, color: '#8B5CF6' },
   { rarity: 'Epic',      coins: 300,   weight: 3.95,  color: '#F97316' },
@@ -903,7 +903,7 @@ function FreeSpinModal({ onClose, onDone }: { onClose: () => void; onDone: (rewa
         <div style={{ width: 300, height: 300 }}>
           <svg width={300} height={300} viewBox="0 0 300 300">
             {segments.map(seg => (
-              <path key={seg.rarity} d={segPath(seg.start, seg.end)} fill={seg.color} stroke="var(--surface)" strokeWidth={1} />
+              <path key={seg.rarity} d={segPath(seg.start, seg.end)} fill={seg.color} />
             ))}
             <g style={{ transformOrigin: `${CX}px ${CY}px`, transform: `rotate(${pointerAngle}deg)`, transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none' }}>
               <polygon points={`${CX},${CY - 32} ${CX - 7},${CY - 20} ${CX + 7},${CY - 20}`} fill="#EF4444" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }} />
