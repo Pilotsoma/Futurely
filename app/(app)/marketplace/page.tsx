@@ -909,20 +909,6 @@ function FreeSpinModal({ onClose, onDone }: { onClose: () => void; onDone: (rewa
               <polygon points={`${CX},${CY - 32} ${CX - 7},${CY - 20} ${CX + 7},${CY - 20}`} fill="#EF4444" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }} />
             </g>
             <circle cx={CX} cy={CY} r={22} fill="#EF4444" stroke="#000" strokeWidth={2} />
-            {/* Coin labels on each segment */}
-            {segments.map(seg => {
-              const midAngle = ((seg.start + seg.end) / 2 - 90) * (Math.PI / 180)
-              const labelR = R * 0.65
-              const x = CX + labelR * Math.cos(midAngle)
-              const y = CY + labelR * Math.sin(midAngle)
-              return (
-                <text key={seg.rarity} x={x} y={y} textAnchor="middle" dominantBaseline="middle"
-                  fill="#fff" fontSize={seg.coins >= 1000 ? 9 : 11} fontWeight="800"
-                  style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))' }}>
-                  {seg.coins >= 1000 ? `${seg.coins / 1000}k` : seg.coins}
-                </text>
-              )
-            })}
           </svg>
         </div>
 
