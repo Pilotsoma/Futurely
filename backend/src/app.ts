@@ -53,9 +53,9 @@ import { logger } from './common/logger'
 const app = express()
 const isProd = process.env.NODE_ENV === 'production'
 
-// Behind a reverse proxy (Render, Railway, Fly.io) req.ip is X-Forwarded-For.
-// trust proxy=1 tells Express to trust one hop, making rate-limit IP accurate.
-if (isProd) app.set('trust proxy', 1)
+// Always behind a reverse proxy (Vercel, Render, Railway) — trust one hop so
+// req.ip resolves to the real client IP from X-Forwarded-For.
+app.set('trust proxy', 1)
 
 // ── Gzip compression — dramatically reduces Neon egress / bandwidth ──────────
 app.use(compression())
@@ -132,6 +132,7 @@ const globalLimiter = rateLimit({
   max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many requests, please slow down.' } },
   handler: (req, res, _next, options) => {
     logger.warn('rate_limit_hit', { type: 'global', ip: req.ip, path: req.originalUrl })
@@ -146,6 +147,7 @@ const authLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many auth attempts, try again later.' } },
   handler: (req, res, _next, options) => {
     logger.warn('rate_limit_hit', { type: 'auth', ip: req.ip, path: req.originalUrl })
@@ -158,6 +160,7 @@ const aiLimiter = rateLimit({
   max: 40,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'AI rate limit reached, wait a moment.' } },
   handler: (req, res, _next, options) => {
     logger.warn('rate_limit_hit', { type: 'ai', ip: req.ip, path: req.originalUrl })
@@ -170,6 +173,7 @@ const registerLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many accounts created from this IP.' } },
   handler: (req, res, _next, options) => {
     logger.warn('rate_limit_hit', { type: 'register', ip: req.ip })
