@@ -105,24 +105,52 @@ wss.on('connection', (ws) => {
       }
 
       if (msg.type === 'BATTLE_NEED_AMMO') {
-        const code = resolveCode()
-        if (!code) return
         try {
+          let code = resolveCode()
+          // Fallback: look up the user's active battle session from DB
+          if (!code) {
+            const part = await prisma.gameParticipant.findFirst({
+              where: { userId: authedUserId!, session: { status: 'ACTIVE', type: 'BATTLE' } },
+              include: { session: { select: { joinCode: true } } },
+              orderBy: { joinedAt: 'desc' },
+            })
+            if (part) {
+              code = part.session.joinCode
+              connBattleCode = code
+              await ensureRegistered(code)
+            }
+            // Also check if user is the host
+            if (!code) {
+              const hosted = await prisma.gameSession.findFirst({
+                where: { hostId: authedUserId!, status: 'ACTIVE', type: 'BATTLE' },
+                select: { joinCode: true },
+                orderBy: { createdAt: 'desc' },
+              })
+              if (hosted) {
+                code = hosted.joinCode
+                connBattleCode = code
+                await ensureRegistered(code)
+              }
+            }
+          }
+          if (!code) { sendToUser(authedUserId!, 'BATTLE_ERROR', { message: 'Not in an active battle' }); return }
           const session = await prisma.gameSession.findUnique({
             where: { joinCode: code },
             include: { set: { select: { questions: { select: { id: true, questionText: true, options: true, correctAnswer: true }, orderBy: { orderIndex: 'asc' } } } } },
           })
-          if (!session) return
+          if (!session) { sendToUser(authedUserId!, 'BATTLE_ERROR', { message: 'Session not found' }); return }
           const questions = session.set.questions
-          if (!questions.length) return
+          if (!questions.length) { sendToUser(authedUserId!, 'BATTLE_ERROR', { message: 'No questions in this set' }); return }
           const idx = Math.floor(Math.random() * questions.length)
           const q = questions[idx]!
-          sendToUser(authedUserId, 'BATTLE_QUESTION', {
+          sendToUser(authedUserId!, 'BATTLE_QUESTION', {
             questionId: q.id,
             questionText: q.questionText,
             options: q.options,
           })
-        } catch { /* ignore */ }
+        } catch (err) {
+          sendToUser(authedUserId!, 'BATTLE_ERROR', { message: 'Failed to load question' })
+        }
         return
       }
 

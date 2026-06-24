@@ -84,6 +84,7 @@ export default function BattlePage() {
   const [zoneRadius, setZoneRadius] = useState(ZONE_INITIAL)
   const [playersAlive, setPlayersAlive] = useState(0)
   const [winnerName, setWinnerName] = useState('')
+  const [battleError, setBattleError] = useState('')
 
   const canvasRef   = useRef<HTMLCanvasElement>(null)
   const gameRef     = useRef<GameEngine | null>(null)
@@ -178,8 +179,13 @@ export default function BattlePage() {
       if (event === 'BATTLE_QUESTION') {
         setQuestion(data)
         setQFeedback(null)
-        // Release pointer lock so the cursor reappears for clicking answers
+        setBattleError('')
         if (document.pointerLockElement) document.exitPointerLock()
+      }
+
+      if (event === 'BATTLE_ERROR') {
+        setBattleError((data as { message: string }).message)
+        setTimeout(() => setBattleError(''), 3000)
       }
 
       if (event === 'BATTLE_AMMO') {
@@ -255,6 +261,11 @@ export default function BattlePage() {
   }, [phase, session])
 
   // ── Answer question ──────────────────────────────────────────────────────
+  function requestQuestion() {
+    if (document.pointerLockElement) document.exitPointerLock()
+    wsRef.current?.send(JSON.stringify({ type: 'BATTLE_NEED_AMMO' }))
+  }
+
   function handleAnswer(answer: string) {
     if (!question || qFeedback) return
     wsRef.current?.send(JSON.stringify({ type: 'BATTLE_ANSWER', questionId: question.questionId, answer }))
@@ -330,6 +341,13 @@ export default function BattlePage() {
         <div style={{ width: 2, height: 14, background: 'rgba(255,255,255,0.9)', margin: '0 auto' }} />
       </div>
 
+      {/* Error toast */}
+      {battleError && (
+        <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translateX(-50%)', background: 'rgba(239,68,68,0.9)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, color: '#fff', pointerEvents: 'none' }}>
+          {battleError}
+        </div>
+      )}
+
       {/* Bottom HUD */}
       <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 20, alignItems: 'flex-end' }}>
         {/* HP */}
@@ -341,14 +359,15 @@ export default function BattlePage() {
           <div style={{ fontSize: 18, fontWeight: 800, color: hp > 50 ? '#22c55e' : hp > 25 ? '#f59e0b' : '#ef4444' }}>{hp}</div>
         </div>
 
-        {/* Ammo */}
-        <div style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(255,255,255,0.1)', minWidth: 100 }}>
-          <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, marginBottom: 4 }}>AMMO</div>
+        {/* Ammo — click or press Q to get a question */}
+        <button onClick={requestQuestion}
+          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', borderRadius: 10, padding: '10px 16px', border: `1px solid ${ammo === 0 ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)'}`, minWidth: 100, cursor: 'pointer', textAlign: 'left' }}>
+          <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, marginBottom: 4 }}>AMMO · press Q</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: ammo > 0 ? '#fff' : '#ef4444' }}>
             {ammo} <span style={{ fontSize: 12, color: '#6b7280' }}>/ 30</span>
           </div>
-          {ammo === 0 && <div style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700 }}>ANSWER Q FOR AMMO</div>}
-        </div>
+          {ammo === 0 && <div style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700 }}>CLICK FOR QUESTION</div>}
+        </button>
 
         {/* Players alive */}
         <div style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', borderRadius: 10, padding: '10px 16px', border: '1px solid rgba(255,255,255,0.1)' }}>
