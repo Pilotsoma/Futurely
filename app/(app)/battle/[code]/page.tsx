@@ -178,6 +178,8 @@ export default function BattlePage() {
       if (event === 'BATTLE_QUESTION') {
         setQuestion(data)
         setQFeedback(null)
+        // Release pointer lock so the cursor reappears for clicking answers
+        if (document.pointerLockElement) document.exitPointerLock()
       }
 
       if (event === 'BATTLE_AMMO') {
@@ -257,6 +259,18 @@ export default function BattlePage() {
     if (!question || qFeedback) return
     wsRef.current?.send(JSON.stringify({ type: 'BATTLE_ANSWER', questionId: question.questionId, answer }))
   }
+
+  // A/B/C/D keyboard shortcuts while question panel is open
+  useEffect(() => {
+    if (!question) return
+    const onKey = (e: KeyboardEvent) => {
+      const map: Record<string, string> = { KeyA: 'A', KeyB: 'B', KeyC: 'C', KeyD: 'D' }
+      const ans = map[e.code]
+      if (ans) handleAnswer(ans)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [question, qFeedback])
 
   // ── Render ────────────────────────────────────────────────────────────────
   if (error) return (
@@ -368,7 +382,7 @@ export default function BattlePage() {
       {/* Question panel */}
       {question && (
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(10,10,20,0.95)', backdropFilter: 'blur(16px)', borderRadius: 16, padding: 28, border: '1px solid rgba(99,102,241,0.4)', width: 360, maxWidth: '90vw', zIndex: 100 }}>
-          <div style={{ fontSize: 11, color: '#6366f1', fontWeight: 700, marginBottom: 8 }}>⚡ ANSWER FOR +5 AMMO</div>
+          <div style={{ fontSize: 11, color: '#6366f1', fontWeight: 700, marginBottom: 8 }}>⚡ ANSWER FOR +5 AMMO &nbsp;·&nbsp; press A / B / C / D</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16, lineHeight: 1.4 }}>{question.questionText}</div>
           {qFeedback && (
             <div style={{ textAlign: 'center', fontSize: 16, fontWeight: 800, color: qFeedback === 'correct' ? '#22c55e' : '#ef4444', marginBottom: 12 }}>
