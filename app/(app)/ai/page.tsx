@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -56,7 +56,6 @@ function formatSessionDate(ts: number): string {
 
 function AIChatInner() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const [sessions, setSessions]   = useState<ChatSession[]>([])
   const [activeId, setActiveId]   = useState<string | null>(null)
   const [messages, setMessages]   = useState<Msg[]>([])
@@ -72,14 +71,47 @@ function AIChatInner() {
   }, [])
 
   // Auto-send the ?q= param from the dashboard AiBar.
-  // Uses lastAutoSentQ (string) instead of a boolean so re-navigating from the
-  // dashboard with a new query always fires, even when the page is router-cached.
+  // Uses stable state setters directly — avoids stale handleSend closures and
+  // avoids any router/Suspense remount that url-cleanup calls can trigger.
   useEffect(() => {
     const q = searchParams.get('q')
     if (!q || lastAutoSentQ.current === q) return
     lastAutoSentQ.current = q
-    router.replace('/ai')
-    void handleSend(q)
+
+    const msg = q.trim()
+    if (!msg) return
+    const sessionId = newSessionId()
+    const title = msg.length > 40 ? msg.slice(0, 40) + '…' : msg
+    const userMsg: Msg = { id: Date.now().toString(), role: 'user', text: msg }
+
+    setMessages([userMsg])
+    setSending(true)
+    setActiveId(sessionId)
+    setInput('')
+
+    api.chat(msg)
+      .then(({ reply }) => {
+        const aiMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: reply }
+        setMessages([userMsg, aiMsg])
+        setSessions(prev => {
+          const next = [{ id: sessionId, title, messages: [userMsg, aiMsg], createdAt: Date.now(), updatedAt: Date.now() }, ...prev]
+          saveSessions(next)
+          return next
+        })
+      })
+      .catch(() => {
+        const errMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: 'Something went wrong. Please try again.' }
+        setMessages([userMsg, errMsg])
+        setSessions(prev => {
+          const next = [{ id: sessionId, title, messages: [userMsg, errMsg], createdAt: Date.now(), updatedAt: Date.now() }, ...prev]
+          saveSessions(next)
+          return next
+        })
+      })
+      .finally(() => {
+        setSending(false)
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
+      })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
