@@ -1,59 +1,64 @@
 import { prisma } from './prisma'
 
-// Each entry is one idempotent SQL statement.
-// Runs once per cold start. Errors are caught per-statement so one
-// failure doesn't block the rest. "already exists" errors are silently
-// ignored (expected on re-runs after the first deploy that adds them).
+// Grouped into as few round-trips as possible: one ALTER TABLE per target table,
+// plus individual CREATE TABLE IF NOT EXISTS statements.
 const PATCHES: string[] = [
-  // ── User columns ─────────────────────────────────────────────────
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "hacName" TEXT`,
+  // ── User columns (single round-trip) ─────────────────────────────
+  `ALTER TABLE "User"
+    ADD COLUMN IF NOT EXISTS "hacName"                  TEXT,
+    ADD COLUMN IF NOT EXISTS "coins"                    INTEGER      NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "lastCoinClaim"            TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "nameColor"                TEXT,
+    ADD COLUMN IF NOT EXISTS "avatarEffect"             TEXT,
+    ADD COLUMN IF NOT EXISTS "avatarUrl"                TEXT,
+    ADD COLUMN IF NOT EXISTS "ownedNameColors"          JSONB        NOT NULL DEFAULT '[]',
+    ADD COLUMN IF NOT EXISTS "ownedAvatarEffects"       JSONB        NOT NULL DEFAULT '[]',
+    ADD COLUMN IF NOT EXISTS "allTags"                  JSONB        NOT NULL DEFAULT '[]',
+    ADD COLUMN IF NOT EXISTS "loginStreak"              INTEGER      NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "marketplaceAccess"        BOOLEAN      NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS "lastSeenAt"               TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "chatBanned"               BOOLEAN      NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS "chatMutedUntil"           TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "failedLoginAttempts"      INTEGER      NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "lockedUntil"              TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "emailVerified"            BOOLEAN      NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS "emailVerificationToken"   TEXT,
+    ADD COLUMN IF NOT EXISTS "emailVerificationExpiry"  TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "deletedAt"                TIMESTAMP(3)`,
+
+  // ALTER COLUMN must be its own statement
   `ALTER TABLE "User" ALTER COLUMN "passwordHash" DROP NOT NULL`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "coins" INTEGER NOT NULL DEFAULT 0`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lastCoinClaim" TIMESTAMP(3)`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "nameColor" TEXT`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "avatarEffect" TEXT`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "ownedNameColors" JSONB NOT NULL DEFAULT '[]'`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "ownedAvatarEffects" JSONB NOT NULL DEFAULT '[]'`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "allTags" JSONB NOT NULL DEFAULT '[]'`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "loginStreak" INTEGER NOT NULL DEFAULT 0`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "marketplaceAccess" BOOLEAN NOT NULL DEFAULT false`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lastSeenAt" TIMESTAMP(3)`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "chatBanned" BOOLEAN NOT NULL DEFAULT false`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "chatMutedUntil" TIMESTAMP(3)`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "failedLoginAttempts" INTEGER NOT NULL DEFAULT 0`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lockedUntil" TIMESTAMP(3)`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerified" BOOLEAN NOT NULL DEFAULT false`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerificationToken" TEXT`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerificationExpiry" TIMESTAMP(3)`,
-  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3)`,
-  // Deduplicate names before adding unique constraint (keeps lowest id per name)
+
+  // ── Post columns (single round-trip) ─────────────────────────────
+  `ALTER TABLE "Post"
+    ADD COLUMN IF NOT EXISTS "type"                TEXT  NOT NULL DEFAULT 'NORMAL',
+    ADD COLUMN IF NOT EXISTS "giveawayTag"         TEXT,
+    ADD COLUMN IF NOT EXISTS "giveawayTagColor"    TEXT,
+    ADD COLUMN IF NOT EXISTS "giveawayCoinAmount"  INTEGER,
+    ADD COLUMN IF NOT EXISTS "giveawayEndsAt"      TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "giveawayWinnerId"    INTEGER,
+    ADD COLUMN IF NOT EXISTS "giveawayItemType"    TEXT,
+    ADD COLUMN IF NOT EXISTS "giveawayItemId"      TEXT,
+    ADD COLUMN IF NOT EXISTS "giveawayItemRarity"  TEXT,
+    ADD COLUMN IF NOT EXISTS "unboxItemType"       TEXT,
+    ADD COLUMN IF NOT EXISTS "unboxItemId"         TEXT,
+    ADD COLUMN IF NOT EXISTS "unboxItemName"       TEXT,
+    ADD COLUMN IF NOT EXISTS "unboxItemValue"      TEXT,
+    ADD COLUMN IF NOT EXISTS "unboxItemRarity"     TEXT,
+    ADD COLUMN IF NOT EXISTS "unboxItemEstValue"   INTEGER,
+    ADD COLUMN IF NOT EXISTS "unboxItemTagColor"   TEXT,
+    ADD COLUMN IF NOT EXISTS "pinnedUntil"         TIMESTAMP(3)`,
+
+  // ── Unique constraint on User.name ───────────────────────────────
+  // Deduplicate first (keeps the row with the lowest id per name).
   `WITH ranked AS (
     SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY id) AS rn
     FROM "User" WHERE name IS NOT NULL
   )
   UPDATE "User" SET name = NULL FROM ranked
   WHERE "User".id = ranked.id AND ranked.rn > 1`,
-  `ALTER TABLE "User" ADD CONSTRAINT "User_name_key" UNIQUE ("name")`,
 
-  // ── Post columns ─────────────────────────────────────────────────
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "type" TEXT NOT NULL DEFAULT 'NORMAL'`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "giveawayTag" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "giveawayTagColor" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "giveawayCoinAmount" INTEGER`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "giveawayEndsAt" TIMESTAMP(3)`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "giveawayWinnerId" INTEGER`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "giveawayItemType" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "giveawayItemId" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "giveawayItemRarity" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "unboxItemType" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "unboxItemId" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "unboxItemName" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "unboxItemValue" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "unboxItemRarity" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "unboxItemEstValue" INTEGER`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "unboxItemTagColor" TEXT`,
-  `ALTER TABLE "Post" ADD COLUMN IF NOT EXISTS "pinnedUntil" TIMESTAMP(3)`,
+  `ALTER TABLE "User" ADD CONSTRAINT "User_name_key" UNIQUE ("name")`,
 
   // ── Tables ───────────────────────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS "GiveawayEntry" (
@@ -94,6 +99,15 @@ let patchPromise: Promise<void> | null = null
 export function ensureSchema(): Promise<void> {
   if (patchPromise) return patchPromise
   patchPromise = (async () => {
+    // Single probe: if the most recently added column and table both exist,
+    // schema is already fully patched — skip all work.
+    try {
+      await prisma.$queryRawUnsafe(`SELECT "deletedAt" FROM "User" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
+      return
+    } catch {
+      // Schema is incomplete — run patches below.
+    }
     for (const sql of PATCHES) {
       try {
         await prisma.$executeRawUnsafe(sql)
