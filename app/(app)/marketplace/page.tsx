@@ -2375,7 +2375,7 @@ export default function MarketplacePage() {
     )
   }
 
-  function renderTradeItems(items: TradeItem[]) {
+  function renderTradeItems(items: TradeItem[], onRemove?: (item: TradeItem) => void) {
     const total = items.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
     return (
       <div>
@@ -2383,6 +2383,7 @@ export default function MarketplacePage() {
           {items.map((item, i) => {
             return (
               <PriceTooltip key={i} price={prices[`${item.type}:${item.id}`]}>
+              <div style={{ position: 'relative', display: 'inline-flex' }}>
               <ItemBox rarity={item.rarity} itemId={item.id} onClick={() => setPreviewItem({ type: item.type, id: item.id, name: item.name ?? item.tag ?? item.id, rarity: item.rarity, value: item.value, tagColor: item.tagColor })} style={{ cursor: 'pointer' }}>
                 <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: 'var(--text-muted)', flexShrink: 0 }}>
                   {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
@@ -2397,6 +2398,13 @@ export default function MarketplacePage() {
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{item.name ?? item.tag}</span>
                 <RarityBadge rarity={item.rarity} itemId={item.id} />
               </ItemBox>
+              {onRemove && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRemove(item) }}
+                  style={{ position: 'absolute', top: -6, right: -6, width: 16, height: 16, borderRadius: '50%', background: '#EF4444', border: '1px solid var(--surface)', color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, zIndex: 1 }}
+                >×</button>
+              )}
+              </div>
               </PriceTooltip>
             )
           })}
@@ -3075,12 +3083,12 @@ export default function MarketplacePage() {
                     <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' as const }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>You offer</div>
-                        {renderTradeItems(selectedOffer)}
+                        {renderTradeItems(selectedOffer, removeOffer)}
                       </div>
                       <div style={{ alignSelf: 'center', fontSize: 18 }}>⇄</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>You receive</div>
-                        {renderTradeItems(selectedRequest)}
+                        {renderTradeItems(selectedRequest, removeRequest)}
                       </div>
                     </div>
                   </div>
