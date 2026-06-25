@@ -1208,6 +1208,9 @@ function SpinWheelModal({
           return (
             <div style={{ width: '100%', textAlign: 'center', border: `1px solid ${borderColor}55`, borderRadius: 12, padding: '20px 16px', background: `${borderColor}08` }}>
               <div style={{ fontSize: 44, marginBottom: 8 }}>{emoji}</div>
+              {!r.alreadyHad && (
+                <div style={{ display: 'inline-block', background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: '1px', borderRadius: 6, padding: '2px 8px', marginBottom: 6 }}>NEW</div>
+              )}
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
               {itemPreview}
               {dummyComment}
@@ -2605,6 +2608,9 @@ export default function MarketplacePage() {
             <PriceTooltip price={wonPrice}>
             <div ref={resultCardRef} className={cardClass} onClick={() => { if (dismissCountdown === 0) setResult(r => r ? { ...r, dismissed: true } : r) }} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${borderColor}08`, cursor: dismissCountdown > 0 ? 'default' : 'pointer' }}>
               <div style={{ fontSize: 48, marginBottom: 10 }}>{emoji}</div>
+              {!result.alreadyHad && (
+                <div style={{ display: 'inline-block', background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: '1px', borderRadius: 6, padding: '2px 8px', marginBottom: 6 }}>NEW</div>
+              )}
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
               {itemPreview}
               {dummyComment}
