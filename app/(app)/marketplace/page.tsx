@@ -883,9 +883,12 @@ function FreeSpinModal({ onClose, onDone }: { onClose: () => void; onDone: (rewa
       const segSize = wonSeg.end - wonSeg.start
       const margin = Math.min(segSize * 0.15, 5)
       const landAngle = wonSeg.start + margin + Math.random() * Math.max(0, segSize - margin * 2)
-      const finalAngle = 5 * 360 + landAngle
       setSpinDuration(4000)
-      setPointerAngle(finalAngle)
+      setPointerAngle(prev => {
+        const currentPos = prev % 360
+        const delta = (landAngle - currentPos + 360) % 360
+        return prev + 5 * 360 + delta
+      })
       setTimeout(() => { onDone(r.reward, r.rarity); onClose() }, 4300)
     } catch {
       setPhase('ready')
@@ -986,9 +989,12 @@ function SpinWheelModal({
       const segSize = wonSeg.end - wonSeg.start
       const margin = Math.min(segSize * 0.15, 5)
       const landAngle = wonSeg.start + margin + Math.random() * Math.max(0, segSize - margin * 2)
-      const finalPointerAngle = 5 * 360 + landAngle
       setSpinDuration(4000)
-      setPointerAngle(finalPointerAngle)
+      setPointerAngle(prev => {
+        const currentPos = prev % 360
+        const delta = (landAngle - currentPos + 360) % 360
+        return prev + 5 * 360 + delta
+      })
       setTimeout(() => { setWonResult(singleResult); setPhase('done') }, 4300)
       return
     }
