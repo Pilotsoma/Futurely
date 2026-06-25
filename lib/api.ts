@@ -24,9 +24,12 @@ let _refreshPromise: Promise<boolean> | null = null
 async function silentRefresh(): Promise<boolean> {
   if (_refreshPromise) return _refreshPromise
   _refreshPromise = (async () => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
     try {
       const res = await fetch(`${BASE}/api/auth/refresh`, {
         method: 'POST',
+        signal: controller.signal,
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       })
@@ -38,6 +41,7 @@ async function silentRefresh(): Promise<boolean> {
       _apiToken = null
       return false
     } finally {
+      clearTimeout(timeout)
       _refreshPromise = null
     }
   })()
