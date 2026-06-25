@@ -510,16 +510,16 @@ export default function LandingPage() {
               {/* Header row */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr',
+                gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr 1fr',
                 background: 'rgba(255,255,255,0.025)',
                 borderBottom: '1px solid var(--border)',
                 padding: '0',
               }}>
                 <div style={{ padding: '18px 24px', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Feature</div>
-                {['Futurely', 'Naviance', 'Schoology', 'Google Classroom'].map((col, i) => (
+                {['Futurely', 'Grade Way', 'Google Classroom', 'Home Access Center', 'Schoology'].map((col, i) => (
                   <div key={col} style={{
-                    padding: '18px 16px', textAlign: 'center',
-                    fontSize: 13, fontWeight: 700,
+                    padding: '18px 12px', textAlign: 'center',
+                    fontSize: 12, fontWeight: 700,
                     color: i === 0 ? 'var(--primary)' : 'var(--text-muted)',
                     background: i === 0 ? 'rgba(45,106,79,0.06)' : 'transparent',
                     borderLeft: '1px solid var(--border)',
@@ -529,25 +529,25 @@ export default function LandingPage() {
 
               {/* Data rows */}
               {[
-                { feature: 'Real-time grade sync from school portal', vals: [true, false, false, false] },
-                { feature: 'AI advisor trained on your own grades', vals: [true, false, false, false] },
-                { feature: 'GPA simulator & what-if scenarios', vals: [true, false, false, false] },
-                { feature: 'Student-owned account (not school-controlled)', vals: [true, false, false, false] },
-                { feature: 'Gamification — coins, streaks, marketplace', vals: [true, false, false, false] },
-                { feature: 'Student social feed & community', vals: [true, false, false, false] },
-                { feature: 'Privacy-first, no data selling', vals: [true, '?', '?', false] },
-                { feature: 'Free for students', vals: [true, false, false, true] },
+                { feature: 'Real-time grade sync from school portal', vals: [true, false, false, true, false] },
+                { feature: 'AI advisor trained on your own grades',   vals: [true, false, false, false, false] },
+                { feature: 'GPA simulator & what-if scenarios',       vals: [true, false, false, false, false] },
+                { feature: 'Student-owned account (not school-controlled)', vals: [true, false, false, false, false] },
+                { feature: 'Gamification — coins, streaks, marketplace',    vals: [true, false, false, false, false] },
+                { feature: 'Student social feed & community',         vals: [true, false, false, false, false] },
+                { feature: 'Privacy-first, no data selling',          vals: [true, '?', false, '?', '?'] },
+                { feature: 'Free for students',                       vals: [true, false, true, false, false] },
               ].map((row, ri) => (
                 <div key={ri} style={{
                   display: 'grid',
-                  gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr',
+                  gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr 1fr',
                   borderBottom: ri < 7 ? '1px solid var(--border)' : 'none',
                   background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
                 }}>
                   <div style={{ padding: '15px 24px', fontSize: 13.5, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>{row.feature}</div>
                   {row.vals.map((v, vi) => (
                     <div key={vi} style={{
-                      padding: '15px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '15px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       borderLeft: '1px solid var(--border)',
                       background: vi === 0 ? 'rgba(45,106,79,0.04)' : 'transparent',
                     }}>
@@ -566,22 +566,27 @@ export default function LandingPage() {
           </Reveal>
 
           {/* Callout cards below table */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginTop: 24 }}>
             {[
               {
                 color: '#F59E0B',
-                title: 'Naviance is assigned to you.',
-                body: "Your school buys it, controls it, and it disappears the day you graduate. Futurely belongs to you — and travels with you.",
+                title: 'Grade Way just shows your grades.',
+                body: "It displays what your teacher entered. Futurely tells you what those grades mean — for your GPA, your college odds, and exactly what to fix.",
               },
               {
                 color: '#60A5FA',
-                title: 'Schoology is a homework drop box.',
-                body: "It shows you what was assigned. Futurely shows you what it means for your GPA, your college chances, and what to do next.",
+                title: 'Google Classroom is a homework box.',
+                body: "It helps teachers assign work. It doesn't help you understand your academic trajectory, simulate your GPA, or plan what comes next.",
+              },
+              {
+                color: '#A78BFA',
+                title: 'Home Access Center is school-controlled.',
+                body: "Your school owns it, admins control it, and it disappears when you graduate. Futurely belongs to you — and follows your journey.",
               },
               {
                 color: '#34D399',
-                title: 'Generic AI isn\'t the same thing.',
-                body: "ChatGPT doesn't know you got a 72 on the last test. Our AI does. The difference between advice and insight is your real data.",
+                title: 'Schoology is built for teachers, not students.',
+                body: "It manages assignments and submissions. Futurely puts the student first — with AI coaching, progress insights, and tools you actually want to use.",
               },
             ].map((card, i) => (
               <Reveal key={i} delay={i * 0.09}>
