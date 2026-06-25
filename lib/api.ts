@@ -18,7 +18,33 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+// Prevents concurrent token refreshes — all callers share the same in-flight promise.
+let _refreshPromise: Promise<boolean> | null = null
+
+async function silentRefresh(): Promise<boolean> {
+  if (_refreshPromise) return _refreshPromise
+  _refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${BASE}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (!res.ok) { _apiToken = null; return false }
+      const { data } = (await res.json()) as { data: { token: string } }
+      _apiToken = data.token
+      return true
+    } catch {
+      _apiToken = null
+      return false
+    } finally {
+      _refreshPromise = null
+    }
+  })()
+  return _refreshPromise
+}
+
+async function request<T>(path: string, options?: RequestInit, _retried = false): Promise<T> {
   const token = _apiToken
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30000)
@@ -36,6 +62,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     })
   } finally {
     clearTimeout(timeout)
+  }
+  // On 401, attempt a silent token refresh and retry once.
+  if (res.status === 401 && !_retried) {
+    const refreshed = await silentRefresh()
+    if (refreshed) return request<T>(path, options, true)
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }

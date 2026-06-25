@@ -17,7 +17,14 @@ const authChannel = typeof BroadcastChannel !== 'undefined'
 
 /** Call once on app boot. Returns true if a valid session was found. */
 export async function initWebAuth(): Promise<boolean> {
-  if (getApiToken()) return true  // already loaded (e.g., just logged in)
+  const current = getApiToken()
+  if (current) {
+    // Verify the in-memory token hasn't expired before trusting it.
+    try {
+      const payload = JSON.parse(atob(current.split('.')[1]!)) as { exp?: number }
+      if (payload.exp && payload.exp * 1000 > Date.now() + 10000) return true
+    } catch { /* malformed — fall through to refresh */ }
+  }
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30000)
