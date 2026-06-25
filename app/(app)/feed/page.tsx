@@ -91,7 +91,7 @@ const GW_NAME_COLOR_ITEMS = [
   { id: 'rainbow',      name: 'Rainbow RGB',  value: 'rainbow', rarity: 'Mythic' },
 ]
 const GW_AVATAR_ITEMS = [
-  { id: 'border-green',  name: 'Green Border',    value: 'border-green',   rarity: 'Common' },
+  { id: 'border-green',  name: 'Green Border',    value: 'border-green',   rarity: 'Epic' },
   { id: 'border-blue',   name: 'Blue Border',     value: 'border-blue',    rarity: 'Common' },
   { id: 'border-red',    name: 'Red Border',      value: 'border-red',     rarity: 'Common' },
   { id: 'border-navy',   name: 'Navy Border',     value: 'border-navy',    rarity: 'Common' },
@@ -103,7 +103,7 @@ const GW_AVATAR_ITEMS = [
   { id: 'border-gold',   name: 'Gold Border',     value: 'border-gold',    rarity: 'Rare' },
   { id: 'border-lime',   name: 'Lime Border',     value: 'border-lime',    rarity: 'Rare' },
   { id: 'glow-pink',     name: 'Pink Glow',       value: 'glow-pink',      rarity: 'Epic' },
-  { id: 'glow-purple',   name: 'Purple Glow',     value: 'glow-purple',    rarity: 'Epic' },
+  { id: 'glow-purple',   name: 'Purple Glow',     value: 'glow-purple',    rarity: 'Common' },
   { id: 'glow-gold',     name: 'Gold Fill',       value: 'glow-gold',      rarity: 'Legendary' },
   { id: 'frame-black',   name: 'Void Fill',       value: 'frame-black',    rarity: 'Legendary' },
   { id: 'rainbow',       name: 'Rainbow Animated',value: 'rainbow',        rarity: 'Mythic' },

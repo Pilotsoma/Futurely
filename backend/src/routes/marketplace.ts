@@ -70,7 +70,7 @@ const NAME_COLOR_BOX_ITEMS: ColorItem[] = [
 ]
 
 const AVATAR_EFFECT_BOX_ITEMS: ColorItem[] = [
-  { id: 'border-green',    name: 'Green Border',     value: 'border-green',   rarity: 'Common',    weight: 12   },
+  { id: 'border-green',    name: 'Green Border',     value: 'border-green',   rarity: 'Epic',      weight: 1.98 },
   { id: 'border-blue',     name: 'Blue Border',      value: 'border-blue',    rarity: 'Common',    weight: 12   },
   { id: 'border-red',      name: 'Red Border',       value: 'border-red',     rarity: 'Common',    weight: 12   },
   { id: 'border-navy',     name: 'Navy Border',      value: 'border-navy',    rarity: 'Common',    weight: 12   },
@@ -82,7 +82,7 @@ const AVATAR_EFFECT_BOX_ITEMS: ColorItem[] = [
   { id: 'border-gold',     name: 'Gold Border',      value: 'border-gold',    rarity: 'Rare',      weight: 3.33 },
   { id: 'border-lime',     name: 'Lime Border',      value: 'border-lime',    rarity: 'Rare',      weight: 3.33 },
   { id: 'glow-pink',       name: 'Pink Glow',        value: 'glow-pink',      rarity: 'Epic',      weight: 1.98 },
-  { id: 'glow-purple',     name: 'Purple Glow',      value: 'glow-purple',    rarity: 'Epic',      weight: 1.98 },
+  { id: 'glow-purple',     name: 'Purple Glow',      value: 'glow-purple',    rarity: 'Common',    weight: 12   },
   { id: 'glow-gold',       name: 'Gold Fill',        value: 'glow-gold',      rarity: 'Legendary', weight: 0.5  },
   { id: 'frame-black',     name: 'Void Fill',        value: 'frame-black',    rarity: 'Legendary', weight: 0.5  },
   { id: 'fill-white',      name: 'White Fill',       value: 'fill-white',     rarity: 'Legendary', weight: 0.5  },
@@ -104,7 +104,7 @@ const COSMETICS_BOX_ITEMS: CosmeticsItem[] = [
   { id: 'dark-red',      name: 'Dark Red',       value: '#991B1B',    rarity: 'Common',    itemType: 'name-color', weight: 4.615 },
   { id: 'slate-blue',    name: 'Slate Blue',     value: '#4338CA',    rarity: 'Common',    itemType: 'name-color', weight: 4.615 },
   { id: 'teal',          name: 'Teal',           value: '#0F766E',    rarity: 'Common',    itemType: 'name-color', weight: 4.615 },
-  { id: 'border-green',  name: 'Green Border',   value: 'border-green',  rarity: 'Common', itemType: 'avatar',       weight: 4.615 },
+  { id: 'border-green',  name: 'Green Border',   value: 'border-green',  rarity: 'Epic',   itemType: 'avatar',       weight: 0.6583 },
   { id: 'border-blue',   name: 'Blue Border',    value: 'border-blue',   rarity: 'Common', itemType: 'avatar',       weight: 4.615 },
   { id: 'border-red',    name: 'Red Border',     value: 'border-red',    rarity: 'Common', itemType: 'avatar',       weight: 4.615 },
   { id: 'border-navy',   name: 'Navy Border',    value: 'border-navy',   rarity: 'Common', itemType: 'avatar',       weight: 4.615 },
@@ -133,7 +133,7 @@ const COSMETICS_BOX_ITEMS: CosmeticsItem[] = [
   { id: 'electric-blue', name: 'Electric Blue',  value: '#2563EB',    rarity: 'Epic',      itemType: 'name-color', weight: 0.6583 },
   { id: 'magenta',       name: 'Magenta',        value: '#C026D3',    rarity: 'Epic',      itemType: 'name-color', weight: 0.6583 },
   { id: 'glow-pink',     name: 'Pink Glow',      value: 'glow-pink',  rarity: 'Epic',      itemType: 'avatar',        weight: 0.6583 },
-  { id: 'glow-purple',   name: 'Purple Glow',    value: 'glow-purple', rarity: 'Epic',     itemType: 'avatar',        weight: 0.6583 },
+  { id: 'glow-purple',   name: 'Purple Glow',    value: 'glow-purple', rarity: 'Common',   itemType: 'avatar',        weight: 4.615 },
   // ── Legendary (0.8% / 7 items ≈ 0.1143 each) ────────────────────────────
   { id: 'mastermind',    tag: 'Valedictorian',   tagColor: '#FFFFFF', rarity: 'Legendary', itemType: 'tag',        weight: 0.1143 },
   { id: 'prodigy',       tag: 'Prodigy',         tagColor: '#111111', rarity: 'Legendary', itemType: 'tag',        weight: 0.1143 },
@@ -183,11 +183,11 @@ export const SEED_PRICES: Record<string, number> = {
   'name-color:platinum': 1200,   'name-color:black': 1200,
   'name-color:rainbow': 30000,
   // PFP Effects — Common 12, Uncommon 20, Rare 35, Epic 125, Legendary 2000, Mythic 50000
-  'avatar:border-green': 12,    'avatar:border-blue': 12,    'avatar:border-red': 12,
+  'avatar:border-green': 125,   'avatar:border-blue': 12,    'avatar:border-red': 12,
   'avatar:border-navy': 12,     'avatar:border-teal': 12,
   'avatar:border-orange': 20,   'avatar:border-violet': 20,  'avatar:border-cyan': 20,
   'avatar:border-hotpink': 35,  'avatar:border-gold': 35,    'avatar:border-lime': 35,
-  'avatar:glow-pink': 125,      'avatar:glow-purple': 125,
+  'avatar:glow-pink': 125,      'avatar:glow-purple': 12,
   'avatar:glow-gold': 2000,     'avatar:frame-black': 2000,  'avatar:fill-white': 2000,
   'avatar:rainbow': 50000,
   // Verified badge
