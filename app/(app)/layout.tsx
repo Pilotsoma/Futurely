@@ -133,22 +133,53 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     void checkAuth()
   }, [router])
 
-  // Set up a persistent call WebSocket once auth is confirmed
+  // Set up a persistent call WebSocket once auth is confirmed, with auto-reconnect
   useEffect(() => {
     if (!checked) return
-    try {
-      const token = getApiToken()
-      if (!token) return
-      const uid = Number(JSON.parse(atob(token.split('.')[1])).sub)
-      setCurrentUserId(uid)
-      const wsUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/^http/, 'ws')
-      const ws = new WebSocket(wsUrl)
-      callWsRef.current = ws
-      ws.onopen = () => { ws.send(JSON.stringify({ type: 'AUTH', token })); setCallWs(ws) }
-      ws.onclose = () => setCallWs(null)
-      ws.onerror = () => ws.close()
-    } catch { /* ignore */ }
-    return () => { callWsRef.current?.close(); callWsRef.current = null }
+    let destroyed = false
+    let pingInterval: ReturnType<typeof setInterval> | null = null
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
+
+    function connect() {
+      if (destroyed) return
+      try {
+        const token = getApiToken()
+        if (!token) return
+        const uid = Number(JSON.parse(atob(token.split('.')[1])).sub)
+        setCurrentUserId(uid)
+        const wsUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/^http/, 'ws')
+        const ws = new WebSocket(wsUrl)
+        callWsRef.current = ws
+
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ type: 'AUTH', token }))
+          setCallWs(ws)
+          // Keepalive ping every 25s so the connection doesn't idle-timeout
+          pingInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'PING' }))
+          }, 25000)
+        }
+
+        ws.onclose = () => {
+          setCallWs(null)
+          if (pingInterval) { clearInterval(pingInterval); pingInterval = null }
+          // Reconnect after 3s unless we're shutting down
+          if (!destroyed) reconnectTimeout = setTimeout(connect, 3000)
+        }
+
+        ws.onerror = () => ws.close()
+      } catch { /* ignore */ }
+    }
+
+    connect()
+
+    return () => {
+      destroyed = true
+      if (pingInterval) clearInterval(pingInterval)
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      callWsRef.current?.close()
+      callWsRef.current = null
+    }
   }, [checked])
 
   function handleLogout() {
