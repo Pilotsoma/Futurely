@@ -49,28 +49,28 @@ function avatarContent(user: { name: string | null; avatarUrl?: string | null })
   return initials(user)
 }
 
-const PFP_BORDER_MAP: Record<string, string> = {
+const AVATAR_BORDER_MAP: Record<string, string> = {
   'border-green': '#22C55E', 'border-blue': '#3B82F6', 'border-red': '#EF4444',
   'border-navy': '#1D4ED8', 'border-teal': '#14B8A6', 'border-orange': '#F97316',
   'border-violet': '#7C3AED', 'border-cyan': '#06B6D4', 'border-hotpink': '#EC4899',
   'border-gold': '#D97706', 'border-lime': '#84CC16',
 }
-const PFP_GLOW_MAP: Record<string, [string, string]> = {
+const AVATAR_GLOW_MAP: Record<string, [string, string]> = {
   'glow-pink': ['#EC4899', '#EC489955'],
   'glow-purple': ['#8B5CF6', '#8B5CF655'],
 }
-function pfpStyle(effect: string | null | undefined): React.CSSProperties {
+function avatarStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
   if (effect === 'glow-gold' || effect === 'frame-black') return {}
-  if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
-  if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
+  if (AVATAR_BORDER_MAP[effect]) return { border: `2px solid ${AVATAR_BORDER_MAP[effect]}` }
+  if (AVATAR_GLOW_MAP[effect]) return { border: `2px solid ${AVATAR_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${AVATAR_GLOW_MAP[effect][1]}` }
   return {}
 }
-function pfpClass(effect: string | null | undefined): string {
-  if (effect === 'rainbow') return 'pfp-rainbow'
-  if (effect === 'glow-gold') return 'pfp-gold-fill'
-  if (effect === 'frame-black') return 'pfp-void-fill'
+function avatarClass(effect: string | null | undefined): string {
+  if (effect === 'rainbow') return 'avatar-rainbow'
+  if (effect === 'glow-gold') return 'avatar-gold-fill'
+  if (effect === 'frame-black') return 'avatar-void-fill'
   return ''
 }
 function nameColorStyle(color: string | null | undefined): React.CSSProperties {
@@ -151,8 +151,8 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
           <>
             <div style={S.header}>
               <div
-                className={pfpClass(profile.pfpEffect)}
-                style={{ ...S.avatar, ...pfpStyle(profile.pfpEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}
+                className={avatarClass(profile.avatarEffect)}
+                style={{ ...S.avatar, ...avatarStyle(profile.avatarEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}
               >
                 {avatarContent(profile)}
               </div>

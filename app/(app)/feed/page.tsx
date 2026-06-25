@@ -42,33 +42,33 @@ function initials(user: { name: string | null; hacName?: string | null }): strin
     : n.slice(0, 2).toUpperCase()
 }
 
-const PFP_BORDER_MAP: Record<string, string> = {
+const AVATAR_BORDER_MAP: Record<string, string> = {
   'border-green': '#22C55E', 'border-blue': '#3B82F6', 'border-red': '#EF4444',
   'border-navy': '#1D4ED8', 'border-teal': '#14B8A6', 'border-orange': '#F97316',
   'border-violet': '#7C3AED', 'border-cyan': '#06B6D4', 'border-hotpink': '#EC4899',
   'border-gold': '#D97706', 'border-lime': '#84CC16',
 }
-const PFP_GLOW_MAP: Record<string, [string, string]> = {
+const AVATAR_GLOW_MAP: Record<string, [string, string]> = {
   'glow-pink':   ['#EC4899', '#EC489955'],
   'glow-purple': ['#8B5CF6', '#8B5CF655'],
 }
-function pfpStyle(effect: string | null | undefined): React.CSSProperties {
+function avatarStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
   if (effect === 'glow-gold')          return {}
   if (effect === 'frame-black')        return {}
   if (effect === 'fill-white')         return {}
   if (effect === 'unobtainable-curse') return { background: 'transparent' }
-  if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
-  if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
+  if (AVATAR_BORDER_MAP[effect]) return { border: `2px solid ${AVATAR_BORDER_MAP[effect]}` }
+  if (AVATAR_GLOW_MAP[effect]) return { border: `2px solid ${AVATAR_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${AVATAR_GLOW_MAP[effect][1]}` }
   return {}
 }
-function pfpClass(effect: string | null | undefined): string {
-  if (effect === 'rainbow')           return 'pfp-rainbow'
-  if (effect === 'glow-gold')         return 'pfp-gold-fill'
-  if (effect === 'frame-black')       return 'pfp-void-fill'
-  if (effect === 'fill-white')        return 'pfp-white-fill'
-  if (effect === 'unobtainable-curse') return 'pfp-curse'
+function avatarClass(effect: string | null | undefined): string {
+  if (effect === 'rainbow')           return 'avatar-rainbow'
+  if (effect === 'glow-gold')         return 'avatar-gold-fill'
+  if (effect === 'frame-black')       return 'avatar-void-fill'
+  if (effect === 'fill-white')        return 'avatar-white-fill'
+  if (effect === 'unobtainable-curse') return 'avatar-curse'
   return ''
 }
 
@@ -90,7 +90,7 @@ const GW_NAME_COLOR_ITEMS = [
   { id: 'black',        name: 'Black',        value: '#111111', rarity: 'Legendary' },
   { id: 'rainbow',      name: 'Rainbow RGB',  value: 'rainbow', rarity: 'Mythic' },
 ]
-const GW_PFP_ITEMS = [
+const GW_AVATAR_ITEMS = [
   { id: 'border-green',  name: 'Green Border',    value: 'border-green',   rarity: 'Common' },
   { id: 'border-blue',   name: 'Blue Border',     value: 'border-blue',    rarity: 'Common' },
   { id: 'border-red',    name: 'Red Border',      value: 'border-red',     rarity: 'Common' },
@@ -245,7 +245,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
         ) : (
           <>
             <div style={O.header}>
-              <div className={pfpClass(profile.pfpEffect)} style={{ ...O.avatar, ...pfpStyle(profile.pfpEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(profile)}</div>
+              <div className={avatarClass(profile.avatarEffect)} style={{ ...O.avatar, ...avatarStyle(profile.avatarEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(profile)}</div>
               <div style={{ flex: 1 }}>
                 <div className={nameColorClass(profile.nameColor)} style={{ ...O.name, ...nameColorStyle(profile.nameColor) }}>{displayName(profile)}</div>
                 {profile.hacName && parseHacName(profile.hacName) !== displayName(profile) && (
@@ -534,7 +534,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
   const isUnbox = post.type === 'UNBOX'
   const isCoinGiveaway = isGiveaway && !!post.giveawayCoinAmount
   const isNameColorGiveaway = isGiveaway && post.giveawayItemType === 'name-color'
-  const isPfpGiveaway = isGiveaway && post.giveawayItemType === 'pfp'
+  const isPfpGiveaway = isGiveaway && post.giveawayItemType === 'avatar'
   const isItemGiveaway = isNameColorGiveaway || isPfpGiveaway
   const giveawayEnded = !!post.giveawayEndsAt && new Date(post.giveawayEndsAt) <= new Date()
   const giveawayTagColor = post.giveawayTagColor || 'gold'
@@ -559,7 +559,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <div className={pfpClass(post.user.pfpEffect)} style={{ ...P.avatar, ...pfpStyle(post.user.pfpEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(post.user)}</div>
+        <div className={avatarClass(post.user.avatarEffect)} style={{ ...P.avatar, ...avatarStyle(post.user.avatarEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(post.user)}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
             <span className={nameColorClass(post.user.nameColor)} style={{ ...P.authorName, ...nameColorStyle(post.user.nameColor) }} onClick={() => onOpenProfile(post.user.id)}>{displayName(post.user)}</span>
@@ -613,15 +613,15 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
           {/* Item preview card - profile-like preview of the won item */}
           <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)' }}>
-            {/* Avatar: pfp type uses won effect, others use default */}
-            {post.unboxItemType === 'pfp' ? (
-              <div className={pfpClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemValue) }}>U</div>
+            {/* Avatar: avatar type uses won effect, others use default */}
+            {post.unboxItemType === 'avatar' ? (
+              <div className={avatarClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...avatarStyle(post.unboxItemValue) }}>U</div>
             ) : (
               <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>U</div>
             )}
             {/* Name + tag row */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
-              {post.unboxItemType === 'pfp' && (
+              {post.unboxItemType === 'avatar' && (
                 <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)' }}>
                   {post.unboxItemValue === 'rainbow' ? 'RGB' : post.unboxItemName}
                 </span>
@@ -685,11 +685,11 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             ) : null}
           </div>
 
-          {/* Item preview for name-color / pfp giveaways */}
+          {/* Item preview for name-color / avatar giveaways */}
           {isItemGiveaway && post.giveawayTag && (
             <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
               {isPfpGiveaway ? (
-                <div className={pfpClass(post.giveawayTagColor)} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, ...pfpStyle(post.giveawayTagColor) }}>U</div>
+                <div className={avatarClass(post.giveawayTagColor)} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, ...avatarStyle(post.giveawayTagColor) }}>U</div>
               ) : (
                 <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>U</div>
               )}
@@ -896,8 +896,8 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
             {/* Post body */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
               <div
-                className={pfpClass(post.user.pfpEffect)}
-                style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, cursor: 'pointer', ...pfpStyle(post.user.pfpEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                className={avatarClass(post.user.avatarEffect)}
+                style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, cursor: 'pointer', ...avatarStyle(post.user.avatarEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                 onClick={() => { onClose(); onOpenProfile(post.user.id) }}
               >
                 {avatarContent(post.user)}
@@ -928,8 +928,8 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
                 <div key={c.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <div
-                      className={pfpClass(c.user.pfpEffect)}
-                      style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                      className={avatarClass(c.user.avatarEffect)}
+                      style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...avatarStyle(c.user.avatarEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                       onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                     >{avatarContent(c.user)}</div>
                     <button
@@ -1056,8 +1056,8 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
               <div key={c.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                   <div
-                    className={pfpClass(c.user.pfpEffect)}
-                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                    className={avatarClass(c.user.avatarEffect)}
+                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...avatarStyle(c.user.avatarEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                     onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                   >
                     {avatarContent(c.user)}
@@ -1220,7 +1220,7 @@ export default function StudyFeedPage() {
   const [mutedUntil, setMutedUntil] = useState<string | null>(null)
   const [statusLoaded, setStatusLoaded] = useState(false)
   const [showGiveawayForm, setShowGiveawayForm] = useState(false)
-  const [gwType, setGwType] = useState<'tag' | 'coin' | 'name-color' | 'pfp'>('tag')
+  const [gwType, setGwType] = useState<'tag' | 'coin' | 'name-color' | 'avatar'>('tag')
   const [gwTag, setGwTag] = useState('')
   const [gwColor, setGwColor] = useState('gold')
   const [gwCoins, setGwCoins] = useState('')
@@ -1465,7 +1465,7 @@ export default function StudyFeedPage() {
     if (!gwBody.trim() || creatingGw) return
     if (gwType === 'tag' && !gwTag.trim()) return
     if (gwType === 'coin' && (!coinAmt || coinAmt < 1)) return
-    if ((gwType === 'name-color' || gwType === 'pfp') && !gwItemId) return
+    if ((gwType === 'name-color' || gwType === 'avatar') && !gwItemId) return
     setCreatingGw(true)
     try {
       let giveawayPayload: Parameters<typeof api.feedCreateGiveaway>[0]
@@ -1478,12 +1478,12 @@ export default function StudyFeedPage() {
           giveawayTag: item.name, giveawayTagColor: item.value,
           giveawayItemType: 'name-color', giveawayItemId: item.id, giveawayItemRarity: item.rarity,
         }
-      } else if (gwType === 'pfp') {
-        const item = GW_PFP_ITEMS.find(i => i.id === gwItemId)!
+      } else if (gwType === 'avatar') {
+        const item = GW_AVATAR_ITEMS.find(i => i.id === gwItemId)!
         giveawayPayload = {
           body: gwBody.trim(), durationMinutes: parseInt(gwDuration) || 60,
           giveawayTag: item.name, giveawayTagColor: item.value,
-          giveawayItemType: 'pfp', giveawayItemId: item.id, giveawayItemRarity: item.rarity,
+          giveawayItemType: 'avatar', giveawayItemId: item.id, giveawayItemRarity: item.rarity,
         }
       } else {
         giveawayPayload = { body: gwBody.trim(), durationMinutes: parseInt(gwDuration) || 60, giveawayTag: gwTag.trim(), giveawayTagColor: gwColor.trim() || 'gold' }
@@ -1630,7 +1630,7 @@ export default function StudyFeedPage() {
                   </div>
                   {/* Type toggle */}
                   <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const }}>
-                    {([['tag', '🏷️ Tag'], ['coin', null], ['name-color', '🎨 Name Color'], ['pfp', '🖼️ PFP Effect']] as const).map(([t, label]) => (
+                    {([['tag', '🏷️ Tag'], ['coin', null], ['name-color', '🎨 Name Color'], ['avatar', '🖼️ PFP Effect']] as const).map(([t, label]) => (
                       <button key={t} onClick={() => { setGwType(t); setGwItemId('') }} style={{ flex: 1, minWidth: 80, height: 34, borderRadius: 8, border: `1px solid ${gwType === t ? 'gold' : 'var(--border)'}`, background: gwType === t ? 'rgba(255,215,0,0.12)' : 'transparent', color: gwType === t ? 'gold' : 'var(--text-secondary)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                         {t === 'coin' ? <><CoinIcon size={13} /> Coins</> : label}
                       </button>
@@ -1640,7 +1640,7 @@ export default function StudyFeedPage() {
                     placeholder={
                       gwType === 'coin' ? "Announce the giveaway… (e.g. 'Enter to win 500 coins!')"
                       : gwType === 'name-color' ? "Announce the giveaway… (e.g. 'Win a legendary name color!')"
-                      : gwType === 'pfp' ? "Announce the giveaway… (e.g. 'Enter to win a rare PFP effect!')"
+                      : gwType === 'avatar' ? "Announce the giveaway… (e.g. 'Enter to win a rare PFP effect!')"
                       : "Announce the giveaway… (e.g. 'Enter to win a limited VIP tag!')"
                     }
                     value={gwBody}
@@ -1679,7 +1679,7 @@ export default function StudyFeedPage() {
                     ) : (
                       <select className="ns-input" style={{ flex: 1, height: 36, fontSize: 13 }} value={gwItemId} onChange={e => setGwItemId(e.target.value)}>
                         <option value="">Pick a PFP effect…</option>
-                        {GW_PFP_ITEMS.map(i => (
+                        {GW_AVATAR_ITEMS.map(i => (
                           <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>
                         ))}
                       </select>
@@ -1694,17 +1694,17 @@ export default function StudyFeedPage() {
                       <option value="10080">1 week</option>
                     </select>
                   </div>
-                  {/* Live preview for name-color / pfp */}
-                  {(gwType === 'name-color' || gwType === 'pfp') && gwItemId && (() => {
+                  {/* Live preview for name-color / avatar */}
+                  {(gwType === 'name-color' || gwType === 'avatar') && gwItemId && (() => {
                     const item = gwType === 'name-color'
                       ? GW_NAME_COLOR_ITEMS.find(i => i.id === gwItemId)
-                      : GW_PFP_ITEMS.find(i => i.id === gwItemId)
+                      : GW_AVATAR_ITEMS.find(i => i.id === gwItemId)
                     if (!item) return null
                     const isRainbow = item.value === 'rainbow'
                     return (
                       <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
-                        {gwType === 'pfp' ? (
-                          <div className={pfpClass(item.value)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, ...pfpStyle(item.value) }}>D</div>
+                        {gwType === 'avatar' ? (
+                          <div className={avatarClass(item.value)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, ...avatarStyle(item.value) }}>D</div>
                         ) : (
                           <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0 }}>D</div>
                         )}
@@ -1720,9 +1720,9 @@ export default function StudyFeedPage() {
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <button className="ns-btn-ghost" style={{ height: 36, padding: '0 14px', fontSize: 13 }} onClick={() => setShowGiveawayForm(false)}>Cancel</button>
                     <button
-                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, background: 'gold', color: '#000', border: 'none', borderRadius: 8, cursor: 'pointer', opacity: gwBody.trim() && (gwType === 'coin' ? parseInt(gwCoins) > 0 : gwType === 'name-color' || gwType === 'pfp' ? !!gwItemId : gwTag.trim()) && !creatingGw ? 1 : 0.5 }}
+                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, background: 'gold', color: '#000', border: 'none', borderRadius: 8, cursor: 'pointer', opacity: gwBody.trim() && (gwType === 'coin' ? parseInt(gwCoins) > 0 : gwType === 'name-color' || gwType === 'avatar' ? !!gwItemId : gwTag.trim()) && !creatingGw ? 1 : 0.5 }}
                       onClick={handleCreateGiveaway}
-                      disabled={!gwBody.trim() || (gwType === 'coin' ? !parseInt(gwCoins) : gwType === 'name-color' || gwType === 'pfp' ? !gwItemId : !gwTag.trim()) || creatingGw}
+                      disabled={!gwBody.trim() || (gwType === 'coin' ? !parseInt(gwCoins) : gwType === 'name-color' || gwType === 'avatar' ? !gwItemId : !gwTag.trim()) || creatingGw}
                     >
                       {creatingGw ? 'Creating…' : 'Launch Giveaway'}
                     </button>

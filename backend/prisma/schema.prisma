@@ -23,11 +23,11 @@ model User {
   lastCoinClaim            DateTime?
   lastFreeSpin             DateTime?
   nameColor                String?
-  pfpEffect                String?
+  avatarEffect             String?
   badge                    String?
   avatarUrl                String?
   ownedNameColors          Json                     @default("[]")
-  ownedPfpEffects          Json                     @default("[]")
+  ownedAvatarEffects       Json                     @default("[]")
   role                     String                   @default("STUDENT")
   chatBanned               Boolean                  @default(false)
   chatMutedUntil           DateTime?

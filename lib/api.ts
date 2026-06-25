@@ -641,7 +641,7 @@ export const api = {
   marketplaceOpenBox: (boxType: string, quantity = 1) =>
     request<BoxResult & { results?: Array<{ won: BoxResult['won']; alreadyHad: boolean }> }>('/api/marketplace/open-box', { method: 'POST', body: JSON.stringify({ boxType, quantity }) }),
 
-  marketplaceQuicksell: (itemType: 'tag' | 'name-color' | 'pfp', itemId: string) =>
+  marketplaceQuicksell: (itemType: 'tag' | 'name-color' | 'avatar', itemId: string) =>
     request<{ coins: number; payout: number }>('/api/marketplace/quicksell', {
       method: 'POST',
       body: JSON.stringify({ itemType, itemId }),
@@ -650,8 +650,8 @@ export const api = {
   marketplaceQuicksellDuplicates: (exclude: string[] = []) =>
     request<{ coins: number; sold: number; totalPayout: number }>('/api/marketplace/quicksell/duplicates', { method: 'POST', body: JSON.stringify({ exclude }), headers: { 'Content-Type': 'application/json' } }),
 
-  marketplaceEquip: (type: 'name-color' | 'pfp' | 'tag', itemId: string | null) =>
-    request<{ nameColor?: string | null; pfpEffect?: string | null }>('/api/marketplace/equip', {
+  marketplaceEquip: (type: 'name-color' | 'avatar' | 'tag', itemId: string | null) =>
+    request<{ nameColor?: string | null; avatarEffect?: string | null }>('/api/marketplace/equip', {
       method: 'PUT',
       body: JSON.stringify({ type, itemId }),
     }),
@@ -662,7 +662,7 @@ export const api = {
       body: JSON.stringify({ type: 'badge', itemId }),
     }),
 
-  marketplaceAdminGrant: (payload: { type: 'coins'; amount: number } | { type: 'name-color' | 'pfp' | 'tag'; itemId: string }) =>
+  marketplaceAdminGrant: (payload: { type: 'coins'; amount: number } | { type: 'name-color' | 'avatar' | 'tag'; itemId: string }) =>
     request<{ coins?: number; granted?: MarketplaceItem & { tag?: string; tagColor?: string }; tag?: string; tagColor?: string }>('/api/marketplace/admin/grant', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -728,23 +728,23 @@ export const api = {
     request<{ sellsUsed: number; sellsRemaining: number; buysUsed: number; buysRemaining: number; tradesUsed: number; tradesRemaining: number }>('/api/marketplace/trader/status'),
 
   traderCatalog: () =>
-    request<Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; traderPrice: number; tag?: string; tagColor?: string; value?: string }>>('/api/marketplace/trader/catalog'),
+    request<Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; traderPrice: number; tag?: string; tagColor?: string; value?: string }>>('/api/marketplace/trader/catalog'),
 
-  traderSell: (itemType: 'tag' | 'name-color' | 'pfp', itemId: string) =>
+  traderSell: (itemType: 'tag' | 'name-color' | 'avatar', itemId: string) =>
     request<{ ok: boolean; payout: number; sellsRemaining: number }>('/api/marketplace/trader/sell', {
       method: 'POST',
       body: JSON.stringify({ itemType, itemId }),
     }),
 
-  traderBuy: (itemType: 'tag' | 'name-color' | 'pfp', itemId: string) =>
+  traderBuy: (itemType: 'tag' | 'name-color' | 'avatar', itemId: string) =>
     request<{ ok: boolean; price: number; buysRemaining: number }>('/api/marketplace/trader/buy', {
       method: 'POST',
       body: JSON.stringify({ itemType, itemId }),
     }),
 
   traderTrade: (
-    offerItems: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string }>,
-    wantItems: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string }>,
+    offerItems: Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string }>,
+    wantItems: Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string }>,
   ) =>
     request<{ ok: boolean; tradesRemaining: number }>('/api/marketplace/trader/trade', {
       method: 'POST',
@@ -1298,7 +1298,7 @@ export interface FeedUser {
   tag: string | null
   tagColor: string | null
   nameColor: string | null
-  pfpEffect: string | null
+  avatarEffect: string | null
   badge?: string | null
   avatarUrl?: string | null
 }
@@ -1353,7 +1353,7 @@ export interface FeedUserProfile {
   tag: string | null
   tagColor: string | null
   nameColor: string | null
-  pfpEffect: string | null
+  avatarEffect: string | null
   badge?: string | null
   avatarUrl?: string | null
   role: string
@@ -1391,11 +1391,11 @@ export interface InventoryData {
   tag: string | null
   tagColor: string | null
   nameColor: string | null
-  pfpEffect: string | null
+  avatarEffect: string | null
   badge?: string | null
   ownedTags: TagInventoryItem[]
   ownedNameColors: MarketplaceItem[]
-  ownedPfpEffects: MarketplaceItem[]
+  ownedAvatarEffects: MarketplaceItem[]
   marketplaceAccess?: boolean
   nextFreeSpin?: string | null
   isdCode?: string | null
@@ -1409,7 +1409,7 @@ export interface BoxResult {
 }
 
 export interface TradeItem {
-  type: 'tag' | 'name-color' | 'pfp'
+  type: 'tag' | 'name-color' | 'avatar'
   id: string
   tag?: string
   tagColor?: string
@@ -1451,14 +1451,14 @@ export interface UserPublicInventory {
   user: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
   tags: TagInventoryItem[]
   nameColors: MarketplaceItem[]
-  pfpEffects: MarketplaceItem[]
+  avatarEffects: MarketplaceItem[]
 }
 
 export interface ItemSalePoint { price: number; soldAt: string }
 
 export interface ItemOwner {
   rank: number; id: number; name: string | null
-  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; badge?: string | null
+  tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; badge?: string | null
   qty: number
 }
 
@@ -1466,7 +1466,7 @@ export interface ItemOwnersData { owners: ItemOwner[]; total: number }
 
 export interface LeaderboardEntry {
   rank: number; id: number; name: string | null
-  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; badge?: string | null; value: number
+  tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; badge?: string | null; value: number
 }
 
 export interface LeaderboardData {

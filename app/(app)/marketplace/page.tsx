@@ -53,33 +53,33 @@ function getRarityColor(rarity: string, itemId?: string | null): string {
   return c ?? '#22C55E'
 }
 
-const PFP_BORDER_MAP: Record<string, string> = {
+const AVATAR_BORDER_MAP: Record<string, string> = {
   'border-green': '#22C55E', 'border-blue': '#3B82F6', 'border-red': '#EF4444',
   'border-navy': '#1D4ED8', 'border-teal': '#14B8A6', 'border-orange': '#F97316',
   'border-violet': '#7C3AED', 'border-cyan': '#06B6D4', 'border-hotpink': '#EC4899',
   'border-gold': '#D97706', 'border-lime': '#84CC16',
 }
-const PFP_GLOW_MAP: Record<string, [string, string]> = {
+const AVATAR_GLOW_MAP: Record<string, [string, string]> = {
   'glow-pink':   ['#EC4899', '#EC489955'],
   'glow-purple': ['#8B5CF6', '#8B5CF655'],
 }
-function pfpStyle(effect: string | null | undefined): React.CSSProperties {
+function avatarStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
   if (effect === 'glow-gold')           return {}
   if (effect === 'frame-black')         return {}
   if (effect === 'fill-white')          return {}
   if (effect === 'unobtainable-curse')  return {}
-  if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
-  if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
+  if (AVATAR_BORDER_MAP[effect]) return { border: `2px solid ${AVATAR_BORDER_MAP[effect]}` }
+  if (AVATAR_GLOW_MAP[effect]) return { border: `2px solid ${AVATAR_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${AVATAR_GLOW_MAP[effect][1]}` }
   return {}
 }
-function pfpClass(effect: string | null | undefined): string {
-  if (effect === 'rainbow')           return 'pfp-rainbow'
-  if (effect === 'glow-gold')         return 'pfp-gold-fill'
-  if (effect === 'frame-black')       return 'pfp-void-fill'
-  if (effect === 'fill-white')        return 'pfp-white-fill'
-  if (effect === 'unobtainable-curse') return 'pfp-curse'
+function avatarClass(effect: string | null | undefined): string {
+  if (effect === 'rainbow')           return 'avatar-rainbow'
+  if (effect === 'glow-gold')         return 'avatar-gold-fill'
+  if (effect === 'frame-black')       return 'avatar-void-fill'
+  if (effect === 'fill-white')        return 'avatar-white-fill'
+  if (effect === 'unobtainable-curse') return 'avatar-curse'
   return ''
 }
 
@@ -88,18 +88,18 @@ type BoxType = 'cosmetics' | 'dev-curse'
 
 // ── Box card cycling previews ──────────────────────────────────────────────────
 
-type PreviewItemDef = { type: 'tag' | 'name-color' | 'pfp'; tag?: string; tagColor?: string; name?: string; value?: string; rarity: string }
+type PreviewItemDef = { type: 'tag' | 'name-color' | 'avatar'; tag?: string; tagColor?: string; name?: string; value?: string; rarity: string }
 
 const BOX_CYCLE_PREVIEWS: Record<string, PreviewItemDef[]> = {
   'cosmetics': [
     { type: 'tag',        tag: 'Valedictorian', tagColor: '#FFFFFF',  rarity: 'Legendary' },
     { type: 'name-color', name: 'Magenta',      value: '#C026D3',     rarity: 'Epic'      },
-    { type: 'pfp',        name: 'Gold Fill',    value: 'glow-gold',   rarity: 'Legendary' },
+    { type: 'avatar',        name: 'Gold Fill',    value: 'glow-gold',   rarity: 'Legendary' },
     { type: 'tag',        tag: 'VIP',           tagColor: '#111111',  rarity: 'Mythic'    },
     { type: 'name-color', name: 'Rainbow RGB',  value: 'rainbow',     rarity: 'Mythic'    },
-    { type: 'pfp',        name: 'Pink Glow',    value: 'glow-pink',   rarity: 'Epic'      },
+    { type: 'avatar',        name: 'Pink Glow',    value: 'glow-pink',   rarity: 'Epic'      },
     { type: 'tag',        tag: 'Ace',           tagColor: '#F97316',  rarity: 'Epic'      },
-    { type: 'pfp',        name: 'Rainbow',      value: 'rainbow',     rarity: 'Mythic'    },
+    { type: 'avatar',        name: 'Rainbow',      value: 'rainbow',     rarity: 'Mythic'    },
   ],
 }
 
@@ -150,15 +150,15 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
             Username
           </span>
         )}
-        {item.type === 'pfp' && (
+        {item.type === 'avatar' && (
           <div
-            className={pfpClass(item.value)}
+            className={avatarClass(item.value)}
             style={{
               width: 40, height: 40, borderRadius: '50%',
               background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontWeight: 800, fontSize: 15, flexShrink: 0,
-              ...pfpStyle(item.value),
+              ...avatarStyle(item.value),
             }}
           >
             A
@@ -204,7 +204,7 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
   },
 ]
 
-type SimItem = { id: string; label: string; rarity: string; type: 'tag' | 'name-color' | 'pfp'; tag?: string; tagColor?: string; value?: string; name?: string }
+type SimItem = { id: string; label: string; rarity: string; type: 'tag' | 'name-color' | 'avatar'; tag?: string; tagColor?: string; value?: string; name?: string }
 const SIM_ITEMS: Record<string, SimItem[]> = {
   tag: [
     { id: 'grinder',        label: 'Grinder (Common)',          rarity: 'Common',    type: 'tag', tag: 'Grinder',        tagColor: '#6B7280' },
@@ -232,14 +232,14 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'black',         label: 'Black (Legendary)',        rarity: 'Legendary', type: 'name-color', name: 'Black',          value: '#111111' },
     { id: 'rainbow',       label: 'Rainbow RGB ✨ (Mythic)',  rarity: 'Mythic',    type: 'name-color', name: 'Rainbow RGB',    value: 'rainbow' },
   ],
-  pfp: [
-    { id: 'border-green',   label: 'Green Border (Common)',      rarity: 'Common',    type: 'pfp', name: 'Green Border',     value: 'border-green' },
-    { id: 'glow-pink',      label: 'Pink Glow (Epic)',           rarity: 'Epic',      type: 'pfp', name: 'Pink Glow',        value: 'glow-pink' },
-    { id: 'glow-purple',    label: 'Purple Glow (Epic)',         rarity: 'Epic',      type: 'pfp', name: 'Purple Glow',      value: 'glow-purple' },
-    { id: 'glow-gold',      label: 'Gold Fill (Legendary)',      rarity: 'Legendary', type: 'pfp', name: 'Gold Fill',        value: 'glow-gold' },
-    { id: 'frame-black',    label: 'Void Fill (Legendary)',      rarity: 'Legendary', type: 'pfp', name: 'Void Fill',        value: 'frame-black' },
-    { id: 'fill-white',     label: 'White Fill (Legendary)',     rarity: 'Legendary', type: 'pfp', name: 'White Fill',       value: 'fill-white' },
-    { id: 'rainbow',        label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic',  type: 'pfp', name: 'Rainbow Animated', value: 'rainbow' },
+  avatar: [
+    { id: 'border-green',   label: 'Green Border (Common)',      rarity: 'Common',    type: 'avatar', name: 'Green Border',     value: 'border-green' },
+    { id: 'glow-pink',      label: 'Pink Glow (Epic)',           rarity: 'Epic',      type: 'avatar', name: 'Pink Glow',        value: 'glow-pink' },
+    { id: 'glow-purple',    label: 'Purple Glow (Epic)',         rarity: 'Epic',      type: 'avatar', name: 'Purple Glow',      value: 'glow-purple' },
+    { id: 'glow-gold',      label: 'Gold Fill (Legendary)',      rarity: 'Legendary', type: 'avatar', name: 'Gold Fill',        value: 'glow-gold' },
+    { id: 'frame-black',    label: 'Void Fill (Legendary)',      rarity: 'Legendary', type: 'avatar', name: 'Void Fill',        value: 'frame-black' },
+    { id: 'fill-white',     label: 'White Fill (Legendary)',     rarity: 'Legendary', type: 'avatar', name: 'White Fill',       value: 'fill-white' },
+    { id: 'rainbow',        label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic',  type: 'avatar', name: 'Rainbow Animated', value: 'rainbow' },
   ],
   'cosmetics': [
     { id: 'grinder',        label: 'Grinder (Common)',          rarity: 'Common',    type: 'tag',        tag: 'Grinder',        tagColor: '#6B7280' },
@@ -250,44 +250,44 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'dark-red',       label: 'Dark Red (Common)',         rarity: 'Common',    type: 'name-color', name: 'Dark Red',      value: '#991B1B' },
     { id: 'slate-blue',     label: 'Slate Blue (Common)',       rarity: 'Common',    type: 'name-color', name: 'Slate Blue',    value: '#4338CA' },
     { id: 'teal',           label: 'Teal (Common)',             rarity: 'Common',    type: 'name-color', name: 'Teal',          value: '#0F766E' },
-    { id: 'border-green',   label: 'Green Border (Common)',     rarity: 'Common',    type: 'pfp',        name: 'Green Border',  value: 'border-green' },
-    { id: 'border-blue',    label: 'Blue Border (Common)',      rarity: 'Common',    type: 'pfp',        name: 'Blue Border',   value: 'border-blue' },
-    { id: 'border-red',     label: 'Red Border (Common)',       rarity: 'Common',    type: 'pfp',        name: 'Red Border',    value: 'border-red' },
-    { id: 'border-navy',    label: 'Navy Border (Common)',      rarity: 'Common',    type: 'pfp',        name: 'Navy Border',   value: 'border-navy' },
-    { id: 'border-teal',    label: 'Teal Border (Common)',      rarity: 'Common',    type: 'pfp',        name: 'Teal Border',   value: 'border-teal' },
+    { id: 'border-green',   label: 'Green Border (Common)',     rarity: 'Common',    type: 'avatar',        name: 'Green Border',  value: 'border-green' },
+    { id: 'border-blue',    label: 'Blue Border (Common)',      rarity: 'Common',    type: 'avatar',        name: 'Blue Border',   value: 'border-blue' },
+    { id: 'border-red',     label: 'Red Border (Common)',       rarity: 'Common',    type: 'avatar',        name: 'Red Border',    value: 'border-red' },
+    { id: 'border-navy',    label: 'Navy Border (Common)',      rarity: 'Common',    type: 'avatar',        name: 'Navy Border',   value: 'border-navy' },
+    { id: 'border-teal',    label: 'Teal Border (Common)',      rarity: 'Common',    type: 'avatar',        name: 'Teal Border',   value: 'border-teal' },
     { id: 'honors-student', label: 'Honors Student (Uncommon)', rarity: 'Uncommon',  type: 'tag',        tag: 'Honors Student', tagColor: '#3B82F6' },
     { id: 'ap-student',     label: 'AP Student (Uncommon)',     rarity: 'Uncommon',  type: 'tag',        tag: 'AP Student',     tagColor: '#06B6D4' },
     { id: 'bright-orange',  label: 'Bright Orange (Uncommon)',  rarity: 'Uncommon',  type: 'name-color', name: 'Bright Orange', value: '#EA580C' },
     { id: 'violet',         label: 'Violet (Uncommon)',         rarity: 'Uncommon',  type: 'name-color', name: 'Violet',        value: '#7C3AED' },
     { id: 'cyan',           label: 'Cyan (Uncommon)',           rarity: 'Uncommon',  type: 'name-color', name: 'Cyan',          value: '#0891B2' },
-    { id: 'border-orange',  label: 'Orange Border (Uncommon)',  rarity: 'Uncommon',  type: 'pfp',        name: 'Orange Border', value: 'border-orange' },
-    { id: 'border-violet',  label: 'Violet Border (Uncommon)',  rarity: 'Uncommon',  type: 'pfp',        name: 'Violet Border', value: 'border-violet' },
-    { id: 'border-cyan',    label: 'Cyan Border (Uncommon)',    rarity: 'Uncommon',  type: 'pfp',        name: 'Cyan Border',   value: 'border-cyan' },
+    { id: 'border-orange',  label: 'Orange Border (Uncommon)',  rarity: 'Uncommon',  type: 'avatar',        name: 'Orange Border', value: 'border-orange' },
+    { id: 'border-violet',  label: 'Violet Border (Uncommon)',  rarity: 'Uncommon',  type: 'avatar',        name: 'Violet Border', value: 'border-violet' },
+    { id: 'border-cyan',    label: 'Cyan Border (Uncommon)',    rarity: 'Uncommon',  type: 'avatar',        name: 'Cyan Border',   value: 'border-cyan' },
     { id: 'deans-list',     label: "Dean's List (Rare)",        rarity: 'Rare',      type: 'tag',        tag: "Dean's List",    tagColor: '#8B5CF6' },
     { id: 'top-performer',  label: 'Top Performer (Rare)',      rarity: 'Rare',      type: 'tag',        tag: 'Top Performer',  tagColor: '#8B5CF6' },
     { id: 'hot-pink',       label: 'Hot Pink (Rare)',           rarity: 'Rare',      type: 'name-color', name: 'Hot Pink',      value: '#DB2777' },
     { id: 'gold',           label: 'Gold (Rare)',               rarity: 'Rare',      type: 'name-color', name: 'Gold',          value: '#D97706' },
     { id: 'lime-green',     label: 'Lime Green (Rare)',         rarity: 'Rare',      type: 'name-color', name: 'Lime Green',    value: '#65A30D' },
-    { id: 'border-hotpink', label: 'Hot Pink Border (Rare)',    rarity: 'Rare',      type: 'pfp',        name: 'Hot Pink Border', value: 'border-hotpink' },
-    { id: 'border-gold',    label: 'Gold Border (Rare)',        rarity: 'Rare',      type: 'pfp',        name: 'Gold Border',   value: 'border-gold' },
-    { id: 'border-lime',    label: 'Lime Border (Rare)',        rarity: 'Rare',      type: 'pfp',        name: 'Lime Border',   value: 'border-lime' },
+    { id: 'border-hotpink', label: 'Hot Pink Border (Rare)',    rarity: 'Rare',      type: 'avatar',        name: 'Hot Pink Border', value: 'border-hotpink' },
+    { id: 'border-gold',    label: 'Gold Border (Rare)',        rarity: 'Rare',      type: 'avatar',        name: 'Gold Border',   value: 'border-gold' },
+    { id: 'border-lime',    label: 'Lime Border (Rare)',        rarity: 'Rare',      type: 'avatar',        name: 'Lime Border',   value: 'border-lime' },
     { id: 'ace',            label: 'Ace (Epic)',                rarity: 'Epic',      type: 'tag',        tag: 'Ace',            tagColor: '#F97316' },
     { id: 'genius',         label: 'Genius (Epic)',             rarity: 'Epic',      type: 'tag',        tag: 'Genius',         tagColor: '#EC4899' },
     { id: 'electric-blue',  label: 'Electric Blue (Epic)',      rarity: 'Epic',      type: 'name-color', name: 'Electric Blue', value: '#2563EB' },
     { id: 'magenta',        label: 'Magenta (Epic)',            rarity: 'Epic',      type: 'name-color', name: 'Magenta',       value: '#C026D3' },
-    { id: 'glow-pink',      label: 'Pink Glow (Epic)',          rarity: 'Epic',      type: 'pfp',        name: 'Pink Glow',     value: 'glow-pink' },
-    { id: 'glow-purple',    label: 'Purple Glow (Epic)',        rarity: 'Epic',      type: 'pfp',        name: 'Purple Glow',   value: 'glow-purple' },
+    { id: 'glow-pink',      label: 'Pink Glow (Epic)',          rarity: 'Epic',      type: 'avatar',        name: 'Pink Glow',     value: 'glow-pink' },
+    { id: 'glow-purple',    label: 'Purple Glow (Epic)',        rarity: 'Epic',      type: 'avatar',        name: 'Purple Glow',   value: 'glow-purple' },
     { id: 'mastermind',     label: 'Valedictorian (Legendary)', rarity: 'Legendary', type: 'tag',        tag: 'Valedictorian',  tagColor: '#FFFFFF' },
     { id: 'prodigy',        label: 'Prodigy (Legendary)',       rarity: 'Legendary', type: 'tag',        tag: 'Prodigy',        tagColor: '#111111' },
     { id: 'platinum',     label: 'Platinum (Legendary)',    rarity: 'Legendary', type: 'name-color', name: 'Platinum',    value: '#C0C0C0' },
     { id: 'black',          label: 'Black (Legendary)',         rarity: 'Legendary', type: 'name-color', name: 'Black',         value: '#111111' },
-    { id: 'glow-gold',      label: 'Gold Fill (Legendary)',     rarity: 'Legendary', type: 'pfp',        name: 'Gold Fill',     value: 'glow-gold' },
-    { id: 'frame-black',    label: 'Void Fill (Legendary)',     rarity: 'Legendary', type: 'pfp',        name: 'Void Fill',     value: 'frame-black' },
-    { id: 'fill-white',     label: 'White Fill (Legendary)',    rarity: 'Legendary', type: 'pfp',        name: 'White Fill',    value: 'fill-white' },
+    { id: 'glow-gold',      label: 'Gold Fill (Legendary)',     rarity: 'Legendary', type: 'avatar',        name: 'Gold Fill',     value: 'glow-gold' },
+    { id: 'frame-black',    label: 'Void Fill (Legendary)',     rarity: 'Legendary', type: 'avatar',        name: 'Void Fill',     value: 'frame-black' },
+    { id: 'fill-white',     label: 'White Fill (Legendary)',    rarity: 'Legendary', type: 'avatar',        name: 'White Fill',    value: 'fill-white' },
     { id: 'god',            label: 'VIP (Mythic)',              rarity: 'Mythic',    type: 'tag',        tag: 'VIP',            tagColor: '#111111' },
     { id: 'verified',       label: 'Verified ✓ Yellow (Mythic)', rarity: 'Mythic',  type: 'tag',        tag: 'Verified',       tagColor: 'verified-yellow' },
     { id: 'rainbow',        label: 'Rainbow RGB ✨ (Mythic)',   rarity: 'Mythic',    type: 'name-color', name: 'Rainbow RGB',   value: 'rainbow' },
-    { id: 'rainbow-pfp',    label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic', type: 'pfp',       name: 'Rainbow Animated', value: 'rainbow' },
+    { id: 'rainbow-pfp',    label: 'Rainbow Animated ✨ (Mythic)', rarity: 'Mythic', type: 'avatar',       name: 'Rainbow Animated', value: 'rainbow' },
   ],
   'dev-curse': [
     { id: 'learner',      label: 'Learner (Common)',        rarity: 'Common', type: 'tag',        tag: 'Learner',    tagColor: '#94A3B8' },
@@ -295,7 +295,7 @@ const SIM_ITEMS: Record<string, SimItem[]> = {
     { id: 'bottom-100',   label: 'Bottom 100 (Common)',     rarity: 'Common', type: 'tag',        tag: 'Bottom 100', tagColor: '#6B7280' },
     { id: 'curse-tag',    label: 'The Curse',               rarity: 'Curse',  type: 'tag',        tag: 'CURSE',      tagColor: 'curse' },
     { id: 'curse-name',   label: 'The Curse',               rarity: 'Curse',  type: 'name-color', name: 'The Curse', value: 'curse' },
-    { id: 'curse',        label: 'The Curse',               rarity: 'Curse',  type: 'pfp',        name: 'The Curse', value: 'unobtainable-curse' },
+    { id: 'curse',        label: 'The Curse',               rarity: 'Curse',  type: 'avatar',        name: 'The Curse', value: 'unobtainable-curse' },
   ],
 }
 
@@ -333,8 +333,8 @@ const NON_TRADEABLE_TAG_IDS = new Set([
 // Dev-curse exclusives: quicksell IS allowed but yields 0 coins
 const ZERO_QUICKSELL_TAG_IDS = new Set(['Learner', 'C Student', 'Bottom 100'])
 
-// Every item that exists in the app — mirrors backend TAG_BOX_ITEMS / NAME_COLOR_BOX_ITEMS / PFP_EFFECT_BOX_ITEMS
-type CatalogItem = { id: string; type: 'tag' | 'name-color' | 'pfp'; name: string; rarity: string; value?: string; tagColor?: string; tag?: string }
+// Every item that exists in the app — mirrors backend TAG_BOX_ITEMS / NAME_COLOR_BOX_ITEMS / AVATAR_EFFECT_BOX_ITEMS
+type CatalogItem = { id: string; type: 'tag' | 'name-color' | 'avatar'; name: string; rarity: string; value?: string; tagColor?: string; tag?: string }
 const CATALOG_ALL_ITEMS: CatalogItem[] = [
   // ── Tags ──
   { id: 'grinder',        type: 'tag', name: 'Grinder',       rarity: 'Common',    tagColor: '#6B7280' },
@@ -381,24 +381,24 @@ const CATALOG_ALL_ITEMS: CatalogItem[] = [
   { id: 'black',         type: 'name-color', name: 'Black',          rarity: 'Legendary', value: '#111111' },
   { id: 'rainbow',       type: 'name-color', name: 'Rainbow RGB ✨', rarity: 'Mythic',    value: 'rainbow' },
   // ── PFP Effects ──
-  { id: 'border-green',   type: 'pfp', name: 'Green Border',      rarity: 'Common',    value: 'border-green'   },
-  { id: 'border-blue',    type: 'pfp', name: 'Blue Border',       rarity: 'Common',    value: 'border-blue'    },
-  { id: 'border-red',     type: 'pfp', name: 'Red Border',        rarity: 'Common',    value: 'border-red'     },
-  { id: 'border-navy',    type: 'pfp', name: 'Navy Border',       rarity: 'Common',    value: 'border-navy'    },
-  { id: 'border-teal',    type: 'pfp', name: 'Teal Border',       rarity: 'Common',    value: 'border-teal'    },
-  { id: 'border-orange',  type: 'pfp', name: 'Orange Border',     rarity: 'Uncommon',  value: 'border-orange'  },
-  { id: 'border-violet',  type: 'pfp', name: 'Violet Border',     rarity: 'Uncommon',  value: 'border-violet'  },
-  { id: 'border-cyan',    type: 'pfp', name: 'Cyan Border',       rarity: 'Uncommon',  value: 'border-cyan'    },
-  { id: 'border-hotpink', type: 'pfp', name: 'Hot Pink Border',   rarity: 'Rare',      value: 'border-hotpink' },
-  { id: 'border-gold',    type: 'pfp', name: 'Gold Border',       rarity: 'Rare',      value: 'border-gold'    },
-  { id: 'border-lime',    type: 'pfp', name: 'Lime Border',       rarity: 'Rare',      value: 'border-lime'    },
-  { id: 'glow-pink',      type: 'pfp', name: 'Pink Glow',         rarity: 'Epic',      value: 'glow-pink'      },
-  { id: 'glow-purple',    type: 'pfp', name: 'Purple Glow',       rarity: 'Epic',      value: 'glow-purple'    },
-  { id: 'glow-gold',      type: 'pfp', name: 'Gold Fill',         rarity: 'Legendary', value: 'glow-gold'      },
-  { id: 'frame-black',    type: 'pfp', name: 'Void Fill',         rarity: 'Legendary', value: 'frame-black'    },
-  { id: 'fill-white',     type: 'pfp', name: 'White Fill',        rarity: 'Legendary', value: 'fill-white'     },
-  { id: 'rainbow',        type: 'pfp', name: 'Rainbow Animated ✨', rarity: 'Mythic',       value: 'rainbow'              },
-  { id: 'curse',         type: 'pfp',        name: 'The Curse',         rarity: 'Curse', value: 'unobtainable-curse' },
+  { id: 'border-green',   type: 'avatar', name: 'Green Border',      rarity: 'Common',    value: 'border-green'   },
+  { id: 'border-blue',    type: 'avatar', name: 'Blue Border',       rarity: 'Common',    value: 'border-blue'    },
+  { id: 'border-red',     type: 'avatar', name: 'Red Border',        rarity: 'Common',    value: 'border-red'     },
+  { id: 'border-navy',    type: 'avatar', name: 'Navy Border',       rarity: 'Common',    value: 'border-navy'    },
+  { id: 'border-teal',    type: 'avatar', name: 'Teal Border',       rarity: 'Common',    value: 'border-teal'    },
+  { id: 'border-orange',  type: 'avatar', name: 'Orange Border',     rarity: 'Uncommon',  value: 'border-orange'  },
+  { id: 'border-violet',  type: 'avatar', name: 'Violet Border',     rarity: 'Uncommon',  value: 'border-violet'  },
+  { id: 'border-cyan',    type: 'avatar', name: 'Cyan Border',       rarity: 'Uncommon',  value: 'border-cyan'    },
+  { id: 'border-hotpink', type: 'avatar', name: 'Hot Pink Border',   rarity: 'Rare',      value: 'border-hotpink' },
+  { id: 'border-gold',    type: 'avatar', name: 'Gold Border',       rarity: 'Rare',      value: 'border-gold'    },
+  { id: 'border-lime',    type: 'avatar', name: 'Lime Border',       rarity: 'Rare',      value: 'border-lime'    },
+  { id: 'glow-pink',      type: 'avatar', name: 'Pink Glow',         rarity: 'Epic',      value: 'glow-pink'      },
+  { id: 'glow-purple',    type: 'avatar', name: 'Purple Glow',       rarity: 'Epic',      value: 'glow-purple'    },
+  { id: 'glow-gold',      type: 'avatar', name: 'Gold Fill',         rarity: 'Legendary', value: 'glow-gold'      },
+  { id: 'frame-black',    type: 'avatar', name: 'Void Fill',         rarity: 'Legendary', value: 'frame-black'    },
+  { id: 'fill-white',     type: 'avatar', name: 'White Fill',        rarity: 'Legendary', value: 'fill-white'     },
+  { id: 'rainbow',        type: 'avatar', name: 'Rainbow Animated ✨', rarity: 'Mythic',       value: 'rainbow'              },
+  { id: 'curse',         type: 'avatar',        name: 'The Curse',         rarity: 'Curse', value: 'unobtainable-curse' },
   { id: 'curse-tag',    type: 'tag',        name: 'The Curse',         rarity: 'Curse', tagColor: 'curse' },
   { id: 'curse-name',   type: 'name-color', name: 'The Curse',         rarity: 'Curse', value: 'curse' },
   // Developer's Curse exclusives (Common, zero-quicksell)
@@ -412,7 +412,7 @@ type TradeSubTab = 'new' | 'incoming' | 'sent' | 'history'
 type TraderSubTab = 'sell' | 'buy' | 'trade'
 
 interface TraderCatalogItem {
-  type: 'tag' | 'name-color' | 'pfp'
+  type: 'tag' | 'name-color' | 'avatar'
   id: string
   name: string
   rarity: string
@@ -510,9 +510,9 @@ function ItemIcon({ item }: { item: { type: string; itemValue?: string; value?: 
       <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'inline-block', flexShrink: 0, border: '1px solid var(--border)', background: value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : value }} />
     )
   }
-  if (type === 'pfp') {
+  if (type === 'avatar') {
     return (
-      <span className={pfpClass(value)} style={{ width: 22, height: 22, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...pfpStyle(value) }} />
+      <span className={avatarClass(value)} style={{ width: 22, height: 22, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...avatarStyle(value) }} />
     )
   }
   return <span style={{ fontSize: 18 }}>📦</span>
@@ -520,7 +520,7 @@ function ItemIcon({ item }: { item: { type: string; itemValue?: string; value?: 
 
 // ── Item Preview Modal ────────────────────────────────────────────────────────
 
-type PreviewItem = { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; value?: string; tagColor?: string }
+type PreviewItem = { type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; value?: string; tagColor?: string }
 
 function SalesChart({ data }: { data: ItemSalePoint[] }) {
   if (data.length === 0) return (
@@ -660,7 +660,7 @@ function ItemPreviewModal({ item, estValue, onClose, onViewProfile }: { item: Pr
                   <span style={{ width: 28, fontSize: 11, fontWeight: 700, color: owner.rank === 1 ? '#EAB308' : 'var(--text-muted)', textAlign: 'right', flexShrink: 0 }}>
                     {owner.rank === 1 ? '🥇' : `#${owner.rank}`}
                   </span>
-                  <div className={pfpClass(owner.pfpEffect)} style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...pfpStyle(owner.pfpEffect) }} />
+                  <div className={avatarClass(owner.avatarEffect)} style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...avatarStyle(owner.avatarEffect) }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <button onClick={() => { onViewProfile(owner.id); onClose() }}
                       className={owner.nameColor === 'rainbow' ? 'name-rainbow' : owner.nameColor === 'curse' ? 'name-curse' : ''}
@@ -1159,7 +1159,7 @@ function SpinWheelModal({
 const SELL_SKIP = new Set(['GOAT', 'Novice', 'Pro', 'Veteran', 'Legend'])
 
 function TraderItemPreview({ type, id, name, tagColor, value, rarity }: {
-  type: 'tag' | 'name-color' | 'pfp'
+  type: 'tag' | 'name-color' | 'avatar'
   id: string
   name: string
   tagColor?: string
@@ -1190,8 +1190,8 @@ function TraderItemPreview({ type, id, name, tagColor, value, rarity }: {
   }
   return (
     <div
-      className={pfpClass(value)}
-      style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 11, flexShrink: 0, ...pfpStyle(value) }}
+      className={avatarClass(value)}
+      style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 11, flexShrink: 0, ...avatarStyle(value) }}
     >
       A
     </div>
@@ -1204,15 +1204,15 @@ const TraderSellGrid = React.memo(function TraderSellGrid({
 }: {
   inv: InventoryData | null
   prices: Record<string, number>
-  onSell: (item: { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; payout: number }) => void
+  onSell: (item: { type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; payout: number }) => void
 }) {
   const items = useMemo(() => {
     const raw = [
       ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity, tagColor: t.tagColor, value: undefined as string | undefined })),
       ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity, tagColor: undefined as string | undefined, value: c.value })),
-      ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity, tagColor: undefined as string | undefined, value: p.value })),
+      ...(inv?.ownedAvatarEffects ?? []).map(p => ({ type: 'avatar' as const, id: p.id, name: p.name, rarity: p.rarity, tagColor: undefined as string | undefined, value: p.value })),
     ].filter(i => !SELL_SKIP.has(i.id))
-    const seen = new Map<string, { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; tagColor?: string; value?: string; count: number }>()
+    const seen = new Map<string, { type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; tagColor?: string; value?: string; count: number }>()
     for (const item of raw) {
       const key = `${item.type}:${item.id}`
       const ex = seen.get(key)
@@ -1340,7 +1340,7 @@ export default function MarketplacePage() {
 
   // Quicksell confirmation (last copy or legendary/mythic)
   const [quicksellConfirm, setQuicksellConfirm] = useState<{
-    itemType: 'tag' | 'name-color' | 'pfp'
+    itemType: 'tag' | 'name-color' | 'avatar'
     itemId: string
     itemName: string
     rarity: string
@@ -1351,7 +1351,7 @@ export default function MarketplacePage() {
 
   // Sell all duplicates confirmation
   const [sellDupsConfirm, setSellDupsConfirm] = useState<{
-    items: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number; coinsEach: number }>
+    items: Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; count: number; coinsEach: number }>
     totalCoins: number
     hasRare: boolean
   } | null>(null)
@@ -1363,11 +1363,11 @@ export default function MarketplacePage() {
   // DEV panel
   const [isDevUser, setIsDevUser] = useState(false)
   const [devCoins, setDevCoins] = useState('500')
-  const [devType, setDevType] = useState<'name-color' | 'pfp' | 'tag'>('name-color')
+  const [devType, setDevType] = useState<'name-color' | 'avatar' | 'tag'>('name-color')
   const [devItemId, setDevItemId] = useState('')
   const [devGranting, setDevGranting] = useState(false)
   const [devMsg, setDevMsg] = useState('')
-  const [simBoxType, setSimBoxType] = useState<'tag' | 'name-color' | 'pfp'>('name-color')
+  const [simBoxType, setSimBoxType] = useState<'tag' | 'name-color' | 'avatar'>('name-color')
   const [simItemId, setSimItemId] = useState('')
   const [devMarketUserId, setDevMarketUserId] = useState('')
   const [devMarketGranting, setDevMarketGranting] = useState(false)
@@ -1436,12 +1436,12 @@ export default function MarketplacePage() {
   const [traderCatalogLoaded, setTraderCatalogLoaded] = useState(false)
   const [traderSearch, setTraderSearch] = useState('')
   const [traderRarityFilter, setTraderRarityFilter] = useState<string>('All')
-  const [traderSellConfirm, setTraderSellConfirm] = useState<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; payout: number } | null>(null)
+  const [traderSellConfirm, setTraderSellConfirm] = useState<{ type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; payout: number } | null>(null)
   const [traderBuyConfirm, setTraderBuyConfirm] = useState<TraderCatalogItem | null>(null)
   const [traderBusy, setTraderBusy] = useState(false)
   const [traderMsg, setTraderMsg] = useState('')
   // Item-for-item trade state
-  const [tradeOfferItems, setTradeOfferItems] = useState<Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string }>>([])
+  const [tradeOfferItems, setTradeOfferItems] = useState<Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string }>>([])
   const [tradeWantItems, setTradeWantItems] = useState<TraderCatalogItem[]>([])
 
   // Free spin
@@ -1657,9 +1657,9 @@ export default function MarketplacePage() {
           const item: MarketplaceItem = { id: r.won.id, name: r.won.name ?? r.won.id, value: r.won.value, rarity: r.won.rarity, weight: 0 }
           next.ownedNameColors = prev.ownedNameColors.some(i => i.id === r.won.id) ? prev.ownedNameColors : [...prev.ownedNameColors, item]
         }
-        if (r.won.type === 'pfp' && r.won.value) {
+        if (r.won.type === 'avatar' && r.won.value) {
           const item: MarketplaceItem = { id: r.won.id, name: r.won.name ?? r.won.id, value: r.won.value, rarity: r.won.rarity, weight: 0 }
-          next.ownedPfpEffects = prev.ownedPfpEffects.some(i => i.id === r.won.id) ? prev.ownedPfpEffects : [...prev.ownedPfpEffects, item]
+          next.ownedAvatarEffects = prev.ownedAvatarEffects.some(i => i.id === r.won.id) ? prev.ownedAvatarEffects : [...prev.ownedAvatarEffects, item]
         }
         if (r.won.type === 'tag' && r.won.tag) {
           const item: TagInventoryItem = { id: r.won.id, tag: r.won.tag, tagColor: r.won.tagColor ?? '#6B7280', rarity: r.won.rarity }
@@ -1689,7 +1689,7 @@ export default function MarketplacePage() {
     }
   }
 
-  async function handleEquip(type: 'name-color' | 'pfp' | 'tag', itemId: string | null) {
+  async function handleEquip(type: 'name-color' | 'avatar' | 'tag', itemId: string | null) {
     if (equipping || !inv) return
     setEquipping(type + (itemId ?? 'null'))
     try {
@@ -1703,7 +1703,7 @@ export default function MarketplacePage() {
           const owned = prev.ownedTags.find(t => t.id === itemId)
           return { ...prev, tag: owned?.tag ?? 'Student', tagColor: owned?.tagColor ?? 'grey' }
         }
-        return { ...prev, pfpEffect: itemId ? prev.ownedPfpEffects.find(i => i.id === itemId)?.value ?? null : null }
+        return { ...prev, avatarEffect: itemId ? prev.ownedAvatarEffects.find(i => i.id === itemId)?.value ?? null : null }
       })
     } catch { /* ignore */ }
     finally { setEquipping(null) }
@@ -1719,7 +1719,7 @@ export default function MarketplacePage() {
     finally { setEquipping(null) }
   }
 
-  async function doQuicksell(itemType: 'tag' | 'name-color' | 'pfp', itemId: string) {
+  async function doQuicksell(itemType: 'tag' | 'name-color' | 'avatar', itemId: string) {
     const key = `${itemType}:${itemId}`
     if (quickselling || !inv) return
     setQuickselling(key)
@@ -1739,22 +1739,22 @@ export default function MarketplacePage() {
           if (idx !== -1) items.splice(idx, 1)
           return { ...prev, coins: res.coins, ownedNameColors: items }
         }
-        const items = [...prev.ownedPfpEffects]
+        const items = [...prev.ownedAvatarEffects]
         const idx = items.findIndex(i => i.id === itemId)
         if (idx !== -1) items.splice(idx, 1)
-        return { ...prev, coins: res.coins, ownedPfpEffects: items }
+        return { ...prev, coins: res.coins, ownedAvatarEffects: items }
       })
     } catch { /* ignore */ }
     finally { setQuickselling(null) }
   }
 
-  function handleQuicksell(itemType: 'tag' | 'name-color' | 'pfp', itemId: string) {
+  function handleQuicksell(itemType: 'tag' | 'name-color' | 'avatar', itemId: string) {
     if (!inv) return
     const allOfType = itemType === 'tag'
       ? (inv.ownedTags ?? [])
       : itemType === 'name-color'
         ? inv.ownedNameColors
-        : inv.ownedPfpEffects
+        : inv.ownedAvatarEffects
     const count = allOfType.filter((i: { id: string }) => i.id === itemId).length
     const first = allOfType.find((i: { id: string }) => i.id === itemId) as { id: string; rarity: string; tag?: string; name?: string } | undefined
     if (!first) return
@@ -1773,7 +1773,7 @@ export default function MarketplacePage() {
 
   function computeDuplicates() {
     if (!inv) return []
-    const result: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number; coinsEach: number }> = []
+    const result: Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; count: number; coinsEach: number }> = []
 
     const tagMap = new Map<string, number>()
     for (const t of (inv.ownedTags ?? [])) tagMap.set(t.id, (tagMap.get(t.id) ?? 0) + 1)
@@ -1791,12 +1791,12 @@ export default function MarketplacePage() {
         result.push({ type: 'name-color', id, name: c.name, rarity: c.rarity, count: cnt - 1, coinsEach: QUICKSELL_PRICES[c.rarity] ?? 5 })
       }
     }
-    const pfpMap = new Map<string, number>()
-    for (const p of inv.ownedPfpEffects) pfpMap.set(p.id, (pfpMap.get(p.id) ?? 0) + 1)
-    for (const [id, cnt] of pfpMap) {
+    const avatarMap = new Map<string, number>()
+    for (const p of inv.ownedAvatarEffects) avatarMap.set(p.id, (avatarMap.get(p.id) ?? 0) + 1)
+    for (const [id, cnt] of avatarMap) {
       if (cnt > 1) {
-        const p = inv.ownedPfpEffects.find(x => x.id === id)!
-        result.push({ type: 'pfp', id, name: p.name, rarity: p.rarity, count: cnt - 1, coinsEach: QUICKSELL_PRICES[p.rarity] ?? 5 })
+        const p = inv.ownedAvatarEffects.find(x => x.id === id)!
+        result.push({ type: 'avatar', id, name: p.name, rarity: p.rarity, count: cnt - 1, coinsEach: QUICKSELL_PRICES[p.rarity] ?? 5 })
       }
     }
     return result
@@ -1823,7 +1823,7 @@ export default function MarketplacePage() {
     finally { setSellingDups(false) }
   }
 
-  async function handleDevGrant(grantType: 'coins' | 'name-color' | 'pfp' | 'tag') {
+  async function handleDevGrant(grantType: 'coins' | 'name-color' | 'avatar' | 'tag') {
     if (devGranting) return
     setDevGranting(true); setDevMsg('')
     try {
@@ -2014,12 +2014,12 @@ export default function MarketplacePage() {
     ? tradeTarget.nameColors.filter(c => !tradeInvQ || c.name.toLowerCase().includes(tradeInvQ))
     : []
   const filteredTradeTargetPfp = tradeTarget
-    ? tradeTarget.pfpEffects.filter(p => !tradeInvQ || p.name.toLowerCase().includes(tradeInvQ))
+    ? tradeTarget.avatarEffects.filter(p => !tradeInvQ || p.name.toLowerCase().includes(tradeInvQ))
     : []
 
   function renderInventoryItem(
     item: { id: string; name?: string; tag?: string; tagColor?: string; value?: string; rarity: string },
-    type: 'tag' | 'name-color' | 'pfp',
+    type: 'tag' | 'name-color' | 'avatar',
     isEquipped: boolean,
     count = 1,
   ) {
@@ -2044,8 +2044,8 @@ export default function MarketplacePage() {
           {type === 'name-color' && (
             <span className={item.value === 'curse' ? 'name-curse' : ''} style={{ width: 20, height: 20, borderRadius: '50%', border: '1px solid var(--border)', background: item.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : item.value === 'curse' ? undefined : item.value }} />
           )}
-          {type === 'pfp' && (
-            <div className={pfpClass(item.value)} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...pfpStyle(item.value) }} />
+          {type === 'avatar' && (
+            <div className={avatarClass(item.value)} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...avatarStyle(item.value) }} />
           )}
           {type === 'tag' && (
             (item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue')
@@ -2179,7 +2179,7 @@ export default function MarketplacePage() {
                 ) : item.type === 'name-color' ? (
                   <span className={item.value === 'rainbow' ? 'name-rainbow' : item.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 12, fontWeight: 800, color: (item.value === 'rainbow' || item.value === 'curse') ? undefined : item.value }}>{inv?.name ?? 'Username'}</span>
                 ) : (
-                  <div className={pfpClass(item.value)} style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, ...pfpStyle(item.value) }} />
+                  <div className={avatarClass(item.value)} style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, ...avatarStyle(item.value) }} />
                 )}
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{item.name ?? item.tag}</span>
                 <RarityBadge rarity={item.rarity} itemId={item.id} />
@@ -2333,17 +2333,17 @@ export default function MarketplacePage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                 <div
-                  className={pfpClass(result.won.value)}
-                  style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: '#FFFFFF', ...pfpStyle(result.won.value) }}
+                  className={avatarClass(result.won.value)}
+                  style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: '#FFFFFF', ...avatarStyle(result.won.value) }}
                 >✦</div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{result.won.name}</div>
               </div>
             )
 
             // Fill effects replace the entire circle — show a pure div, no image
-            const PFP_FILL_EFFECTS = new Set(['rainbow', 'glow-gold', 'frame-black', 'fill-white', 'unobtainable-curse'])
-            const isPfpFill = result.won.type === 'pfp' && PFP_FILL_EFFECTS.has(result.won.value ?? '')
-            const effectStyle = pfpStyle(result.won.type === 'pfp' ? result.won.value : undefined)
+            const AVATAR_FILL_EFFECTS = new Set(['rainbow', 'glow-gold', 'frame-black', 'fill-white', 'unobtainable-curse'])
+            const isPfpFill = result.won.type === 'avatar' && AVATAR_FILL_EFFECTS.has(result.won.value ?? '')
+            const effectStyle = avatarStyle(result.won.type === 'avatar' ? result.won.value : undefined)
             const dummyImgStyle: React.CSSProperties = {
               ...(effectStyle.border     ? { border:     effectStyle.border }     : {}),
               ...(effectStyle.boxShadow  ? { boxShadow:  effectStyle.boxShadow }  : {}),
@@ -2353,7 +2353,7 @@ export default function MarketplacePage() {
               <div style={{ background: 'var(--surface-2,#1a1a1a)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0 4px', border: '1px solid var(--border)', textAlign: 'left' as const }}>
                 {isPfpFill ? (
                   <div
-                    className={pfpClass(result.won.value)}
+                    className={avatarClass(result.won.value)}
                     style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, ...effectStyle }}
                   />
                 ) : (
@@ -2361,7 +2361,7 @@ export default function MarketplacePage() {
                   <img
                     src={DUMMY_PFP}
                     alt={inv?.name ?? 'User'}
-                    className={result.won.type === 'pfp' ? pfpClass(result.won.value) : ''}
+                    className={result.won.type === 'avatar' ? avatarClass(result.won.value) : ''}
                     style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0, ...dummyImgStyle }}
                   />
                 )}
@@ -2409,7 +2409,7 @@ export default function MarketplacePage() {
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                 {result.won.type !== 'tag' && (
                   <button
-                    onClick={() => void handleEquip(result.won.type === 'name-color' ? 'name-color' : 'pfp', result.won.id)}
+                    onClick={() => void handleEquip(result.won.type === 'name-color' ? 'name-color' : 'avatar', result.won.id)}
                     style={{ padding: '10px 20px', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
                   >
                     Equip Now
@@ -2512,7 +2512,7 @@ export default function MarketplacePage() {
                       <div
                         className="ns-card"
                         style={{ padding: '12px 12px 10px', display: 'flex', flexDirection: 'column', gap: 8, border: `1px solid ${rarityColor}33`, borderTop: `3px solid ${rarityColor}`, cursor: 'pointer' }}
-                        onClick={() => setPreviewItem({ type: listing.itemType as 'tag' | 'name-color' | 'pfp', id: listing.itemId, name: listing.itemName, rarity: listing.itemRarity, value: listing.itemValue })}
+                        onClick={() => setPreviewItem({ type: listing.itemType as 'tag' | 'name-color' | 'avatar', id: listing.itemId, name: listing.itemName, rarity: listing.itemRarity, value: listing.itemValue })}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <ItemIcon item={{ type: listing.itemType, itemValue: listing.itemValue, itemType: listing.itemType, itemId: listing.itemId }} />
@@ -2748,7 +2748,7 @@ export default function MarketplacePage() {
                                     ) : item.type === 'name-color' ? (
                                       <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'block', flexShrink: 0, border: '2px solid var(--border)', background: item.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : item.value === 'curse' ? 'rgba(255,0,0,0.25)' : item.value }} />
                                     ) : (
-                                      <div className={pfpClass(item.value)} style={{ width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...pfpStyle(item.value) }} />
+                                      <div className={avatarClass(item.value)} style={{ width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...avatarStyle(item.value) }} />
                                     )}
                                   </div>
                                   {/* Name */}
@@ -2773,15 +2773,15 @@ export default function MarketplacePage() {
                     // Deduplicated item lists for their inventory
                     const theirTagsDedup = dedup(filteredTradeTargetTags.map(t => ({ type: 'tag' as const, id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity, name: t.tag })))
                     const theirColorsDedup = dedup(filteredTradeTargetColors.map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, value: c.value, rarity: c.rarity })))
-                    const theirPfpDedup = dedup(filteredTradeTargetPfp.map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, value: p.value, rarity: p.rarity })))
+                    const theirPfpDedup = dedup(filteredTradeTargetPfp.map(p => ({ type: 'avatar' as const, id: p.id, name: p.name, value: p.value, rarity: p.rarity })))
 
                     // Deduplicated item lists for my inventory
                     const myTagsRaw = (inv?.ownedTags ?? []).filter(t => !myListedIds.has(`tag:${t.id}`) && !NON_TRADEABLE_TAG_IDS.has(t.tag) && !NON_TRADEABLE_TAG_IDS.has(t.id) && (!tradeMyQ || t.tag.toLowerCase().includes(tradeMyQ)))
                     const myColorsRaw = (inv?.ownedNameColors ?? []).filter(c => !myListedIds.has(`name-color:${c.id}`) && (!tradeMyQ || c.name.toLowerCase().includes(tradeMyQ)))
-                    const myPfpRaw = (inv?.ownedPfpEffects ?? []).filter(p => !myListedIds.has(`pfp:${p.id}`) && (!tradeMyQ || p.name.toLowerCase().includes(tradeMyQ)))
+                    const myPfpRaw = (inv?.ownedAvatarEffects ?? []).filter(p => !myListedIds.has(`avatar:${p.id}`) && (!tradeMyQ || p.name.toLowerCase().includes(tradeMyQ)))
                     const myTagsDedup = dedup(myTagsRaw.map(t => ({ type: 'tag' as const, id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity, name: t.tag })))
                     const myColorsDedup = dedup(myColorsRaw.map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, value: c.value, rarity: c.rarity })))
-                    const myPfpDedup = dedup(myPfpRaw.map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, value: p.value, rarity: p.rarity })))
+                    const myPfpDedup = dedup(myPfpRaw.map(p => ({ type: 'avatar' as const, id: p.id, name: p.name, value: p.value, rarity: p.rarity })))
 
                     const selectedRequestTotal = selectedRequest.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
                     const selectedOfferTotal = selectedOffer.reduce((s, i) => s + (prices[`${i.type}:${i.id}`] ?? 0), 0)
@@ -3051,7 +3051,7 @@ export default function MarketplacePage() {
             <div style={{ fontSize: 12, color: listingMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 12 }}>{listingMsg}</div>
           )}
 
-          {(inv?.ownedTags ?? []).length === 0 && (inv?.ownedNameColors ?? []).length === 0 && (inv?.ownedPfpEffects ?? []).length === 0 && myActiveListings.length === 0 ? (
+          {(inv?.ownedTags ?? []).length === 0 && (inv?.ownedNameColors ?? []).length === 0 && (inv?.ownedAvatarEffects ?? []).length === 0 && myActiveListings.length === 0 ? (
             <div className="ns-card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
               Your inventory is empty — spin to get items
             </div>
@@ -3061,7 +3061,7 @@ export default function MarketplacePage() {
                 let worth = 0
                 for (const t of (inv?.ownedTags ?? [])) worth += prices[`tag:${t.id}`] ?? 0
                 for (const c of (inv?.ownedNameColors ?? [])) worth += prices[`name-color:${c.id}`] ?? 0
-                for (const p of (inv?.ownedPfpEffects ?? [])) worth += prices[`pfp:${p.id}`] ?? 0
+                for (const p of (inv?.ownedAvatarEffects ?? [])) worth += prices[`avatar:${p.id}`] ?? 0
                 return (
                   <div className="ns-card" style={{ padding: 16, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
@@ -3139,16 +3139,16 @@ export default function MarketplacePage() {
                 </div>
               )}
 
-              {((inv?.ownedPfpEffects ?? []).length > 0 || myActiveListings.some(l => l.itemType === 'pfp')) && (
+              {((inv?.ownedAvatarEffects ?? []).length > 0 || myActiveListings.some(l => l.itemType === 'avatar')) && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🖼️ Profile Picture Effects</div>
-                  {groupById(byRarity(inv!.ownedPfpEffects)).map(item =>
-                    renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'pfp', inv!.pfpEffect === item.value, item.count)
+                  {groupById(byRarity(inv!.ownedAvatarEffects)).map(item =>
+                    renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'avatar', inv!.avatarEffect === item.value, item.count)
                   )}
                   {myActiveListings
-                    .filter(l => l.itemType === 'pfp' && !(inv?.ownedPfpEffects ?? []).some(p => p.id === l.itemId))
+                    .filter(l => l.itemType === 'avatar' && !(inv?.ownedAvatarEffects ?? []).some(p => p.id === l.itemId))
                     .filter((l, i, arr) => arr.findIndex(x => x.itemId === l.itemId) === i)
-                    .map(l => renderInventoryItem({ id: l.itemId, name: l.itemName, value: l.itemValue, rarity: l.itemRarity }, 'pfp', false, 0))
+                    .map(l => renderInventoryItem({ id: l.itemId, name: l.itemName, value: l.itemValue, rarity: l.itemRarity }, 'avatar', false, 0))
                   }
                 </div>
               )}
@@ -3227,13 +3227,13 @@ export default function MarketplacePage() {
             const canTrade = tradeOfferItems.length > 0 && tradeWantItems.length > 0 && offerEstTotal >= wantPriceTotal
 
             // Deduplicated sell-able inventory
-            const invItems: Array<{ type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; tagColor?: string; value?: string; count: number }> = (() => {
+            const invItems: Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; tagColor?: string; value?: string; count: number }> = (() => {
               const raw = [
                 ...(inv?.ownedTags ?? []).map(t => ({ type: 'tag' as const, id: t.id, name: t.tag, rarity: t.rarity, tagColor: t.tagColor, value: undefined as string | undefined })),
                 ...(inv?.ownedNameColors ?? []).map(c => ({ type: 'name-color' as const, id: c.id, name: c.name, rarity: c.rarity, tagColor: undefined as string | undefined, value: c.value })),
-                ...(inv?.ownedPfpEffects ?? []).map(p => ({ type: 'pfp' as const, id: p.id, name: p.name, rarity: p.rarity, tagColor: undefined as string | undefined, value: p.value })),
+                ...(inv?.ownedAvatarEffects ?? []).map(p => ({ type: 'avatar' as const, id: p.id, name: p.name, rarity: p.rarity, tagColor: undefined as string | undefined, value: p.value })),
               ].filter(i => !SELL_SKIP.has(i.id))
-              const seen = new Map<string, { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; tagColor?: string; value?: string; count: number }>()
+              const seen = new Map<string, { type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; tagColor?: string; value?: string; count: number }>()
               for (const item of raw) {
                 const key = `${item.type}:${item.id}`
                 const ex = seen.get(key)
@@ -3261,7 +3261,7 @@ export default function MarketplacePage() {
                         const ex = m.get(k)
                         if (ex) ex.count++; else m.set(k, { ...i, count: 1 })
                         return m
-                      }, new Map<string, { type: 'tag' | 'name-color' | 'pfp'; id: string; name: string; rarity: string; count: number }>()).values()
+                      }, new Map<string, { type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; count: number }>()).values()
                     )
                     return (
                       <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginBottom: 10 }}>
@@ -3427,7 +3427,7 @@ export default function MarketplacePage() {
                     <span style={{ width: 32, textAlign: 'center', fontSize: i < 3 ? 18 : 12, fontWeight: 700, color: i === 0 ? '#EAB308' : i === 1 ? '#94A3B8' : i === 2 ? '#CD7F32' : 'var(--text-muted)', flexShrink: 0 }}>
                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.rank}`}
                     </span>
-                    <div className={pfpClass(entry.pfpEffect)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...pfpStyle(entry.pfpEffect) }} />
+                    <div className={avatarClass(entry.avatarEffect)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...avatarStyle(entry.avatarEffect) }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <button onClick={() => openProfile(entry.id)}
@@ -3470,7 +3470,7 @@ export default function MarketplacePage() {
           { label: '🏅 Badges',                  id: 'badge',      filter: i => isBadge(i) },
           { label: '🏷️ Tags',                    id: 'tag',        filter: i => i.type === 'tag' && !isBadge(i) },
           { label: '🎨 Name Colors',             id: 'name-color', filter: i => i.type === 'name-color' },
-          { label: '🖼️ Profile Picture Effects', id: 'pfp',        filter: i => i.type === 'pfp' },
+          { label: '🖼️ Profile Picture Effects', id: 'avatar',        filter: i => i.type === 'avatar' },
         ]
         const rarityOrder: Record<string, number> = { Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5 }
         return (
@@ -3498,8 +3498,8 @@ export default function MarketplacePage() {
                             {item.type === 'name-color' && (
                               <span style={{ width: 20, height: 20, borderRadius: '50%', display: 'inline-block', border: '1px solid var(--border)', background: item.value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : item.value }} />
                             )}
-                            {item.type === 'pfp' && (
-                              <div className={pfpClass(item.value)} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...pfpStyle(item.value) }} />
+                            {item.type === 'avatar' && (
+                              <div className={avatarClass(item.value)} style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...avatarStyle(item.value) }} />
                             )}
                             {item.type === 'tag' && (
                               (item.tagColor === 'verified-yellow' || item.tagColor === 'verified-blue')
@@ -3586,8 +3586,8 @@ export default function MarketplacePage() {
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
                   <div
-                    className={pfpClass(profilePanel.pfpEffect)}
-                    style={{ width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0, ...pfpStyle(profilePanel.pfpEffect), ...(profilePanel.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                    className={avatarClass(profilePanel.avatarEffect)}
+                    style={{ width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0, ...avatarStyle(profilePanel.avatarEffect), ...(profilePanel.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                   >
                     {profilePanel.avatarUrl
                       ? <img src={profilePanel.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
@@ -3760,10 +3760,10 @@ export default function MarketplacePage() {
               </button>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
-              <select value={devType} onChange={e => { setDevType(e.target.value as 'name-color' | 'pfp' | 'tag'); setDevItemId('') }}
+              <select value={devType} onChange={e => { setDevType(e.target.value as 'name-color' | 'avatar' | 'tag'); setDevItemId('') }}
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
                 <option value="name-color">Name Color</option>
-                <option value="pfp">PFP Effect</option>
+                <option value="avatar">Avatar Effect</option>
                 <option value="tag">Tag</option>
               </select>
               {devType === 'tag' ? (
@@ -3829,11 +3829,11 @@ export default function MarketplacePage() {
             <div style={{ borderTop: '1px solid rgba(255,107,107,0.2)', paddingTop: 14, marginTop: 2 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🎰 Simulate Unlock</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
-                <select value={simBoxType} onChange={e => { setSimBoxType(e.target.value as 'tag' | 'name-color' | 'pfp'); setSimItemId('') }}
+                <select value={simBoxType} onChange={e => { setSimBoxType(e.target.value as 'tag' | 'name-color' | 'avatar'); setSimItemId('') }}
                   style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
                   <option value="tag">Tag Box</option>
                   <option value="name-color">Name Color Box</option>
-                  <option value="pfp">PFP Box</option>
+                  <option value="avatar">Avatar Box</option>
                 </select>
                 <select value={simItemId} onChange={e => setSimItemId(e.target.value)}
                   style={{ flex: 1, minWidth: 160, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>

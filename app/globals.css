@@ -382,50 +382,50 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .tag-curse { animation: tagCurse 7s linear infinite; font-weight: 800 !important; }
 
 
-@keyframes pfpRainbow {
+@keyframes avatarRainbow {
   0%   { filter: hue-rotate(0deg) saturate(1.4) brightness(1.05); }
   50%  { filter: hue-rotate(180deg) saturate(1.4) brightness(1.05); }
   100% { filter: hue-rotate(360deg) saturate(1.4) brightness(1.05); }
 }
-.pfp-rainbow { animation: pfpRainbow 2.3s linear infinite; }
+.avatar-rainbow { animation: avatarRainbow 2.3s linear infinite; }
 
-@keyframes pfpGoldShimmer {
+@keyframes avatarGoldShimmer {
   0%   { background-position: 0% 50%;   box-shadow: 0 0 10px #EAB30866; border-color: #EAB308; }
   50%  { background-position: 100% 50%; box-shadow: 0 0 24px #EAB308cc, 0 0 40px #FDE04755; border-color: #FDE068; }
   100% { background-position: 0% 50%;   box-shadow: 0 0 10px #EAB30866; border-color: #EAB308; }
 }
-.pfp-gold-fill {
+.avatar-gold-fill {
   background: linear-gradient(135deg, #EAB308, #FDE047, #B45309, #FDE047, #EAB308) !important;
   background-size: 300% 300% !important;
   border: 2px solid #EAB308 !important;
   color: #000 !important;
-  animation: pfpGoldShimmer 3s ease-in-out infinite;
+  animation: avatarGoldShimmer 3s ease-in-out infinite;
 }
 
-@keyframes pfpVoidPulse {
+@keyframes avatarVoidPulse {
   0%, 100% { box-shadow: 0 0 6px #C084FC66, 0 0 0px #EC489900; border-color: #0a0a0a; }
   50%       { box-shadow: 0 0 20px #A855F7aa, 0 0 40px #EC489944; border-color: #1a1a1a; }
 }
-.pfp-void-fill {
+.avatar-void-fill {
   background: #000000 !important;
   border: 2px solid #0a0a0a !important;
   color: #1F2937 !important;
-  animation: pfpVoidPulse 3s ease-in-out infinite;
+  animation: avatarVoidPulse 3s ease-in-out infinite;
 }
 
-@keyframes pfpWhiteGlow {
+@keyframes avatarWhiteGlow {
   0%, 100% { box-shadow: 0 0 8px #FFFFFF88,  0 0 0px  #FFFFFF00; border-color: #e5e5e5; }
   50%       { box-shadow: 0 0 22px #FFFFFFdd, 0 0 44px #FFFFFF66; border-color: #FFFFFF; }
 }
-.pfp-white-fill {
+.avatar-white-fill {
   background: #FFFFFF !important;
   border: 2px solid #e5e5e5 !important;
   color: #111111 !important;
-  animation: pfpWhiteGlow 2.5s ease-in-out infinite;
+  animation: avatarWhiteGlow 2.5s ease-in-out infinite;
 }
 
 /* ── Unobtainable: The Curse ── */
-@keyframes pfpCurse {
+@keyframes avatarCurse {
   /* Rainbow RGB */
   0%    { background: #ff0000; box-shadow: 0 0 18px #ff000099, 0 0 36px #ff000033; border-color: #ff0000; color: #fff; }
   3%    { background: #ff8800; box-shadow: 0 0 18px #ff880099; border-color: #ff8800; }
@@ -457,8 +457,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   90%   { background: #ff0000; box-shadow: 0 0 18px #ff000099, 0 0 36px #ff000033; border-color: #ff0000; color: #fff; }
   100%  { background: #ff0000; box-shadow: 0 0 18px #ff000099, 0 0 36px #ff000033; border-color: #ff0000; color: #fff; }
 }
-.pfp-curse {
-  animation: pfpCurse 7s linear infinite !important;
+.avatar-curse {
+  animation: avatarCurse 7s linear infinite !important;
 }
 
 /* Small indicator (legend dot, badge) cycling through the curse palette */
