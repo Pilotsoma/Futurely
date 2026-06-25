@@ -1027,7 +1027,7 @@ function SpinWheelModal({
   return createPortal(
     <div
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      onClick={phase === 'ready' || phase === 'done' ? onClose : undefined}
+      onClick={phase === 'ready' ? onClose : undefined}
     >
       <div
         className="ns-card"
@@ -1117,14 +1117,14 @@ function SpinWheelModal({
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                 {r.won.type !== 'tag' && (
                   <button
-                    onClick={() => { onEquip(r.won.type === 'name-color' ? 'name-color' : 'avatar', r.won.id); onClose() }}
+                    onClick={() => { onEquip(r.won.type === 'name-color' ? 'name-color' : 'avatar', r.won.id); setPhase('ready'); setWonResult(null) }}
                     style={{ padding: '10px 20px', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
                   >
                     Equip Now
                   </button>
                 )}
                 <button
-                  onClick={onClose}
+                  onClick={() => { setPhase('ready'); setWonResult(null) }}
                   style={{ padding: '10px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
                 >
                   Nice!
