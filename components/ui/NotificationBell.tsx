@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { api, AppNotification, getApiToken } from '../../lib/api'
+import UserProfileModal from './UserProfileModal'
 
 // Module-level dedup set — shared across all instances so toasts fire only once
 const _seen = new Set<number>()
@@ -37,12 +38,13 @@ interface Props {
 
 export default function NotificationBell({ showToasts = false, collapsed = false, onOpenProfile }: Props) {
   const router = useRouter()
-  const pathname = usePathname()
-  const [notifs, setNotifs]       = useState<AppNotification[]>([])
-  const [unread, setUnread]       = useState(0)
-  const [showPanel, setShowPanel] = useState(false)
-  const [toasts, setToasts]       = useState<Toast[]>([])
-  const [panelPos, setPanelPos]   = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  const [notifs, setNotifs]         = useState<AppNotification[]>([])
+  const [unread, setUnread]         = useState(0)
+  const [showPanel, setShowPanel]   = useState(false)
+  const [toasts, setToasts]         = useState<Toast[]>([])
+  const [panelPos, setPanelPos]     = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  const [profileUserId, setProfileUserId] = useState<number | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<number>(0)
   const bellRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -80,6 +82,11 @@ export default function NotificationBell({ showToasts = false, collapsed = false
     connect()
     return () => { dead = true; ws?.close() }
   }, [pushToast])
+
+  // Fetch current user id once for profile modal
+  useEffect(() => {
+    api.authMe().then(u => setCurrentUserId(u.id)).catch(() => {})
+  }, [])
 
   // Polling fallback every 30s
   useEffect(() => {
@@ -195,29 +202,16 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                   } else if (n.type === 'COUNSELOR_LINKED' || n.type === 'COUNSELOR_NOTE_ADDED' || n.type === 'COUNSELOR_RECOMMENDATION_ADDED' || n.type === 'ACTION_ITEM_CREATED') {
                     router.push('/my-counselor')
                   } else {
-                    // FOLLOW, LIKE, COMMENT — open the sender's profile in the feed
-                    if (onOpenProfile) {
-                      onOpenProfile(n.fromUserId)
-                    } else if (pathname === '/feed') {
-                      window.dispatchEvent(new CustomEvent('ns:open-profile', { detail: n.fromUserId }))
-                    } else {
-                      router.push(`/feed?profile=${n.fromUserId}`)
-                    }
+                    setProfileUserId(n.fromUserId)
                   }
                 }
 
-                // Name link: always opens the sender's profile (stopPropagation so row click doesn't also fire)
+                // Name link: always opens the sender's profile inline
                 const link = (label: React.ReactNode) => (
                   <b onClick={(e) => {
                     e.stopPropagation()
                     setShowPanel(false)
-                    if (onOpenProfile) {
-                      onOpenProfile(n.fromUserId)
-                    } else if (pathname === '/feed') {
-                      window.dispatchEvent(new CustomEvent('ns:open-profile', { detail: n.fromUserId }))
-                    } else {
-                      router.push(`/feed?profile=${n.fromUserId}`)
-                    }
+                    setProfileUserId(n.fromUserId)
                   }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
                 )
 
@@ -290,6 +284,14 @@ export default function NotificationBell({ showToasts = false, collapsed = false
             )
           })}
         </div>
+      )}
+
+      {profileUserId !== null && currentUserId !== 0 && (
+        <UserProfileModal
+          userId={profileUserId}
+          currentUserId={currentUserId}
+          onClose={() => setProfileUserId(null)}
+        />
       )}
     </>
   )
