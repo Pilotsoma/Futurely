@@ -938,14 +938,19 @@ function SpinWheelModal({
   onClose,
   onSpin,
   onDone,
+  prices,
+  onEquip,
 }: {
   box: (typeof BOX_DEFS)[0]
   inv: InventoryData | null
   onClose: () => void
   onSpin: (boxType: BoxType, quantity: number) => Promise<BoxResult | MultiBoxResult | null>
   onDone: (result: BoxResult | MultiBoxResult) => void
+  prices: Record<string, number>
+  onEquip: (type: 'name-color' | 'avatar' | 'tag', itemId: string | null) => void
 }) {
-  const [phase, setPhase] = useState<'ready' | 'spinning'>('ready')
+  const [phase, setPhase] = useState<'ready' | 'spinning' | 'done'>('ready')
+  const [wonResult, setWonResult] = useState<BoxResult | null>(null)
   const [pointerAngle, setPointerAngle] = useState(0)
   const [spinDuration, setSpinDuration] = useState(0)
   const [quantity, setQuantity] = useState(1)
@@ -984,7 +989,7 @@ function SpinWheelModal({
       const finalPointerAngle = 5 * 360 + landAngle
       setSpinDuration(4000)
       setPointerAngle(finalPointerAngle)
-      setTimeout(() => { onDone(singleResult); onClose() }, 4300)
+      setTimeout(() => { setWonResult(singleResult); setPhase('done') }, 4300)
       return
     }
 
@@ -1022,7 +1027,7 @@ function SpinWheelModal({
   return createPortal(
     <div
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      onClick={phase === 'ready' ? onClose : undefined}
+      onClick={phase === 'ready' || phase === 'done' ? onClose : undefined}
     >
       <div
         className="ns-card"
@@ -1031,122 +1036,222 @@ function SpinWheelModal({
       >
         <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{box.icon} {box.label}</div>
 
-        {/* Wheel (static) + orbiting arrow */}
-        <div style={{ width: 300, height: 300 }}>
-          <svg width={300} height={300} viewBox="0 0 300 300">
-            {segments.map(seg => (
-              <path
-                key={seg.rarity}
-                d={segmentPath(seg.start, seg.end)}
-                fill={seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse' ? '#ff0000' : getRarityWheelColor(seg.rarity)}
-                stroke="none"
-                className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined}
-              />
-            ))}
-            {/* Single arrow — only for qty=1 */}
-            {quantity === 1 && multiArrows.length === 0 && (
-              <g style={{
-                transformOrigin: `${CX}px ${CY}px`,
-                transform: `rotate(${pointerAngle}deg)`,
-                transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
-              }}>
-                <polygon
-                  points={`${CX},${CY - 32} ${CX - 7},${CY - 20} ${CX + 7},${CY - 20}`}
-                  fill="#EF4444"
-                  style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }}
-                />
-              </g>
-            )}
-            {/* Multi arrows — one per spin (capped at 100), all animate simultaneously */}
-            {multiArrows.map((arrow, i) => (
-              <g key={i} style={{
-                transformOrigin: `${CX}px ${CY}px`,
-                transform: `rotate(${arrowsLanded ? arrow.finalAngle : 0}deg)`,
-                transition: arrowsLanded ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
-              }}>
-                <polygon
-                  points={`${CX},${CY - 34} ${CX - 8},${CY - 21} ${CX + 8},${CY - 21}`}
-                  fill="#EF4444"
-                  fillOpacity={multiArrows.length <= 10 ? 0.9 : multiArrows.length <= 50 ? 0.6 : 0.4}
-                  style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }}
-                />
-              </g>
-            ))}
-            {/* Center hub: anchors all arrow bases */}
-            <circle cx={CX} cy={CY} r={22} fill="#EF4444" stroke="#000" strokeWidth={2} />
-          </svg>
-        </div>
-
-        {/* Rarity legend */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', justifyContent: 'center' }}>
-          {segments.map(seg => (
-            <div key={seg.rarity} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
-              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined} style={{ width: 10, height: 10, borderRadius: 2, background: (seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? '#ff0000' : getRarityWheelColor(seg.rarity), display: 'inline-block', flexShrink: 0 }} />
-              <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined} style={{ color: (seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? '#ff0000' : getRarityWheelColor(seg.rarity), fontWeight: 700 }}>{seg.rarity}</span>
-              <span style={{ color: 'var(--text-muted)' }}>{seg.pct}%</span>
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={() => void handleSpin()}
-          disabled={!canSpin}
-          style={{
-            padding: '13px 44px', borderRadius: 12, border: 'none',
-            background: canSpin ? 'var(--primary)' : 'var(--surface-2)',
-            color: canSpin ? '#060D10' : 'var(--text-muted)',
-            fontWeight: 800, fontSize: 16,
-            cursor: canSpin ? 'pointer' : 'not-allowed',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}
-        >
-          {phase === 'spinning'
-            ? 'Spinning…'
-            : <><CoinIcon size={15} />{totalCost} — Spin{quantity > 1 ? ` ×${quantity}` : ''}!</>
+        {phase === 'done' && wonResult ? (() => {
+          const r = wonResult
+          const isRainbow = r.won.value === 'rainbow'
+          const isMythic  = r.won.rarity === 'Mythic'
+          const isLegend  = r.won.rarity === 'Legendary'
+          const emoji     = isMythic ? '👑' : isLegend ? '🌟' : '🎉'
+          const borderColor = getRarityColor(r.won.rarity, r.won.id)
+          const AVATAR_FILL_EFFECTS = new Set(['rainbow', 'glow-gold', 'frame-black', 'fill-white', 'unobtainable-curse'])
+          const isPfpFill = r.won.type === 'avatar' && AVATAR_FILL_EFFECTS.has(r.won.value ?? '')
+          const effectStyle = avatarStyle(r.won.type === 'avatar' ? r.won.value : undefined)
+          const dummyImgStyle: React.CSSProperties = {
+            ...(effectStyle.border    ? { border:    effectStyle.border }    : {}),
+            ...(effectStyle.boxShadow ? { boxShadow: effectStyle.boxShadow } : {}),
           }
-        </button>
+          const wonPrice = prices[`${r.won.type}:${r.won.id}`]
 
-        {/* Quantity input */}
-        {phase === 'ready' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Quantity:</span>
-              <input
-                type="number"
-                min={1}
-                max={box.type === 'dev-curse' ? 5000 : 100}
-                value={quantity}
-                onChange={e => {
-                  const maxQ = box.type === 'dev-curse' ? 5000 : 100
-                  const v = Math.max(1, Math.min(maxQ, parseInt(e.target.value) || 1))
-                  setQuantity(v)
-                  setSpinError(null)
-                }}
-                style={{ width: 64, padding: '5px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, textAlign: 'center' }}
-              />
-              {quantity > 1 && (
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  = <CoinIcon size={11} /> {totalCost.toLocaleString()} total
-                </span>
-              )}
+          const itemPreview = r.won.type === 'tag' ? (
+            (r.won.tagColor === 'verified-yellow' || r.won.tagColor === 'verified-blue')
+              ? <div style={{ marginBottom: 4 }}><VerifiedBadge variant={r.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={64} /></div>
+              : <div className={tagCssClass(r.won.tag, r.won.tagColor)} style={{ fontSize: 22, fontWeight: 800, color: isAnimatedTag(r.won.tag) || r.won.tagColor === 'curse' ? undefined : r.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
+                  [{r.won.tag}]
+                </div>
+          ) : r.won.type === 'name-color' ? (
+            <div className={isRainbow ? 'name-rainbow' : r.won.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 24, fontWeight: 800, color: (isRainbow || r.won.value === 'curse') ? undefined : r.won.value, marginBottom: 4 }}>
+              {r.won.name}
             </div>
-            {spinError && (
-              <div style={{ fontSize: 12, color: '#EF4444', textAlign: 'center', padding: '4px 10px', background: '#EF444420', borderRadius: 6 }}>
-                {spinError}
-              </div>
-            )}
-            {inv && inv.coins < totalCost && (
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                You can afford up to {Math.floor(inv.coins / box.cost)} spin{Math.floor(inv.coins / box.cost) !== 1 ? 's' : ''}
-              </div>
-            )}
-          </div>
-        )}
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <div className={avatarClass(r.won.value)} style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: '#FFFFFF', ...avatarStyle(r.won.value) }}>✦</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{r.won.name}</div>
+            </div>
+          )
 
-        {phase === 'ready' && (
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', padding: '4px 10px' }}>
-            Cancel
-          </button>
+          const dummyComment = (
+            <div style={{ background: 'var(--surface-2,#1a1a1a)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0 4px', border: '1px solid var(--border)', textAlign: 'left' as const }}>
+              {isPfpFill ? (
+                <div className={avatarClass(r.won.value)} style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, ...effectStyle }} />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={DUMMY_PFP} alt={inv?.name ?? 'User'} className={r.won.type === 'avatar' ? avatarClass(r.won.value) : ''} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0, ...dummyImgStyle }} />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
+                  <span
+                    className={r.won.type === 'name-color' && isRainbow ? 'name-rainbow' : r.won.type === 'name-color' && r.won.value === 'curse' ? 'name-curse' : ''}
+                    style={{ fontSize: 13, fontWeight: 700, color: r.won.type === 'name-color' && !isRainbow && r.won.value !== 'curse' ? r.won.value : 'var(--text)' }}
+                  >
+                    {inv?.name ?? 'Username'}
+                  </span>
+                  {r.won.type === 'tag' ? (
+                    (r.won.tagColor === 'verified-yellow' || r.won.tagColor === 'verified-blue')
+                      ? <VerifiedBadge variant={r.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
+                      : <span className={tagCssClass(r.won.tag, r.won.tagColor)} style={{ fontSize: 12, fontWeight: 700, color: isAnimatedTag(r.won.tag) || r.won.tagColor === 'curse' ? undefined : (r.won.tagColor ?? '#6B7280') }}>[{r.won.tag}]</span>
+                  ) : inv?.tag ? (
+                    (inv.tagColor === 'verified-yellow' || inv.tagColor === 'verified-blue')
+                      ? <VerifiedBadge variant={inv.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
+                      : <span style={{ fontSize: 12, fontWeight: 700, color: inv.tagColor ?? '#6B7280' }}>[{inv.tag}]</span>
+                  ) : null}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Here&apos;s a preview of your new item ✨</div>
+              </div>
+            </div>
+          )
+
+          return (
+            <div style={{ width: '100%', textAlign: 'center', border: `1px solid ${borderColor}55`, borderRadius: 12, padding: '20px 16px', background: `${borderColor}08` }}>
+              <div style={{ fontSize: 44, marginBottom: 8 }}>{emoji}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
+              {itemPreview}
+              {dummyComment}
+              <div style={{ fontSize: 13, color: getRarityColor(r.won.rarity, r.won.id), fontWeight: 700, marginBottom: wonPrice ? 4 : 14 }}>
+                {r.won.rarity}{r.alreadyHad ? ' · already owned' : ''}
+              </div>
+              {wonPrice && (
+                <div style={{ fontSize: 12, color: '#EAB308', fontWeight: 700, marginBottom: 14 }}>
+                  <CoinIcon size={12} style={{ marginRight: 3 }} />Est. {wonPrice.toLocaleString()}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                {r.won.type !== 'tag' && (
+                  <button
+                    onClick={() => { onEquip(r.won.type === 'name-color' ? 'name-color' : 'avatar', r.won.id); onClose() }}
+                    style={{ padding: '10px 20px', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                  >
+                    Equip Now
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  style={{ padding: '10px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Nice!
+                </button>
+              </div>
+            </div>
+          )
+        })() : (
+          <>
+            {/* Wheel (static) + orbiting arrow */}
+            <div style={{ width: 300, height: 300 }}>
+              <svg width={300} height={300} viewBox="0 0 300 300">
+                {segments.map(seg => (
+                  <path
+                    key={seg.rarity}
+                    d={segmentPath(seg.start, seg.end)}
+                    fill={seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse' ? '#ff0000' : getRarityWheelColor(seg.rarity)}
+                    stroke="none"
+                    className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined}
+                  />
+                ))}
+                {/* Single arrow — only for qty=1 */}
+                {quantity === 1 && multiArrows.length === 0 && (
+                  <g style={{
+                    transformOrigin: `${CX}px ${CY}px`,
+                    transform: `rotate(${pointerAngle}deg)`,
+                    transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
+                  }}>
+                    <polygon
+                      points={`${CX},${CY - 32} ${CX - 7},${CY - 20} ${CX + 7},${CY - 20}`}
+                      fill="#EF4444"
+                      style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }}
+                    />
+                  </g>
+                )}
+                {/* Multi arrows — one per spin (capped at 100), all animate simultaneously */}
+                {multiArrows.map((arrow, i) => (
+                  <g key={i} style={{
+                    transformOrigin: `${CX}px ${CY}px`,
+                    transform: `rotate(${arrowsLanded ? arrow.finalAngle : 0}deg)`,
+                    transition: arrowsLanded ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
+                  }}>
+                    <polygon
+                      points={`${CX},${CY - 34} ${CX - 8},${CY - 21} ${CX + 8},${CY - 21}`}
+                      fill="#EF4444"
+                      fillOpacity={multiArrows.length <= 10 ? 0.9 : multiArrows.length <= 50 ? 0.6 : 0.4}
+                      style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }}
+                    />
+                  </g>
+                ))}
+                {/* Center hub: anchors all arrow bases */}
+                <circle cx={CX} cy={CY} r={22} fill="#EF4444" stroke="#000" strokeWidth={2} />
+              </svg>
+            </div>
+
+            {/* Rarity legend */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', justifyContent: 'center' }}>
+              {segments.map(seg => (
+                <div key={seg.rarity} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
+                  <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined} style={{ width: 10, height: 10, borderRadius: 2, background: (seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? '#ff0000' : getRarityWheelColor(seg.rarity), display: 'inline-block', flexShrink: 0 }} />
+                  <span className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined} style={{ color: (seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? '#ff0000' : getRarityWheelColor(seg.rarity), fontWeight: 700 }}>{seg.rarity}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{seg.pct}%</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => void handleSpin()}
+              disabled={!canSpin}
+              style={{
+                padding: '13px 44px', borderRadius: 12, border: 'none',
+                background: canSpin ? 'var(--primary)' : 'var(--surface-2)',
+                color: canSpin ? '#060D10' : 'var(--text-muted)',
+                fontWeight: 800, fontSize: 16,
+                cursor: canSpin ? 'pointer' : 'not-allowed',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}
+            >
+              {phase === 'spinning'
+                ? 'Spinning…'
+                : <><CoinIcon size={15} />{totalCost} — Spin{quantity > 1 ? ` ×${quantity}` : ''}!</>
+              }
+            </button>
+
+            {/* Quantity input */}
+            {phase === 'ready' && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Quantity:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={box.type === 'dev-curse' ? 5000 : 100}
+                    value={quantity}
+                    onChange={e => {
+                      const maxQ = box.type === 'dev-curse' ? 5000 : 100
+                      const v = Math.max(1, Math.min(maxQ, parseInt(e.target.value) || 1))
+                      setQuantity(v)
+                      setSpinError(null)
+                    }}
+                    style={{ width: 64, padding: '5px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, textAlign: 'center' }}
+                  />
+                  {quantity > 1 && (
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      = <CoinIcon size={11} /> {totalCost.toLocaleString()} total
+                    </span>
+                  )}
+                </div>
+                {spinError && (
+                  <div style={{ fontSize: 12, color: '#EF4444', textAlign: 'center', padding: '4px 10px', background: '#EF444420', borderRadius: 6 }}>
+                    {spinError}
+                  </div>
+                )}
+                {inv && inv.coins < totalCost && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    You can afford up to {Math.floor(inv.coins / box.cost)} spin{Math.floor(inv.coins / box.cost) !== 1 ? 's' : ''}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {phase === 'ready' && (
+              <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', padding: '4px 10px' }}>
+                Cancel
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>,
@@ -3556,6 +3661,8 @@ export default function MarketplacePage() {
               setResultId(id => id + 1)
             }
           }}
+          prices={prices}
+          onEquip={handleEquip}
         />
       )}
       {multiResult && (
