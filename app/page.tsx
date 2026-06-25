@@ -529,14 +529,14 @@ export default function LandingPage() {
 
               {/* Data rows */}
               {[
-                { feature: 'Real-time grade sync from school portal', vals: [true, false, false, true, false] },
+                { feature: 'Real-time grade sync from school portal', vals: [true, true, false, true, false] },
                 { feature: 'AI advisor trained on your own grades',   vals: [true, false, false, false, false] },
                 { feature: 'GPA simulator & what-if scenarios',       vals: [true, false, false, false, false] },
                 { feature: 'Student-owned account (not school-controlled)', vals: [true, false, false, false, false] },
                 { feature: 'Gamification — coins, streaks, marketplace',    vals: [true, false, false, false, false] },
                 { feature: 'Student social feed & community',         vals: [true, false, false, false, false] },
                 { feature: 'Privacy-first, no data selling',          vals: [true, '?', false, '?', '?'] },
-                { feature: 'Free for students',                       vals: [true, false, true, false, false] },
+                { feature: 'Free for students',                       vals: [true, true, true, true, false] },
               ].map((row, ri) => (
                 <div key={ri} style={{
                   display: 'grid',
