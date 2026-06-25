@@ -104,13 +104,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function checkAuth() {
+      // Apply cached role immediately so DEV/ADMIN UI shows without waiting for a network round-trip.
+      const cachedUser = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { name?: string | null; role?: string } | null
+      if (cachedUser?.role === 'DEV' || cachedUser?.role === 'ADMIN') setIsAdmin(true)
+      if (cachedUser?.role === 'DEV') setIsDev(true)
+
       const ok = await initWebAuth()
       if (!ok) { router.replace('/login'); return }
       startStudentPrefetch()
 
       // Fetch live user data so role is always current (e.g. after OAuth login or role upgrade)
       const freshUser = await api.authMe().catch(() => null)
-      const cachedUser = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { name?: string | null; role?: string } | null
       const role = freshUser?.role ?? cachedUser?.role
       const name = freshUser?.name ?? cachedUser?.name
       if (freshUser) {

@@ -99,6 +99,10 @@ function LoginPageInner() {
       setError(oauthError === 'oauth_cancelled' ? 'Sign-in cancelled.' : 'Sign-in failed. Please try again.')
     }
     if (oauthResult === 'success') {
+      // Seed ns_user from authMe so the app layout has the role immediately on first load.
+      api.authMe().then(u => {
+        if (u) localStorage.setItem('ns_user', JSON.stringify(u))
+      }).catch(() => {})
       router.push('/dashboard')
     }
   }, [searchParams, router])
