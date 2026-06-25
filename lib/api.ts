@@ -1036,6 +1036,12 @@ export const api = {
 
   studentToggleActionItem: (id: number) =>
     request<StudentActionItem>(`/api/students/action-items/${id}`, { method: 'PATCH' }),
+
+  callToken: (targetUserId: number) =>
+    request<{ token: string; roomName: string; livekitUrl: string }>('/api/calls/token', {
+      method: 'POST',
+      body: JSON.stringify({ targetUserId }),
+    }),
 }
 
 // ── Planner types ─────────────────────────────────────────────────────────

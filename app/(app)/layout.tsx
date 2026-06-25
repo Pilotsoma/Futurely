@@ -14,6 +14,8 @@ import ForcedLogoutWatcher from '../../components/ui/ForcedLogoutWatcher'
 import InactivityWatcher from '../../components/ui/InactivityWatcher'
 import ExternalLinkGuard from '../../components/ui/ExternalLinkGuard'
 import CanvasTokenExpiredBanner from '../../components/ui/CanvasTokenExpiredBanner'
+import CallManager from '../../components/CallManager'
+import { getApiToken } from '../../lib/api'
 
 const NAV = [
   {
@@ -76,6 +78,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [userName, setUserName] = useState<string>('Student')
   const [collapsed, setCollapsed] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [callWs, setCallWs] = useState<WebSocket | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+  const callWsRef = useRef<WebSocket | null>(null)
 
   // Floating active pill
   const navRef  = useRef<HTMLElement>(null)
@@ -124,8 +129,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
       setChecked(true)
       api.portalStatus().catch(() => {})
+
+      // Set up call WebSocket
+      try {
+        const token = getApiToken()
+        if (token) {
+          const uid = Number(JSON.parse(atob(token.split('.')[1])).sub)
+          setCurrentUserId(uid)
+          const wsUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/^http/, 'ws')
+          const ws = new WebSocket(wsUrl)
+          callWsRef.current = ws
+          ws.onopen = () => { ws.send(JSON.stringify({ type: 'AUTH', token })); setCallWs(ws) }
+          ws.onclose = () => setCallWs(null)
+        }
+      } catch { /* ignore */ }
     }
     void checkAuth()
+    return () => { callWsRef.current?.close() }
   }, [router])
 
   function handleLogout() {
@@ -358,6 +378,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <InactivityWatcher />
       <ExternalLinkGuard />
       <CanvasTokenExpiredBanner />
+      <CallManager ws={callWs} currentUserId={currentUserId} />
 
       {/* Main content — spring-follows sidebar width */}
       <motion.main

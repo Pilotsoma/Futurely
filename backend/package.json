@@ -38,6 +38,7 @@
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.2",
+    "livekit-server-sdk": "^2.15.5",
     "nodemailer": "^9.0.1",
     "openai": "^6.43.0",
     "tough-cookie": "^4.1.4",
