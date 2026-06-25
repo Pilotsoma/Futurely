@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -56,13 +56,14 @@ function formatSessionDate(ts: number): string {
 
 function AIChatInner() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [sessions, setSessions]   = useState<ChatSession[]>([])
   const [activeId, setActiveId]   = useState<string | null>(null)
   const [messages, setMessages]   = useState<Msg[]>([])
   const [input, setInput]         = useState('')
   const [sending, setSending]     = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const autoSentRef = useRef(false)
+  const lastAutoSentQ = useRef<string | null>(null)
 
   useEffect(() => {
     const loaded = loadSessions()
@@ -70,15 +71,15 @@ function AIChatInner() {
     saveSessions(loaded)
   }, [])
 
-  // Auto-send the ?q= param from the dashboard AiBar exactly once
+  // Auto-send the ?q= param from the dashboard AiBar.
+  // Uses lastAutoSentQ (string) instead of a boolean so re-navigating from the
+  // dashboard with a new query always fires, even when the page is router-cached.
   useEffect(() => {
     const q = searchParams.get('q')
-    if (q && !autoSentRef.current && !sending) {
-      autoSentRef.current = true
-      // Remove the param from URL without reloading so it doesn't re-fire on re-render
-      window.history.replaceState({}, '', '/ai')
-      void handleSend(q)
-    }
+    if (!q || lastAutoSentQ.current === q) return
+    lastAutoSentQ.current = q
+    router.replace('/ai')
+    void handleSend(q)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
