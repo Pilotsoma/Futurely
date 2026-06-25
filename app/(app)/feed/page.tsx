@@ -288,13 +288,6 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
                 <button className={following ? 'ns-btn-ghost' : 'ns-btn-primary'} style={{ flex: 1, height: 40, fontSize: 14 }} onClick={handleFollow}>
                   {following ? 'Following' : 'Follow'}
                 </button>
-                <button
-                  onClick={() => window.dispatchEvent(new CustomEvent('futurely:call', { detail: { targetUserId: userId, targetName: profile?.name ?? `User ${userId}` } }))}
-                  style={{ height: 40, padding: '0 16px', borderRadius: 10, border: '1px solid #22C55E', background: 'transparent', color: '#22C55E', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-                  title="Start call"
-                >
-                  📞 Call
-                </button>
               </div>
             )}
 

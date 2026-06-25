@@ -14,9 +14,6 @@ import ForcedLogoutWatcher from '../../components/ui/ForcedLogoutWatcher'
 import InactivityWatcher from '../../components/ui/InactivityWatcher'
 import ExternalLinkGuard from '../../components/ui/ExternalLinkGuard'
 import CanvasTokenExpiredBanner from '../../components/ui/CanvasTokenExpiredBanner'
-import CallManager from '../../components/CallManager'
-import { getApiToken } from '../../lib/api'
-
 const NAV = [
   {
     href: '/dashboard', label: 'Dashboard',
@@ -31,10 +28,6 @@ const NAV = [
     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
   },
   {
-    href: '/classroom', label: 'Classroom',
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
-  },
-  {
     href: '/feed', label: 'Study Feed',
     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>,
   },
@@ -47,20 +40,28 @@ const NAV = [
     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>,
   },
   {
-    href: '/sets', label: 'Study Sets',
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>,
-  },
-  {
-    href: '/play', label: 'Play',
-    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>,
-  },
-  {
     href: '/ai', label: 'AI Chat',
     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
   },
   {
     href: '/settings', label: 'Settings',
     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>,
+  },
+]
+
+// Features hidden from regular users — visible only to DEV via the toggle
+const HIDDEN_NAV = [
+  {
+    href: '/classroom', label: 'Classroom',
+    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+  },
+  {
+    href: '/sets', label: 'Study Sets',
+    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>,
+  },
+  {
+    href: '/play', label: 'Play',
+    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>,
   },
 ]
 
@@ -78,9 +79,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [userName, setUserName] = useState<string>('Student')
   const [collapsed, setCollapsed] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [callWs, setCallWs] = useState<WebSocket | null>(null)
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
-  const callWsRef = useRef<WebSocket | null>(null)
+  const [isDev, setIsDev] = useState(false)
+  const [showHidden, setShowHidden] = useState(false)
 
   // Floating active pill
   const navRef  = useRef<HTMLElement>(null)
@@ -117,6 +117,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         localStorage.setItem('ns_user', JSON.stringify({ ...cachedUser, ...freshUser }))
       }
       if (role === 'DEV' || role === 'ADMIN') setIsAdmin(true)
+      if (role === 'DEV') setIsDev(true)
       if (name) {
         const n = name
         if (n.includes(',')) {
@@ -132,55 +133,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
     void checkAuth()
   }, [router])
-
-  // Set up a persistent call WebSocket once auth is confirmed, with auto-reconnect
-  useEffect(() => {
-    if (!checked) return
-    let destroyed = false
-    let pingInterval: ReturnType<typeof setInterval> | null = null
-    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
-
-    function connect() {
-      if (destroyed) return
-      try {
-        const token = getApiToken()
-        if (!token) return
-        const uid = Number(JSON.parse(atob(token.split('.')[1])).sub)
-        setCurrentUserId(uid)
-        const wsUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/^http/, 'ws')
-        const ws = new WebSocket(wsUrl)
-        callWsRef.current = ws
-
-        ws.onopen = () => {
-          ws.send(JSON.stringify({ type: 'AUTH', token }))
-          setCallWs(ws)
-          // Keepalive ping every 25s so the connection doesn't idle-timeout
-          pingInterval = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'PING' }))
-          }, 25000)
-        }
-
-        ws.onclose = () => {
-          setCallWs(null)
-          if (pingInterval) { clearInterval(pingInterval); pingInterval = null }
-          // Reconnect after 3s unless we're shutting down
-          if (!destroyed) reconnectTimeout = setTimeout(connect, 3000)
-        }
-
-        ws.onerror = () => ws.close()
-      } catch { /* ignore */ }
-    }
-
-    connect()
-
-    return () => {
-      destroyed = true
-      if (pingInterval) clearInterval(pingInterval)
-      if (reconnectTimeout) clearTimeout(reconnectTimeout)
-      callWsRef.current?.close()
-      callWsRef.current = null
-    }
-  }, [checked])
 
   function handleLogout() {
     api.logout().catch(() => null)
@@ -319,6 +271,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )
           })}
 
+          {/* Admin: educator approval queue */}
           {isAdmin && (() => {
             const active = pathname.startsWith('/admin')
             return (
@@ -331,23 +284,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     whileHover={{ x: collapsed ? 0 : 2 }}
                     transition={fastSpring}
                   >
-                    <motion.span
-                      style={{ flexShrink: 0 }}
-                      animate={{ opacity: active ? 1 : 0.55, color: active ? '#EF4444' : '#EF4444' }}
-                      transition={{ duration: 0.15 }}
-                    >
+                    <motion.span style={{ flexShrink: 0 }} animate={{ opacity: active ? 1 : 0.55, color: '#EF4444' }} transition={{ duration: 0.15 }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
                     </motion.span>
                     <AnimatePresence>
                       {!collapsed && (
-                        <motion.span
-                          key="label-admin"
-                          initial={{ opacity: 0, x: -6 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -6 }}
-                          transition={fastSpring}
-                          style={{ whiteSpace: 'nowrap', overflow: 'hidden', color: '#EF4444', fontWeight: 700 }}
-                        >
+                        <motion.span key="label-admin" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={fastSpring}
+                          style={{ whiteSpace: 'nowrap', overflow: 'hidden', color: '#EF4444', fontWeight: 700 }}>
                           Educator Requests
                         </motion.span>
                       )}
@@ -357,6 +300,80 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </>
             )
           })()}
+
+          {/* DEV only: toggle + hidden feature links */}
+          {isDev && (
+            <>
+              <div style={{ height: 1, background: 'var(--border)', margin: '6px 8px' }} />
+              <motion.button
+                onClick={() => setShowHidden(s => !s)}
+                title={collapsed ? (showHidden ? 'Hide features' : 'Show hidden features') : undefined}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
+                  gap: collapsed ? 0 : 9, width: '100%',
+                  padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: showHidden ? 'rgba(168,85,247,0.10)' : 'transparent',
+                  color: showHidden ? '#A855F7' : 'var(--text-muted)',
+                  fontSize: 13, fontWeight: 600,
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+                whileHover={{ backgroundColor: 'rgba(168,85,247,0.10)' }}
+                whileTap={{ scale: 0.97 }}
+                transition={fastSpring}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  {showHidden
+                    ? <><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                    : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                  }
+                </svg>
+                <AnimatePresence>
+                  {!collapsed && (
+                    <motion.span key="hidden-label" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={fastSpring}
+                      style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                      {showHidden ? 'Hide features' : 'Show hidden features'}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+
+              <AnimatePresence>
+                {showHidden && HIDDEN_NAV.map((link, i) => {
+                  const active = pathname === link.href || pathname.startsWith(link.href + '/')
+                  return (
+                    <motion.div key={link.href}
+                      initial={{ opacity: 0, y: -6, height: 0 }}
+                      animate={{ opacity: 1, y: 0, height: 'auto' }}
+                      exit={{ opacity: 0, y: -4, height: 0 }}
+                      transition={{ ...fastSpring, delay: i * 0.04 }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <Link href={link.href} style={{ textDecoration: 'none' }} title={collapsed ? link.label : undefined}>
+                        <motion.div
+                          className={`ns-nav-link${active ? ' active' : ''}`}
+                          style={{ justifyContent: collapsed ? 'center' : undefined, gap: collapsed ? 0 : undefined }}
+                          whileHover={{ x: collapsed ? 0 : 2 }}
+                          transition={fastSpring}
+                        >
+                          <motion.span style={{ flexShrink: 0 }} animate={{ opacity: active ? 1 : 0.55, color: active ? '#A855F7' : '#A855F7' }} transition={{ duration: 0.15 }}>
+                            {link.icon}
+                          </motion.span>
+                          <AnimatePresence>
+                            {!collapsed && (
+                              <motion.span key={`hidden-${link.href}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={fastSpring}
+                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', color: '#A855F7', fontSize: 13 }}>
+                                {link.label}
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      </Link>
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
+            </>
+          )}
         </nav>
 
         {/* Bottom */}
@@ -412,7 +429,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <InactivityWatcher />
       <ExternalLinkGuard />
       <CanvasTokenExpiredBanner />
-      <CallManager ws={callWs} currentUserId={currentUserId} />
 
       {/* Main content — spring-follows sidebar width */}
       <motion.main

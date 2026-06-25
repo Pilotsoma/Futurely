@@ -49,38 +49,6 @@ wss.on('connection', (ws) => {
 
       if (!authedUserId) return
 
-      // ── Call signaling ────────────────────────────────────────────────────
-      if (msg.type === 'CALL_INVITE') {
-        const targetId = Number(msg.targetUserId)
-        if (!isNaN(targetId) && targetId !== authedUserId) {
-          const caller = await prisma.user.findUnique({ where: { id: authedUserId }, select: { name: true, hacName: true } })
-          sendToUser(targetId, 'CALL_INCOMING', {
-            callerId: authedUserId,
-            callerName: caller?.name ?? caller?.hacName ?? `User ${authedUserId}`,
-            roomName: `call-${Math.min(authedUserId, targetId)}-${Math.max(authedUserId, targetId)}`,
-          })
-        }
-        return
-      }
-
-      if (msg.type === 'CALL_ACCEPTED') {
-        const callerId = Number(msg.callerId)
-        if (!isNaN(callerId)) sendToUser(callerId, 'CALL_ACCEPTED', { acceptedBy: authedUserId })
-        return
-      }
-
-      if (msg.type === 'CALL_REJECTED') {
-        const callerId = Number(msg.callerId)
-        if (!isNaN(callerId)) sendToUser(callerId, 'CALL_REJECTED', { rejectedBy: authedUserId })
-        return
-      }
-
-      if (msg.type === 'CALL_ENDED') {
-        const otherId = Number(msg.otherUserId)
-        if (!isNaN(otherId)) sendToUser(otherId, 'CALL_ENDED', { endedBy: authedUserId })
-        return
-      }
-
       if (msg.type === 'BATTLE_READY') {
         const code = String(msg.code ?? '').toUpperCase()
         connBattleCode = code
