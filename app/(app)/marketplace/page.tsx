@@ -1161,7 +1161,7 @@ function SpinWheelModal({
             (r.won.tagColor === 'verified-yellow' || r.won.tagColor === 'verified-blue')
               ? <div style={{ marginBottom: 4 }}><VerifiedBadge variant={r.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={64} /></div>
               : <div className={tagCssClass(r.won.tag, r.won.tagColor)} style={{ fontSize: 22, fontWeight: 800, color: isAnimatedTag(r.won.tag) || r.won.tagColor === 'curse' ? undefined : r.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
-                  [{r.won.tag}]
+                  {r.won.tag}
                 </div>
           ) : r.won.type === 'name-color' ? (
             <div className={isRainbow ? 'name-rainbow' : r.won.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 24, fontWeight: 800, color: (isRainbow || r.won.value === 'curse') ? undefined : r.won.value, marginBottom: 4 }}>
@@ -1193,7 +1193,7 @@ function SpinWheelModal({
                   {r.won.type === 'tag' ? (
                     (r.won.tagColor === 'verified-yellow' || r.won.tagColor === 'verified-blue')
                       ? <VerifiedBadge variant={r.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
-                      : <span className={tagCssClass(r.won.tag, r.won.tagColor)} style={{ fontSize: 12, fontWeight: 700, color: isAnimatedTag(r.won.tag) || r.won.tagColor === 'curse' ? undefined : (r.won.tagColor ?? '#6B7280') }}>[{r.won.tag}]</span>
+                      : <span className={tagCssClass(r.won.tag, r.won.tagColor)} style={{ fontSize: 12, fontWeight: 700, color: isAnimatedTag(r.won.tag) || r.won.tagColor === 'curse' ? undefined : (r.won.tagColor ?? '#6B7280') }}>{r.won.tag}</span>
                   ) : inv?.tag ? (
                     (inv.tagColor === 'verified-yellow' || inv.tagColor === 'verified-blue')
                       ? <VerifiedBadge variant={inv.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
@@ -2537,7 +2537,7 @@ export default function MarketplacePage() {
               (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                 ? <div style={{ marginBottom: 4 }}><VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={64} /></div>
                 : <div className={tagCssClass(result.won.tag, result.won.tagColor)} style={{ fontSize: 22, fontWeight: 800, color: isAnimatedTag(result.won.tag) || result.won.tagColor === 'curse' ? undefined : result.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
-                    [{result.won.tag}]
+                    {result.won.tag}
                   </div>
             ) : result.won.type === 'name-color' ? (
               <div className={isRainbow ? 'name-rainbow' : result.won.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 24, fontWeight: 800, color: (isRainbow || result.won.value === 'curse') ? undefined : result.won.value, marginBottom: 4 }}>
@@ -2590,7 +2590,7 @@ export default function MarketplacePage() {
                       (result.won.tagColor === 'verified-yellow' || result.won.tagColor === 'verified-blue')
                         ? <VerifiedBadge variant={result.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
                         : <span className={tagCssClass(result.won.tag, result.won.tagColor)} style={{ fontSize: 12, fontWeight: 700, color: isAnimatedTag(result.won.tag) || result.won.tagColor === 'curse' ? undefined : (result.won.tagColor ?? '#6B7280') }}>
-                            [{result.won.tag}]
+                            {result.won.tag}
                           </span>
                     ) : inv?.tag ? (
                       (inv.tagColor === 'verified-yellow' || inv.tagColor === 'verified-blue')
