@@ -102,8 +102,8 @@ function validatePassword(password: string): string | null {
   return null
 }
 
-function issueAccessToken(userId: number): string {
-  return jwt.sign({ sub: userId }, process.env.JWT_SECRET!, { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_EXPIRY })
+function issueAccessToken(userId: number, role = 'STUDENT'): string {
+  return jwt.sign({ sub: userId, role }, process.env.JWT_SECRET!, { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_EXPIRY })
 }
 
 const IS_PROD = process.env.NODE_ENV === 'production'
@@ -324,7 +324,7 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
 
     // Email is already verified via OTP — no verification link needed
 
-    const token = issueAccessToken(user.id)
+    const token = issueAccessToken(user.id, user.role)
     const refreshToken = await issueRefreshToken(user.id)
     setAuthCookies(res, token, refreshToken)
 
@@ -431,7 +431,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
       data: { failedLoginAttempts: 0, lockedUntil: null },
     })
 
-    const token = issueAccessToken(user.id)
+    const token = issueAccessToken(user.id, user.role)
     const refreshToken = await issueRefreshToken(user.id)
     setAuthCookies(res, token, refreshToken)
 
@@ -489,12 +489,13 @@ router.post('/refresh', refreshTokenLimiter, async (req: Request, res: Response)
     }
 
     // Rotate: revoke old and create new in parallel (both depend only on stored, not each other)
-    const [newRefreshToken] = await Promise.all([
+    const [newRefreshToken,, refreshedUser] = await Promise.all([
       issueRefreshToken(stored.userId),
       prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } }),
+      prisma.user.findUnique({ where: { id: stored.userId }, select: { role: true } }),
     ])
 
-    const newAccessToken = issueAccessToken(stored.userId)
+    const newAccessToken = issueAccessToken(stored.userId, refreshedUser?.role ?? 'STUDENT')
     setAuthCookies(res, newAccessToken, newRefreshToken)
 
     logger.info('auth.token_refreshed', { userId: stored.userId })
@@ -863,11 +864,12 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
     userId = user.id
   }
 
-  const accessToken = issueAccessToken(userId)
-  const [refreshToken, hasSchool] = await Promise.all([
+  const [oauthUser, refreshToken, hasSchool] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { role: true } }),
     issueRefreshToken(userId),
     prisma.schoolConnection.findUnique({ where: { userId } }),
   ])
+  const accessToken = issueAccessToken(userId, oauthUser?.role ?? 'STUDENT')
   setAuthCookies(res, accessToken, refreshToken)
   res.redirect(`${appUrl}/dashboard${!hasSchool ? '?connect=1' : ''}`)
 }

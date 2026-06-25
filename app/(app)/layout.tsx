@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion, AnimatePresence, type Transition } from 'framer-motion'
-import { api } from '../../lib/api'
+import { api, getApiToken } from '../../lib/api'
 import { initWebAuth, clearWebAuth } from '../../lib/authState'
 import { startStudentPrefetch } from '../../lib/prefetch'
 import NotificationBell from '../../components/ui/NotificationBell'
@@ -104,16 +104,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function checkAuth() {
-      // Apply cached role immediately so DEV/ADMIN UI shows without waiting for a network round-trip.
+      // 1. Apply cached role from localStorage immediately (works across navigations).
       const cachedUser = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { name?: string | null; role?: string } | null
       if (cachedUser?.role === 'DEV' || cachedUser?.role === 'ADMIN') setIsAdmin(true)
       if (cachedUser?.role === 'DEV') setIsDev(true)
 
       const ok = await initWebAuth()
       if (!ok) { router.replace('/login'); return }
+
+      // 2. Decode role directly from the JWT payload — no extra network call required.
+      //    (The backend embeds `role` in the token since the latest deploy.)
+      try {
+        const token = getApiToken()
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]!)) as { role?: string }
+          if (payload.role === 'DEV' || payload.role === 'ADMIN') setIsAdmin(true)
+          if (payload.role === 'DEV') setIsDev(true)
+        }
+      } catch { /* malformed token — fall through to authMe */ }
+
       startStudentPrefetch()
 
-      // Fetch live user data so role is always current (e.g. after OAuth login or role upgrade)
+      // 3. Fetch live user data to get name and keep ns_user current.
       const freshUser = await api.authMe().catch(() => null)
       const role = freshUser?.role ?? cachedUser?.role
       const name = freshUser?.name ?? cachedUser?.name
