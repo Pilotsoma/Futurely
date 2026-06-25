@@ -129,24 +129,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
       setChecked(true)
       api.portalStatus().catch(() => {})
-
-      // Set up call WebSocket
-      try {
-        const token = getApiToken()
-        if (token) {
-          const uid = Number(JSON.parse(atob(token.split('.')[1])).sub)
-          setCurrentUserId(uid)
-          const wsUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/^http/, 'ws')
-          const ws = new WebSocket(wsUrl)
-          callWsRef.current = ws
-          ws.onopen = () => { ws.send(JSON.stringify({ type: 'AUTH', token })); setCallWs(ws) }
-          ws.onclose = () => setCallWs(null)
-        }
-      } catch { /* ignore */ }
     }
     void checkAuth()
-    return () => { callWsRef.current?.close() }
   }, [router])
+
+  // Set up a persistent call WebSocket once auth is confirmed
+  useEffect(() => {
+    if (!checked) return
+    try {
+      const token = getApiToken()
+      if (!token) return
+      const uid = Number(JSON.parse(atob(token.split('.')[1])).sub)
+      setCurrentUserId(uid)
+      const wsUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/^http/, 'ws')
+      const ws = new WebSocket(wsUrl)
+      callWsRef.current = ws
+      ws.onopen = () => { ws.send(JSON.stringify({ type: 'AUTH', token })); setCallWs(ws) }
+      ws.onclose = () => setCallWs(null)
+      ws.onerror = () => ws.close()
+    } catch { /* ignore */ }
+    return () => { callWsRef.current?.close(); callWsRef.current = null }
+  }, [checked])
 
   function handleLogout() {
     api.logout().catch(() => null)
