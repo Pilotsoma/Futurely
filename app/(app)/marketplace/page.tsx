@@ -909,9 +909,9 @@ function FreeSpinModal({ onClose, onDone }: { onClose: () => void; onDone: (rewa
               <path key={seg.rarity} d={segPath(seg.start, seg.end)} fill={seg.color} />
             ))}
             <g style={{ transformOrigin: `${CX}px ${CY}px`, transform: `rotate(${pointerAngle}deg)`, transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none' }}>
-              <polygon points={`${CX},${CY - 32} ${CX - 7},${CY - 20} ${CX + 7},${CY - 20}`} fill="#EF4444" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }} />
+              <polygon points={`${CX},${CY - 42} ${CX - 9},${CY - 24} ${CX + 9},${CY - 24}`} fill="#EF4444" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }} />
             </g>
-            <circle cx={CX} cy={CY} r={22} fill="#EF4444" stroke="#000" strokeWidth={2} />
+            <circle cx={CX} cy={CY} r={27} fill="#EF4444" stroke="#000" strokeWidth={2} />
           </svg>
         </div>
 
@@ -960,6 +960,8 @@ function SpinWheelModal({
   const [spinError, setSpinError] = useState<string | null>(null)
   const [multiArrows, setMultiArrows] = useState<Array<{ finalAngle: number; color: string }>>([])
   const [arrowsLanded, setArrowsLanded] = useState(false)
+  const [canDismiss, setCanDismiss] = useState(true)
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const segments = useMemo(() => {
     let cum = 0
@@ -995,7 +997,18 @@ function SpinWheelModal({
         const delta = (landAngle - currentPos + 360) % 360
         return prev + 5 * 360 + delta
       })
-      setTimeout(() => { setWonResult(singleResult); setPhase('done') }, 4300)
+      setTimeout(() => {
+        setWonResult(singleResult)
+        setPhase('done')
+        const HIGH_RARITIES = new Set(['Legendary', 'Mythic', 'Unobtainable', 'Curse'])
+        if (HIGH_RARITIES.has(singleResult.won.rarity)) {
+          setCanDismiss(false)
+          if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+          dismissTimerRef.current = setTimeout(() => setCanDismiss(true), 3000)
+        } else {
+          setCanDismiss(true)
+        }
+      }, 4300)
       return
     }
 
@@ -1033,7 +1046,7 @@ function SpinWheelModal({
   return createPortal(
     <div
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      onClick={phase === 'ready' ? onClose : undefined}
+      onClick={phase === 'ready' ? onClose : (phase === 'done' && canDismiss) ? () => { setPhase('ready'); setWonResult(null) } : undefined}
     >
       <div
         className="ns-card"
@@ -1160,7 +1173,7 @@ function SpinWheelModal({
                     transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
                   }}>
                     <polygon
-                      points={`${CX},${CY - 32} ${CX - 7},${CY - 20} ${CX + 7},${CY - 20}`}
+                      points={`${CX},${CY - 42} ${CX - 9},${CY - 24} ${CX + 9},${CY - 24}`}
                       fill="#EF4444"
                       style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }}
                     />
@@ -1182,7 +1195,7 @@ function SpinWheelModal({
                   </g>
                 ))}
                 {/* Center hub: anchors all arrow bases */}
-                <circle cx={CX} cy={CY} r={22} fill="#EF4444" stroke="#000" strokeWidth={2} />
+                <circle cx={CX} cy={CY} r={27} fill="#EF4444" stroke="#000" strokeWidth={2} />
               </svg>
             </div>
 
