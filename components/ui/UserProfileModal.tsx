@@ -54,10 +54,15 @@ const AVATAR_BORDER_MAP: Record<string, string> = {
   'border-navy': '#1D4ED8', 'border-teal': '#14B8A6', 'border-orange': '#F97316',
   'border-violet': '#7C3AED', 'border-cyan': '#06B6D4', 'border-hotpink': '#EC4899',
   'border-gold': '#D97706', 'border-lime': '#84CC16',
+  'border-yellow': '#EAB308', 'border-pink': '#F472B6', 'border-gray': '#6B7280',
+  'border-brown': '#92400E', 'border-rose': '#F43F5E', 'border-sky': '#0EA5E9',
+  'border-silver': '#C0C0C0',
 }
 const AVATAR_GLOW_MAP: Record<string, [string, string]> = {
-  'glow-pink': ['#EC4899', '#EC489955'],
+  'glow-pink':   ['#EC4899', '#EC489955'],
   'glow-purple': ['#8B5CF6', '#8B5CF655'],
+  'glow-blue':   ['#3B82F6', '#3B82F655'],
+  'glow-orange': ['#F97316', '#F9731655'],
 }
 function avatarStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
