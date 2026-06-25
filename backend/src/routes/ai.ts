@@ -7,6 +7,16 @@ const router = Router()
 
 const FREE_MODEL = 'openrouter/free'
 
+function deriveGradeLevel(graduationYear: number | null, stored: number | null): number | null {
+  if (graduationYear) {
+    const now = new Date()
+    const effectiveYear = now.getMonth() >= 7 ? now.getFullYear() + 1 : now.getFullYear()
+    const derived = 12 - (graduationYear - effectiveYear)
+    if (derived >= 9 && derived <= 12) return derived
+  }
+  return stored ?? null
+}
+
 // Strip markdown code fences and extract raw JSON
 function extractJson(raw: string): string {
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
@@ -128,7 +138,7 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
 
     const systemPrompt = `You are NextStep AI, an academic companion for high school students. Answer based only on the student data below — never invent numbers or facts. Be encouraging, concise, and specific. Keep responses under 4 sentences.
 
-Student: ${firstName}, Grade ${profile?.gradeLevel ?? 'unknown'}
+Student: ${firstName}, Grade ${deriveGradeLevel(profile?.graduationYear ?? null, profile?.gradeLevel ?? null) ?? 'unknown'}
 Current GPA: ${uGpa} unweighted, ${wGpa} weighted${portalData?.classRank ? ` | Class rank: ${portalData.classRank}` : ''}
 Current semester courses & grades: ${courseList}
 Pending assignments: ${assignmentList || 'none'}${portalData?.attendanceSummary ? `\nAttendance this month: ${portalData.attendanceSummary}` : ''}

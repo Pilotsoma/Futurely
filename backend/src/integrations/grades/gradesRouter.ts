@@ -429,7 +429,13 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
         const profileUpdate: Record<string, unknown> = {}
         if (studentInfo.counselor?.trim()) profileUpdate.counselorName = studentInfo.counselor.trim()
         const cohortNum = studentInfo.cohortYear ? parseInt(studentInfo.cohortYear.replace(/\D/g, ''), 10) : NaN
-        if (!isNaN(cohortNum) && cohortNum > 2000 && cohortNum < 2060) profileUpdate.graduationYear = cohortNum
+        if (!isNaN(cohortNum) && cohortNum > 2000 && cohortNum < 2060) {
+          profileUpdate.graduationYear = cohortNum
+          const now = new Date()
+          const effectiveYear = now.getMonth() >= 7 ? now.getFullYear() + 1 : now.getFullYear()
+          const derived = 12 - (cohortNum - effectiveYear)
+          if (derived >= 9 && derived <= 12) profileUpdate.gradeLevel = derived
+        }
         if (Object.keys(profileUpdate).length > 0) {
           await prisma.profile.upsert({ where: { userId }, create: { userId, ...profileUpdate }, update: profileUpdate })
         }
