@@ -184,19 +184,43 @@ export default function NotificationBell({ showToasts = false, collapsed = false
               : notifs.map(n => {
                 const name = senderFirst(n)
                 const icon = n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : n.type === 'LISTING_SOLD' ? '🏷️' : n.type.startsWith('TRADE') ? '🔄' : n.type === 'ASSIGNMENT_CREATED' ? '📚' : n.type === 'TEACHER_ASSIGNMENT' ? '📋' : n.type === 'CLASSROOM_JOINED' ? '🏫' : n.type === 'COUNSELOR_LINKED' ? '🤝' : n.type === 'COUNSELOR_NOTE_ADDED' ? '📝' : n.type === 'COUNSELOR_RECOMMENDATION_ADDED' ? '✨' : n.type === 'ACTION_ITEM_CREATED' ? '✅' : '💬'
+
+                // Row-level navigation: where clicking the notification takes you
+                function handleRowClick() {
+                  setShowPanel(false)
+                  if (n.type === 'LISTING_SOLD' || n.type === 'GIVEAWAY_WIN' || n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED') {
+                    router.push('/marketplace')
+                  } else if (n.type === 'ASSIGNMENT_CREATED' || n.type === 'TEACHER_ASSIGNMENT' || n.type === 'CLASSROOM_JOINED') {
+                    router.push('/grades/classwork')
+                  } else if (n.type === 'COUNSELOR_LINKED' || n.type === 'COUNSELOR_NOTE_ADDED' || n.type === 'COUNSELOR_RECOMMENDATION_ADDED' || n.type === 'ACTION_ITEM_CREATED') {
+                    router.push('/my-counselor')
+                  } else {
+                    // FOLLOW, LIKE, COMMENT — open the sender's profile in the feed
+                    if (onOpenProfile) {
+                      onOpenProfile(n.fromUserId)
+                    } else if (pathname === '/feed') {
+                      window.dispatchEvent(new CustomEvent('ns:open-profile', { detail: n.fromUserId }))
+                    } else {
+                      router.push(`/feed?profile=${n.fromUserId}`)
+                    }
+                  }
+                }
+
+                // Name link: always opens the sender's profile (stopPropagation so row click doesn't also fire)
                 const link = (label: React.ReactNode) => (
-                  <b onClick={() => {
+                  <b onClick={(e) => {
+                    e.stopPropagation()
                     setShowPanel(false)
                     if (onOpenProfile) {
                       onOpenProfile(n.fromUserId)
                     } else if (pathname === '/feed') {
                       window.dispatchEvent(new CustomEvent('ns:open-profile', { detail: n.fromUserId }))
                     } else {
-                      // Use ?profile= query param — more reliable than sessionStorage on Vercel
                       router.push(`/feed?profile=${n.fromUserId}`)
                     }
                   }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
                 )
+
                 let body: React.ReactNode
                 if (n.type === 'FOLLOW')           body = <>{link(name)} started following you</>
                 else if (n.type === 'LIKE')        body = <>{link(name)} liked your post</>
@@ -215,7 +239,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 else if (n.type === 'ACTION_ITEM_CREATED') body = <>{link(name)} assigned you a task: <b>{n.preview ?? 'Action item'}</b></>
                 else body = n.preview ?? 'New notification'
                 return (
-                  <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)' }}>
+                  <div key={n.id} onClick={handleRowClick} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)', cursor: 'pointer' }}>
                     <span style={{ fontSize: 15, flexShrink: 0 }}>{icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.4 }}>{body}</div>
