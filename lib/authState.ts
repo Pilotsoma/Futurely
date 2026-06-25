@@ -21,8 +21,10 @@ export async function initWebAuth(): Promise<boolean> {
   if (current) {
     // Verify the in-memory token hasn't expired before trusting it.
     try {
-      const payload = JSON.parse(atob(current.split('.')[1]!)) as { exp?: number }
-      if (payload.exp && payload.exp * 1000 > Date.now() + 10000) return true
+      const payload = JSON.parse(atob(current.split('.')[1]!)) as { exp?: number; role?: string }
+      // Only skip refresh if token is valid AND already has role embedded.
+      // Tokens issued before the role-in-JWT change lack `role` — fall through to refresh.
+      if (payload.exp && payload.exp * 1000 > Date.now() + 10000 && payload.role) return true
     } catch { /* malformed — fall through to refresh */ }
   }
 
