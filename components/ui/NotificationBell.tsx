@@ -190,12 +190,14 @@ export default function NotificationBell({ showToasts = false, collapsed = false
               ? <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No notifications yet</div>
               : notifs.map(n => {
                 const name = senderFirst(n)
-                const icon = n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : n.type === 'LISTING_SOLD' ? '🏷️' : n.type.startsWith('TRADE') ? '🔄' : n.type === 'ASSIGNMENT_CREATED' ? '📚' : n.type === 'TEACHER_ASSIGNMENT' ? '📋' : n.type === 'CLASSROOM_JOINED' ? '🏫' : n.type === 'COUNSELOR_LINKED' ? '🤝' : n.type === 'COUNSELOR_NOTE_ADDED' ? '📝' : n.type === 'COUNSELOR_RECOMMENDATION_ADDED' ? '✨' : n.type === 'ACTION_ITEM_CREATED' ? '✅' : '💬'
+                const icon = n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : n.type === 'LISTING_SOLD' ? '🏷️' : n.type.startsWith('TRADE') ? '🔄' : n.type === 'ASSIGNMENT_CREATED' ? '📚' : n.type === 'TEACHER_ASSIGNMENT' ? '📋' : n.type === 'CLASSROOM_JOINED' ? '🏫' : n.type === 'COUNSELOR_LINKED' ? '🤝' : n.type === 'COUNSELOR_NOTE_ADDED' ? '📝' : n.type === 'COUNSELOR_RECOMMENDATION_ADDED' ? '✨' : n.type === 'ACTION_ITEM_CREATED' ? '✅' : n.type === 'COIN_RECEIVED' ? '🪙' : '💬'
 
                 // Row-level navigation: where clicking the notification takes you
                 function handleRowClick() {
                   setShowPanel(false)
                   if (n.type === 'LISTING_SOLD' || n.type === 'GIVEAWAY_WIN' || n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED') {
+                    router.push('/marketplace')
+                  } else if (n.type === 'COIN_RECEIVED') {
                     router.push('/marketplace')
                   } else if (n.type === 'ASSIGNMENT_CREATED') {
                     const isCanvas = n.preview?.includes('Canvas assignment') || n.preview?.includes('Canvas assignments')
@@ -227,6 +229,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 else if (n.type === 'TRADE_OFFER')    body = <>{link(name)} sent a trade offer</>
                 else if (n.type === 'TRADE_ACCEPTED') body = <>{link(name)} accepted your trade</>
                 else if (n.type === 'TRADE_DECLINED')    body = <>{link(name)} declined your trade</>
+                else if (n.type === 'COIN_RECEIVED') body = <>{link(name)} sent you {n.preview ?? 'coins'}!</>
                 else if (n.type === 'ASSIGNMENT_CREATED') body = n.preview ?? 'New assignment added'
                 else if (n.type === 'TEACHER_ASSIGNMENT') body = <>{link(name)} posted an assignment{n.preview ? <> — {n.preview}</> : null}</>
                 else if (n.type === 'CLASSROOM_JOINED') body = <>You joined <b>{n.preview ?? 'a classroom'}</b></>
@@ -265,6 +268,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 case 'TRADE_ACCEPTED':   return { emoji: '✅', accent: '#22C55E', text: `${name} accepted your trade` }
                 case 'TRADE_DECLINED':   return { emoji: '❌', accent: '#EF4444', text: `${name} declined your trade` }
                 case 'LISTING_SOLD':        return { emoji: '💰', accent: '#EAB308', text: `Your listing sold — ${t.notif.preview ?? ''}` }
+                case 'COIN_RECEIVED':       return { emoji: '🪙', accent: '#EAB308', text: `${name} sent you ${t.notif.preview ?? 'coins'}!` }
                 case 'ASSIGNMENT_CREATED':              return { emoji: '📚', accent: '#6366F1', text: t.notif.preview ?? 'New assignment added' }
                 case 'TEACHER_ASSIGNMENT':              return { emoji: '📋', accent: '#6366F1', text: `${name} posted: ${t.notif.preview ?? 'New assignment'}` }
                 case 'CLASSROOM_JOINED':                return { emoji: '🏫', accent: '#10B981', text: `You joined ${t.notif.preview ?? 'a classroom'}` }

@@ -2213,6 +2213,23 @@ router.post('/coins/send', requireAuth, txLimiter, async (req: AuthRequest, res:
       prisma.user.update({ where: { id: receiverId }, data: { coins: { increment: amount } } }),
     ])
     const updated = await prisma.user.findUnique({ where: { id: senderId }, select: { coins: true } })
+
+    try {
+      const notif = await prisma.notification.create({
+        data: {
+          userId: receiverId,
+          fromUserId: senderId,
+          type: 'COIN_RECEIVED',
+          preview: `🪙 ${amount.toLocaleString()} coins`,
+        },
+        include: {
+          sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarEffect: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true } },
+        },
+      })
+      const s = notif.sender
+      sendToUser(receiverId, 'NOTIFICATION', { ...notif, sender: { id: s.id, name: s.name, tag: s.tag, tagColor: s.tagColor, nameColor: s.nameColor, avatarEffect: s.avatarEffect } })
+    } catch { /* non-critical */ }
+
     res.json({ data: { ok: true, newBalance: updated!.coins, tax }, error: null })
   } catch (err) {
     console.error('[COINS_SEND]', err)
