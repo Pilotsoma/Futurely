@@ -1252,7 +1252,7 @@ function SpinWheelModal({
           <svg width={300} height={300} viewBox="0 0 300 300"
             style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
           >
-            {quantity === 1 && multiArrows.length === 0 && phase !== 'done' && (
+            {multiArrows.length === 0 && phase !== 'done' && (
               <g style={{
                 transformOrigin: `${CX}px ${CY}px`,
                 transform: `rotate(${pointerAngle}deg)`,
