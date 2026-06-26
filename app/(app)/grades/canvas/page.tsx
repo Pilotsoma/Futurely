@@ -934,10 +934,11 @@ function QuizPanel({
                   </div>
                 </div>
 
-                {sub && sub.submission_data && data.questions.length > 0 ? (
+                {sub && data.questions.length > 0 ? (
                   <>
                     <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', marginBottom: 12 }}>
                       Question Review {!data.quiz.show_correct_answers && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>· correct answers hidden by instructor</span>}
+                      {!sub.submission_data?.length && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}> · your selected answers are not available for this attempt</span>}
                     </div>
                     {data.questions.map(q => (
                       <QuizQuestionRow key={q.id} question={q} submissionData={subMap.get(q.id) as Parameters<typeof QuizQuestionRow>[0]['submissionData']} showCorrect={data.quiz.show_correct_answers} />
@@ -946,7 +947,7 @@ function QuizPanel({
                 ) : sub ? (
                   <div style={{ padding: '16px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', textAlign: 'center' }}>
                     <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{sub.kept_score ?? sub.score ?? '—'} / {sub.quiz_points_possible}</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Detailed answer review not available for this quiz type.</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Question details are not available for this quiz.</div>
                   </div>
                 ) : null}
               </>
