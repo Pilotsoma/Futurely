@@ -1166,85 +1166,115 @@ function SpinWheelModal({
     >
       <div
         className="ns-card"
-        style={{ padding: 32, maxWidth: 380, width: '92%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}
+        style={{ padding: '28px 24px', maxWidth: 380, width: '92%', maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{box.icon} {box.label}</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{box.icon} {box.label}</div>
 
+        {/* ── Wheel — always visible ─────────────────────────────────────────── */}
+        <div style={{ position: 'relative', width: 300, height: 300, flexShrink: 0 }}>
+          {/* Layer 1: pie segments */}
+          <svg width={300} height={300} viewBox="0 0 300 300"
+            style={phase === 'done' && wonResult ? {
+              filter: `drop-shadow(0 0 20px ${getRarityColor(wonResult.won.rarity, wonResult.won.id)}99)`,
+              transition: 'filter 0.6s ease',
+            } : { transition: 'filter 0.3s ease' }}
+          >
+            {segments.map(seg => (
+              <path
+                key={seg.rarity}
+                d={segmentPath(seg.start, seg.end)}
+                fill={seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse' ? '#ff0000' : getRarityWheelColor(seg.rarity)}
+                stroke="none"
+                className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined}
+              />
+            ))}
+            {/* Center hub — hidden when item is revealed */}
+            {phase !== 'done' && (
+              <circle cx={CX} cy={CY} r={27} fill="#EF4444" stroke="#000" strokeWidth={2} />
+            )}
+          </svg>
+
+          {/* Layer 2: item reveal — pops into center on landing */}
+          {phase === 'done' && wonResult && (() => {
+            const r = wonResult
+            const isRainbow = r.won.value === 'rainbow'
+            const rarityColor = getRarityColor(r.won.rarity, r.won.id)
+            const centerItem = r.won.type === 'tag'
+              ? (r.won.tagColor === 'verified-yellow' || r.won.tagColor === 'verified-blue')
+                ? <VerifiedBadge variant={r.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={44} />
+                : <span className={tagCssClass(r.won.tag, r.won.tagColor)} style={{ fontSize: 13, fontWeight: 800, color: isAnimatedTag(r.won.tag) || r.won.tagColor === 'curse' ? undefined : r.won.tagColor ?? '#6B7280', textAlign: 'center' as const, maxWidth: 110, wordBreak: 'break-word' as const, lineHeight: 1.2 }}>{r.won.tag}</span>
+              : r.won.type === 'name-color'
+                ? <span className={isRainbow ? 'name-rainbow' : r.won.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 800, color: (isRainbow || r.won.value === 'curse') ? undefined : r.won.value, textAlign: 'center' as const, maxWidth: 110, wordBreak: 'break-word' as const }}>{r.won.name}</span>
+                : <div className={avatarClass(r.won.value)} style={{ width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#fff', flexShrink: 0, ...avatarStyle(r.won.value) }}>✦</div>
+            return (
+              <div style={{
+                position: 'absolute', left: '50%', top: '50%',
+                width: 134, height: 134, borderRadius: '50%',
+                background: 'var(--surface)',
+                border: `3px solid ${rarityColor}`,
+                boxShadow: `0 0 0 5px ${rarityColor}33, 0 0 30px ${rarityColor}88`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: 4, padding: 10, overflow: 'hidden',
+                animation: 'spinReveal 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+              }}>
+                {centerItem}
+              </div>
+            )
+          })()}
+
+          {/* Layer 3: arrow — always on top so it stays visible over the overlay */}
+          <svg width={300} height={300} viewBox="0 0 300 300"
+            style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+          >
+            {quantity === 1 && multiArrows.length === 0 && (
+              <g style={{
+                transformOrigin: `${CX}px ${CY}px`,
+                transform: `rotate(${pointerAngle}deg)`,
+                transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
+              }}>
+                <polygon
+                  points={`${CX},${CY - 120} ${CX - 8},${CY - 80} ${CX + 8},${CY - 80}`}
+                  fill="#EF4444"
+                  style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.7))' }}
+                />
+              </g>
+            )}
+            {multiArrows.map((arrow, i) => (
+              <g key={i} style={{
+                transformOrigin: `${CX}px ${CY}px`,
+                transform: `rotate(${arrowsLanded ? arrow.finalAngle : 0}deg)`,
+                transition: arrowsLanded ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
+              }}>
+                <polygon
+                  points={`${CX},${CY - 120} ${CX - 8},${CY - 80} ${CX + 8},${CY - 80}`}
+                  fill={arrow.color}
+                  fillOpacity={multiArrows.length <= 10 ? 0.9 : multiArrows.length <= 50 ? 0.6 : 0.4}
+                  style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }}
+                />
+              </g>
+            ))}
+          </svg>
+        </div>
+
+        {/* ── Below-wheel: result info OR legend + controls ─────────────────── */}
         {phase === 'done' && wonResult ? (() => {
           const r = wonResult
-          const isRainbow = r.won.value === 'rainbow'
-          const isMythic  = r.won.rarity === 'Mythic'
-          const isLegend  = r.won.rarity === 'Legendary'
-          const emoji     = isMythic ? '👑' : isLegend ? '🌟' : '🎉'
-          const borderColor = getRarityColor(r.won.rarity, r.won.id)
-          const AVATAR_FILL_EFFECTS = new Set(['rainbow', 'glow-gold', 'frame-black', 'fill-white', 'unobtainable-curse'])
-          const isPfpFill = r.won.type === 'avatar' && AVATAR_FILL_EFFECTS.has(r.won.value ?? '')
-          const effectStyle = avatarStyle(r.won.type === 'avatar' ? r.won.value : undefined)
-          const dummyImgStyle: React.CSSProperties = {
-            ...(effectStyle.border    ? { border:    effectStyle.border }    : {}),
-            ...(effectStyle.boxShadow ? { boxShadow: effectStyle.boxShadow } : {}),
-          }
+          const isMythic = r.won.rarity === 'Mythic'
+          const isLegend = r.won.rarity === 'Legendary'
+          const emoji    = isMythic ? '👑' : isLegend ? '🌟' : '🎉'
+          const rarityColor = getRarityColor(r.won.rarity, r.won.id)
           const wonPrice = prices[`${r.won.type}:${r.won.id}`]
-
-          const itemPreview = r.won.type === 'tag' ? (
-            (r.won.tagColor === 'verified-yellow' || r.won.tagColor === 'verified-blue')
-              ? <div style={{ marginBottom: 4 }}><VerifiedBadge variant={r.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={64} /></div>
-              : <div className={tagCssClass(r.won.tag, r.won.tagColor)} style={{ fontSize: 22, fontWeight: 800, color: isAnimatedTag(r.won.tag) || r.won.tagColor === 'curse' ? undefined : r.won.tagColor ?? '#6B7280', marginBottom: 4 }}>
-                  {r.won.tag}
-                </div>
-          ) : r.won.type === 'name-color' ? (
-            <div className={isRainbow ? 'name-rainbow' : r.won.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 24, fontWeight: 800, color: (isRainbow || r.won.value === 'curse') ? undefined : r.won.value, marginBottom: 4 }}>
-              {r.won.name}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <div className={avatarClass(r.won.value)} style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: '#FFFFFF', ...avatarStyle(r.won.value) }}>✦</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{r.won.name}</div>
-            </div>
-          )
-
-          const dummyComment = (
-            <div style={{ background: 'var(--surface-2,#1a1a1a)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0 4px', border: '1px solid var(--border)', textAlign: 'left' as const }}>
-              {isPfpFill ? (
-                <div className={avatarClass(r.won.value)} style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, ...effectStyle }} />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={DUMMY_PFP} alt={inv?.name ?? 'User'} className={r.won.type === 'avatar' ? avatarClass(r.won.value) : ''} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0, ...dummyImgStyle }} />
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
-                  <span
-                    className={r.won.type === 'name-color' && isRainbow ? 'name-rainbow' : r.won.type === 'name-color' && r.won.value === 'curse' ? 'name-curse' : ''}
-                    style={{ fontSize: 13, fontWeight: 700, color: r.won.type === 'name-color' && !isRainbow && r.won.value !== 'curse' ? r.won.value : 'var(--text)' }}
-                  >
-                    {inv?.name ?? 'Username'}
-                  </span>
-                  {r.won.type === 'tag' ? (
-                    (r.won.tagColor === 'verified-yellow' || r.won.tagColor === 'verified-blue')
-                      ? <VerifiedBadge variant={r.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} />
-                      : <span className={tagCssClass(r.won.tag, r.won.tagColor)} style={{ fontSize: 12, fontWeight: 700, color: isAnimatedTag(r.won.tag) || r.won.tagColor === 'curse' ? undefined : (r.won.tagColor ?? '#6B7280') }}>{r.won.tag}</span>
-                  ) : inv?.tag ? (
-                    (inv.tagColor === 'verified-yellow' || inv.tagColor === 'verified-blue')
-                      ? <VerifiedBadge variant={inv.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
-                      : <span style={{ fontSize: 12, fontWeight: 700, color: inv.tagColor ?? '#6B7280' }}>[{inv.tag}]</span>
-                  ) : null}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Here&apos;s a preview of your new item ✨</div>
-              </div>
-            </div>
-          )
-
+          const itemLabel = r.won.type === 'tag' ? r.won.tag : r.won.name
           return (
-            <div style={{ width: '100%', textAlign: 'center', border: `1px solid ${borderColor}55`, borderRadius: 12, padding: '20px 16px', background: `${borderColor}08` }}>
-              <div style={{ fontSize: 44, marginBottom: 8 }}>{emoji}</div>
+            <div style={{ width: '100%', textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 4 }}>{emoji}</div>
               {!r.alreadyHad && (
                 <div style={{ display: 'inline-block', background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: '1px', borderRadius: 6, padding: '2px 8px', marginBottom: 6 }}>NEW</div>
               )}
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>You won!</div>
-              {itemPreview}
-              {dummyComment}
-              <div style={{ fontSize: 13, color: getRarityColor(r.won.rarity, r.won.id), fontWeight: 700, marginBottom: wonPrice ? 4 : 14 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>You won!</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: rarityColor, marginBottom: 2 }}>{itemLabel}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: wonPrice ? 4 : 14 }}>
                 {r.won.rarity}{r.alreadyHad ? ' · already owned' : ''}
               </div>
               {wonPrice && (
@@ -1262,62 +1292,17 @@ function SpinWheelModal({
                   </button>
                 )}
                 <button
+                  disabled={!canDismiss}
                   onClick={() => { setPhase('ready'); setWonResult(null) }}
-                  style={{ padding: '10px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                  style={{ padding: '10px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: canDismiss ? 'pointer' : 'not-allowed', opacity: canDismiss ? 1 : 0.5 }}
                 >
-                  Nice!
+                  {canDismiss ? 'Nice!' : '⏳'}
                 </button>
               </div>
             </div>
           )
         })() : (
           <>
-            {/* Wheel (static) + orbiting arrow */}
-            <div style={{ width: 300, height: 300 }}>
-              <svg width={300} height={300} viewBox="0 0 300 300">
-                {segments.map(seg => (
-                  <path
-                    key={seg.rarity}
-                    d={segmentPath(seg.start, seg.end)}
-                    fill={seg.rarity === 'Mythic' || seg.rarity === 'Unobtainable' || seg.rarity === 'Curse' ? '#ff0000' : getRarityWheelColor(seg.rarity)}
-                    stroke="none"
-                    className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined}
-                  />
-                ))}
-                {/* Single arrow — only for qty=1 */}
-                {quantity === 1 && multiArrows.length === 0 && (
-                  <g style={{
-                    transformOrigin: `${CX}px ${CY}px`,
-                    transform: `rotate(${pointerAngle}deg)`,
-                    transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
-                  }}>
-                    <polygon
-                      points={`${CX},${CY - 42} ${CX - 9},${CY - 24} ${CX + 9},${CY - 24}`}
-                      fill="#EF4444"
-                      style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))' }}
-                    />
-                  </g>
-                )}
-                {/* Multi arrows — one per spin (capped at 100), all animate simultaneously */}
-                {multiArrows.map((arrow, i) => (
-                  <g key={i} style={{
-                    transformOrigin: `${CX}px ${CY}px`,
-                    transform: `rotate(${arrowsLanded ? arrow.finalAngle : 0}deg)`,
-                    transition: arrowsLanded ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
-                  }}>
-                    <polygon
-                      points={`${CX},${CY - 42} ${CX - 9},${CY - 24} ${CX + 9},${CY - 24}`}
-                      fill="#EF4444"
-                      fillOpacity={multiArrows.length <= 10 ? 0.9 : multiArrows.length <= 50 ? 0.6 : 0.4}
-                      style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }}
-                    />
-                  </g>
-                ))}
-                {/* Center hub: anchors all arrow bases */}
-                <circle cx={CX} cy={CY} r={27} fill="#EF4444" stroke="#000" strokeWidth={2} />
-              </svg>
-            </div>
-
             {/* Rarity legend */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', justifyContent: 'center' }}>
               {segments.map(seg => (
