@@ -856,7 +856,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* DEV-only: profile picture URL */}
+          {/* DEV-only: avatar URL */}
           {data?.role === 'ADMIN' && (
             <div className="ns-card" style={{ ...S.card, border: '1px solid rgba(43,74,142,0.25)' }}>
               <p style={{ ...S.cardLabel, color: 'var(--primary)' }}>DEV — Avatar URL</p>

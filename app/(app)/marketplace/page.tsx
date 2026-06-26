@@ -188,13 +188,13 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
 
 const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost: number; drops: DropGroup[] }[] = [
   {
-    type: 'cosmetics', icon: '🎁', label: 'Cosmetics Spin', desc: 'Any cosmetic — tags, name colors & PFP effects', cost: 25,
+    type: 'cosmetics', icon: '🎁', label: 'Cosmetics Spin', desc: 'Any cosmetic — tags, name colors & Avatar effects', cost: 25,
     drops: [
-      { rarity: 'Common',    pct: '60%',    items: ['Tags · Name Colors · PFP Borders'] },
-      { rarity: 'Uncommon',  pct: '25%',    items: ['Tags · Name Colors · PFP Borders'] },
-      { rarity: 'Rare',      pct: '10.2%',  items: ['Tags · Name Colors · PFP Borders'] },
-      { rarity: 'Epic',      pct: '3.95%',  items: ['Tags · Name Colors · PFP Glows'] },
-      { rarity: 'Legendary', pct: '0.8%',   items: ['Tags · Name Colors · PFP Fills'] },
+      { rarity: 'Common',    pct: '60%',    items: ['Tags · Name Colors · Avatar Borders'] },
+      { rarity: 'Uncommon',  pct: '25%',    items: ['Tags · Name Colors · Avatar Borders'] },
+      { rarity: 'Rare',      pct: '10.2%',  items: ['Tags · Name Colors · Avatar Borders'] },
+      { rarity: 'Epic',      pct: '3.95%',  items: ['Tags · Name Colors · Avatar Glows'] },
+      { rarity: 'Legendary', pct: '0.8%',   items: ['Tags · Name Colors · Avatar Fills'] },
       { rarity: 'Mythic',    pct: '0.05%',  items: ['GOD · Verified · Rainbow'] },
     ],
   },
@@ -885,7 +885,7 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
               }
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              {current.type === 'tag' ? 'Tag' : current.type === 'name-color' ? 'Name Color' : 'PFP Effect'}
+              {current.type === 'tag' ? 'Tag' : current.type === 'name-color' ? 'Name Color' : 'Avatar Effect'}
             </div>
           </div>
           {carouselCards.length > 1 && (
@@ -3092,7 +3092,7 @@ export default function MarketplacePage() {
                               <TradeGrid items={theirTagsDedup} accentColor="var(--primary)" selectedList={selectedRequest} onAdd={(item, max) => addRequest(item, max)} onRemove={item => removeRequest(item)} />
                               {theirColorsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🎨 Colors</div>}
                               <TradeGrid items={theirColorsDedup} accentColor="var(--primary)" selectedList={selectedRequest} onAdd={(item, max) => addRequest(item, max)} onRemove={item => removeRequest(item)} />
-                              {theirPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🖼️ PFP</div>}
+                              {theirPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🖼️ Avatar</div>}
                               <TradeGrid items={theirPfpDedup} accentColor="var(--primary)" selectedList={selectedRequest} onAdd={(item, max) => addRequest(item, max)} onRemove={item => removeRequest(item)} />
                               {selectedRequest.length > 0 && selectedRequestTotal > 0 && (
                                 <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, paddingTop: 6, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -3123,7 +3123,7 @@ export default function MarketplacePage() {
                               <TradeGrid items={myTagsDedup} accentColor="#22C55E" selectedList={selectedOffer} onAdd={(item, max) => addOffer(item, max)} onRemove={item => removeOffer(item)} />
                               {myColorsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🎨 Colors</div>}
                               <TradeGrid items={myColorsDedup} accentColor="#22C55E" selectedList={selectedOffer} onAdd={(item, max) => addOffer(item, max)} onRemove={item => removeOffer(item)} />
-                              {myPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🖼️ PFP</div>}
+                              {myPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🖼️ Avatar</div>}
                               <TradeGrid items={myPfpDedup} accentColor="#22C55E" selectedList={selectedOffer} onAdd={(item, max) => addOffer(item, max)} onRemove={item => removeOffer(item)} />
                               {selectedOffer.length > 0 && selectedOfferTotal > 0 && (
                                 <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, paddingTop: 6, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -3425,7 +3425,7 @@ export default function MarketplacePage() {
 
               {((inv?.ownedAvatarEffects ?? []).length > 0 || myActiveListings.some(l => l.itemType === 'avatar')) && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🖼️ Profile Picture Effects</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🖼️ Avatar Effects</div>
                   {groupById(byRarity(inv!.ownedAvatarEffects)).map(item =>
                     renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'avatar', inv!.avatarEffect === item.value, item.count)
                   )}
@@ -3754,7 +3754,7 @@ export default function MarketplacePage() {
           { label: '🏅 Badges',                  id: 'badge',      filter: i => isBadge(i) },
           { label: '🏷️ Tags',                    id: 'tag',        filter: i => i.type === 'tag' && !isBadge(i) },
           { label: '🎨 Name Colors',             id: 'name-color', filter: i => i.type === 'name-color' },
-          { label: '🖼️ Profile Picture Effects', id: 'avatar',        filter: i => i.type === 'avatar' },
+          { label: '🖼️ Avatar Effects', id: 'avatar',        filter: i => i.type === 'avatar' },
         ]
         const rarityOrder: Record<string, number> = { Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5 }
         return (

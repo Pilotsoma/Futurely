@@ -621,7 +621,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             <span style={{ fontSize: 20 }}>{post.unboxItemRarity === 'Mythic' ? '👑' : '🌟'}</span>
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, color: unboxAccent, letterSpacing: '0.5px' }}>
-                {post.unboxItemType === 'tag' ? 'TAG SPIN' : post.unboxItemType === 'name-color' ? 'NAME COLOR SPIN' : 'PFP SPIN'}
+                {post.unboxItemType === 'tag' ? 'TAG SPIN' : post.unboxItemType === 'name-color' ? 'NAME COLOR SPIN' : 'AVATAR SPIN'}
               </div>
             </div>
             <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, color: unboxAccent, background: `${unboxAccent}18`, border: `1px solid ${unboxAccent}44` }}>
@@ -682,7 +682,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const }}>
             <span style={{ fontSize: 16 }}>🎁</span>
             <span style={{ fontSize: 12, fontWeight: 800, color: giveawayAccent, letterSpacing: '0.5px' }}>
-              {isCoinGiveaway ? 'COIN GIVEAWAY' : isNameColorGiveaway ? 'NAME COLOR GIVEAWAY' : isPfpGiveaway ? 'PFP GIVEAWAY' : 'TAG GIVEAWAY'}
+              {isCoinGiveaway ? 'COIN GIVEAWAY' : isNameColorGiveaway ? 'NAME COLOR GIVEAWAY' : isPfpGiveaway ? 'AVATAR GIVEAWAY' : 'TAG GIVEAWAY'}
             </span>
             {isCoinGiveaway ? (
               <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(234,179,8,0.15)', color: '#EAB308', border: '1px solid rgba(234,179,8,0.5)' }}>
@@ -719,7 +719,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                   <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>[Student]</span>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                  Preview of the {isNameColorGiveaway ? 'name color' : 'PFP effect'} ✨
+                  Preview of the {isNameColorGiveaway ? 'name color' : 'Avatar effect'} ✨
                 </div>
               </div>
               {post.giveawayItemRarity && (
@@ -743,7 +743,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                     : isNameColorGiveaway
                       ? <><strong className={giveawayRainbow ? 'name-rainbow' : ''} style={giveawayRainbow ? {} : { color: post.giveawayTagColor ?? 'var(--text)' }}>{post.giveawayTag}</strong> name color</>
                       : isPfpGiveaway
-                        ? <><strong style={{ color: '#8B5CF6' }}>{post.giveawayTag}</strong> PFP effect</>
+                        ? <><strong style={{ color: '#8B5CF6' }}>{post.giveawayTag}</strong> Avatar effect</>
                         : <>the <strong style={{ color: giveawayTagColor }}>{post.giveawayTag}</strong> tag</>
                   }!
                 </div>
@@ -1648,7 +1648,7 @@ export default function StudyFeedPage() {
                   </div>
                   {/* Type toggle */}
                   <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const }}>
-                    {([['tag', '🏷️ Tag'], ['coin', null], ['name-color', '🎨 Name Color'], ['avatar', '🖼️ PFP Effect']] as const).map(([t, label]) => (
+                    {([['tag', '🏷️ Tag'], ['coin', null], ['name-color', '🎨 Name Color'], ['avatar', '🖼️ Avatar Effect']] as const).map(([t, label]) => (
                       <button key={t} onClick={() => { setGwType(t); setGwItemId('') }} style={{ flex: 1, minWidth: 80, height: 34, borderRadius: 8, border: `1px solid ${gwType === t ? 'gold' : 'var(--border)'}`, background: gwType === t ? 'rgba(255,215,0,0.12)' : 'transparent', color: gwType === t ? 'gold' : 'var(--text-secondary)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                         {t === 'coin' ? <><CoinIcon size={13} /> Coins</> : label}
                       </button>
@@ -1658,7 +1658,7 @@ export default function StudyFeedPage() {
                     placeholder={
                       gwType === 'coin' ? "Announce the giveaway… (e.g. 'Enter to win 500 coins!')"
                       : gwType === 'name-color' ? "Announce the giveaway… (e.g. 'Win a legendary name color!')"
-                      : gwType === 'avatar' ? "Announce the giveaway… (e.g. 'Enter to win a rare PFP effect!')"
+                      : gwType === 'avatar' ? "Announce the giveaway… (e.g. 'Enter to win a rare Avatar effect!')"
                       : "Announce the giveaway… (e.g. 'Enter to win a limited VIP tag!')"
                     }
                     value={gwBody}
@@ -1696,7 +1696,7 @@ export default function StudyFeedPage() {
                       </select>
                     ) : (
                       <select className="ns-input" style={{ flex: 1, height: 36, fontSize: 13 }} value={gwItemId} onChange={e => setGwItemId(e.target.value)}>
-                        <option value="">Pick a PFP effect…</option>
+                        <option value="">Pick an Avatar effect…</option>
                         {GW_AVATAR_ITEMS.map(i => (
                           <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>
                         ))}

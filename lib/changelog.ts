@@ -92,7 +92,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         emoji: '✨',
         headline: 'Animated Profile Effects',
-        detail: 'Gold Fill and Void Fill profile picture effects now animate in real time.',
+        detail: 'Gold Fill and Void Fill avatar effects now animate in real time.',
       },
       {
         emoji: '🪙',

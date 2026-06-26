@@ -148,7 +148,7 @@ async function autoDrawExpiredGiveaways() {
       : ga.giveawayItemType === 'name-color'
         ? `the "${ga.giveawayTag}" name color`
         : ga.giveawayItemType === 'avatar'
-          ? `the "${ga.giveawayTag}" PFP effect`
+          ? `the "${ga.giveawayTag}" Avatar effect`
           : `the "${ga.giveawayTag}" tag`;
     const notif = await prisma.notification.create({
       data: { userId: winner.userId, fromUserId: ga.userId, type: 'GIVEAWAY_WIN', postId: ga.id, preview: `You won a giveaway and received ${prize}!` },
@@ -678,7 +678,7 @@ router.post('/posts/:id/giveaway/draw', async (req: Request, res: Response) => {
       : post.giveawayItemType === 'name-color'
         ? `the "${post.giveawayTag}" name color`
         : post.giveawayItemType === 'avatar'
-          ? `the "${post.giveawayTag}" PFP effect`
+          ? `the "${post.giveawayTag}" Avatar effect`
           : `the "${post.giveawayTag}" tag`;
     const notif = await prisma.notification.create({
       data: { userId: winnerEntry.userId, fromUserId: post.userId, type: 'GIVEAWAY_WIN', postId, preview: `You won a giveaway and received ${prize}!` },
