@@ -134,6 +134,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
       if (role === 'DEV' || role === 'ADMIN') setIsAdmin(true)
       if (role === 'DEV') setIsDev(true)
+
+      // Also check allTags for a DEV tag (covers accounts where tag=DEV but role isn't set)
+      if (freshUser && role !== 'DEV') {
+        api.feedUserProfile(freshUser.id).then(p => {
+          if (p.tag === 'DEV' || (p.allTags ?? []).some((t: { tag: string }) => t.tag === 'DEV')) {
+            setIsDev(true)
+            setIsAdmin(true)
+          }
+        }).catch(() => {})
+      }
       if (name) {
         const n = name
         if (n.includes(',')) {
