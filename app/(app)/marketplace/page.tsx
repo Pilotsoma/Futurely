@@ -1580,6 +1580,8 @@ export default function MarketplacePage() {
     const next = !reduceMotion
     setReduceMotion(next)
     localStorage.setItem('rm', next ? '1' : '0')
+    if (next) document.documentElement.classList.add('reduce-motion')
+    else document.documentElement.classList.remove('reduce-motion')
   }
 
   // Inventory & coins
@@ -2530,7 +2532,7 @@ export default function MarketplacePage() {
   const pendingIncoming = incomingTrades.filter(t => t.status === 'PENDING').length
 
   return (
-    <div className={`fade-up${reduceMotion ? ' reduce-motion' : ''}`} style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
+    <div className="fade-up" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>Spend your coins</p>
