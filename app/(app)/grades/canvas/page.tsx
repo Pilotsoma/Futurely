@@ -1607,14 +1607,52 @@ function FilesTab({ courseId, canvasInstanceUrl }: { courseId: number; canvasIns
   )
 }
 
-function GradesTab({ courseGrades }: { courseGrades: CanvasGradesCourse | undefined }) {
+function GradesTab({ courseGrades, onSelectAssignment }: { courseGrades: CanvasGradesCourse | undefined; onSelectAssignment: (id: number) => void }) {
   if (!courseGrades) return <Empty text="No grade data available." />
 
   const score = courseGrades.currentScore
   const graded = courseGrades.assignments.filter(a => a.submission?.workflow_state === 'graded' && a.submission.score !== null)
-  const submitted = courseGrades.assignments.filter(a => a.submission?.workflow_state === 'submitted')
+  const submitted = courseGrades.assignments.filter(a => a.submission?.workflow_state === 'submitted' && !a.submission?.missing)
   const missing = courseGrades.assignments.filter(a => a.submission?.missing)
-  const unsubmitted = courseGrades.assignments.filter(a => !a.submission || a.submission.workflow_state === 'unsubmitted')
+  const unsubmitted = courseGrades.assignments.filter(a => !a.submission || (a.submission.workflow_state === 'unsubmitted' && !a.submission.missing))
+
+  function AssignmentRow({ a, last }: { a: CanvasGradesAssignment; last: boolean }) {
+    const pct = a.points_possible && a.submission?.score !== null && a.submission?.score !== undefined
+      ? (a.submission.score / a.points_possible) * 100 : null
+    return (
+      <div
+        onClick={() => onSelectAssignment(a.id)}
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: last ? 'none' : '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', transition: 'background 0.1s' }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}
+      >
+        <span style={{ flex: 1, fontSize: 13, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+        {pct !== null ? (
+          <span style={{ fontSize: 13, fontWeight: 700, color: scoreColor(pct), flexShrink: 0 }}>
+            {a.submission!.score} / {a.points_possible}
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>({pct.toFixed(1)}%)</span>
+          </span>
+        ) : (
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
+            {a.points_possible != null ? `— / ${a.points_possible}` : '—'}
+          </span>
+        )}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: 'var(--text-muted)', flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    )
+  }
+
+  function Section({ title, items }: { title: string; items: CanvasGradesAssignment[] }) {
+    if (items.length === 0) return null
+    return (
+      <div>
+        <div style={S.sectionTitle}>{title}</div>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          {items.map((a, i) => <AssignmentRow key={a.id} a={a} last={i === items.length - 1} />)}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -1644,26 +1682,10 @@ function GradesTab({ courseGrades }: { courseGrades: CanvasGradesCourse | undefi
         </div>
       </div>
 
-      {/* Graded assignments */}
-      {graded.length > 0 && (
-        <div>
-          <div style={S.sectionTitle}>Graded Assignments</div>
-          <div style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-            {graded.map((a, i) => {
-              const pct = a.points_possible && a.submission?.score !== null ? (a.submission!.score! / a.points_possible) * 100 : null
-              return (
-                <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: i < graded.length - 1 ? '1px solid var(--border)' : 'none', background: 'var(--surface)' }}>
-                  <span style={{ flex: 1, fontSize: 13, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: scoreColor(pct), flexShrink: 0 }}>
-                    {a.submission?.score} / {a.points_possible ?? '?'}
-                    {pct !== null && <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>({pct.toFixed(1)}%)</span>}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      <Section title="Graded" items={graded} />
+      <Section title="Submitted" items={submitted} />
+      <Section title="Missing" items={missing} />
+      <Section title="Not Submitted" items={unsubmitted} />
     </div>
   )
 }
@@ -2077,7 +2099,7 @@ export default function CanvasPage() {
                 <FilesTab courseId={activeCourseId} canvasInstanceUrl={activeInstance} />
               )}
               {courseTab === 'grades' && (
-                gradesLoading ? <ContentSkeleton /> : <GradesTab courseGrades={gradesForCourse} />
+                gradesLoading ? <ContentSkeleton /> : <GradesTab courseGrades={gradesForCourse} onSelectAssignment={id => openAssignment(activeCourseId!, id)} />
               )}
             </>
           ) : null}
