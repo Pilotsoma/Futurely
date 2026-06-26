@@ -338,6 +338,7 @@ type UserSnap = {
   tag?: string
   nameColor?: string | null
   avatarEffect?: string | null
+  badge?: string | null
 }
 
 function resolveTagName(item: TradeItem): string {
@@ -364,8 +365,11 @@ function removeItem(user: UserSnap, item: TradeItem): Record<string, string | nu
     if (idx !== -1) tags.splice(idx, 1)
     updates.allTags = JSON.stringify(tags)
     // Only unequip if no copies remain
-    if (user.tag === tagName && !tags.some(t => t.tag === tagName)) {
-      updates.tag = 'Student'; updates.tagColor = null
+    if (!tags.some(t => t.tag === tagName)) {
+      if (user.tag === tagName) { updates.tag = 'Student'; updates.tagColor = null }
+      // Badge is a separate field — clear it when the backing tag is gone
+      if (item.id === 'verified' && user.badge === 'verified-yellow') updates.badge = null
+      if (item.id === 'verified-blue' && user.badge === 'verified-blue') updates.badge = null
     }
   } else if (item.type === 'name-color') {
     const owned = parseJsonArr(user.ownedNameColors)
@@ -423,6 +427,8 @@ function applyMultipleRemoves(user: UserSnap, items: TradeItem[]): Record<string
       const tagName = resolveTagName(item)
       tags = tags.filter(t => t.tag !== tagName)
       if (user.tag === tagName) { updates.tag = 'Student'; updates.tagColor = null }
+      if (item.id === 'verified' && user.badge === 'verified-yellow') updates.badge = null
+      if (item.id === 'verified-blue' && user.badge === 'verified-blue') updates.badge = null
     } else if (item.type === 'name-color') {
       nameColors = nameColors.filter(i => i.id !== item.id)
       const def = NAME_COLOR_BOX_ITEMS.find(c => c.id === item.id) ?? DEV_CURSE_ITEMS.find(c => c.id === item.id && c.itemType === 'name-color')
@@ -916,7 +922,7 @@ router.post('/quicksell', requireAuth, txLimiter, async (req: AuthRequest, res: 
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { coins: true, allTags: true, ownedNameColors: true, ownedAvatarEffects: true },
+      select: { coins: true, allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, badge: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
@@ -944,6 +950,12 @@ router.post('/quicksell', requireAuth, txLimiter, async (req: AuthRequest, res: 
         tags.splice(idx, 1)
       }
       data = { allTags: JSON.stringify(tags) }
+      // Clear equipped tag and badge when last copy is sold
+      if (!tags.some(t => t.tag === tagName)) {
+        if (user.tag === tagName) { data.tag = 'Student'; data.tagColor = null }
+        if (itemId === 'verified' && user.badge === 'verified-yellow') data.badge = null
+        if (itemId === 'verified-blue' && user.badge === 'verified-blue') data.badge = null
+      }
     } else if (itemType === 'name-color') {
       const owned = parseJsonArr(user.ownedNameColors)
       const idx = owned.findIndex((i: { id: string; rarity?: string }) => i.id === itemId)
@@ -1195,7 +1207,7 @@ router.post('/listings', requireAuth, txLimiter, async (req: AuthRequest, res: R
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { coins: true, allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true },
+      select: { coins: true, allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true, badge: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
     if (user.coins < listingFee) {
@@ -1518,7 +1530,7 @@ router.post('/trader/sell', requireAuth, txLimiter, async (req: AuthRequest, res
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true, traderSellCount: true, traderSellDate: true },
+      select: { allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true, badge: true, traderSellCount: true, traderSellDate: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
@@ -1651,7 +1663,7 @@ router.post('/trader/trade', requireAuth, txLimiter, async (req: AuthRequest, re
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true, traderTradeCount: true, traderTradeDate: true },
+      select: { allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true, badge: true, traderTradeCount: true, traderTradeDate: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
@@ -1832,7 +1844,7 @@ router.post('/trades', requireAuth, txLimiter, async (req: AuthRequest, res: Res
     const [sender, receiver] = await Promise.all([
       prisma.user.findUnique({
         where: { id: req.userId },
-        select: { coins: true, allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true },
+        select: { coins: true, allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true, badge: true },
       }),
       prisma.user.findUnique({ where: { id: receiverId }, select: { id: true } }),
     ])
@@ -1899,11 +1911,11 @@ router.post('/trades/:id/accept', requireAuth, txLimiter, async (req: AuthReques
       const [senderSnap, receiverSnap] = await Promise.all([
         tx.user.findUnique({
           where: { id: trade.senderId },
-          select: { allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true },
+          select: { allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true, badge: true },
         }),
         tx.user.findUnique({
           where: { id: trade.receiverId },
-          select: { allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true },
+          select: { allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, nameColor: true, avatarEffect: true, badge: true },
         }),
       ])
       if (!senderSnap || !receiverSnap) throw new Error('User not found')
