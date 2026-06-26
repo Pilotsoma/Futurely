@@ -1589,6 +1589,11 @@ export default function MarketplacePage() {
   const [devBanMarketUserId, setDevBanMarketUserId] = useState('')
   const [devBanMarketBusy, setDevBanMarketBusy] = useState(false)
   const [devBanMarketMsg, setDevBanMarketMsg] = useState('')
+  const [devLookupId, setDevLookupId] = useState('')
+  const [devLookupBusy, setDevLookupBusy] = useState(false)
+  type LookupUser = { id: number; name: string | null; hacName: string | null; email: string; role: string; tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; coins: number; loginStreak: number; chatBanned: boolean; marketplaceBanned: boolean; marketplaceAccess: boolean; deletedAt: string | null; createdAt: string; lastSeenAt: string | null }
+  const [devLookupResult, setDevLookupResult] = useState<LookupUser | null>(null)
+  const [devLookupError, setDevLookupError] = useState('')
   const [profileMarketGranting, setProfileMarketGranting] = useState(false)
   const [profileMarketMsg, setProfileMarketMsg] = useState('')
 
@@ -4002,6 +4007,74 @@ export default function MarketplacePage() {
         <div className="ns-card" style={{ marginTop: 28, padding: 20, border: '1px solid rgba(255,107,107,0.4)', background: 'rgba(255,107,107,0.04)' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#ff6b6b', marginBottom: 16 }}>🔧 DEV Panel — Grant to Self</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* User lookup by Futurely ID */}
+            <div style={{ borderBottom: '1px solid rgba(255,107,107,0.2)', paddingBottom: 14, marginBottom: 2 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🔍 Look Up User by ID</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  value={devLookupId}
+                  onChange={e => { setDevLookupId(e.target.value); setDevLookupResult(null); setDevLookupError('') }}
+                  onKeyDown={async e => {
+                    if (e.key !== 'Enter') return
+                    const uid = parseInt(devLookupId)
+                    if (isNaN(uid)) { setDevLookupError('Invalid ID'); return }
+                    setDevLookupBusy(true); setDevLookupResult(null); setDevLookupError('')
+                    try { setDevLookupResult(await api.adminLookupUser(uid)) }
+                    catch { setDevLookupError('User not found') }
+                    finally { setDevLookupBusy(false) }
+                  }}
+                  placeholder="Futurely ID"
+                  type="number"
+                  style={{ width: 130, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}
+                />
+                <button
+                  disabled={devLookupBusy || !devLookupId.trim()}
+                  onClick={async () => {
+                    const uid = parseInt(devLookupId)
+                    if (isNaN(uid)) { setDevLookupError('Invalid ID'); return }
+                    setDevLookupBusy(true); setDevLookupResult(null); setDevLookupError('')
+                    try { setDevLookupResult(await api.adminLookupUser(uid)) }
+                    catch { setDevLookupError('User not found') }
+                    finally { setDevLookupBusy(false) }
+                  }}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#ff6b6b', color: '#fff', fontWeight: 700, fontSize: 13, cursor: devLookupId.trim() ? 'pointer' : 'not-allowed', opacity: devLookupId.trim() ? 1 : 0.5 }}
+                >{devLookupBusy ? '…' : 'Look Up'}</button>
+              </div>
+              {devLookupError && <div style={{ fontSize: 12, color: '#EF4444', fontWeight: 600, marginTop: 6 }}>{devLookupError}</div>}
+              {devLookupResult && (() => {
+                const u = devLookupResult
+                const rows: [string, string][] = [
+                  ['ID', String(u.id)],
+                  ['Name', u.name ?? '—'],
+                  ['HAC Name', u.hacName ?? '—'],
+                  ['Email', u.email],
+                  ['Role', u.role],
+                  ['Tag', u.tag ? `[${u.tag}]` : '—'],
+                  ['Name Color', u.nameColor ?? '—'],
+                  ['Avatar Effect', u.avatarEffect ?? '—'],
+                  ['Coins', u.coins.toLocaleString()],
+                  ['Streak', `${u.loginStreak}d`],
+                  ['Market Access', u.marketplaceAccess ? '✓ Yes' : '✗ No'],
+                  ['Market Banned', u.marketplaceBanned ? '🚫 Yes' : '✓ No'],
+                  ['Chat Banned', u.chatBanned ? '🚫 Yes' : '✓ No'],
+                  ['Deleted', u.deletedAt ? new Date(u.deletedAt).toLocaleDateString() : 'No'],
+                  ['Last Seen', u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleString() : '—'],
+                  ['Joined', new Date(u.createdAt).toLocaleDateString()],
+                ]
+                return (
+                  <div style={{ marginTop: 10, background: 'var(--surface-2)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--border)' }}>
+                    {rows.map(([label, val]) => (
+                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{label}</span>
+                        <span style={{ color: val.startsWith('🚫') ? '#EF4444' : val.startsWith('✓') ? '#22C55E' : 'var(--text)', fontWeight: 500, textAlign: 'right', maxWidth: '60%', wordBreak: 'break-all' }}>{val}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+            </div>
+
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input value={devCoins} onChange={e => setDevCoins(e.target.value)} placeholder="500"
                 style={{ width: 100, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }} />

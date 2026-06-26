@@ -817,6 +817,9 @@ export const api = {
   adminStats: () =>
     request<{ totalUsers: number; activeUsers: number; liveUsers: number }>('/api/marketplace/admin/stats'),
 
+  adminLookupUser: (userId: number) =>
+    request<{ id: number; name: string | null; hacName: string | null; email: string; role: string; tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; coins: number; loginStreak: number; chatBanned: boolean; marketplaceBanned: boolean; marketplaceAccess: boolean; deletedAt: string | null; createdAt: string; lastSeenAt: string | null }>(`/api/admin/users/${userId}`),
+
   adminGrantMarketAccess: (userId: number) =>
     request<{ ok: boolean }>('/api/admin/grant-market-access', { method: 'POST', body: JSON.stringify({ userId }) }),
 

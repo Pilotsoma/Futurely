@@ -14,6 +14,28 @@ function parseTagArr(raw: unknown): Array<{ tag: string; tagColor: string }> {
   try { return JSON.parse(String(raw ?? '[]')) } catch { return [] }
 }
 
+// ── GET /admin/users/:id — look up any user by Futurely ID ──
+router.get('/users/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = parseInt(req.params.id)
+  if (isNaN(id)) { res.status(400).json({ error: 'Invalid user ID' }); return }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true, name: true, hacName: true, email: true, role: true,
+        tag: true, tagColor: true, nameColor: true, avatarEffect: true,
+        coins: true, loginStreak: true,
+        chatBanned: true, marketplaceBanned: true, marketplaceAccess: true,
+        deletedAt: true, createdAt: true, lastSeenAt: true,
+      },
+    })
+    if (!user) { res.status(404).json({ error: 'User not found' }); return }
+    res.json({ data: user })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to look up user' })
+  }
+})
+
 // ── GET /admin/educator-requests ──
 const listRequestsQuerySchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'DENIED', 'ALL']).optional().default('PENDING'),
