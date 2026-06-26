@@ -2415,7 +2415,7 @@ export default function MarketplacePage() {
               onChange={e => setListingPrice(e.target.value)}
               style={{ width: 72, padding: '4px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12 }}
             />
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 2 }}>fee: <CoinIcon size={11} />{Math.floor((parseInt(listingPrice) || 0) * 0.1)}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 2 }}>fee: <CoinIcon size={11} />{Math.floor((parseInt(listingPrice) || 0) * 0.05)}</span>
             <button onClick={() => void handleCreateListing()} disabled={listingBusy}
               style={{ padding: '4px 10px', borderRadius: 7, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
               {listingBusy ? '…' : 'Confirm'}

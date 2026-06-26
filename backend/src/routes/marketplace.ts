@@ -1242,7 +1242,7 @@ router.post('/listings', requireAuth, txLimiter, async (req: AuthRequest, res: R
     res.status(403).json({ error: 'This tag cannot be listed on the marketplace' }); return
   }
 
-  const listingFee = Math.floor(price * 0.1)
+  const listingFee = Math.floor(price * 0.05)
 
   try {
     const user = await prisma.user.findUnique({
@@ -1488,9 +1488,9 @@ router.get('/users/:userId/inventory', requireAuth, async (req: AuthRequest, res
 
 // ── Wandering Trader ──────────────────────────────────────────────────────────
 
-const TRADER_DAILY_SELL_LIMIT  = 3
-const TRADER_DAILY_BUY_LIMIT   = 3
-const TRADER_DAILY_TRADE_LIMIT = 3
+const TRADER_DAILY_SELL_LIMIT  = 2
+const TRADER_DAILY_BUY_LIMIT   = 2
+const TRADER_DAILY_TRADE_LIMIT = 2
 
 const TRADER_MARKUP: Record<string, number> = {
   Common: 1.5, Uncommon: 1.75, Rare: 2.0, Epic: 2.25, Legendary: 2.5, Mythic: 2.0,
