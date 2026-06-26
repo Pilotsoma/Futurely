@@ -14,6 +14,7 @@ import ForcedLogoutWatcher from '../../components/ui/ForcedLogoutWatcher'
 import InactivityWatcher from '../../components/ui/InactivityWatcher'
 import ExternalLinkGuard from '../../components/ui/ExternalLinkGuard'
 import CanvasTokenExpiredBanner from '../../components/ui/CanvasTokenExpiredBanner'
+import LagDetector from '../../components/ui/LagDetector'
 const NAV = [
   {
     href: '/dashboard', label: 'Dashboard',
@@ -455,6 +456,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <InactivityWatcher />
       <ExternalLinkGuard />
       <CanvasTokenExpiredBanner />
+      <LagDetector />
 
       {/* Main content — spring-follows sidebar width */}
       <motion.main

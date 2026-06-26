@@ -93,6 +93,7 @@ const DEFAULT_GRADE_COLORS = { A: '#22C55E', B: '#10B981', C: '#F59E0B', D: '#F9
 export default function SettingsPage() {
   const router = useRouter()
   const [theme, setTheme]                   = useState<'dark' | 'light'>('dark')
+  const [reduceMotion, setReduceMotion]     = useState(false)
 
   const [gradeColors, setGradeColors]       = useState<Record<string, string>>(DEFAULT_GRADE_COLORS)
   const [data, setData]                     = useState<StudentData | null>(null)
@@ -151,6 +152,7 @@ export default function SettingsPage() {
   useEffect(() => {
     setTheme((localStorage.getItem('ns_theme') as 'dark' | 'light') || 'dark')
     setHideGpa(localStorage.getItem('ns_hide_gpa') === '1')
+    setReduceMotion(localStorage.getItem('rm') === '1')
     try {
       const saved = localStorage.getItem('ns_grade_colors_v2')
       if (saved) {
@@ -744,6 +746,30 @@ export default function SettingsPage() {
                 background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}>
                 {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div>
+                <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Reduce animations</span>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Disables tag, avatar, and name-color animations — helps if the app is lagging</div>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !reduceMotion
+                  setReduceMotion(next)
+                  localStorage.setItem('rm', next ? '1' : '0')
+                  if (next) document.documentElement.classList.add('reduce-motion')
+                  else document.documentElement.classList.remove('reduce-motion')
+                }}
+                style={{
+                  width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                  background: reduceMotion ? 'var(--primary)' : 'var(--border)', transition: 'background 0.2s',
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 3, left: reduceMotion ? 23 : 3, width: 18, height: 18,
+                  borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                }} />
               </button>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
