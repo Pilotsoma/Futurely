@@ -1300,7 +1300,7 @@ function SpinWheelModal({
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>You won!</div>
               <div style={{ fontSize: 18, fontWeight: 800, color: rarityColor, marginBottom: 2 }}>{itemLabel}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: wonPrice ? 4 : 14 }}>
-                {r.won.rarity}{r.alreadyHad ? ' · already owned' : ''}
+                {r.won.rarity} · {r.won.type === 'tag' ? 'Tag' : r.won.type === 'name-color' ? 'Name Color' : 'Avatar Effect'}{r.alreadyHad ? ' · already owned' : ''}
               </div>
               {wonPrice && (
                 <div style={{ fontSize: 12, color: '#EAB308', fontWeight: 700, marginBottom: 14 }}>
