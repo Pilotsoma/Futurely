@@ -3,49 +3,58 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
-const LOW_FPS_THRESHOLD = 30
-const LOW_FPS_SECONDS   = 3
-const WARN_COOLDOWN_MS  = 24 * 60 * 60 * 1000
+// Trigger if more than half of frames in a 1-second window take > 33ms (< 30fps effective)
+// and that condition holds for 2 consecutive windows.
+const SLOW_FRAME_MS    = 33   // frame gap that counts as "slow"
+const SLOW_RATIO       = 0.5  // fraction of frames that must be slow
+const SLOW_WINDOWS     = 2    // consecutive slow windows needed
+const FRAMES_PER_WINDOW = 30  // sample this many frames per window
 
 export default function LagDetector() {
   const [showBanner, setShowBanner] = useState(false)
   const rafRef = useRef<number>(0)
-  const lowFpsSecondsRef = useRef(0)
-  const activeRef = useRef(true)
 
   useEffect(() => {
-    const lastWarn = parseInt(localStorage.getItem('rm_warned') ?? '0', 10)
-    if (Date.now() - lastWarn < WARN_COOLDOWN_MS) return
+    // Once per browser session (sessionStorage resets on tab close)
+    if (sessionStorage.getItem('rm_warned') === '1') return
     if (localStorage.getItem('rm') === '1') return
 
-    let lastSec = performance.now()
-    let frameCount = 0
+    let lastFrame = 0
+    let slowFrames = 0
+    let totalFrames = 0
+    let slowWindows = 0
+    let stopped = false
 
     function tick(now: number) {
-      if (!activeRef.current) return
-      frameCount++
-      const elapsed = now - lastSec
-      if (elapsed >= 1000) {
-        const fps = (frameCount / elapsed) * 1000
-        if (fps < LOW_FPS_THRESHOLD) {
-          lowFpsSecondsRef.current++
-          if (lowFpsSecondsRef.current >= LOW_FPS_SECONDS) {
-            localStorage.setItem('rm_warned', String(Date.now()))
-            setShowBanner(true)
-            return
+      if (stopped) return
+
+      if (lastFrame > 0) {
+        totalFrames++
+        if (now - lastFrame > SLOW_FRAME_MS) slowFrames++
+
+        if (totalFrames >= FRAMES_PER_WINDOW) {
+          if (slowFrames / totalFrames >= SLOW_RATIO) {
+            slowWindows++
+            if (slowWindows >= SLOW_WINDOWS) {
+              sessionStorage.setItem('rm_warned', '1')
+              setShowBanner(true)
+              return
+            }
+          } else {
+            slowWindows = 0
           }
-        } else {
-          lowFpsSecondsRef.current = 0
+          slowFrames = 0
+          totalFrames = 0
         }
-        frameCount = 0
-        lastSec = now
       }
+
+      lastFrame = now
       rafRef.current = requestAnimationFrame(tick)
     }
 
     rafRef.current = requestAnimationFrame(tick)
     return () => {
-      activeRef.current = false
+      stopped = true
       cancelAnimationFrame(rafRef.current)
     }
   }, [])
