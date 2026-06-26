@@ -197,7 +197,10 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                   setShowPanel(false)
                   if (n.type === 'LISTING_SOLD' || n.type === 'GIVEAWAY_WIN' || n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED') {
                     router.push('/marketplace')
-                  } else if (n.type === 'ASSIGNMENT_CREATED' || n.type === 'TEACHER_ASSIGNMENT' || n.type === 'CLASSROOM_JOINED') {
+                  } else if (n.type === 'ASSIGNMENT_CREATED') {
+                    const isCanvas = n.preview?.includes('Canvas assignment') || n.preview?.includes('Canvas assignments')
+                    router.push(isCanvas ? '/grades/canvas' : '/grades/classwork')
+                  } else if (n.type === 'TEACHER_ASSIGNMENT' || n.type === 'CLASSROOM_JOINED') {
                     router.push('/grades/classwork')
                   } else if (n.type === 'COUNSELOR_LINKED' || n.type === 'COUNSELOR_NOTE_ADDED' || n.type === 'COUNSELOR_RECOMMENDATION_ADDED' || n.type === 'ACTION_ITEM_CREATED') {
                     router.push('/my-counselor')
