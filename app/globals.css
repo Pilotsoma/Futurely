@@ -662,3 +662,27 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .canvas-page-body pre { padding: 12px; overflow-x: auto; }
 .canvas-page-body code { padding: 1px 5px; }
 .canvas-page-body blockquote { border-left: 3px solid var(--primary); margin: 0.8em 0; padding: 6px 14px; color: var(--text-secondary); background: var(--surface-2); border-radius: 0 6px 6px 0; }
+
+/* ── Reduce-motion: disables all cosmetic animations for performance ──────── */
+.reduce-motion .tag-rainbow,
+.reduce-motion .tag-mythic,
+.reduce-motion .tag-god,
+.reduce-motion .tag-curse,
+.reduce-motion .name-rainbow,
+.reduce-motion .name-curse,
+.reduce-motion .avatar-rainbow,
+.reduce-motion .avatar-gold-fill,
+.reduce-motion .avatar-void-fill,
+.reduce-motion .avatar-white-fill,
+.reduce-motion .avatar-curse,
+.reduce-motion .mythic-hue,
+.reduce-motion .unobtainable-hue,
+.reduce-motion .box-rainbow,
+.reduce-motion .box-legendary,
+.reduce-motion .box-mythic,
+.reduce-motion .legendary-text,
+.reduce-motion .mythic-text,
+.reduce-motion .ai-dot {
+  animation: none !important;
+  transition: none !important;
+}

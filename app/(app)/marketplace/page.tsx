@@ -1574,6 +1574,13 @@ export default function MarketplacePage() {
   const [streak, setStreak] = useState<number | null>(null)
   const [tab, setTab] = useState<Tab>('boxes')
   const [tradeSubTab, setTradeSubTab] = useState<TradeSubTab>('new')
+  const [reduceMotion, setReduceMotion] = useState(false)
+  useEffect(() => { setReduceMotion(localStorage.getItem('rm') === '1') }, [])
+  function toggleReduceMotion() {
+    const next = !reduceMotion
+    setReduceMotion(next)
+    localStorage.setItem('rm', next ? '1' : '0')
+  }
 
   // Inventory & coins
   const [inv, setInv] = useState<InventoryData | null>(null)
@@ -2523,7 +2530,7 @@ export default function MarketplacePage() {
   const pendingIncoming = incomingTrades.filter(t => t.status === 'PENDING').length
 
   return (
-    <div className="fade-up" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
+    <div className={`fade-up${reduceMotion ? ' reduce-motion' : ''}`} style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>Spend your coins</p>
@@ -2596,7 +2603,7 @@ export default function MarketplacePage() {
       })()}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 2, marginBottom: 24, borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: 2, marginBottom: 24, borderBottom: '1px solid var(--border)', alignItems: 'flex-end' }}>
         {(['boxes', 'shop', 'trade', 'trader', 'inventory', 'leaderboard', 'catalog'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '8px 16px', borderRadius: '8px 8px 0 0', border: 'none',
@@ -2619,6 +2626,13 @@ export default function MarketplacePage() {
             {t === 'catalog' && '📖 Catalog'}
           </button>
         ))}
+        <button
+          onClick={toggleReduceMotion}
+          title={reduceMotion ? 'Enable animations' : 'Disable animations to reduce lag'}
+          style={{ marginLeft: 'auto', marginBottom: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: reduceMotion ? 'var(--surface-2)' : 'transparent', color: reduceMotion ? 'var(--text)' : 'var(--text-muted)', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}
+        >
+          {reduceMotion ? '⚡ Motion Off' : '⚡ Motion On'}
+        </button>
       </div>
 
       {/* ── BOXES TAB ── */}
