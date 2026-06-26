@@ -48,7 +48,10 @@ function newSessionId() {
 }
 
 function formatSessionDate(ts: number): string {
-  const diffDays = Math.floor((Date.now() - ts) / 86400000)
+  const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const today = toDay(new Date())
+  const day   = toDay(new Date(ts))
+  const diffDays = Math.round((today - day) / 86400000)
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Yesterday'
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
