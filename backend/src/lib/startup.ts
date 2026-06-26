@@ -1,9 +1,7 @@
 import { prisma } from './prisma'
 
-// Grouped into as few round-trips as possible: one ALTER TABLE per target table,
-// plus individual CREATE TABLE IF NOT EXISTS statements.
 const PATCHES: string[] = [
-  // ── User columns (single round-trip) ─────────────────────────────
+  // ── User columns ─────────────────────────────────────────────────────
   `ALTER TABLE "User"
     ADD COLUMN IF NOT EXISTS "hacName"                  TEXT,
     ADD COLUMN IF NOT EXISTS "coins"                    INTEGER      NOT NULL DEFAULT 0,
@@ -30,7 +28,7 @@ const PATCHES: string[] = [
   // ALTER COLUMN must be its own statement
   `ALTER TABLE "User" ALTER COLUMN "passwordHash" DROP NOT NULL`,
 
-  // ── Post columns (single round-trip) ─────────────────────────────
+  // ── Post columns ─────────────────────────────────────────────────────
   `ALTER TABLE "Post"
     ADD COLUMN IF NOT EXISTS "type"                TEXT  NOT NULL DEFAULT 'NORMAL',
     ADD COLUMN IF NOT EXISTS "giveawayTag"         TEXT,
@@ -50,18 +48,26 @@ const PATCHES: string[] = [
     ADD COLUMN IF NOT EXISTS "unboxItemTagColor"   TEXT,
     ADD COLUMN IF NOT EXISTS "pinnedUntil"         TIMESTAMP(3)`,
 
-  // ── Unique constraint on User.name ───────────────────────────────
-  // Deduplicate first (keeps the row with the lowest id per name).
-  `WITH ranked AS (
-    SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY id) AS rn
-    FROM "User" WHERE name IS NOT NULL
-  )
-  UPDATE "User" SET name = NULL FROM ranked
-  WHERE "User".id = ranked.id AND ranked.rn > 1`,
+  // ── Unique constraint on User.name ───────────────────────────────────
+  // Deduplicate only if duplicates actually exist (avoids a full table scan every cold start).
+  `DO $$ BEGIN
+    IF EXISTS (
+      SELECT 1 FROM "User" WHERE name IS NOT NULL
+      GROUP BY name HAVING COUNT(*) > 1 LIMIT 1
+    ) THEN
+      WITH ranked AS (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY id) AS rn
+        FROM "User" WHERE name IS NOT NULL
+      )
+      UPDATE "User" SET name = NULL FROM ranked
+      WHERE "User".id = ranked.id AND ranked.rn > 1;
+    END IF;
+  END $$`,
 
-  `ALTER TABLE "User" ADD CONSTRAINT "User_name_key" UNIQUE ("name")`,
+  // IF NOT EXISTS avoids the AccessExclusiveLock when the constraint already exists.
+  `ALTER TABLE "User" ADD CONSTRAINT IF NOT EXISTS "User_name_key" UNIQUE ("name")`,
 
-  // ── Tables ───────────────────────────────────────────────────────
+  // ── Tables ───────────────────────────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS "GiveawayEntry" (
     "id"        SERIAL PRIMARY KEY,
     "postId"    INTEGER NOT NULL REFERENCES "Post"("id") ON DELETE CASCADE,
@@ -100,8 +106,8 @@ let patchPromise: Promise<void> | null = null
 export function ensureSchema(): Promise<void> {
   if (patchPromise) return patchPromise
   patchPromise = (async () => {
-    // Single probe: if the most recently added column and table both exist,
-    // schema is already fully patched — skip all work.
+    // Probe checks the two newest additions. If both exist, all patches have run — skip.
+    // IMPORTANT: update this probe whenever a new column/table is added to PATCHES above.
     try {
       await prisma.$queryRawUnsafe(`SELECT "marketplaceBanned" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
