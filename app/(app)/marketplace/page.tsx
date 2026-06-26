@@ -1078,7 +1078,7 @@ function SpinWheelModal({
   const [spinDuration, setSpinDuration] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [spinError, setSpinError] = useState<string | null>(null)
-  const [multiArrows, setMultiArrows] = useState<Array<{ finalAngle: number; color: string }>>([])
+  const [multiArrows, setMultiArrows] = useState<Array<{ finalAngle: number }>>([])
   const [arrowsLanded, setArrowsLanded] = useState(false)
   const [canDismiss, setCanDismiss] = useState(true)
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1141,7 +1141,7 @@ function SpinWheelModal({
       const margin = Math.min(segSize * 0.15, 5)
       const landAngle = seg.start + margin + Math.random() * Math.max(0, segSize - margin * 2)
       const spins = 3 + Math.floor(Math.random() * 3)
-      return { finalAngle: spins * 360 + landAngle, color: getRarityWheelColor(r.won.rarity) }
+      return { finalAngle: spins * 360 + landAngle }
     })
     setMultiArrows(arrows)
     // After first paint (arrows at 0), trigger the spin animation
@@ -1258,9 +1258,8 @@ function SpinWheelModal({
                 transform: `rotate(${pointerAngle}deg)`,
                 transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
               }}>
-                {/* Long needle from hub-edge to near rim — looks naturally attached to the center circle */}
                 <polygon
-                  points={`${CX},${CY - 113} ${CX - 9},${CY - 30} ${CX + 9},${CY - 30}`}
+                  points={`${CX},${CY - 80} ${CX - 9},${CY - 30} ${CX + 9},${CY - 30}`}
                   fill="#EF4444"
                   style={{ filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.8))' }}
                 />
@@ -1273,8 +1272,8 @@ function SpinWheelModal({
                 transition: arrowsLanded ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
               }}>
                 <polygon
-                  points={`${CX},${CY - 113} ${CX - 7},${CY - 30} ${CX + 7},${CY - 30}`}
-                  fill={arrow.color}
+                  points={`${CX},${CY - 80} ${CX - 7},${CY - 30} ${CX + 7},${CY - 30}`}
+                  fill="#EF4444"
                   fillOpacity={multiArrows.length <= 10 ? 0.9 : multiArrows.length <= 50 ? 0.6 : 0.4}
                   style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }}
                 />
