@@ -101,6 +101,15 @@ model User {
   traderBuyDate             String                      @default("")
   traderTradeCount          Int                         @default(0)
   traderTradeDate           String                      @default("")
+  spinCoinsSpent            Int                         @default(0)
+  spinTotalSpins            Int                         @default(0)
+  spinCommon                Int                         @default(0)
+  spinUncommon              Int                         @default(0)
+  spinRare                  Int                         @default(0)
+  spinEpic                  Int                         @default(0)
+  spinLegendary             Int                         @default(0)
+  spinMythic                Int                         @default(0)
+  spinCurse                 Int                         @default(0)
 }
 
 model OAuthAccount {

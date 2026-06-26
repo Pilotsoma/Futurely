@@ -9,7 +9,7 @@ import {
   api, ApiError, InventoryData, BoxResult, MarketplaceItem, TagInventoryItem,
   MarketplaceListing, TradeOffer, TradeItem, UserPublicInventory, FeedUserProfile,
   getApiToken, ItemSalePoint, ItemOwner, LeaderboardData, LeaderboardEntry,
-  FeedPost,
+  FeedPost, SpinStats,
 } from '../../../lib/api'
 
 // ── Tag helpers ───────────────────────────────────────────────────────────────
@@ -1702,6 +1702,11 @@ export default function MarketplacePage() {
   const [freeSpinOpen, setFreeSpinOpen] = useState(false)
   const [freeSpinCountdown, setFreeSpinCountdown] = useState('')
 
+  // Spin stats
+  const [spinStatsOpen, setSpinStatsOpen] = useState(false)
+  const [spinStats, setSpinStats] = useState<SpinStats | null>(null)
+  const [spinStatsLoading, setSpinStatsLoading] = useState(false)
+
   // Item prices for hover tooltips
   const [prices, setPrices] = useState<Record<string, number>>({})
 
@@ -2553,13 +2558,27 @@ export default function MarketplacePage() {
                 </p>
               )}
             </div>
-            <button
-              onClick={() => { setFreeSpinResult(null); setFreeSpinOpen(true) }}
-              disabled={onCooldown}
-              style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: onCooldown ? 'var(--surface-2)' : '#EAB308', color: onCooldown ? 'var(--text-muted)' : '#000', fontWeight: 700, fontSize: 14, cursor: onCooldown ? 'not-allowed' : 'pointer', opacity: onCooldown ? 0.6 : 1, flexShrink: 0 }}
-            >
-              {onCooldown ? 'On Cooldown' : '🎰 Free Spin'}
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, alignItems: 'stretch' }}>
+              <button
+                onClick={() => { setFreeSpinResult(null); setFreeSpinOpen(true) }}
+                disabled={onCooldown}
+                style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: onCooldown ? 'var(--surface-2)' : '#EAB308', color: onCooldown ? 'var(--text-muted)' : '#000', fontWeight: 700, fontSize: 14, cursor: onCooldown ? 'not-allowed' : 'pointer', opacity: onCooldown ? 0.6 : 1 }}
+              >
+                {onCooldown ? 'On Cooldown' : '🎰 Free Spin'}
+              </button>
+              <button
+                onClick={() => {
+                  setSpinStatsOpen(true)
+                  if (!spinStats) {
+                    setSpinStatsLoading(true)
+                    api.spinStats().then(d => { setSpinStats(d); setSpinStatsLoading(false) }).catch(() => setSpinStatsLoading(false))
+                  }
+                }}
+                style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
+              >
+                📊 Spin Stats
+              </button>
+            </div>
           </div>
         )
       })()}
@@ -4517,6 +4536,70 @@ export default function MarketplacePage() {
           onClose={() => setFreeSpinOpen(false)}
           onDone={handleFreeSpinDone}
         />
+      )}
+
+      {spinStatsOpen && createPortal(
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setSpinStatsOpen(false) }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <div className="ns-card" style={{ width: '100%', maxWidth: 400, padding: 28, position: 'relative' }}>
+            <button onClick={() => setSpinStatsOpen(false)} style={{ position: 'absolute', top: 14, right: 14, background: 'transparent', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1 }}>×</button>
+            <p style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>📊 Spin Stats</p>
+
+            {spinStatsLoading && <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>Loading…</p>}
+
+            {spinStats && !spinStatsLoading && (() => {
+              const rows: { label: string; count: number; color: string }[] = [
+                { label: 'Common',    count: spinStats.spinCommon,    color: '#6B7280' },
+                { label: 'Uncommon',  count: spinStats.spinUncommon,  color: '#3B82F6' },
+                { label: 'Rare',      count: spinStats.spinRare,      color: '#8B5CF6' },
+                { label: 'Epic',      count: spinStats.spinEpic,      color: '#F97316' },
+                { label: 'Legendary', count: spinStats.spinLegendary, color: '#FACC15' },
+                { label: 'Mythic',    count: spinStats.spinMythic,    color: '#EAB308' },
+                { label: 'Curse',     count: spinStats.spinCurse,     color: '#EF4444' },
+              ].filter(r => r.count > 0 || spinStats.spinTotalSpins === 0)
+              const total = spinStats.spinTotalSpins
+              return (
+                <>
+                  <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+                    <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 12, padding: '14px 16px', textAlign: 'center' }}>
+                      <p style={{ fontSize: 22, fontWeight: 800, color: '#EAB308' }}>{total.toLocaleString()}</p>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>Total Spins</p>
+                    </div>
+                    <div style={{ flex: 1, background: 'var(--surface-2)', borderRadius: 12, padding: '14px 16px', textAlign: 'center' }}>
+                      <p style={{ fontSize: 22, fontWeight: 800, color: '#EF4444' }}>{spinStats.spinCoinsSpent.toLocaleString()}</p>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>Coins Spent</p>
+                    </div>
+                  </div>
+
+                  {total === 0
+                    ? <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>No paid spins yet — hit the boxes tab to start!</p>
+                    : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {rows.map(({ label, count, color }) => {
+                          const pct = total > 0 ? Math.round((count / total) * 100) : 0
+                          return (
+                            <div key={label}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color }}>{label}</span>
+                                <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>{count.toLocaleString()} <span style={{ fontSize: 11 }}>({pct}%)</span></span>
+                              </div>
+                              <div style={{ height: 6, borderRadius: 99, background: 'var(--surface-2)', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 0.4s ease' }} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  }
+                </>
+              )
+            })()}
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   )

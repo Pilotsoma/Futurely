@@ -809,6 +809,9 @@ export const api = {
       body: JSON.stringify({ offerItems, wantItems }),
     }),
 
+  spinStats: () =>
+    request<SpinStats>('/api/marketplace/spin-stats'),
+
   // ── Parent API ────────────────────────────────────────────────────────────────
 
   parentLinkStudent: (credentials: { districtUrl: string; username: string; password: string }) =>
@@ -1487,6 +1490,18 @@ export interface InventoryData {
   nextFreeSpin?: string | null
   isdCode?: string | null
   isdDisplayName?: string | null
+}
+
+export interface SpinStats {
+  spinCoinsSpent: number
+  spinTotalSpins: number
+  spinCommon: number
+  spinUncommon: number
+  spinRare: number
+  spinEpic: number
+  spinLegendary: number
+  spinMythic: number
+  spinCurse: number
 }
 
 export interface BoxResult {

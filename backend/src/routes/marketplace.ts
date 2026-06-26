@@ -673,6 +673,22 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
   }
 })
 
+// ── Spin Stats ────────────────────────────────────────────────────────────────
+
+router.get('/spin-stats', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { spinCoinsSpent: true, spinTotalSpins: true, spinCommon: true, spinUncommon: true, spinRare: true, spinEpic: true, spinLegendary: true, spinMythic: true, spinCurse: true },
+    })
+    if (!user) { res.status(404).json({ error: 'User not found' }); return }
+    res.json({ data: user })
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch spin stats' })
+  }
+})
+
 // ── Unbox auto-post helper ────────────────────────────────────────────────────
 
 async function autoPostUnbox(
@@ -813,6 +829,13 @@ router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: R
       }
     }
 
+    // Tally rarity counts for spin stat tracking
+    const rarityCounts: Record<string, number> = {}
+    for (const { won } of results) {
+      const r = (won as { rarity: string }).rarity
+      rarityCounts[r] = (rarityCounts[r] ?? 0) + 1
+    }
+
     const updated = await prisma.user.update({
       where: { id: req.userId },
       data: {
@@ -820,6 +843,15 @@ router.post('/open-box', requireAuth, txLimiter, async (req: AuthRequest, res: R
         allTags: JSON.stringify(newTags),
         ownedNameColors: JSON.stringify(newColors),
         ownedAvatarEffects: JSON.stringify(newPfps),
+        spinCoinsSpent: { increment: totalCost },
+        spinTotalSpins: { increment: quantity },
+        spinCommon:    { increment: rarityCounts['Common']    ?? 0 },
+        spinUncommon:  { increment: rarityCounts['Uncommon']  ?? 0 },
+        spinRare:      { increment: rarityCounts['Rare']      ?? 0 },
+        spinEpic:      { increment: rarityCounts['Epic']      ?? 0 },
+        spinLegendary: { increment: rarityCounts['Legendary'] ?? 0 },
+        spinMythic:    { increment: rarityCounts['Mythic']    ?? 0 },
+        spinCurse:     { increment: rarityCounts['Curse']     ?? 0 },
       },
       select: { coins: true },
     })
