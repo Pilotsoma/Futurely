@@ -103,7 +103,7 @@ export function ensureSchema(): Promise<void> {
     // Single probe: if the most recently added column and table both exist,
     // schema is already fully patched — skip all work.
     try {
-      await prisma.$queryRawUnsafe(`SELECT "deletedAt" FROM "User" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT "marketplaceBanned" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
       return
     } catch {
