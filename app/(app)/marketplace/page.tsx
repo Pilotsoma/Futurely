@@ -1225,7 +1225,7 @@ function SpinWheelModal({
                 ? <span
                     className={isRainbow ? 'name-rainbow' : r.won.value === 'curse' ? 'name-curse' : ''}
                     style={{ fontSize: 17, fontWeight: 800, color: (isRainbow || r.won.value === 'curse') ? undefined : r.won.value, textAlign: 'center' as const, maxWidth: 130, wordBreak: 'break-word' as const }}>
-                    Player
+                    Username
                   </span>
                 : <div
                     className={avatarClass(r.won.value)}
