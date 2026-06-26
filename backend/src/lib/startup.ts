@@ -99,6 +99,52 @@ const PATCHES: string[] = [
     "usedAt"    TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+
+  // ── Spin stats columns ───────────────────────────────────────────────
+  `ALTER TABLE "User"
+    ADD COLUMN IF NOT EXISTS "spinCoinsSpent"  INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "spinTotalSpins"  INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "spinCommon"      INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "spinUncommon"    INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "spinRare"        INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "spinEpic"        INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "spinLegendary"   INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "spinMythic"      INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS "spinCurse"       INTEGER NOT NULL DEFAULT 0`,
+]
+
+// Data-level repairs that are always idempotent and safe to re-run on every cold start.
+// These fix rows that became inconsistent before code-level guards were in place.
+const DATA_REPAIRS: string[] = [
+  // Clear stale badge values: user sold their verified tag without un-equipping it.
+  `UPDATE "User"
+   SET badge = NULL
+   WHERE badge IN ('verified-yellow', 'verified-blue')
+     AND NOT EXISTS (
+       SELECT 1 FROM jsonb_array_elements(
+         CASE
+           WHEN jsonb_typeof("allTags") = 'string' THEN ("allTags"#>>'{}')::jsonb
+           WHEN jsonb_typeof("allTags") = 'array'  THEN "allTags"
+           ELSE '[]'::jsonb
+         END
+       ) AS t
+       WHERE t->>'tagColor' = "User".badge
+     )`,
+
+  // Clear stale equipped tagColor / tag values for the same reason.
+  `UPDATE "User"
+   SET tag = 'Student', "tagColor" = NULL
+   WHERE "tagColor" IN ('verified-yellow', 'verified-blue')
+     AND NOT EXISTS (
+       SELECT 1 FROM jsonb_array_elements(
+         CASE
+           WHEN jsonb_typeof("allTags") = 'string' THEN ("allTags"#>>'{}')::jsonb
+           WHEN jsonb_typeof("allTags") = 'array'  THEN "allTags"
+           ELSE '[]'::jsonb
+         END
+       ) AS t
+       WHERE t->>'tagColor' = "User"."tagColor"
+     )`,
 ]
 
 let patchPromise: Promise<void> | null = null
@@ -106,26 +152,35 @@ let patchPromise: Promise<void> | null = null
 export function ensureSchema(): Promise<void> {
   if (patchPromise) return patchPromise
   patchPromise = (async () => {
-    // Probe checks the two newest additions. If both exist, all patches have run — skip.
+    // Probe checks the two newest schema additions. If both exist, schema patches are skipped.
     // IMPORTANT: update this probe whenever a new column/table is added to PATCHES above.
     try {
-      await prisma.$queryRawUnsafe(`SELECT "marketplaceBanned" FROM "User" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT "spinCoinsSpent" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
-      return
     } catch {
       // Schema is incomplete — run patches below.
+      for (const sql of PATCHES) {
+        try {
+          await prisma.$executeRawUnsafe(sql)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          if (!msg.includes('already exists') && !msg.includes('does not exist')) {
+            console.error('[startup] patch failed:', sql.slice(0, 80), msg)
+          }
+        }
+      }
+      console.log('[startup] schema patches complete')
     }
-    for (const sql of PATCHES) {
+
+    // Always run data repairs — they are idempotent and fast.
+    for (const sql of DATA_REPAIRS) {
       try {
         await prisma.$executeRawUnsafe(sql)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
-        if (!msg.includes('already exists') && !msg.includes('does not exist')) {
-          console.error('[startup] patch failed:', sql.slice(0, 80), msg)
-        }
+        console.error('[startup] data repair failed:', sql.slice(0, 80), msg)
       }
     }
-    console.log('[startup] schema patches complete')
   })()
   return patchPromise
 }

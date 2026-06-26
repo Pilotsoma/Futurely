@@ -881,7 +881,7 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
                   : <span className={tagCssClass(current.tag, current.tagColor)} style={{ color: isAnimatedTag(current.tag) || current.tagColor === 'curse' ? undefined : current.tagColor ?? carouselColor }}>[{current.tag}]</span>
                 : current.type === 'name-color'
                   ? <span className={current.value === 'rainbow' ? 'name-rainbow' : current.value === 'curse' ? 'name-curse' : ''} style={{ color: (current.value === 'rainbow' || current.value === 'curse') ? undefined : current.value ?? carouselColor }}>{userName ?? 'Username'}</span>
-                  : <span>{current.name}</span>
+                  : <div className={avatarClass(current.value)} style={{ width: 74, height: 74, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 28, ...avatarStyle(current.value) }}>✦</div>
               }
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -922,7 +922,9 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {(highlight.won.tagColor === 'verified-yellow' || highlight.won.tagColor === 'verified-blue')
                   ? <><VerifiedBadge variant={highlight.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={20} /> Verified</>
-                  : (highlight.won.name ?? highlight.won.tag)}
+                  : highlight.won.type === 'avatar'
+                    ? <><div className={avatarClass(highlight.won.value)} style={{ width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...avatarStyle(highlight.won.value) }} />{highlight.won.name}</>
+                    : (highlight.won.name ?? highlight.won.tag)}
               </div>
             </div>
           </div>
@@ -938,7 +940,9 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
                     ? `[${g.won.tag}]`
                     : g.won.type === 'name-color'
                       ? <span className={g.won.value === 'rainbow' ? 'name-rainbow' : g.won.value === 'curse' ? 'name-curse' : ''} style={{ color: (g.won.value === 'rainbow' || g.won.value === 'curse') ? undefined : g.won.value }}>{userName ?? 'Username'}</span>
-                      : (g.won.name ?? g.won.id)}
+                      : g.won.type === 'avatar'
+                        ? <><div className={avatarClass(g.won.value)} style={{ width: 20, height: 20, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...avatarStyle(g.won.value) }} />{g.won.name}</>
+                        : (g.won.name ?? g.won.id)}
               </div>
               <div style={{ fontSize: 11, color: getRarityColor(g.won.rarity, g.won.id), fontWeight: 700, flexShrink: 0 }}>{g.won.rarity}</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)', flexShrink: 0, minWidth: 32, textAlign: 'right' }}>×{g.count}</div>
@@ -1200,22 +1204,43 @@ function SpinWheelModal({
             const r = wonResult
             const isRainbow = r.won.value === 'rainbow'
             const rarityColor = getRarityColor(r.won.rarity, r.won.id)
+            const isAnimated = isAnimatedTag(r.won.tag)
+            const isCurseTag = r.won.tagColor === 'curse'
             const centerItem = r.won.type === 'tag'
               ? (r.won.tagColor === 'verified-yellow' || r.won.tagColor === 'verified-blue')
-                ? <VerifiedBadge variant={r.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={44} />
-                : <span className={tagCssClass(r.won.tag, r.won.tagColor)} style={{ fontSize: 13, fontWeight: 800, color: isAnimatedTag(r.won.tag) || r.won.tagColor === 'curse' ? undefined : r.won.tagColor ?? '#6B7280', textAlign: 'center' as const, maxWidth: 110, wordBreak: 'break-word' as const, lineHeight: 1.2 }}>{r.won.tag}</span>
+                ? <VerifiedBadge variant={r.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={52} />
+                : <span
+                    className={tagCssClass(r.won.tag, r.won.tagColor)}
+                    style={{
+                      fontSize: 13, fontWeight: 800, lineHeight: 1.25,
+                      padding: '4px 10px', borderRadius: 6,
+                      background: (isAnimated || isCurseTag) ? undefined : `${r.won.tagColor ?? '#6B7280'}22`,
+                      border: (isAnimated || isCurseTag) ? undefined : `1px solid ${r.won.tagColor ?? '#6B7280'}`,
+                      color: (isAnimated || isCurseTag) ? undefined : r.won.tagColor ?? '#6B7280',
+                      textAlign: 'center' as const, maxWidth: 130, wordBreak: 'break-word' as const,
+                    }}>
+                    {r.won.tag}
+                  </span>
               : r.won.type === 'name-color'
-                ? <span className={isRainbow ? 'name-rainbow' : r.won.value === 'curse' ? 'name-curse' : ''} style={{ fontSize: 13, fontWeight: 800, color: (isRainbow || r.won.value === 'curse') ? undefined : r.won.value, textAlign: 'center' as const, maxWidth: 110, wordBreak: 'break-word' as const }}>{r.won.name}</span>
-                : <div className={avatarClass(r.won.value)} style={{ width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#fff', flexShrink: 0, ...avatarStyle(r.won.value) }}>✦</div>
+                ? <span
+                    className={isRainbow ? 'name-rainbow' : r.won.value === 'curse' ? 'name-curse' : ''}
+                    style={{ fontSize: 17, fontWeight: 800, color: (isRainbow || r.won.value === 'curse') ? undefined : r.won.value, textAlign: 'center' as const, maxWidth: 130, wordBreak: 'break-word' as const }}>
+                    Player
+                  </span>
+                : <div
+                    className={avatarClass(r.won.value)}
+                    style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: '#fff', flexShrink: 0, ...avatarStyle(r.won.value) }}>
+                    ✦
+                  </div>
             return (
               <div style={{
                 position: 'absolute', left: '50%', top: '50%',
-                width: 134, height: 134, borderRadius: '50%',
+                width: 168, height: 168, borderRadius: '50%',
                 background: 'var(--surface)',
                 border: `3px solid ${rarityColor}`,
                 boxShadow: `0 0 0 5px ${rarityColor}33, 0 0 30px ${rarityColor}88`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                gap: 4, padding: 10, overflow: 'hidden',
+                gap: 4, padding: 12, overflow: 'hidden',
                 animation: 'spinReveal 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both',
               }}>
                 {centerItem}
@@ -1223,20 +1248,21 @@ function SpinWheelModal({
             )
           })()}
 
-          {/* Layer 3: arrow — always on top so it stays visible over the overlay */}
+          {/* Layer 3: arrow — on top; hidden after reveal so the item circle can breathe */}
           <svg width={300} height={300} viewBox="0 0 300 300"
             style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
           >
-            {quantity === 1 && multiArrows.length === 0 && (
+            {quantity === 1 && multiArrows.length === 0 && phase !== 'done' && (
               <g style={{
                 transformOrigin: `${CX}px ${CY}px`,
                 transform: `rotate(${pointerAngle}deg)`,
                 transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
               }}>
+                {/* Long needle from hub-edge to near rim — looks naturally attached to the center circle */}
                 <polygon
-                  points={`${CX},${CY - 120} ${CX - 8},${CY - 80} ${CX + 8},${CY - 80}`}
+                  points={`${CX},${CY - 113} ${CX - 9},${CY - 30} ${CX + 9},${CY - 30}`}
                   fill="#EF4444"
-                  style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.7))' }}
+                  style={{ filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.8))' }}
                 />
               </g>
             )}
@@ -1247,7 +1273,7 @@ function SpinWheelModal({
                 transition: arrowsLanded ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
               }}>
                 <polygon
-                  points={`${CX},${CY - 120} ${CX - 8},${CY - 80} ${CX + 8},${CY - 80}`}
+                  points={`${CX},${CY - 113} ${CX - 7},${CY - 30} ${CX + 7},${CY - 30}`}
                   fill={arrow.color}
                   fillOpacity={multiArrows.length <= 10 ? 0.9 : multiArrows.length <= 50 ? 0.6 : 0.4}
                   style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }}
