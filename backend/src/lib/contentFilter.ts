@@ -191,6 +191,21 @@ export function filterContent(text: string): FilterResult {
   return { ok: true }
 }
 
+// Reserved names — stripped to lowercase alphanumeric for comparison so
+// leet-speak variants like "Futur3ly", "adm1n", or "off1cial" are also blocked.
+const RESERVED_NAMES: readonly string[] = [
+  // Brand
+  'futurely', 'futurly', 'futurley',
+  // Staff / authority roles
+  'admin', 'administrator', 'moderator', 'mod', 'staff', 'support',
+  'official', 'team', 'owner', 'ceo', 'founder',
+  // System / bot
+  'system', 'bot', 'robot', 'automated', 'futurelybot', 'futurelyteam',
+  'futurelyofficial', 'futurelystaff', 'futurelymod', 'futurelysupport',
+  // Dev roles
+  'dev', 'developer', 'devteam',
+]
+
 export function filterUsername(name: string): FilterResult {
   const trimmed = name.trim()
   if (trimmed.length < 2) {
@@ -199,6 +214,15 @@ export function filterUsername(name: string): FilterResult {
   if (trimmed.length > 30) {
     return { ok: false, reason: 'Name must be 30 characters or fewer' }
   }
+
+  // Reserved name check — normalize to lowercase alphanumeric only
+  const normalized = trimmed.toLowerCase().replace(/[^a-z0-9]/g, '')
+  for (const reserved of RESERVED_NAMES) {
+    if (normalized === reserved || normalized.startsWith(reserved) || normalized.endsWith(reserved)) {
+      return { ok: false, reason: 'That name is reserved and cannot be used' }
+    }
+  }
+
   return filterContent(trimmed)
 }
 
