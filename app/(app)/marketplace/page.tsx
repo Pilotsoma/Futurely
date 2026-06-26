@@ -878,7 +878,7 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
               {current.tag
                 ? (current.tagColor === 'verified-yellow' || current.tagColor === 'verified-blue')
                   ? <VerifiedBadge variant={current.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={48} />
-                  : <span className={tagCssClass(current.tag, current.tagColor)} style={{ color: isAnimatedTag(current.tag) || current.tagColor === 'curse' ? undefined : current.tagColor ?? carouselColor }}>[{current.tag}]</span>
+                  : <span className={tagCssClass(current.tag, current.tagColor)} style={{ color: isAnimatedTag(current.tag) || current.tagColor === 'curse' ? undefined : current.tagColor ?? carouselColor }}>{current.tag}</span>
                 : current.type === 'name-color'
                   ? <span className={current.value === 'rainbow' ? 'name-rainbow' : current.value === 'curse' ? 'name-curse' : ''} style={{ color: (current.value === 'rainbow' || current.value === 'curse') ? undefined : current.value ?? carouselColor }}>{userName ?? 'Username'}</span>
                   : <div className={avatarClass(current.value)} style={{ width: 74, height: 74, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 28, ...avatarStyle(current.value) }}>✦</div>
@@ -937,7 +937,7 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
                 {(g.won.tagColor === 'verified-yellow' || g.won.tagColor === 'verified-blue')
                   ? <><VerifiedBadge variant={g.won.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} /> Verified</>
                   : g.won.tag
-                    ? `[${g.won.tag}]`
+                    ? g.won.tag
                     : g.won.type === 'name-color'
                       ? <span className={g.won.value === 'rainbow' ? 'name-rainbow' : g.won.value === 'curse' ? 'name-curse' : ''} style={{ color: (g.won.value === 'rainbow' || g.won.value === 'curse') ? undefined : g.won.value }}>{userName ?? 'Username'}</span>
                       : g.won.type === 'avatar'
