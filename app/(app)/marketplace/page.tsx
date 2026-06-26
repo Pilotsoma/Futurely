@@ -1006,7 +1006,7 @@ function FreeSpinModal({ onClose, onDone }: { onClose: () => void; onDone: (rewa
             <div key={seg.rarity} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
               <span style={{ width: 10, height: 10, borderRadius: 2, background: seg.color, display: 'inline-block', flexShrink: 0 }} />
               <span style={{ color: seg.color, fontWeight: 700 }}>{seg.rarity}</span>
-              <span style={{ color: 'var(--text-muted)' }}>{seg.coins.toLocaleString()} 🪙</span>
+              <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>{seg.coins.toLocaleString()} <CoinIcon size={11} /></span>
             </div>
           ))}
         </div>
