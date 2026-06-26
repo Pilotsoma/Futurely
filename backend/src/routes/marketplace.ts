@@ -922,7 +922,7 @@ router.post('/quicksell', requireAuth, txLimiter, async (req: AuthRequest, res: 
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { coins: true, allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, badge: true },
+      select: { coins: true, allTags: true, ownedNameColors: true, ownedAvatarEffects: true, tag: true, badge: true, nameColor: true, avatarEffect: true },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
@@ -961,15 +961,23 @@ router.post('/quicksell', requireAuth, txLimiter, async (req: AuthRequest, res: 
       const idx = owned.findIndex((i: { id: string; rarity?: string }) => i.id === itemId)
       if (idx === -1) { res.status(404).json({ error: 'You do not own this item' }); return }
       rarity = (owned[idx] as { rarity?: string }).rarity ?? 'Common'
+      const ncValue = (owned[idx] as { value?: string }).value
       owned.splice(idx, 1)
       data = { ownedNameColors: JSON.stringify(owned) }
+      if (ncValue && user.nameColor === ncValue && !owned.some((i: { id: string }) => i.id === itemId)) {
+        data.nameColor = null
+      }
     } else {
       const owned = parseJsonArr(user.ownedAvatarEffects)
       const idx = owned.findIndex((i: { id: string; rarity?: string }) => i.id === itemId)
       if (idx === -1) { res.status(404).json({ error: 'You do not own this item' }); return }
       rarity = (owned[idx] as { rarity?: string }).rarity ?? 'Common'
+      const aeValue = (owned[idx] as { value?: string }).value
       owned.splice(idx, 1)
       data = { ownedAvatarEffects: JSON.stringify(owned) }
+      if (aeValue && user.avatarEffect === aeValue && !owned.some((i: { id: string }) => i.id === itemId)) {
+        data.avatarEffect = null
+      }
     }
 
     const tagNameForPayout = itemType === 'tag' ? (TAG_BOX_ITEMS.find(t => t.id === itemId)?.tag ?? itemId) : null
