@@ -1259,7 +1259,7 @@ function SpinWheelModal({
                 transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
               }}>
                 <polygon
-                  points={`${CX},${CY - 80} ${CX - 9},${CY - 30} ${CX + 9},${CY - 30}`}
+                  points={`${CX},${CY - 55} ${CX - 7},${CY - 30} ${CX + 7},${CY - 30}`}
                   fill="#EF4444"
                   style={{ filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.8))' }}
                 />
@@ -1272,7 +1272,7 @@ function SpinWheelModal({
                 transition: arrowsLanded ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
               }}>
                 <polygon
-                  points={`${CX},${CY - 80} ${CX - 7},${CY - 30} ${CX + 7},${CY - 30}`}
+                  points={`${CX},${CY - 55} ${CX - 6},${CY - 30} ${CX + 6},${CY - 30}`}
                   fill="#EF4444"
                   fillOpacity={multiArrows.length <= 10 ? 0.9 : multiArrows.length <= 50 ? 0.6 : 0.4}
                   style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.7))' }}
