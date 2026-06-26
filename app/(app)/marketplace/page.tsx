@@ -1665,6 +1665,7 @@ export default function MarketplacePage() {
   const [selectedRequest, setSelectedRequest] = useState<TradeItem[]>([])
   const [sendingTrade, setSendingTrade] = useState(false)
   const [tradeMsg, setTradeMsg] = useState('')
+  const [tradeNote, setTradeNote] = useState('')
 
   // Profile panel
   const [profilePanel, setProfilePanel] = useState<FeedUserProfile | null>(null)
@@ -2222,8 +2223,9 @@ export default function MarketplacePage() {
         receiverId: tradeTarget.user.id,
         senderItems: selectedOffer,
         receiverItems: selectedRequest,
+        ...(tradeNote.trim() ? { note: tradeNote.trim() } : {}),
       })
-      setTradeTarget(null); setSelectedOffer([]); setSelectedRequest([])
+      setTradeTarget(null); setSelectedOffer([]); setSelectedRequest([]); setTradeNote('')
       setTradeMsg('✓ Trade sent!')
       refreshInventory()
       fetchTrades()
@@ -3182,6 +3184,20 @@ export default function MarketplacePage() {
                       </div>
                     </div>
                   </div>
+                  {/* Optional message */}
+                  <div style={{ marginBottom: 12 }}>
+                    <textarea
+                      placeholder="Add a message to this trade... (optional)"
+                      value={tradeNote}
+                      onChange={e => setTradeNote(e.target.value.slice(0, 200))}
+                      maxLength={200}
+                      rows={2}
+                      style={{ width: '100%', padding: '9px 11px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 12, resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const, outline: 'none' }}
+                    />
+                    {tradeNote.length > 0 && (
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right' as const, marginTop: 2 }}>{tradeNote.length}/200</div>
+                    )}
+                  </div>
                   {tradeMsg && <div style={{ fontSize: 12, color: tradeMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 10 }}>{tradeMsg}</div>}
                   {selectedOffer.length === 0 && selectedRequest.length > 0 && (
                     <div style={{ fontSize: 12, color: '#F97316', fontWeight: 600, marginBottom: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)' }}>
@@ -3236,6 +3252,12 @@ export default function MarketplacePage() {
                             {renderTradeItems(parseTradeItemsClient(trade.receiverItems))}
                           </div>
                         </div>
+                        {trade.note && trade.note !== 'WANDERING_TRADER' && (
+                          <div style={{ fontSize: 12, color: 'var(--text)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', marginBottom: 10, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                            <span style={{ flexShrink: 0, opacity: 0.6 }}>💬</span>
+                            <span style={{ wordBreak: 'break-word' as const }}>{trade.note}</span>
+                          </div>
+                        )}
                         {msg ? (
                           <div style={{ fontSize: 12, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 8 }}>{msg}</div>
                         ) : (
@@ -3293,6 +3315,12 @@ export default function MarketplacePage() {
                             {renderTradeItems(parseTradeItemsClient(trade.receiverItems))}
                           </div>
                         </div>
+                        {trade.note && trade.note !== 'WANDERING_TRADER' && (
+                          <div style={{ fontSize: 12, color: 'var(--text)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', marginBottom: 10, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                            <span style={{ flexShrink: 0, opacity: 0.6 }}>💬</span>
+                            <span style={{ wordBreak: 'break-word' as const }}>{trade.note}</span>
+                          </div>
+                        )}
                         {msg ? (
                           <div style={{ fontSize: 12, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600 }}>{msg}</div>
                         ) : (
@@ -3337,7 +3365,7 @@ export default function MarketplacePage() {
                           {new Date(trade.createdAt).toLocaleDateString()}
                         </span>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center', marginBottom: !isTraderTrade && trade.note ? 10 : 0 }}>
                         <div>
                           <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>You gave</div>
                           {renderTradeItems(myItems)}
@@ -3348,6 +3376,12 @@ export default function MarketplacePage() {
                           {renderTradeItems(theirItems)}
                         </div>
                       </div>
+                      {!isTraderTrade && trade.note && (
+                        <div style={{ fontSize: 12, color: 'var(--text)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 11px', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                          <span style={{ flexShrink: 0, opacity: 0.6 }}>💬</span>
+                          <span style={{ wordBreak: 'break-word' as const }}>{trade.note}</span>
+                        </div>
+                      )}
                     </div>
                     )
                   })}

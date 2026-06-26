@@ -744,7 +744,7 @@ export const api = {
   marketplaceGetUserInventory: (userId: number) =>
     request<UserPublicInventory>(`/api/marketplace/users/${userId}/inventory`),
 
-  marketplaceCreateTrade: (payload: { receiverId: number; senderItems: TradeItem[]; receiverItems: TradeItem[] }) =>
+  marketplaceCreateTrade: (payload: { receiverId: number; senderItems: TradeItem[]; receiverItems: TradeItem[]; note?: string }) =>
     request<TradeOffer>('/api/marketplace/trades', {
       method: 'POST',
       body: JSON.stringify(payload),

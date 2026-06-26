@@ -1862,11 +1862,13 @@ router.get('/trades/history', requireAuth, async (req: AuthRequest, res: Respons
 
 router.post('/trades', requireAuth, txLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
-  const { receiverId, senderItems, receiverItems } = req.body as {
+  const { receiverId, senderItems, receiverItems, note } = req.body as {
     receiverId?: number
     senderItems?: TradeItem[]
     receiverItems?: TradeItem[]
+    note?: string
   }
+  const tradeNote = typeof note === 'string' ? note.trim().slice(0, 200) || null : null
 
   if (!receiverId || typeof receiverId !== 'number') { res.status(400).json({ error: 'receiverId required' }); return }
   if (receiverId === req.userId) { res.status(400).json({ error: 'Cannot trade with yourself' }); return }
@@ -1913,6 +1915,7 @@ router.post('/trades', requireAuth, txLimiter, async (req: AuthRequest, res: Res
           senderItems: JSON.stringify(senderItems),
           receiverItems: JSON.stringify(receiverItems),
           status: 'PENDING',
+          ...(tradeNote ? { note: tradeNote } : {}),
         },
         include: {
           sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true } },
