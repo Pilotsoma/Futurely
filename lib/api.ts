@@ -607,6 +607,29 @@ export const api = {
       `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
     ),
 
+  canvasStartQuizSubmission: (courseId: number, quizId: number, canvasInstanceUrl?: string) =>
+    request<CanvasActiveQuizSubmission>(
+      `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}/submissions`,
+      { method: 'POST', body: JSON.stringify({ canvasInstanceUrl }) },
+    ),
+
+  canvasGetSubmissionQuestions: (courseId: number, quizId: number, submissionId: number, validationToken: string, canvasInstanceUrl?: string) =>
+    request<CanvasSubmissionQuestion[]>(
+      `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}/submissions/${submissionId}/questions?validationToken=${encodeURIComponent(validationToken)}${canvasInstanceUrl ? `&canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasSaveQuizAnswers: (courseId: number, quizId: number, submissionId: number, body: { validationToken: string; attempt: number; quizQuestions: Array<{ id: number; flagged: boolean; answer: unknown }>; canvasInstanceUrl?: string }) =>
+    request<{ ok: boolean }>(
+      `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}/submissions/${submissionId}/questions`,
+      { method: 'PUT', body: JSON.stringify(body) },
+    ),
+
+  canvasCompleteQuizSubmission: (courseId: number, quizId: number, submissionId: number, body: { validationToken: string; attempt: number; canvasInstanceUrl?: string }) =>
+    request<{ ok: boolean }>(
+      `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}/submissions/${submissionId}/complete`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+
   canvasSubmitAssignment: (courseId: number, assignmentId: number, submission: { submissionType: 'online_text_entry' | 'online_url'; body?: string; url?: string; canvasInstanceUrl?: string }) =>
     request<{ ok: boolean }>(
       `/api/integrations/canvas/courses/${courseId}/assignments/${assignmentId}/submit`,
@@ -1277,6 +1300,34 @@ export interface CanvasQuizSubmission {
   attempt: number
   quiz_points_possible: number
   submission_data?: CanvasQuizSubmissionData[]
+}
+
+export interface CanvasActiveQuizSubmission {
+  id: number
+  quiz_id: number
+  attempt: number
+  validation_token: string
+  started_at: string | null
+  end_at: string | null
+  workflow_state: string
+  time_limit: number | null
+}
+
+export interface CanvasSubmissionQuestionAnswer {
+  id: number
+  text: string
+  html?: string
+  match_id?: number
+}
+
+export interface CanvasSubmissionQuestion {
+  id: number
+  question_name: string
+  question_text: string
+  question_type: string
+  points_possible: number
+  answers?: CanvasSubmissionQuestionAnswer[]
+  matches?: Array<{ text: string; match_id: number }>
 }
 
 export interface CanvasCourseFile {

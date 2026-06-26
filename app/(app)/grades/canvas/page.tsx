@@ -20,6 +20,9 @@ import {
   type CanvasQuizDetail,
   type CanvasQuizQuestion,
   type CanvasQuizSubmission,
+  type CanvasActiveQuizSubmission,
+  type CanvasSubmissionQuestion,
+  type CanvasSubmissionQuestionAnswer,
   CanvasGradesConnection,
   CanvasGradesCourse,
   CanvasGradesAssignment,
@@ -408,6 +411,374 @@ function DiscussionPanel({
   )
 }
 
+// ── Quiz Taker Panel ──────────────────────────────────────────────────────────
+
+type QuizAnswer = number | string | number[] | null
+
+function QuizTakerQuestion({
+  question,
+  answer,
+  onChange,
+  idx,
+}: {
+  question: CanvasSubmissionQuestion
+  answer: QuizAnswer
+  onChange: (answer: QuizAnswer) => void
+  idx: number
+  total: number
+}) {
+  const qType = question.question_type
+
+  return (
+    <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
+          <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', marginTop: 1 }}>
+            Q{idx + 1}
+          </span>
+          <div
+            className="canvas-html"
+            style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.65, flex: 1 }}
+            dangerouslySetInnerHTML={{ __html: prepareCanvasHtml(question.question_text) }}
+          />
+        </div>
+        <span style={{ flexShrink: 0, fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+          {question.points_possible} pt{question.points_possible !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {/* Multiple choice / True-False */}
+      {(qType === 'multiple_choice_question' || qType === 'true_false_question') && question.answers && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {question.answers.map((ans: CanvasSubmissionQuestionAnswer) => {
+            const selected = answer === ans.id
+            return (
+              <button
+                key={ans.id}
+                onClick={() => onChange(ans.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                  borderRadius: 8, border: `1px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
+                  background: selected ? 'rgba(var(--primary-rgb),0.08)' : 'var(--surface-2)',
+                  color: selected ? 'var(--primary)' : 'var(--text-secondary)',
+                  fontWeight: selected ? 700 : 400, fontSize: 14, cursor: 'pointer', textAlign: 'left',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}
+              >
+                <span style={{
+                  width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                  border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
+                  background: selected ? 'var(--primary)' : 'transparent',
+                }} />
+                <span dangerouslySetInnerHTML={{ __html: prepareCanvasHtml(ans.html ?? ans.text) }} />
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Multiple answers (checkboxes) */}
+      {qType === 'multiple_answers_question' && question.answers && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {question.answers.map((ans: CanvasSubmissionQuestionAnswer) => {
+            const selected = Array.isArray(answer) && (answer as number[]).includes(ans.id)
+            return (
+              <button
+                key={ans.id}
+                onClick={() => {
+                  const cur = (Array.isArray(answer) ? answer : []) as number[]
+                  onChange(selected ? cur.filter(id => id !== ans.id) : [...cur, ans.id])
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                  borderRadius: 8, border: `1px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
+                  background: selected ? 'rgba(var(--primary-rgb),0.08)' : 'var(--surface-2)',
+                  color: selected ? 'var(--primary)' : 'var(--text-secondary)',
+                  fontWeight: selected ? 700 : 400, fontSize: 14, cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <span style={{
+                  width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                  border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
+                  background: selected ? 'var(--primary)' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {selected && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>}
+                </span>
+                <span dangerouslySetInnerHTML={{ __html: prepareCanvasHtml(ans.html ?? ans.text) }} />
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Short answer */}
+      {qType === 'short_answer_question' && (
+        <input
+          type="text"
+          value={(answer as string) ?? ''}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Your answer…"
+          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, boxSizing: 'border-box' }}
+        />
+      )}
+
+      {/* Essay */}
+      {qType === 'essay_question' && (
+        <textarea
+          value={(answer as string) ?? ''}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Write your response here…"
+          rows={5}
+          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+        />
+      )}
+
+      {/* Numerical */}
+      {qType === 'numerical_question' && (
+        <input
+          type="number"
+          value={(answer as string) ?? ''}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Enter a number…"
+          style={{ width: 180, padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14 }}
+        />
+      )}
+
+      {/* Unsupported types */}
+      {!['multiple_choice_question','true_false_question','multiple_answers_question','short_answer_question','essay_question','numerical_question','text_only_question'].includes(qType) && (
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '10px 0', fontStyle: 'italic' }}>
+          This question type ({qType.replace(/_/g, ' ')}) must be answered in Canvas.
+        </div>
+      )}
+    </div>
+  )
+}
+
+function QuizTakerPanel({
+  courseId, quizId, quizTitle, quizDetail, canvasInstanceUrl, onClose, onSubmitted,
+}: {
+  courseId: number
+  quizId: number
+  quizTitle: string
+  quizDetail: { time_limit: number | null; allowed_attempts: number; question_count: number }
+  canvasInstanceUrl: string
+  onClose: () => void
+  onSubmitted: () => void
+}) {
+  const [stage, setStage] = useState<'confirm' | 'loading' | 'taking' | 'submitting' | 'done' | 'error'>('confirm')
+  const [submission, setSubmission] = useState<CanvasActiveQuizSubmission | null>(null)
+  const [questions, setQuestions] = useState<CanvasSubmissionQuestion[]>([])
+  const [answers, setAnswers] = useState<Map<number, QuizAnswer>>(new Map())
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  async function startQuiz() {
+    setStage('loading')
+    try {
+      const sub = await api.canvasStartQuizSubmission(courseId, quizId, canvasInstanceUrl)
+      const qs = await api.canvasGetSubmissionQuestions(courseId, quizId, sub.id, sub.validation_token, canvasInstanceUrl)
+      setSubmission(sub)
+      setQuestions(qs)
+      setAnswers(new Map())
+
+      if (sub.end_at) {
+        const remaining = Math.max(0, Math.floor((new Date(sub.end_at).getTime() - Date.now()) / 1000))
+        setTimeLeft(remaining)
+        timerRef.current = setInterval(() => {
+          setTimeLeft(t => {
+            if (t === null || t <= 1) {
+              clearInterval(timerRef.current!)
+              return 0
+            }
+            return t - 1
+          })
+        }, 1000)
+      }
+
+      autoSaveRef.current = setInterval(() => {
+        setAnswers(cur => {
+          const quizQs = Array.from(cur.entries()).map(([id, answer]) => ({ id, flagged: false, answer }))
+          api.canvasSaveQuizAnswers(courseId, quizId, sub.id, {
+            validationToken: sub.validation_token,
+            attempt: sub.attempt,
+            quizQuestions: quizQs,
+            canvasInstanceUrl,
+          }).catch(() => {})
+          return cur
+        })
+      }, 30_000)
+
+      setStage('taking')
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : 'Could not start quiz. It may have reached its attempt limit.')
+      setStage('error')
+    }
+  }
+
+  async function submitQuiz() {
+    if (!submission) return
+    setStage('submitting')
+    try {
+      const quizQs = Array.from(answers.entries()).map(([id, answer]) => ({ id, flagged: false, answer }))
+      await api.canvasSaveQuizAnswers(courseId, quizId, submission.id, {
+        validationToken: submission.validation_token,
+        attempt: submission.attempt,
+        quizQuestions: quizQs,
+        canvasInstanceUrl,
+      })
+      await api.canvasCompleteQuizSubmission(courseId, quizId, submission.id, {
+        validationToken: submission.validation_token,
+        attempt: submission.attempt,
+        canvasInstanceUrl,
+      })
+      setStage('done')
+      onSubmitted()
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : 'Submission failed. Please try again.')
+      setStage('taking')
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+      if (autoSaveRef.current) clearInterval(autoSaveRef.current)
+    }
+  }, [])
+
+  const answeredCount = answers.size
+  const totalQ = questions.filter(q => q.question_type !== 'text_only_question').length
+
+  function fmtTime(secs: number): string {
+    const m = Math.floor(secs / 60)
+    const s = secs % 60
+    return `${m}:${s.toString().padStart(2, '0')}`
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        background: 'var(--background)', borderRadius: 14, width: '100%', maxWidth: 700,
+        maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.5)', border: '1px solid var(--border)',
+        margin: '0 16px',
+      }}>
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 4 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', marginBottom: 2 }}>Quiz</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{quizTitle}</div>
+          </div>
+          {stage === 'taking' && timeLeft !== null && (
+            <div style={{
+              fontSize: 15, fontWeight: 800, padding: '5px 12px', borderRadius: 8,
+              background: timeLeft < 120 ? 'rgba(239,68,68,0.12)' : 'var(--surface-2)',
+              color: timeLeft < 120 ? '#EF4444' : 'var(--text)',
+              border: `1px solid ${timeLeft < 120 ? 'rgba(239,68,68,0.3)' : 'var(--border)'}`,
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              {fmtTime(timeLeft)}
+            </div>
+          )}
+          {stage === 'taking' && (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+              {answeredCount}/{totalQ} answered
+            </div>
+          )}
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+
+          {/* Confirm stage */}
+          {stage === 'confirm' && (
+            <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16 }}>
+              <div style={{ fontSize: 36 }}>📝</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>Ready to start?</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 380 }}>
+                This will start a new quiz attempt. Once started, {quizDetail.time_limit ? `you'll have ${quizDetail.time_limit} minutes.` : 'you can take your time.'}
+                {quizDetail.allowed_attempts > 0 && ` You have ${quizDetail.allowed_attempts} attempt${quizDetail.allowed_attempts !== 1 ? 's' : ''} allowed.`}
+              </div>
+              <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 360 }}>
+                <button onClick={onClose} style={{ flex: 1, padding: '11px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={startQuiz} style={{ flex: 2, padding: '11px 0', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Start Quiz</button>
+              </div>
+            </div>
+          )}
+
+          {/* Loading */}
+          {stage === 'loading' && (
+            <div style={{ padding: '48px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 32, height: 32, border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Starting quiz…</div>
+            </div>
+          )}
+
+          {/* Error */}
+          {stage === 'error' && (
+            <div style={{ padding: '40px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
+              <div style={{ fontSize: 32 }}>⚠️</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Could not start quiz</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 360 }}>{errorMsg}</div>
+              <button onClick={onClose} style={{ padding: '10px 24px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Close</button>
+            </div>
+          )}
+
+          {/* Done */}
+          {stage === 'done' && (
+            <div style={{ padding: '48px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
+              <div style={{ fontSize: 40 }}>✅</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>Quiz Submitted!</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>Your answers have been submitted. Check back in the quiz panel to see your score once it&apos;s graded.</div>
+              <button onClick={onClose} style={{ padding: '11px 28px', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Done</button>
+            </div>
+          )}
+
+          {/* Taking / Submitting */}
+          {(stage === 'taking' || stage === 'submitting') && questions.map((q, idx) => (
+            <QuizTakerQuestion
+              key={q.id}
+              question={q}
+              answer={answers.get(q.id) ?? null}
+              onChange={val => setAnswers(prev => new Map(prev).set(q.id, val))}
+              idx={idx}
+              total={questions.length}
+            />
+          ))}
+        </div>
+
+        {/* Footer — Submit button */}
+        {(stage === 'taking' || stage === 'submitting') && (
+          <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {errorMsg && stage === 'taking' && (
+              <div style={{ fontSize: 12, color: '#EF4444', textAlign: 'center', fontWeight: 600 }}>{errorMsg}</div>
+            )}
+            <button
+              onClick={submitQuiz}
+              disabled={stage === 'submitting'}
+              style={{ width: '100%', padding: '12px 0', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 15, cursor: stage === 'submitting' ? 'not-allowed' : 'pointer', opacity: stage === 'submitting' ? 0.7 : 1 }}
+            >
+              {stage === 'submitting' ? 'Submitting…' : `Submit Quiz (${answeredCount}/${totalQ} answered)`}
+            </button>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>Answers auto-save every 30 seconds</div>
+          </div>
+        )}
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
 // ── Quiz Panel ────────────────────────────────────────────────────────────────
 
 function QuizQuestionRow({ question, submissionData, showCorrect }: {
@@ -487,6 +858,7 @@ function QuizPanel({
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
   const [selectedAttempt, setSelectedAttempt] = useState(0)
+  const [showTaker, setShowTaker] = useState(false)
 
   useEffect(() => {
     setLoading(true); setErr(null)
@@ -580,20 +952,53 @@ function QuizPanel({
               </>
             ) : (
               <div style={{ padding: '20px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', textAlign: 'center' }}>
-                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>You haven't taken this quiz yet. Open it in Canvas to begin.</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>You haven&apos;t taken this quiz yet.</div>
+                <button
+                  onClick={() => setShowTaker(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 9, background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer' }}
+                >
+                  Take Quiz
+                </button>
               </div>
             )}
           </>
         )}
       </div>
 
-      <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+      <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {!err && (
+          <button
+            onClick={() => setShowTaker(true)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', width: '100%' }}
+          >
+            {data?.submissions.length ? 'Retake Quiz' : 'Take Quiz'}
+          </button>
+        )}
         <a href={canvasUrl} target="_blank" rel="noopener noreferrer" data-no-intercept="true"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>
-          {data?.submissions.length ? 'Review / Retake in Canvas' : 'Take Quiz in Canvas'}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
+          {data?.submissions.length ? 'Review / Retake in Canvas' : 'Open in Canvas'}
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         </a>
       </div>
+
+      {showTaker && data && (
+        <QuizTakerPanel
+          courseId={courseId}
+          quizId={quizId}
+          quizTitle={data.quiz.title ?? quizTitle}
+          quizDetail={{ time_limit: data.quiz.time_limit, allowed_attempts: data.quiz.allowed_attempts, question_count: data.quiz.question_count }}
+          canvasInstanceUrl={canvasInstanceUrl}
+          onClose={() => setShowTaker(false)}
+          onSubmitted={() => {
+            setShowTaker(false)
+            setLoading(true)
+            api.canvasQuiz(courseId, quizId, canvasInstanceUrl)
+              .then(d => { setData(d); setSelectedAttempt(d.submissions.length - 1) })
+              .catch(() => {})
+              .finally(() => setLoading(false))
+          }}
+        />
+      )}
     </div>
   )
 }

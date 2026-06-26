@@ -191,6 +191,34 @@ export interface CanvasQuizSubmission {
   submission_data?: CanvasQuizSubmissionData[]
 }
 
+export interface CanvasActiveQuizSubmission {
+  id: number
+  quiz_id: number
+  attempt: number
+  validation_token: string
+  started_at: string | null
+  end_at: string | null
+  workflow_state: string
+  time_limit: number | null
+}
+
+export interface CanvasSubmissionQuestionAnswer {
+  id: number
+  text: string
+  html?: string
+  match_id?: number
+}
+
+export interface CanvasSubmissionQuestion {
+  id: number
+  question_name: string
+  question_text: string
+  question_type: string
+  points_possible: number
+  answers?: CanvasSubmissionQuestionAnswer[]
+  matches?: Array<{ text: string; match_id: number }>
+}
+
 export interface CanvasCourseFile {
   id: number
   display_name: string
@@ -664,6 +692,108 @@ export async function submitCanvasAssignment(
       headers: buildAuthHeaders(token),
       timeout: 20_000,
     })
+  } catch (err) {
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Start a new quiz submission attempt for the student.
+ * Returns the active submission with a validation_token required for subsequent calls.
+ */
+export async function startCanvasQuizSubmission(
+  instanceUrl: string,
+  token: string,
+  courseId: number,
+  quizId: number,
+): Promise<CanvasActiveQuizSubmission> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/quizzes/${quizId}/submissions`
+  try {
+    const res = await axios.post<{ quiz_submissions: CanvasActiveQuizSubmission[] }>(
+      url,
+      {},
+      { headers: buildAuthHeaders(token), timeout: 20_000 },
+    )
+    const sub = res.data.quiz_submissions?.[0]
+    if (!sub) throw new CanvasApiError('No submission returned from Canvas', 422)
+    return sub
+  } catch (err) {
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Fetch questions for an active (in-progress) quiz submission.
+ * Requires the validation_token from startCanvasQuizSubmission.
+ */
+export async function fetchCanvasSubmissionQuestions(
+  instanceUrl: string,
+  token: string,
+  courseId: number,
+  quizId: number,
+  submissionId: number,
+  validationToken: string,
+): Promise<CanvasSubmissionQuestion[]> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/quizzes/${quizId}/submissions/${submissionId}/questions`
+  try {
+    const res = await axios.get<{ quiz_submission_questions: CanvasSubmissionQuestion[] }>(
+      url,
+      {
+        headers: { ...buildAuthHeaders(token), 'Quiz-Submission-Validation': validationToken },
+        timeout: 15_000,
+      },
+    )
+    return res.data.quiz_submission_questions ?? []
+  } catch (err) {
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Save (backup) answers for an in-progress quiz submission.
+ * quizQuestions is an array of { id: questionId, flagged: boolean, answer: any }
+ */
+export async function saveCanvasQuizAnswers(
+  instanceUrl: string,
+  token: string,
+  courseId: number,
+  quizId: number,
+  submissionId: number,
+  validationToken: string,
+  attempt: number,
+  quizQuestions: Array<{ id: number; flagged: boolean; answer: unknown }>,
+): Promise<void> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/quizzes/${quizId}/submissions/${submissionId}/questions`
+  try {
+    await axios.put(
+      url,
+      { validation_token: validationToken, attempt, quiz_questions: quizQuestions },
+      { headers: buildAuthHeaders(token), timeout: 20_000 },
+    )
+  } catch (err) {
+    handleAxiosError(err, instanceUrl)
+  }
+}
+
+/**
+ * Complete (submit) an in-progress quiz submission.
+ */
+export async function completeCanvasQuizSubmission(
+  instanceUrl: string,
+  token: string,
+  courseId: number,
+  quizId: number,
+  submissionId: number,
+  validationToken: string,
+  attempt: number,
+): Promise<void> {
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/courses/${courseId}/quizzes/${quizId}/submissions/${submissionId}/complete`
+  try {
+    await axios.post(
+      url,
+      { attempt, validation_token: validationToken },
+      { headers: buildAuthHeaders(token), timeout: 20_000 },
+    )
   } catch (err) {
     handleAxiosError(err, instanceUrl)
   }
