@@ -1259,7 +1259,7 @@ function SpinWheelModal({
                 transition: spinDuration > 0 ? `transform ${spinDuration}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)` : 'none',
               }}>
                 <polygon
-                  points={`${CX},${CY - 55} ${CX - 7},${CY - 27} ${CX + 7},${CY - 27}`}
+                  points={`${CX},${CY - 46} ${CX - 6},${CY - 27} ${CX + 6},${CY - 27}`}
                   fill="#EF4444"
                   style={{ filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.8))' }}
                 />
