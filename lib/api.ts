@@ -820,6 +820,9 @@ export const api = {
   adminGrantMarketAccess: (userId: number) =>
     request<{ ok: boolean }>('/api/admin/grant-market-access', { method: 'POST', body: JSON.stringify({ userId }) }),
 
+  adminBanMarketplace: (userId: number, banned: boolean) =>
+    request<{ ok: boolean }>('/api/admin/ban-marketplace', { method: 'POST', body: JSON.stringify({ userId, banned }) }),
+
   sendCoins: (receiverId: number, amount: number) =>
     request<{ ok: boolean; newBalance: number }>('/api/marketplace/coins/send', { method: 'POST', body: JSON.stringify({ receiverId, amount }) }),
 

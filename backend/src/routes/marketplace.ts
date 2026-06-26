@@ -623,7 +623,7 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { name: true, coins: true, tag: true, tagColor: true, nameColor: true, avatarEffect: true, badge: true, ownedNameColors: true, ownedAvatarEffects: true, lastCoinClaim: true, lastFreeSpin: true, allTags: true, marketplaceAccess: true, schoolConnection: { select: { districtUrl: true } } },
+      select: { name: true, coins: true, tag: true, tagColor: true, nameColor: true, avatarEffect: true, badge: true, ownedNameColors: true, ownedAvatarEffects: true, lastCoinClaim: true, lastFreeSpin: true, allTags: true, marketplaceAccess: true, marketplaceBanned: true, schoolConnection: { select: { districtUrl: true } } },
     })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
@@ -656,6 +656,7 @@ router.get('/inventory', requireAuth, async (req: AuthRequest, res: Response): P
         ownedNameColors: parseJsonArr(user.ownedNameColors),
         ownedAvatarEffects: parseJsonArr(user.ownedAvatarEffects),
         marketplaceAccess: user.marketplaceAccess,
+        marketplaceBanned: user.marketplaceBanned,
         nextFreeSpin: nextFreeSpin && nextFreeSpin > new Date() ? nextFreeSpin.toISOString() : null,
         isdCode,
         isdDisplayName: isdCode ? isdDisplayName(isdCode) : null,

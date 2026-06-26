@@ -310,4 +310,32 @@ router.post('/grant-market-access', async (req: AuthRequest, res: Response): Pro
   }
 })
 
+// ── POST /admin/ban-marketplace ──
+const banMarketplaceSchema = z.object({
+  userId: z.number().int().positive(),
+  banned: z.boolean(),
+})
+
+router.post('/ban-marketplace', async (req: AuthRequest, res: Response): Promise<void> => {
+  const parse = banMarketplaceSchema.safeParse(req.body)
+  if (!parse.success) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid request' } })
+    return
+  }
+  const { userId, banned } = parse.data
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
+    if (!user) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
+      return
+    }
+    await prisma.user.update({ where: { id: userId }, data: { marketplaceBanned: banned } })
+    logger.info('admin_marketplace_ban', { adminId: req.userId, targetUserId: userId, banned })
+    res.json({ data: { ok: true }, error: null })
+  } catch (err: unknown) {
+    logger.error('admin_marketplace_ban_error', { adminId: req.userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to update marketplace ban' } })
+  }
+})
+
 export default router

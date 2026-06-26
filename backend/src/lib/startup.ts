@@ -18,6 +18,7 @@ const PATCHES: string[] = [
     ADD COLUMN IF NOT EXISTS "marketplaceAccess"        BOOLEAN      NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS "lastSeenAt"               TIMESTAMP(3),
     ADD COLUMN IF NOT EXISTS "chatBanned"               BOOLEAN      NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS "marketplaceBanned"        BOOLEAN      NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS "chatMutedUntil"           TIMESTAMP(3),
     ADD COLUMN IF NOT EXISTS "failedLoginAttempts"      INTEGER      NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS "lockedUntil"              TIMESTAMP(3),

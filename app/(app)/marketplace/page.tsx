@@ -1585,6 +1585,10 @@ export default function MarketplacePage() {
   const [devMarketUserId, setDevMarketUserId] = useState('')
   const [devMarketGranting, setDevMarketGranting] = useState(false)
   const [devMarketMsg, setDevMarketMsg] = useState('')
+  const [marketplaceBanned, setMarketplaceBanned] = useState(false)
+  const [devBanMarketUserId, setDevBanMarketUserId] = useState('')
+  const [devBanMarketBusy, setDevBanMarketBusy] = useState(false)
+  const [devBanMarketMsg, setDevBanMarketMsg] = useState('')
   const [profileMarketGranting, setProfileMarketGranting] = useState(false)
   const [profileMarketMsg, setProfileMarketMsg] = useState('')
 
@@ -1685,6 +1689,7 @@ export default function MarketplacePage() {
         setInv(d)
         if (d.marketplaceAccess) setStreak(prev => Math.max(prev ?? 0, 3))
         if (d.nextFreeSpin) setFreeSpinCooldownUntil(new Date(d.nextFreeSpin))
+        if ((d as { marketplaceBanned?: boolean }).marketplaceBanned) setMarketplaceBanned(true)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -2413,6 +2418,26 @@ export default function MarketplacePage() {
         {items.length > 0 && total > 0 && (
           <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, marginTop: 5, display: 'flex', alignItems: 'center', gap: 3 }}><CoinIcon size={11} />Est. {total.toLocaleString()}</div>
         )}
+      </div>
+    )
+  }
+
+  if (marketplaceBanned && !isDevUser) {
+    return (
+      <div className="fade-up" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
+        <div style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>Spend your coins</p>
+          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>Marketplace</h1>
+        </div>
+        <div className="ns-card" style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div style={{ fontSize: 52 }}>🚫</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#EF4444', letterSpacing: '-0.3px' }}>Marketplace Access Revoked</div>
+          <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 360 }}>
+            Your access to the Marketplace has been revoked by a moderator.
+            If you believe this is a mistake, please contact{' '}
+            <a href="mailto:sumodhprabhu2008@gmail.com" style={{ color: 'var(--primary)', fontWeight: 600 }}>sumodhprabhu2008@gmail.com</a>.
+          </div>
+        </div>
       </div>
     )
   }
@@ -4049,6 +4074,53 @@ export default function MarketplacePage() {
                 </button>
               </div>
               {devMarketMsg && <div style={{ fontSize: 12, color: devMarketMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{devMarketMsg}</div>}
+            </div>
+
+            {/* Revoke / Restore Market Access */}
+            <div style={{ borderTop: '1px solid rgba(255,107,107,0.2)', paddingTop: 14, marginTop: 2 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🚫 Revoke / Restore Market Access</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  value={devBanMarketUserId}
+                  onChange={e => setDevBanMarketUserId(e.target.value)}
+                  placeholder="User ID"
+                  type="number"
+                  style={{ width: 110, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}
+                />
+                <button
+                  disabled={devBanMarketBusy || !devBanMarketUserId.trim()}
+                  onClick={async () => {
+                    const uid = parseInt(devBanMarketUserId)
+                    if (isNaN(uid)) { setDevBanMarketMsg('Invalid user ID'); return }
+                    setDevBanMarketBusy(true); setDevBanMarketMsg('')
+                    try {
+                      await api.adminBanMarketplace(uid, true)
+                      setDevBanMarketMsg(`✓ Market access revoked for user ${uid}`)
+                    } catch { setDevBanMarketMsg('Failed') }
+                    finally { setDevBanMarketBusy(false) }
+                  }}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#EF4444', color: '#fff', fontWeight: 700, fontSize: 13, cursor: devBanMarketUserId.trim() ? 'pointer' : 'not-allowed', opacity: devBanMarketUserId.trim() ? 1 : 0.5 }}
+                >
+                  {devBanMarketBusy ? '…' : 'Revoke'}
+                </button>
+                <button
+                  disabled={devBanMarketBusy || !devBanMarketUserId.trim()}
+                  onClick={async () => {
+                    const uid = parseInt(devBanMarketUserId)
+                    if (isNaN(uid)) { setDevBanMarketMsg('Invalid user ID'); return }
+                    setDevBanMarketBusy(true); setDevBanMarketMsg('')
+                    try {
+                      await api.adminBanMarketplace(uid, false)
+                      setDevBanMarketMsg(`✓ Market access restored for user ${uid}`)
+                    } catch { setDevBanMarketMsg('Failed') }
+                    finally { setDevBanMarketBusy(false) }
+                  }}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#22C55E', color: '#000', fontWeight: 700, fontSize: 13, cursor: devBanMarketUserId.trim() ? 'pointer' : 'not-allowed', opacity: devBanMarketUserId.trim() ? 1 : 0.5 }}
+                >
+                  {devBanMarketBusy ? '…' : 'Restore'}
+                </button>
+              </div>
+              {devBanMarketMsg && <div style={{ fontSize: 12, color: devBanMarketMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{devBanMarketMsg}</div>}
             </div>
 
             {/* Simulate unlock */}
