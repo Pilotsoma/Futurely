@@ -65,6 +65,7 @@ function AIChatInner() {
   const [input, setInput]         = useState('')
   const [sending, setSending]     = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const lastAutoSentQ = useRef<string | null>(null)
 
   useEffect(() => {
     const loaded = loadSessions()
@@ -78,10 +79,11 @@ function AIChatInner() {
   useEffect(() => {
     const q = searchParams.get('q')
     const n = searchParams.get('n') ?? ''
-    if (!q) return
-    const sentKey = `ai_q_${n}`
-    if (sessionStorage.getItem(sentKey)) return
-    sessionStorage.setItem(sentKey, '1')
+    if (!q || lastAutoSentQ.current === q) return
+    // Nonce guard: prevents the same submission from re-sending on page reload
+    if (n && sessionStorage.getItem(`ai_q_${n}`) === '1') return
+    lastAutoSentQ.current = q
+    if (n) sessionStorage.setItem(`ai_q_${n}`, '1')
 
     const msg = q.trim()
     if (!msg) return
