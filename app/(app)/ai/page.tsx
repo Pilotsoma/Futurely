@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -59,7 +59,6 @@ function formatSessionDate(ts: number): string {
 
 function AIChatInner() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const [sessions, setSessions]   = useState<ChatSession[]>([])
   const [activeId, setActiveId]   = useState<string | null>(null)
   const [messages, setMessages]   = useState<Msg[]>([])
@@ -81,7 +80,7 @@ function AIChatInner() {
     const q = searchParams.get('q')
     if (!q || lastAutoSentQ.current === q) return
     lastAutoSentQ.current = q
-    router.replace('/ai')
+    window.history.replaceState(null, '', '/ai')
 
     const msg = q.trim()
     if (!msg) return
