@@ -1076,7 +1076,9 @@ function SpinWheelModal({
   const [wonResult, setWonResult] = useState<BoxResult | null>(null)
   const [pointerAngle, setPointerAngle] = useState(0)
   const [spinDuration, setSpinDuration] = useState(0)
-  const [quantity, setQuantity] = useState(1)
+  const maxQ = box.type === 'dev-curse' ? 1000 : 100
+  const [quantityStr, setQuantityStr] = useState<string>('')
+  const quantity = quantityStr === '' ? 1 : Math.max(1, Math.min(maxQ, parseInt(quantityStr) || 1))
   const [spinError, setSpinError] = useState<string | null>(null)
   const [multiArrows, setMultiArrows] = useState<Array<{ finalAngle: number }>>([])
   const [arrowsLanded, setArrowsLanded] = useState(false)
@@ -1366,12 +1368,11 @@ function SpinWheelModal({
                   <input
                     type="number"
                     min={1}
-                    max={box.type === 'dev-curse' ? 1000 : 100}
-                    value={quantity}
+                    max={maxQ}
+                    value={quantityStr}
+                    placeholder="1"
                     onChange={e => {
-                      const maxQ = box.type === 'dev-curse' ? 1000 : 100
-                      const v = Math.max(1, Math.min(maxQ, parseInt(e.target.value) || 1))
-                      setQuantity(v)
+                      setQuantityStr(e.target.value)
                       setSpinError(null)
                     }}
                     style={{ width: 64, padding: '5px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, textAlign: 'center' }}

@@ -871,7 +871,11 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
   ])
   const accessToken = issueAccessToken(userId, oauthUser?.role ?? 'STUDENT')
   setAuthCookies(res, accessToken, refreshToken)
-  res.redirect(`${appUrl}/dashboard${!hasSchool ? '?connect=1' : ''}`)
+  if (isNew) {
+    res.redirect(`${appUrl}/login?oauth=new`)
+  } else {
+    res.redirect(`${appUrl}/dashboard${!hasSchool ? '?connect=1' : ''}`)
+  }
 }
 
 // ── GET /auth/oauth/google ───────────────────────────────────────────────────

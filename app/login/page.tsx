@@ -43,6 +43,7 @@ function LoginPageInner() {
   const [agreedPrivacy, setAgreedPrivacy]       = useState(false)
   const [agreedTos, setAgreedTos]               = useState(false)
   const [agreedAge, setAgreedAge]               = useState(false)
+  const [pendingOAuthNew, setPendingOAuthNew]   = useState(false)
 
   const [institution, setInstitution] = useState('')
   const [applyAsCounselor, setApplyAsCounselor] = useState(false)
@@ -104,6 +105,17 @@ function LoginPageInner() {
         if (u) localStorage.setItem('ns_user', JSON.stringify(u))
       }).catch(() => {})
       router.push('/dashboard')
+    }
+    if (oauthResult === 'new') {
+      // New account created via OAuth — must agree to ToS before entering the app
+      api.authMe().then(u => {
+        if (u) localStorage.setItem('ns_user', JSON.stringify(u))
+      }).catch(() => {})
+      setAgreedPrivacy(false)
+      setAgreedTos(false)
+      setAgreedAge(false)
+      setPendingOAuthNew(true)
+      setShowPrivacyModal(true)
     }
   }, [searchParams, router])
 
@@ -782,10 +794,17 @@ function LoginPageInner() {
               <button
                 type="button"
                 disabled={!agreedTos || !agreedPrivacy || !agreedAge || isLoading}
-                onClick={() => { setShowPrivacyModal(false); void doRegisterOrLogin() }}
+                onClick={() => {
+                  setShowPrivacyModal(false)
+                  if (pendingOAuthNew) {
+                    router.push('/dashboard')
+                  } else {
+                    void doRegisterOrLogin()
+                  }
+                }}
                 style={{ ...styles.btn, marginTop: 6, opacity: (!agreedTos || !agreedPrivacy || !agreedAge || isLoading) ? 0.45 : 1 }}
               >
-                {isLoading ? 'Creating account...' : 'Continue & Create Account'}
+                {isLoading ? 'Creating account...' : pendingOAuthNew ? 'Continue to Futurely' : 'Continue & Create Account'}
               </button>
             </div>
           </div>
