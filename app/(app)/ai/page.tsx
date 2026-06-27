@@ -65,7 +65,6 @@ function AIChatInner() {
   const [input, setInput]         = useState('')
   const [sending, setSending]     = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const lastAutoSentQ = useRef<string | null>(null)
 
   useEffect(() => {
     const loaded = loadSessions()
@@ -78,9 +77,11 @@ function AIChatInner() {
   // avoids any router/Suspense remount that url-cleanup calls can trigger.
   useEffect(() => {
     const q = searchParams.get('q')
-    if (!q || lastAutoSentQ.current === q) return
-    lastAutoSentQ.current = q
-    window.history.replaceState(null, '', '/ai')
+    const n = searchParams.get('n') ?? ''
+    if (!q) return
+    const sentKey = `ai_q_${n}`
+    if (sessionStorage.getItem(sentKey)) return
+    sessionStorage.setItem(sentKey, '1')
 
     const msg = q.trim()
     if (!msg) return
