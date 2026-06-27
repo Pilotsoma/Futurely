@@ -379,14 +379,6 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
               onUpdateMute={mu => setProfile(prev => prev ? { ...prev, chatMutedUntil: mu } : prev)}
             />
 
-            {/* Tag picker — only shown on own profile */}
-            {userId === currentUserId && (profile.allTags ?? []).length > 0 && (
-              <OwnTagPicker
-                profile={profile}
-                onUpdateTag={updated => setProfile(prev => prev ? { ...prev, tag: updated.tag, tagColor: updated.tagColor } : prev)}
-              />
-            )}
-
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
               <p style={O.postsTitle}>Posts</p>
               {postsLoading ? (
@@ -413,91 +405,6 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
       </div>
     </div>,
     document.body
-  )
-}
-
-// ── Own Tag Picker ────────────────────────────────────────────────────────────
-
-function OwnTagPicker({ profile, onUpdateTag }: {
-  profile: FeedUserProfile
-  onUpdateTag: (u: { tag: string | null; tagColor: string | null }) => void
-}) {
-  const [saving, setSaving] = useState<string | null>(null)
-  const isBannedOrMuted = profile.chatBanned || (!!profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())
-  const allTags = Array.from(new Map((profile.allTags ?? []).map(t => [`${t.tag}:${t.tagColor}`, t])).values())
-
-  async function handleSelect(tag: string, tagColor: string) {
-    if (saving || isBannedOrMuted) return
-    const savingKey = `${tag}:${tagColor}`
-    setSaving(savingKey)
-    try {
-      const updated = await api.feedSetDisplayTag(tag, tagColor)
-      onUpdateTag(updated)
-    } catch { /* ignore */ }
-    finally { setSaving(null) }
-  }
-
-  return (
-    <div style={{ background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>YOUR DISPLAY TAG</p>
-      {isBannedOrMuted ? (
-        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Tag selection is disabled while banned or muted.</p>
-      ) : (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
-          {allTags.map(t => {
-            const savingKey = `${t.tag}:${t.tagColor}`
-            const isVerified = t.tagColor === 'verified-yellow' || t.tagColor === 'verified-blue'
-            const isActive = profile.tag === t.tag && (isVerified ? profile.tagColor === t.tagColor : true)
-            const isDev = t.tag === 'DEV'
-            const isGod = t.tag === 'GOAT'
-            const isMythic = t.tag === 'VIP'
-            if (isVerified) {
-              // Verified checkmarks are badges, not equippable tags — show as read-only
-              return (
-                <span
-                  key={savingKey}
-                  title="This is a badge — it displays automatically and cannot be equipped as a tag"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    background: 'var(--surface-2)',
-                    border: `1px solid ${t.tagColor === 'verified-yellow' ? '#EAB30840' : '#1D9BF040'}`,
-                    borderRadius: 6, padding: '4px 8px',
-                    opacity: 0.6, cursor: 'default',
-                  }}
-                >
-                  <VerifiedBadge variant={t.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: t.tagColor === 'verified-yellow' ? '#EAB308' : '#1D9BF0' }}>
-                    {t.tagColor === 'verified-yellow' ? 'Verified' : 'Partner'}
-                  </span>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>badge</span>
-                </span>
-              )
-            }
-            return (
-              <button
-                key={savingKey}
-                disabled={!!saving}
-                onClick={() => void handleSelect(t.tag, t.tagColor)}
-                className={tagCssClass(t.tag, t.tagColor)}
-                style={{
-                  border: `2px solid ${isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.6)' : t.tagColor === 'curse' ? '#ff0000' : isAnimatedTag(t.tag) ? 'rgba(255,255,255,0.4)' : t.tagColor) : 'transparent'}`,
-                  background: isActive && !isAnimatedTag(t.tag) ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : t.tagColor === 'curse' ? 'rgba(255,0,0,0.08)' : `${t.tagColor}22`) : undefined,
-                  borderRadius: 6, padding: '4px 10px',
-                  fontSize: 12, fontWeight: 700,
-                  color: isAnimatedTag(t.tag) ? undefined : t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor === 'curse' ? undefined : t.tagColor,
-                  cursor: saving ? 'default' : 'pointer',
-                  opacity: saving === savingKey ? 0.5 : 1,
-                  transition: 'all 0.15s',
-                }}
-              >
-                {saving === savingKey ? '…' : t.tag}
-                {isActive && <span style={{ marginLeft: 4, fontSize: 10 }}>✓</span>}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
   )
 }
 
