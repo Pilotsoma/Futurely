@@ -4623,12 +4623,11 @@ export default function MarketplacePage() {
                     : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {rows.map(({ label, count, color }) => {
-                          const pct = total > 0 ? Math.round((count / total) * 100) : 0
                           return (
                             <div key={label}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                                 <span style={{ fontSize: 13, fontWeight: 700, color }}>{label}</span>
-                                <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>{count.toLocaleString()} <span style={{ fontSize: 11 }}>({pct}%)</span></span>
+                                <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>{count.toLocaleString()}</span>
                               </div>
                               <div style={{ height: 6, borderRadius: 99, background: 'var(--surface-2)', overflow: 'hidden' }}>
                                 <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 0.4s ease' }} />
