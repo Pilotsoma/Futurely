@@ -63,7 +63,6 @@ function AIChatInner() {
   const [input, setInput]         = useState('')
   const [sending, setSending]     = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const lastAutoSentQ = useRef<string | null>(null)
 
   useEffect(() => {
     const loaded = loadSessions()
@@ -72,13 +71,16 @@ function AIChatInner() {
   }, [])
 
   // Auto-send a message passed from the dashboard AiBar via sessionStorage.
-  // sessionStorage is consumed immediately so a page reload won't resend.
+  // We use a cancel flag so React 18 Strict Mode's mount→unmount→remount
+  // cycle works correctly: the first mount's callbacks are cancelled on
+  // cleanup, the second (live) mount re-reads sessionStorage and completes
+  // the send. sessionStorage is only removed after a successful send so the
+  // second mount can still read the value.
   useEffect(() => {
     const msg = sessionStorage.getItem('ai_pending_msg')?.trim()
-    sessionStorage.removeItem('ai_pending_msg')
-    if (!msg || lastAutoSentQ.current === msg) return
-    lastAutoSentQ.current = msg
+    if (!msg) return
 
+    let cancelled = false
     const sessionId = newSessionId()
     const title = msg.length > 40 ? msg.slice(0, 40) + '…' : msg
     const userMsg: Msg = { id: Date.now().toString(), role: 'user', text: msg }
@@ -90,6 +92,8 @@ function AIChatInner() {
 
     api.chat(msg)
       .then(({ reply }) => {
+        if (cancelled) return
+        sessionStorage.removeItem('ai_pending_msg')
         const aiMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: reply }
         setMessages([userMsg, aiMsg])
         setSessions(prev => {
@@ -99,6 +103,8 @@ function AIChatInner() {
         })
       })
       .catch(() => {
+        if (cancelled) return
+        sessionStorage.removeItem('ai_pending_msg')
         const errMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: 'Something went wrong. Please try again.' }
         setMessages([userMsg, errMsg])
         setSessions(prev => {
@@ -108,9 +114,11 @@ function AIChatInner() {
         })
       })
       .finally(() => {
-        setSending(false)
-        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
+        if (!cancelled) setSending(false)
+        if (!cancelled) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
       })
+
+    return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
