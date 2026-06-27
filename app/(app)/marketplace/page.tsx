@@ -1193,10 +1193,7 @@ function SpinWheelModal({
                 className={seg.rarity === 'Mythic' ? 'mythic-hue' : (seg.rarity === 'Unobtainable' || seg.rarity === 'Curse') ? 'unobtainable-hue' : undefined}
               />
             ))}
-            {/* Center hub — hidden when item is revealed */}
-            {phase !== 'done' && (
-              <circle cx={CX} cy={CY} r={27} fill="#EF4444" stroke="#000" strokeWidth={2} />
-            )}
+            {/* Center hub is rendered in the arrow layer so it stays on top of all arrows */}
           </svg>
 
           {/* Layer 2: item reveal — pops into center on landing */}
@@ -1279,6 +1276,10 @@ function SpinWheelModal({
                 />
               </g>
             ))}
+            {/* Hub rendered last so it always sits on top of all arrows */}
+            {phase !== 'done' && (
+              <circle cx={CX} cy={CY} r={27} fill="#EF4444" stroke="#000" strokeWidth={2} />
+            )}
           </svg>
         </div>
 
