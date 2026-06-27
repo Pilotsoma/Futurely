@@ -20,14 +20,14 @@ Accent Lavender: #A855F7
 ```
 primary:        #2979FF   --primary
 primaryDark:    #1B4DB0   --primary-dark
-background:     #050B18   --bg
-surface:        #0D1627   --surface
-surface2:       #111C35   --surface-2
-border:         #1A2744   --border
-borderHover:    #243357   --border-hover
+background:     #0D1829   --bg
+surface:        #162235   --surface
+surface2:       #1C2D47   --surface-2
+border:         #273D5E   --border
+borderHover:    #2F4970   --border-hover
 textPrimary:    #E8EEFF   --text
-textSecondary:  #7B8DB0   --text-secondary
-textMuted:      #3D4F72   --text-muted
+textSecondary:  #96AACC   --text-secondary
+textMuted:      #52698A   --text-muted
 success:        #10B981
 warning:        #F59E0B
 error:          #EF4444
@@ -77,8 +77,8 @@ F: #EF4444  (red)
 ## Components — Standards
 
 ### Cards
-- Background: surface (`#0D1627`)
-- Border: 1px solid border (`#1A2744`)
+- Background: surface (`#162235`)
+- Border: 1px solid border (`#273D5E`)
 - Border-radius: 12px
 - Shadow: none (flat design — dark theme)
 - Padding: 16px
@@ -92,17 +92,17 @@ F: #EF4444  (red)
 - Note: `expo-linear-gradient` not installed — use flat blue fallback
 
 ### Inputs
-- Background: `#050B18`
-- Border: `#1A2744` (default), `#2979FF` (focused), `#EF4444` (error)
-- Placeholder text: `#7B8DB0`
+- Background: `#0D1829`
+- Border: `#273D5E` (default), `#2979FF` (focused), `#EF4444` (error)
+- Placeholder text: `#96AACC`
 - Radius: 8px (web) / rounded-2xl (mobile)
 - Height: 48px
 - Label above input, error message below
 
 ### Navigation (mobile)
-- Drawer sidebar: bg `#050B18`, active item left-border `#2979FF`
+- Drawer sidebar: bg `#0D1829`, active item left-border `#2979FF`
 - Active icon/label: `#2979FF`
-- Inactive icon/label: `#7B8DB0`
+- Inactive icon/label: `#96AACC`
 
 ### Navigation (web)
 - Sidebar: bg `var(--surface)`, 220px expanded / 64px collapsed
