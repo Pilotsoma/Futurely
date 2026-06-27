@@ -20,8 +20,8 @@
   --error:        #EF4444;
   --info:         #00E5FF;
   --purple:       #7C3AED;
-  --sidebar-w:    220px;
-  --page-px:      36px;
+  --sidebar-w:    260px;
+  --page-px:      44px;
   --gc-a: #10B981;
   --gc-b: #2979FF;
   --gc-c: #F59E0B;
@@ -98,7 +98,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -119,10 +119,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .ns-nav-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 14px;
-  border-radius: 9px;
-  font-size: 13.5px;
+  gap: 12px;
+  padding: 11px 16px;
+  border-radius: 10px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
