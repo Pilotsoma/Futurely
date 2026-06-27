@@ -4624,6 +4624,7 @@ export default function MarketplacePage() {
                     : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {rows.map(({ label, count, color }) => {
+                          const pct = total > 0 ? (count / total) * 100 : 0
                           return (
                             <div key={label}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
