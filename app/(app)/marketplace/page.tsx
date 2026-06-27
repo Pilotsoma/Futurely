@@ -1372,7 +1372,13 @@ function SpinWheelModal({
                     value={quantityStr}
                     placeholder="1"
                     onChange={e => {
-                      setQuantityStr(e.target.value)
+                      const raw = e.target.value
+                      if (raw === '') {
+                        setQuantityStr('')
+                      } else {
+                        const parsed = parseInt(raw, 10)
+                        if (!isNaN(parsed)) setQuantityStr(String(Math.max(1, Math.min(maxQ, parsed))))
+                      }
                       setSpinError(null)
                     }}
                     style={{ width: 64, padding: '5px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, textAlign: 'center' }}
