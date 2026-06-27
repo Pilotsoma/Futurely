@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -58,7 +57,6 @@ function formatSessionDate(ts: number): string {
 }
 
 function AIChatInner() {
-  const searchParams = useSearchParams()
   const [sessions, setSessions]   = useState<ChatSession[]>([])
   const [activeId, setActiveId]   = useState<string | null>(null)
   const [messages, setMessages]   = useState<Msg[]>([])
@@ -73,20 +71,14 @@ function AIChatInner() {
     saveSessions(loaded)
   }, [])
 
-  // Auto-send the ?q= param from the dashboard AiBar.
-  // Uses stable state setters directly — avoids stale handleSend closures and
-  // avoids any router/Suspense remount that url-cleanup calls can trigger.
+  // Auto-send a message passed from the dashboard AiBar via sessionStorage.
+  // sessionStorage is consumed immediately so a page reload won't resend.
   useEffect(() => {
-    const q = searchParams.get('q')
-    const n = searchParams.get('n') ?? ''
-    if (!q || lastAutoSentQ.current === q) return
-    // Nonce guard: prevents the same submission from re-sending on page reload
-    if (n && sessionStorage.getItem(`ai_q_${n}`) === '1') return
-    lastAutoSentQ.current = q
-    if (n) sessionStorage.setItem(`ai_q_${n}`, '1')
+    const msg = sessionStorage.getItem('ai_pending_msg')?.trim()
+    sessionStorage.removeItem('ai_pending_msg')
+    if (!msg || lastAutoSentQ.current === msg) return
+    lastAutoSentQ.current = msg
 
-    const msg = q.trim()
-    if (!msg) return
     const sessionId = newSessionId()
     const title = msg.length > 40 ? msg.slice(0, 40) + '…' : msg
     const userMsg: Msg = { id: Date.now().toString(), role: 'user', text: msg }
@@ -120,7 +112,7 @@ function AIChatInner() {
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
       })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
+  }, [])
 
   function startNewChat() {
     setActiveId(null)

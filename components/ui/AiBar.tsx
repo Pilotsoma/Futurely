@@ -14,7 +14,8 @@ export default function AiBar({ placeholder = 'Ask Futurely AI…' }: AiBarProps
   function handleSubmit() {
     const trimmed = query.trim()
     if (!trimmed) return
-    router.push(`/ai?q=${encodeURIComponent(trimmed)}&n=${Date.now()}`)
+    sessionStorage.setItem('ai_pending_msg', trimmed)
+    router.push('/ai')
   }
 
   return (
