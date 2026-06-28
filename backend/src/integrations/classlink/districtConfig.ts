@@ -22,7 +22,7 @@ export const DISTRICTS: Record<string, DistrictConfig> = {
     id: 'pausd',
     name: 'Palo Alto Unified School District',
     state: 'CA',
-    classlink: { loginUrl: 'https://login.pausd.org', tenant: 'pausd' },
+    classlink: { loginUrl: 'https://launchpad.classlink.com/pausd', tenant: 'pausd' },
     schoology: { domain: 'pausd.schoology.com', enabled: true },
     infiniteCampus: { baseUrl: 'https://pausd.infinitecampus.org', appName: 'campus', enabled: true },
   },

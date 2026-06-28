@@ -32,9 +32,30 @@ router.post('/connect', asyncHandler(async (req, res) => {
     return;
   }
 
-  const district = getDistrict(districtId); // throws if unknown
+  let district;
+  try {
+    district = getDistrict(districtId);
+  } catch {
+    res.status(400).json({ error: { code: 'UNKNOWN_DISTRICT', message: `Unknown district: "${districtId}"` } });
+    return;
+  }
 
-  await loginClasslink(userId, username, password, district);
+  try {
+    await loginClasslink(userId, username, password, district);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.startsWith('CLASSLINK_GOOGLE_SSO')) {
+      res.status(400).json({ error: { code: 'GOOGLE_SSO', message: 'This district uses Google SSO — username/password login is not supported. Contact your school for direct ClassLink credentials.' } });
+      return;
+    }
+    if (msg.startsWith('CLASSLINK_INVALID_CREDENTIALS')) {
+      res.status(401).json({ error: { code: 'INVALID_CREDENTIALS', message: 'Incorrect username or password. Please try again.' } });
+      return;
+    }
+    // Network / timeout / unexpected — surface the real message so we can diagnose
+    res.status(502).json({ error: { code: 'LOGIN_FAILED', message: `ClassLink login failed: ${msg || 'Unknown error'}` } });
+    return;
+  }
 
   // Persist credentials using existing SchoolConnection model:
   //   systemType = "CLASSLINK", districtUrl = districtId slug, hacUsername = username

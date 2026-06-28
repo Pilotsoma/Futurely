@@ -35,46 +35,59 @@ export async function loginClasslink(
     timeout: 20000,
   }));
 
-  const loginUrl = district.classlink.loginUrl;
-
-  // Step 1: GET login page to extract CSRF token and detect Google SSO
-  const loginPageResp = await http.get(loginUrl);
+  // Step 1: GET the launchpad page — this sets cookies and may redirect to the
+  // district's IdP (ClassLink, Google, ADFS, etc.)
+  const launchpadUrl = `https://launchpad.classlink.com/${district.classlink.tenant}`;
+  const loginPageResp = await http.get(launchpadUrl);
+  const finalLandingUrl: string = (loginPageResp.request?.res?.responseUrl as string) || launchpadUrl;
   const $ = cheerio.load(loginPageResp.data as string);
 
+  // Detect Google SSO redirect
   const isGoogleSSO =
-    (loginPageResp.request?.res?.responseUrl as string | undefined)?.includes('accounts.google.com') ||
-    $('a[href*="accounts.google.com"]').length > 0;
+    finalLandingUrl.includes('accounts.google.com') ||
+    $('a[href*="accounts.google.com"]').length > 0 ||
+    $('form[action*="accounts.google.com"]').length > 0;
 
   if (isGoogleSSO) {
     throw new Error(
       `CLASSLINK_GOOGLE_SSO: District "${district.id}" uses Google SSO. ` +
-      `ClassLink credential login is not available. Run debug-classlink.ts for raw page dump.`
+      `ClassLink credential login is not available.`
     );
   }
 
+  // Extract CSRF token from the login form
   const csrfToken =
     ($('input[name="_csrf"]').val() as string) ||
     ($('input[name="csrf_token"]').val() as string) ||
     ($('input[name="authenticity_token"]').val() as string) ||
     '';
 
+  // Determine the form action — ClassLink IdP uses /idp/login or the form's own action
+  const formAction = ($('form').attr('action') as string | undefined) || '';
+  const loginPostUrl = formAction.startsWith('http')
+    ? formAction
+    : formAction
+      ? new URL(formAction, finalLandingUrl).toString()
+      : `https://launchpad.classlink.com/idp/login`;
+
   // Step 2: POST credentials
-  const loginPostUrl = loginUrl.replace(/\/$/, '') + '/login';
   const formData = new URLSearchParams();
   formData.append('username', username);
   formData.append('password', password);
   if (csrfToken) formData.append('_csrf', csrfToken);
 
   await http.post(loginPostUrl, formData.toString(), {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Referer': finalLandingUrl,
+    },
   });
 
-  // Step 3: Verify login by fetching the launchpad
-  const launchpadUrl = `https://launchpad.classlink.com/${district.classlink.tenant}`;
-  const launchpadResp = await http.get(launchpadUrl);
-  const finalUrl: string = (launchpadResp.request?.res?.responseUrl as string) || '';
+  // Step 3: Verify login — launchpad should load without redirecting back to /login
+  const verifyResp = await http.get(launchpadUrl);
+  const verifyUrl: string = (verifyResp.request?.res?.responseUrl as string) || '';
 
-  if (finalUrl.includes('/login') || finalUrl.includes('/signin')) {
+  if (verifyUrl.includes('/login') || verifyUrl.includes('/signin') || verifyUrl.includes('idp/login')) {
     throw new Error('CLASSLINK_INVALID_CREDENTIALS: Login failed. Check username and password.');
   }
 
