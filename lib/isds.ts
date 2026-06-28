@@ -1,8 +1,9 @@
 export interface ISDEntry {
   name: string
   state: string
-  hacUrl?: string     // K-12 HAC portal URL (not set for colleges)
-  canvasUrl?: string  // hostname only, e.g. "katyisd.instructure.com"
+  hacUrl?: string        // K-12 HAC portal URL (not set for colleges)
+  canvasUrl?: string     // hostname only, e.g. "katyisd.instructure.com"
+  classlinkId?: string   // ClassLink district slug (districtConfig.ts)
 }
 
 export const ISD_LIST: ISDEntry[] = [
@@ -68,8 +69,13 @@ export const ISD_LIST: ISDEntry[] = [
   // Delaware
   { name: 'Delaware Public Schools (statewide)',   state: 'DE', hacUrl: 'https://hacdoe.doe.k12.de.us' },
 
+  // Pennsylvania
+  { name: 'Downingtown Area School District',      state: 'PA', classlinkId: 'dasd' },
+  { name: 'Norristown Area School District',       state: 'PA', classlinkId: 'norristown' },
+
   // California
-  { name: 'Palo Alto USD',                         state: 'CA', canvasUrl: 'pausd.instructure.com' },
+  { name: 'Palo Alto USD',                         state: 'CA', canvasUrl: 'pausd.instructure.com',           classlinkId: 'pausd' },
+  { name: 'San Ramon Valley USD',                  state: 'CA', classlinkId: 'srvusd' },
   { name: 'Los Angeles USD',                       state: 'CA', canvasUrl: 'lausd.instructure.com' },
   { name: 'San Diego USD',                         state: 'CA', canvasUrl: 'sandi.instructure.com' },
   { name: 'Elk Grove USD',                         state: 'CA', canvasUrl: 'egusd.instructure.com' },
@@ -127,11 +133,11 @@ export const ISD_LIST: ISDEntry[] = [
   { name: 'Polk County Public Schools',            state: 'FL', canvasUrl: 'polkfl.instructure.com' },
 
   // Georgia
+  { name: 'Fulton County Schools',                 state: 'GA', canvasUrl: 'fultonschools.instructure.com',   classlinkId: 'fulton' },
   { name: 'Gwinnett County Public Schools',        state: 'GA', canvasUrl: 'gcps.instructure.com' },
   { name: 'Cherokee County Schools',               state: 'GA', canvasUrl: 'cherokee.instructure.com' },
   { name: 'Forsyth County Schools',                state: 'GA', canvasUrl: 'forsyth.instructure.com' },
   { name: 'Cobb County School District',           state: 'GA', canvasUrl: 'cobbk12.instructure.com' },
-  { name: 'Fulton County Schools',                 state: 'GA', canvasUrl: 'fultonschools.instructure.com' },
   { name: 'DeKalb County School District',         state: 'GA', canvasUrl: 'dekalbschools.instructure.com' },
   { name: 'Atlanta Public Schools',                state: 'GA', canvasUrl: 'atlanta.instructure.com' },
 
@@ -159,6 +165,7 @@ export const ISD_LIST: ISDEntry[] = [
   { name: 'Chicago Public Schools',                state: 'IL', canvasUrl: 'cps.instructure.com' },
   { name: 'Naperville CUSD 203',                   state: 'IL', canvasUrl: 'naperville203.instructure.com' },
   { name: 'District 211 (Palatine)',               state: 'IL', canvasUrl: 'd211.instructure.com' },
+  { name: 'St. Charles CUSD 303',                  state: 'IL', classlinkId: 'd303' },
 
   // Ohio
   { name: 'Columbus City Schools',                 state: 'OH', canvasUrl: 'columbus.instructure.com' },
@@ -171,6 +178,7 @@ export const ISD_LIST: ISDEntry[] = [
   { name: 'Ann Arbor Public Schools',              state: 'MI', canvasUrl: 'aaps.instructure.com' },
 
   // Minnesota
+  { name: 'Shakopee Public Schools',               state: 'MN', classlinkId: 'shakopee' },
   { name: 'Anoka-Hennepin School District',        state: 'MN', canvasUrl: 'ahschools.instructure.com' },
   { name: 'Osseo Area Schools',                    state: 'MN', canvasUrl: 'district279.instructure.com' },
   { name: 'Wayzata Public Schools',                state: 'MN', canvasUrl: 'wayzata.instructure.com' },
