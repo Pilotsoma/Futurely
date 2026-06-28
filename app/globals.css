@@ -31,34 +31,20 @@
 
 /* ── Futurely dark theme ──────────────────────────────────────────────────── */
 html[data-theme="dark"] {
-<<<<<<< HEAD
-  --bg:           #0F1623;
-  --surface:      #182030;
-  --surface-2:    #1E2B3C;
-  --surface-3:    #243348;
-  --border:       #243050;
-  --border-hover: #2E3E64;
-=======
   --bg:           #0D1829;
   --surface:      #162235;
   --surface-2:    #1C2D47;
   --surface-3:    #233456;
   --border:       #273D5E;
   --border-hover: #2F4970;
->>>>>>> 840ac053f04d198dd69731be795b6c9272f10edc
   --primary:      #2979FF;
   --primary-dark: #1B4DB0;
   --primary-dim:  rgba(41, 121, 255, 0.10);
   --primary-glow: rgba(41, 121, 255, 0.25);
   --accent-blue:  #00E5FF;
   --text:         #E8EEFF;
-<<<<<<< HEAD
-  --text-secondary: #9CAAC8;
-  --text-muted:   #5D7099;
-=======
   --text-secondary: #96AACC;
   --text-muted:   #52698A;
->>>>>>> 840ac053f04d198dd69731be795b6c9272f10edc
   --success:      #10B981;
   --warning:      #F59E0B;
   --orange:       #F97316;

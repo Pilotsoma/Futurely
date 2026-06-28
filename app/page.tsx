@@ -387,15 +387,10 @@ export default function LandingPage() {
             </BorderGlow>
           </Reveal>
           <Reveal delay={0.18}>
-<<<<<<< HEAD
-            <BentoCard accent="#C45A1A" icon={ICON_STREAK} label="Daily Streaks"
-              desc="Log in every day. Build your streak. Earn coins and unlock exclusive tags the longer you stay consistent." />
-=======
             <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
               <BentoCard accent="#C45A1A" icon={ICON_STREAK} label="Daily Streaks"
-                desc="Show up every day. Build your streak. Earn coins and unlock the Marketplace — because consistency is how grades actually move." />
+                desc="Show up every day. Build your streak. Earn coins and unlock exclusive tags — because consistency is how grades actually move." />
             </BorderGlow>
->>>>>>> 840ac053f04d198dd69731be795b6c9272f10edc
           </Reveal>
         </div>
 
@@ -408,25 +403,15 @@ export default function LandingPage() {
             </BorderGlow>
           </Reveal>
           <Reveal delay={0.14}>
-<<<<<<< HEAD
-            <BentoCard accent="#2D6A4F" icon={
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
-              </svg>
-            } label="Reward Shop"
-              desc="Earn coins from daily streaks and use them to unlock exclusive profile effects, name colors, and cosmetic gear — the more you show up, the more you can earn."
-              large />
-=======
             <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
               <BentoCard accent="#2D6A4F" icon={
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
                   <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
                 </svg>
-              } label="Marketplace"
-                desc="Unlock at day 3 of your streak. Buy, sell, and trade cosmetics with coins you earn just by showing up — exclusive avatar effects, name colors, profile frames, and rare tags. The rarer your consistency, the rarer your gear."
+              } label="Reward Shop"
+                desc="Earn coins from daily streaks and use them to unlock exclusive profile effects, name colors, and cosmetic gear — the more you show up, the more you can earn."
                 large />
             </BorderGlow>
->>>>>>> 840ac053f04d198dd69731be795b6c9272f10edc
           </Reveal>
         </div>
       </section>
