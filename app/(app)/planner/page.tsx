@@ -78,6 +78,8 @@ export default function PlannerPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [toggling, setToggling] = useState<Set<number>>(new Set())
+  const [toggleError, setToggleError] = useState<string | null>(null)
+  const togglingRef = useRef<Set<number>>(new Set())
 
   // Canvas state
   const [canvasStatus, setCanvasStatus] = useState<CanvasStatus | null>(null)
@@ -168,18 +170,26 @@ export default function PlannerPage() {
   }
 
   async function handleToggle(id: number, completed: boolean) {
-    setToggling(prev => new Set([...prev, id]))
+    setToggleError(null)
+    togglingRef.current.add(id)
+    setToggling(new Set(togglingRef.current))
+    // Optimistic update
     setItems(prev => prev.map(item =>
       item.id === id ? { ...item, completed, completedAt: completed ? new Date().toISOString() : null } : item
     ))
     try {
-      await api.plannerToggle(id, completed)
+      // Confirm with server — use the returned item to keep state authoritative
+      const updated = await api.plannerToggle(id, completed)
+      setItems(prev => prev.map(item => item.id === id ? updated : item))
     } catch {
+      // Revert optimistic update and surface the error
       setItems(prev => prev.map(item =>
         item.id === id ? { ...item, completed: !completed, completedAt: !completed ? new Date().toISOString() : null } : item
       ))
+      setToggleError('Failed to save — please try again.')
     } finally {
-      setToggling(prev => { const n = new Set(prev); n.delete(id); return n })
+      togglingRef.current.delete(id)
+      setToggling(new Set(togglingRef.current))
     }
   }
 
@@ -197,7 +207,15 @@ export default function PlannerPage() {
     try {
       await api.canvasSync()
       const assignments = await api.plannerList()
-      setItems(assignments)
+      setItems(prev => {
+        const prevMap = new Map(prev.map(i => [i.id, i]))
+        // Don't overwrite items that have an in-flight toggle — their local state
+        // is more authoritative than the just-fetched DB snapshot
+        return assignments.map(a => {
+          if (togglingRef.current.has(a.id)) return prevMap.get(a.id) ?? a
+          return a
+        })
+      })
       const status = await api.canvasStatus()
       setCanvasStatus(status)
     } catch (e) {
@@ -609,6 +627,14 @@ export default function PlannerPage() {
           </div>
         )}
       </div>
+
+      {/* Toggle error toast */}
+      {toggleError && (
+        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <span style={{ fontSize: 13, color: '#EF4444' }}>{toggleError}</span>
+          <button onClick={() => setToggleError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 16, padding: 0, lineHeight: 1 }}>✕</button>
+        </div>
+      )}
 
       {/* Assignment Groups */}
       {(() => {

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
+import { promises as dnsPromises } from 'dns'
 import rateLimit from 'express-rate-limit'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
@@ -13,7 +14,7 @@ const router = Router()
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const BCRYPT_ROUNDS = 12
+const BCRYPT_ROUNDS = 10
 const ACCESS_TOKEN_EXPIRY = '15m'
 const REFRESH_TOKEN_EXPIRY_DAYS = 7
 const RESET_TOKEN_EXPIRY_MINUTES = 15
@@ -101,8 +102,8 @@ function validatePassword(password: string): string | null {
   return null
 }
 
-function issueAccessToken(userId: number): string {
-  return jwt.sign({ sub: userId }, process.env.JWT_SECRET!, { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_EXPIRY })
+function issueAccessToken(userId: number, role = 'STUDENT'): string {
+  return jwt.sign({ sub: userId, role }, process.env.JWT_SECRET!, { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_EXPIRY })
 }
 
 const IS_PROD = process.env.NODE_ENV === 'production'
@@ -144,6 +145,21 @@ async function sendVerificationEmail(email: string, token: string): Promise<void
   })
 }
 
+// Returns false only when DNS conclusively confirms the domain has no mail handler.
+// Fails open on timeouts/SERVFAIL so transient DNS issues don't block real users.
+async function hasValidMailDomain(email: string): Promise<boolean> {
+  const domain = email.split('@')[1]?.toLowerCase()
+  if (!domain || !domain.includes('.')) return false
+  try {
+    const records = await dnsPromises.resolveMx(domain)
+    return records.length > 0
+  } catch (err: unknown) {
+    const code = (err as { code?: string }).code
+    if (code === 'ENOTFOUND' || code === 'ENODATA') return false
+    return true // SERVFAIL, ETIMEOUT, etc. → fail open
+  }
+}
+
 async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
   const appUrl = process.env.APP_URL ?? 'https://futurely.app'
   const link = `${appUrl}/reset-password?token=${token}`
@@ -151,26 +167,83 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
     to: email,
     subject: 'Reset your Futurely password',
     html: `
-      <p>You requested a password reset for your Futurely account.</p>
-      <p>Click the link below to reset your password:</p>
-      <p><a href="${link}">Reset Password</a></p>
-      <p>This link expires in ${RESET_TOKEN_EXPIRY_MINUTES} minutes.</p>
-      <p>If you didn't request this, you can safely ignore this email.</p>
-    `,
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F0F4FF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0F4FF;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:480px;background:#ffffff;border-radius:18px;border:1px solid #C0CCE8;box-shadow:0 8px 40px rgba(26,21,14,0.08);overflow:hidden;">
+        <tr>
+          <td style="padding:36px 40px 28px;text-align:center;border-bottom:1px solid #C0CCE8;">
+            <span style="font-size:28px;font-weight:700;color:#050B18;letter-spacing:-0.5px;">Futurely</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 40px 28px;">
+            <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#050B18;">Reset your password</h1>
+            <p style="margin:0 0 24px;font-size:15px;color:#3D4F72;line-height:1.6;">
+              We received a request to reset your Futurely password. Click the button below — this link expires in <strong>${RESET_TOKEN_EXPIRY_MINUTES} minutes</strong>.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center">
+                  <a href="${link}" style="display:inline-block;background:#2979FF;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:10px;letter-spacing:0.1px;">
+                    Reset my password
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:28px 0 0;font-size:13px;color:#7B8DB0;line-height:1.6;">
+              If the button doesn't work, copy and paste this link into your browser:<br>
+              <a href="${link}" style="color:#2979FF;word-break:break-all;">${link}</a>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 40px;border-top:1px solid #C0CCE8;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#7B8DB0;line-height:1.5;">
+              If you didn't request a password reset, you can safely ignore this email.<br>
+              Your password won't change.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
   })
 }
 
 // ── POST /auth/register ───────────────────────────────────────────────────────
 
 router.post('/register', registerLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email, password, name, role: roleInput } = req.body as {
-    email?: string; password?: string; name?: string; role?: string
+  const { email, password, name, role: roleInput, otp } = req.body as {
+    email?: string; password?: string; name?: string; role?: string; otp?: string
   }
 
   if (!email || !password) {
     res.status(400).json({
       data: null,
       error: { code: 'VALIDATION_ERROR', message: 'email and password required' },
+    })
+    return
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'Please enter a valid email address.' },
+    })
+    return
+  }
+
+  const domainValid = await hasValidMailDomain(email)
+  if (!domainValid) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'That email domain doesn\'t appear to be valid. Please check for typos.' },
     })
     return
   }
@@ -184,33 +257,58 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     return
   }
 
-  const displayName = name ?? email.split('@')[0]
-  const nameCheck = filterUsername(displayName)
-  if (!nameCheck.ok) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'INAPPROPRIATE_NAME', message: nameCheck.reason },
-    })
-    return
+  // Display name is optional — only validate if provided
+  const displayName = name?.trim() || null
+  if (displayName) {
+    const nameCheck = filterUsername(displayName)
+    if (!nameCheck.ok) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'INAPPROPRIATE_NAME', message: nameCheck.reason },
+      })
+      return
+    }
   }
 
   try {
-    const existing = await prisma.user.findUnique({ where: { email } })
-    if (existing) {
+    const [emailTaken, nameTaken] = await Promise.all([
+      prisma.user.findUnique({ where: { email } }),
+      displayName ? prisma.user.findFirst({ where: { name: displayName } }) : Promise.resolve(null),
+    ])
+    if (emailTaken) {
       res.status(409).json({
         data: null,
         error: { code: 'CONFLICT', message: 'An account with this email already exists' },
       })
       return
     }
+    if (nameTaken) {
+      res.status(409).json({
+        data: null,
+        error: { code: 'NAME_TAKEN', message: 'That display name is already taken. Please choose another.' },
+      })
+      return
+    }
+
+    // Verify OTP
+    if (!otp) {
+      res.status(400).json({ data: null, error: { code: 'OTP_REQUIRED', message: 'Verification code required.' } })
+      return
+    }
+    const codeHash = crypto.createHash('sha256').update(otp.trim()).digest('hex')
+    const otpRecord = await prisma.emailOTP.findFirst({
+      where: { email, codeHash, usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (!otpRecord) {
+      res.status(400).json({ data: null, error: { code: 'INVALID_OTP', message: 'Invalid or expired verification code.' } })
+      return
+    }
+    await prisma.emailOTP.update({ where: { id: otpRecord.id }, data: { usedAt: new Date() } })
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
-    const userRole = roleInput === 'PARENT' ? 'PARENT' : 'STUDENT'
-    const defaultTag = userRole === 'PARENT' ? 'Parent' : 'Student'
-
-    const verificationToken = crypto.randomBytes(32).toString('hex')
-    const verificationExpiry = new Date()
-    verificationExpiry.setHours(verificationExpiry.getHours() + VERIFY_TOKEN_EXPIRY_HOURS)
+    const userRole = roleInput === 'PARENT' ? 'PARENT' : roleInput === 'TEACHER' ? 'TEACHER' : roleInput === 'COUNSELOR' ? 'COUNSELOR' : 'STUDENT'
+    const defaultTag = userRole === 'PARENT' ? 'Parent' : userRole === 'TEACHER' || userRole === 'COUNSELOR' ? 'Teacher' : 'Student'
 
     const user = await prisma.user.create({
       data: {
@@ -220,18 +318,13 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
         role: userRole,
         tag: defaultTag,
         tagColor: 'grey',
-        emailVerified: false,
-        emailVerificationToken: verificationToken,
-        emailVerificationExpiry: verificationExpiry,
+        emailVerified: true,
       },
     })
 
-    // Fire-and-forget — don't fail registration if email fails
-    void sendVerificationEmail(email, verificationToken).catch((err) =>
-      console.error('Failed to send verification email:', err),
-    )
+    // Email is already verified via OTP — no verification link needed
 
-    const token = issueAccessToken(user.id)
+    const token = issueAccessToken(user.id, user.role)
     const refreshToken = await issueRefreshToken(user.id)
     setAuthCookies(res, token, refreshToken)
 
@@ -272,7 +365,9 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
     // Always run bcrypt regardless of whether user exists — prevents timing-based
     // user enumeration (attacker can't tell if email is registered from response time)
     const passwordValid = user
-      ? await bcrypt.compare(password, user.passwordHash)
+      ? user.passwordHash
+        ? await bcrypt.compare(password, user.passwordHash)
+        : await bcrypt.compare(password, DUMMY_HASH).then(() => false) // OAuth-only account
       : await bcrypt.compare(password, DUMMY_HASH).then(() => false)
 
     if (!user) {
@@ -283,13 +378,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
       return
     }
 
-    if (user.deletedAt) {
-      res.status(401).json({
-        data: null,
-        error: { code: 'ACCOUNT_DELETED', message: 'This account has been deleted' },
-      })
-      return
-    }
+
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       logger.warn('auth.login_rejected_locked', { userId: user.id, ip: req.ip })
@@ -342,7 +431,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
       data: { failedLoginAttempts: 0, lockedUntil: null },
     })
 
-    const token = issueAccessToken(user.id)
+    const token = issueAccessToken(user.id, user.role)
     const refreshToken = await issueRefreshToken(user.id)
     setAuthCookies(res, token, refreshToken)
 
@@ -399,14 +488,14 @@ router.post('/refresh', refreshTokenLimiter, async (req: Request, res: Response)
       return
     }
 
-    // Rotate: revoke old, issue fresh pair
-    await prisma.refreshToken.update({
-      where: { id: stored.id },
-      data: { revokedAt: new Date() },
-    })
+    // Rotate: revoke old and create new in parallel (both depend only on stored, not each other)
+    const [newRefreshToken,, refreshedUser] = await Promise.all([
+      issueRefreshToken(stored.userId),
+      prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } }),
+      prisma.user.findUnique({ where: { id: stored.userId }, select: { role: true } }),
+    ])
 
-    const newAccessToken = issueAccessToken(stored.userId)
-    const newRefreshToken = await issueRefreshToken(stored.userId)
+    const newAccessToken = issueAccessToken(stored.userId, refreshedUser?.role ?? 'STUDENT')
     setAuthCookies(res, newAccessToken, newRefreshToken)
 
     logger.info('auth.token_refreshed', { userId: stored.userId })
@@ -456,12 +545,36 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: 
     return
   }
 
-  // Respond 200 immediately — prevents email enumeration
-  res.json({ data: { message: 'If an account exists for that email, a reset link has been sent.' } })
+  // Basic format check before DNS lookup
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'Please enter a valid email address.' },
+    })
+    return
+  }
 
+  // MX-record check: reject domains that provably cannot receive email.
+  // This catches typos like @gmal.com or @fakdomain — not whether an account exists.
+  const domainValid = await hasValidMailDomain(email)
+  if (!domainValid) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'That email domain doesn\'t appear to be valid. Please check for typos.' },
+    })
+    return
+  }
+
+  // Do all work before responding — on Vercel serverless the function can be
+  // killed immediately after res.json(), so fire-and-forget after the response
+  // is unreliable. Always return the same generic message to prevent enumeration.
   try {
     const user = await prisma.user.findUnique({ where: { email } })
-    if (!user || user.deletedAt) return
+
+    if (!user) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'No account found with that email address.' } })
+      return
+    }
 
     // Invalidate any existing unused tokens
     await prisma.passwordResetToken.updateMany({
@@ -477,12 +590,14 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: 
     await prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt } })
     logger.info('auth.password_reset_requested', { userId: user.id })
 
-    void sendPasswordResetEmail(email, rawToken).catch((err) =>
-      console.error('Failed to send password reset email:', err),
-    )
+    await sendPasswordResetEmail(email, rawToken)
   } catch (e) {
     logger.error('auth.error', { event: 'forgot_password', error: e instanceof Error ? e.message : String(e) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong. Please try again.' } })
+    return
   }
+
+  res.json({ data: { message: 'Reset link sent.' } })
 })
 
 // ── POST /auth/reset-password ─────────────────────────────────────────────────
@@ -680,11 +795,6 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
   const userId = req.userId!
   const { password } = req.body as { password?: string }
 
-  if (!password) {
-    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Password required' } })
-    return
-  }
-
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) {
@@ -692,19 +802,22 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
       return
     }
 
-    const valid = await bcrypt.compare(password, user.passwordHash)
-    if (!valid) {
-      res.status(401).json({ data: null, error: { code: 'INVALID_CREDENTIALS', message: 'Incorrect password' } })
-      return
+    if (user.passwordHash) {
+      // Password account — require password verification
+      if (!password) {
+        res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Password required' } })
+        return
+      }
+      const valid = await bcrypt.compare(password, user.passwordHash)
+      if (!valid) {
+        res.status(401).json({ data: null, error: { code: 'INVALID_CREDENTIALS', message: 'Incorrect password' } })
+        return
+      }
     }
+    // OAuth-only account — no password needed, just the DELETE confirmation from the frontend
 
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: userId }, data: { deletedAt: new Date() } }),
-      prisma.refreshToken.updateMany({
-        where: { userId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      }),
-    ])
+    // Hard delete — cascades to all related records (posts, likes, comments, etc.)
+    await prisma.user.delete({ where: { id: userId } })
 
     logger.info('auth.account_deleted', { userId })
     res.json({ data: { deleted: true } })
@@ -714,6 +827,214 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
     })
+  }
+})
+
+// ── OAuth helpers ────────────────────────────────────────────────────────────
+
+const OTP_EXPIRY_MINUTES = 10
+
+const otpLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { data: null, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many OTP requests. Try again in 1 hour.' } },
+})
+
+async function finishOAuth(res: Response, provider: string, providerId: string, email: string, name?: string): Promise<void> {
+  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
+
+  let existing = await prisma.oAuthAccount.findFirst({ where: { provider, providerId } })
+  let userId: number
+  let isNew = false
+
+  if (existing) {
+    userId = existing.userId
+  } else {
+    // Check if a user with this email already exists — link accounts
+    let user = await prisma.user.findUnique({ where: { email } })
+    if (!user) {
+      user = await prisma.user.create({
+        data: { email, passwordHash: null, name: name ?? null, emailVerified: true },
+      })
+      isNew = true
+    }
+    await prisma.oAuthAccount.create({ data: { userId: user.id, provider, providerId, email } })
+    userId = user.id
+  }
+
+  const [oauthUser, refreshToken, hasSchool] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { role: true } }),
+    issueRefreshToken(userId),
+    prisma.schoolConnection.findUnique({ where: { userId } }),
+  ])
+  const accessToken = issueAccessToken(userId, oauthUser?.role ?? 'STUDENT')
+  setAuthCookies(res, accessToken, refreshToken)
+  if (isNew) {
+    res.redirect(`${appUrl}/login?oauth=new`)
+  } else {
+    res.redirect(`${appUrl}/dashboard${!hasSchool ? '?connect=1' : ''}`)
+  }
+}
+
+// ── GET /auth/oauth/google ───────────────────────────────────────────────────
+router.get('/oauth/google', (_req: Request, res: Response): void => {
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  if (!clientId) { res.status(500).json({ error: 'Google OAuth not configured' }); return }
+  const redirect = encodeURIComponent(`${process.env.APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/google/callback`)
+  const state = jwt.sign({ ts: Date.now() }, process.env.JWT_SECRET!, { expiresIn: '10m' })
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=openid%20email%20profile&state=${state}`
+  res.redirect(url)
+})
+
+router.get('/oauth/google/callback', async (req: Request, res: Response): Promise<void> => {
+  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
+  try {
+    const { code, state } = req.query as { code?: string; state?: string }
+    if (!code || !state) { res.redirect(`${appUrl}/login?error=oauth_cancelled`); return }
+    jwt.verify(state, process.env.JWT_SECRET!)
+
+    const redirect = encodeURIComponent(`${appUrl}/api/auth/oauth/google/callback`)
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        redirect_uri: decodeURIComponent(redirect), grant_type: 'authorization_code',
+      }),
+    })
+    const tokens = await tokenRes.json() as { access_token?: string; id_token?: string }
+    if (!tokens.access_token) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
+
+    const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    })
+    const info = await userRes.json() as { sub?: string; email?: string; name?: string }
+    if (!info.sub || !info.email) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
+
+    await finishOAuth(res, 'google', info.sub, info.email, info.name)
+  } catch (e) {
+    logger.error('auth.error', { event: 'oauth_google_callback', error: e instanceof Error ? e.message : String(e) })
+    res.redirect(`${appUrl}/login?error=oauth_failed`)
+  }
+})
+
+// ── GET /auth/oauth/microsoft ────────────────────────────────────────────────
+router.get('/oauth/microsoft', (_req: Request, res: Response): void => {
+  const clientId = process.env.MICROSOFT_CLIENT_ID
+  if (!clientId) { res.status(500).json({ error: 'Microsoft OAuth not configured' }); return }
+  const redirect = encodeURIComponent(`${process.env.APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/microsoft/callback`)
+  const state = jwt.sign({ ts: Date.now() }, process.env.JWT_SECRET!, { expiresIn: '10m' })
+  const url = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=openid%20email%20profile&state=${state}`
+  res.redirect(url)
+})
+
+router.get('/oauth/microsoft/callback', async (req: Request, res: Response): Promise<void> => {
+  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
+  try {
+    const { code, state } = req.query as { code?: string; state?: string }
+    if (!code || !state) { res.redirect(`${appUrl}/login?error=oauth_cancelled`); return }
+    jwt.verify(state, process.env.JWT_SECRET!)
+
+    const redirect = encodeURIComponent(`${appUrl}/api/auth/oauth/microsoft/callback`)
+    const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code, client_id: process.env.MICROSOFT_CLIENT_ID!, client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+        redirect_uri: decodeURIComponent(redirect), grant_type: 'authorization_code',
+      }),
+    })
+    const tokens = await tokenRes.json() as { access_token?: string }
+    if (!tokens.access_token) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
+
+    const userRes = await fetch('https://graph.microsoft.com/v1.0/me?$select=id,mail,displayName,userPrincipalName', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    })
+    const info = await userRes.json() as { id?: string; mail?: string; userPrincipalName?: string; displayName?: string }
+    const email = info.mail ?? info.userPrincipalName
+    if (!info.id || !email) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
+
+    await finishOAuth(res, 'microsoft', info.id, email, info.displayName)
+  } catch (e) {
+    logger.error('auth.error', { event: 'oauth_microsoft_callback', error: e instanceof Error ? e.message : String(e) })
+    res.redirect(`${appUrl}/login?error=oauth_failed`)
+  }
+})
+
+// ── POST /auth/send-otp ──────────────────────────────────────────────────────
+router.post('/send-otp', otpLimiter, async (req: Request, res: Response): Promise<void> => {
+  const { email } = req.body as { email?: string }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Valid email required.' } })
+    return
+  }
+
+  const domainValid = await hasValidMailDomain(email)
+  if (!domainValid) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'That email domain doesn\'t appear to be valid.' } })
+    return
+  }
+
+  const existing = await prisma.user.findUnique({ where: { email } })
+  if (existing) {
+    res.status(409).json({ data: null, error: { code: 'CONFLICT', message: 'An account with this email already exists.' } })
+    return
+  }
+
+  const code = String(Math.floor(100000 + Math.random() * 900000))
+  const codeHash = crypto.createHash('sha256').update(code).digest('hex')
+  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000)
+
+  await prisma.emailOTP.updateMany({ where: { email, usedAt: null }, data: { usedAt: new Date() } })
+  await prisma.emailOTP.create({ data: { email, codeHash, expiresAt } })
+
+  await sendEmail({
+    to: email,
+    subject: 'Your Futurely verification code',
+    html: `
+      <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:40px 20px;background:#F0F4FF;">
+        <div style="background:#fff;border-radius:16px;border:1px solid #C0CCE8;padding:36px 40px;text-align:center;">
+          <div style="font-size:26px;font-weight:800;color:#050B18;margin-bottom:24px;">Futurely</div>
+          <div style="font-size:16px;font-weight:600;color:#050B18;margin-bottom:8px;">Your verification code</div>
+          <div style="font-size:42px;font-weight:800;letter-spacing:10px;color:#2979FF;margin:24px 0;">${code}</div>
+          <div style="font-size:13px;color:#7B8DB0;">This code expires in ${OTP_EXPIRY_MINUTES} minutes.<br>If you didn't request this, ignore this email.</div>
+        </div>
+      </div>
+    `,
+  })
+
+  res.json({ data: { sent: true } })
+})
+
+// ── GET /auth/test-email ─────────────────────────────────────────────────────
+// Temporary diagnostic endpoint — remove once email delivery is confirmed.
+router.get('/test-email', async (req: Request, res: Response): Promise<void> => {
+  const to = (req.query.to as string) || 'srikar.vattem@gmail.com'
+
+  const env = {
+    RESEND_API_KEY: process.env.RESEND_API_KEY ? '✓ set' : '✗ missing',
+    SMTP_HOST: process.env.SMTP_HOST ?? '✗ missing',
+    SMTP_PASS: process.env.SMTP_PASS ? `✓ set (starts with ${(process.env.SMTP_PASS ?? '').slice(0, 6)}...)` : '✗ missing',
+    SMTP_FROM: process.env.SMTP_FROM ?? '✗ missing',
+    APP_URL: process.env.APP_URL ?? '✗ missing',
+  }
+
+  // DB diagnostic — find what's breaking login
+  let dbResult: string
+  try {
+    const user = await prisma.user.findFirst({ select: { id: true, email: true, name: true, hacName: true, emailVerified: true, loginStreak: true, lastSeenAt: true, failedLoginAttempts: true, lockedUntil: true } })
+    dbResult = user ? `✓ DB query OK (user id=${user.id})` : '✓ DB query OK (no users found)'
+  } catch (e) {
+    dbResult = `✗ DB error: ${e instanceof Error ? e.message : String(e)}`
+  }
+
+  try {
+    await sendEmail({ to, subject: 'Futurely email test', html: '<p>If you see this, email delivery works!</p>' })
+    res.json({ data: { status: 'sent', to, db: dbResult, env } })
+  } catch (e) {
+    res.status(500).json({ data: null, error: { message: e instanceof Error ? e.message : String(e) }, db: dbResult, env })
   }
 })
 

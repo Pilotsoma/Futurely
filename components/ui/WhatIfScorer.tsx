@@ -2,62 +2,115 @@
 
 import { useState } from 'react'
 
-interface Assignment {
+const ASSIGNMENT_TYPES = ['Daily', 'Minor', 'Major'] as const
+type AssignmentType = (typeof ASSIGNMENT_TYPES)[number]
+
+const DEFAULT_WEIGHTS: Record<AssignmentType, number> = {
+  Daily: 0.10,
+  Minor: 0.30,
+  Major: 0.60,
+}
+
+interface ExistingAssignment {
   score: number | null
   total: number | null
+  category: string
 }
 
 interface Hypothetical {
   title: string
-  score: number
-  total: number
-  weight: string
+  grade: number
+  type: AssignmentType
 }
 
 interface WhatIfScorerProps {
   currentAverage: number
-  existingAssignments: Assignment[]
+  existingAssignments: ExistingAssignment[]
+  categoryWeights?: Record<string, number>
   onClose: () => void
 }
 
-function recalculate(
-  existing: Assignment[],
-  hyps: Hypothetical[],
-): number | null {
-  const graded = existing.filter(
-    a => a.score !== null && a.score !== undefined &&
-         a.total !== null && a.total !== undefined && (a.total ?? 0) > 0,
-  )
-  const validHyps = hyps.filter(h => h.total > 0)
-
-  if (graded.length === 0 && validHyps.length === 0) return null
-
-  const earned   = graded.reduce((s, a) => s + (a.score ?? 0), 0)
-               + validHyps.reduce((s, h) => s + h.score, 0)
-  const possible = graded.reduce((s, a) => s + (a.total ?? 0), 0)
-               + validHyps.reduce((s, h) => s + h.total, 0)
-
-  return possible === 0 ? null : (earned / possible) * 100
+function normalizeCat(raw: string): AssignmentType | null {
+  const s = raw.toLowerCase()
+  if (s.includes('daily')) return 'Daily'
+  if (s.includes('minor')) return 'Minor'
+  if (s.includes('major')) return 'Major'
+  return null
 }
 
-export default function WhatIfScorer({ currentAverage, existingAssignments, onClose }: WhatIfScorerProps) {
-  const [title,  setTitle]  = useState('')
-  const [grade,  setGrade]  = useState('')
-  const [total,  setTotal]  = useState('100')
-  const [weight, setWeight] = useState('Daily')
-  const [hyps,   setHyps]   = useState<Hypothetical[]>([])
+function avg(grades: number[]): number {
+  return grades.reduce((s, g) => s + g, 0) / grades.length
+}
 
-  function add() {
-    const s = parseFloat(grade)
-    const t = parseFloat(total)
-    if (isNaN(s) || isNaN(t) || t <= 0) return
-    setHyps(prev => [...prev, { title: title.trim() || 'Untitled', score: s, total: t, weight }])
-    setTitle(''); setGrade(''); setTotal('100')
+function recalculate(
+  existing: ExistingAssignment[],
+  hyps: Hypothetical[],
+  weights: Record<string, number>,
+  currentAverage: number,
+): { simAvg: number; firstInCat: AssignmentType[] } {
+  // Group existing graded assignments by category
+  const existingByCat: Partial<Record<AssignmentType, number[]>> = {}
+  for (const a of existing) {
+    if (a.score === null || a.total === null || a.total <= 0) continue
+    const cat = normalizeCat(a.category)
+    if (!cat) continue
+    ;(existingByCat[cat] ??= []).push((a.score / a.total) * 100)
   }
 
-  const simAvg    = hyps.length > 0 ? (recalculate(existingAssignments, hyps) ?? currentAverage) : currentAverage
-  const delta     = simAvg - currentAverage
-  const deltaColor = delta > 0.05 ? '#22C55E' : delta < -0.05 ? '#EF4444' : 'var(--text-muted)'
+  // Group simulated grades by type
+  const hypsByCat: Partial<Record<AssignmentType, number[]>> = {}
+  for (const h of hyps) {
+    ;(hypsByCat[h.type] ??= []).push(h.grade)
+  }
+
+  // For each affected category:
+  //   delta = (new_cat_avg − old_cat_avg) × weight
+  // old_avg = 0 when category has no existing grades (simulated grade is the first).
+  // Then: simulated = currentAverage + Σ(deltas)
+  let totalDelta = 0
+  const firstInCat: AssignmentType[] = []
+
+  for (const [cat, simGrades] of Object.entries(hypsByCat) as [AssignmentType, number[]][]) {
+    const w = weights[cat] ?? DEFAULT_WEIGHTS[cat] ?? 0
+    const existingGrades = existingByCat[cat] ?? []
+
+    if (existingGrades.length === 0) firstInCat.push(cat)
+
+    const oldAvg = existingGrades.length > 0 ? avg(existingGrades) : 0
+    const newAvg = avg([...existingGrades, ...simGrades])
+    totalDelta += (newAvg - oldAvg) * w
+  }
+
+  return { simAvg: currentAverage + totalDelta, firstInCat }
+}
+
+export default function WhatIfScorer({
+  currentAverage,
+  existingAssignments,
+  categoryWeights,
+  onClose,
+}: WhatIfScorerProps) {
+  const weights = { ...DEFAULT_WEIGHTS, ...categoryWeights }
+
+  const [title, setTitle] = useState('')
+  const [grade, setGrade] = useState('')
+  const [type, setType] = useState<AssignmentType>('Daily')
+  const [hyps, setHyps] = useState<Hypothetical[]>([])
+
+  function add() {
+    const g = parseFloat(grade)
+    if (isNaN(g) || g < 0 || g > 100) return
+    setHyps(prev => [...prev, { title: title.trim() || 'Untitled', grade: g, type }])
+    setTitle('')
+    setGrade('')
+  }
+
+  const { simAvg, firstInCat } = hyps.length > 0
+    ? recalculate(existingAssignments, hyps, weights, currentAverage)
+    : { simAvg: currentAverage, firstInCat: [] }
+
+  const delta = simAvg - currentAverage
+  const deltaColor = delta > 0.005 ? '#22C55E' : delta < -0.005 ? '#EF4444' : 'var(--text-muted)'
 
   return (
     <div style={S.wrap}>
@@ -69,19 +122,19 @@ export default function WhatIfScorer({ currentAverage, existingAssignments, onCl
       <div style={S.scoreRow}>
         <div>
           <div style={S.scoreTag}>Current</div>
-          <div style={S.scoreNum}>{currentAverage.toFixed(1)}%</div>
+          <div style={S.scoreNum}>{currentAverage.toFixed(2)}%</div>
         </div>
         <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>→</span>
         <div>
           <div style={S.scoreTag}>Simulated</div>
           <div style={{ ...S.scoreNum, color: hyps.length > 0 ? 'var(--primary)' : 'var(--text-muted)' }}>
-            {simAvg.toFixed(1)}%
+            {simAvg.toFixed(2)}%
           </div>
         </div>
         {hyps.length > 0 && (
           <div style={{ marginLeft: 'auto', textAlign: 'right' as const }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: deltaColor }}>
-              {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
+              {delta >= 0 ? '+' : ''}{delta.toFixed(2)}%
             </div>
           </div>
         )}
@@ -90,21 +143,23 @@ export default function WhatIfScorer({ currentAverage, existingAssignments, onCl
       <div style={S.inputRow}>
         <input className="ns-input" style={{ flex: 2, height: 36, fontSize: 12 }} type="text"
           value={title} onChange={e => setTitle(e.target.value)} placeholder="Assignment title" />
-        <input className="ns-input" style={{ flex: 1, height: 36, fontSize: 12 }} type="number"
-          value={grade} onChange={e => setGrade(e.target.value)} placeholder="Score"
-          onKeyDown={e => e.key === 'Enter' && add()} />
-        <input className="ns-input" style={{ flex: 1, height: 36, fontSize: 12 }} type="number"
-          value={total} onChange={e => setTotal(e.target.value)} placeholder="/ 100"
+        <input className="ns-input" style={{ flex: 1, height: 36, fontSize: 12, textAlign: 'right' as const }}
+          type="number" min="0" max="100"
+          value={grade} onChange={e => setGrade(e.target.value)} placeholder="Grade"
           onKeyDown={e => e.key === 'Enter' && add()} />
       </div>
 
       <div style={S.ctaRow}>
         <select className="ns-input" style={{ height: 34, fontSize: 12, width: 'auto', paddingRight: 8 }}
-          value={weight} onChange={e => setWeight(e.target.value)}>
-          {['Daily', 'Quiz', 'Test/Major', 'Lab', 'Project', 'Other'].map(w => <option key={w}>{w}</option>)}
+          value={type} onChange={e => setType(e.target.value as AssignmentType)}>
+          {ASSIGNMENT_TYPES.map(t => (
+            <option key={t} value={t}>
+              {t} ({Math.round((weights[t] ?? DEFAULT_WEIGHTS[t]) * 100)}%)
+            </option>
+          ))}
         </select>
         <button className="ns-btn-primary" style={{ height: 34, padding: '0 16px', fontSize: 12 }}
-          onClick={add} disabled={!grade || !total}>
+          onClick={add} disabled={!grade}>
           + Add
         </button>
         {hyps.length > 0 && (
@@ -120,8 +175,8 @@ export default function WhatIfScorer({ currentAverage, existingAssignments, onCl
           {hyps.map((h, i) => (
             <div key={i} style={S.hypRow}>
               <span style={{ flex: 1, color: 'var(--text-secondary)' }}>{h.title}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', marginRight: 8 }}>{h.weight}</span>
-              <span style={{ fontWeight: 500 }}>{h.score}/{h.total}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', marginRight: 8 }}>{h.type}</span>
+              <span style={{ fontWeight: 500 }}>{h.grade}%</span>
               <button onClick={() => setHyps(p => p.filter((_, j) => j !== i))}
                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 8, fontSize: 12, padding: '0 2px' }}>
                 ✕
@@ -130,9 +185,23 @@ export default function WhatIfScorer({ currentAverage, existingAssignments, onCl
           ))}
         </div>
       )}
-      <p style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.5 }}>
-        Approximation — exact result depends on your teacher&apos;s category weights.
-      </p>
+
+      {firstInCat.length > 0 && (
+        <div style={{ marginTop: 8, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '7px 12px', fontSize: 11.5, color: '#D97706', lineHeight: 1.5 }}>
+          No existing {firstInCat.join(', ')} grades — simulating as your first assignment in {firstInCat.length > 1 ? 'those categories' : 'that category'}.
+        </div>
+      )}
+
+      {!categoryWeights && (
+        <div style={{ marginTop: 8, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '7px 12px', fontSize: 11.5, color: '#D97706', lineHeight: 1.5 }}>
+          Weights not detected from HAC — using Katy ISD defaults (Daily 10% / Minor 30% / Major 60%). Refresh your Grades page to sync actual weights.
+        </div>
+      )}
+      {categoryWeights && (
+        <p style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>
+          Using weights from HAC: Daily {Math.round(weights.Daily * 100)}% / Minor {Math.round(weights.Minor * 100)}% / Major {Math.round(weights.Major * 100)}%.
+        </p>
+      )}
     </div>
   )
 }

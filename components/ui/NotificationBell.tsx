@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { api, AppNotification, getApiToken } from '../../lib/api'
+import UserProfileModal from './UserProfileModal'
 
 // Module-level dedup set — shared across all instances so toasts fire only once
 const _seen = new Set<number>()
@@ -37,12 +38,13 @@ interface Props {
 
 export default function NotificationBell({ showToasts = false, collapsed = false, onOpenProfile }: Props) {
   const router = useRouter()
-  const pathname = usePathname()
-  const [notifs, setNotifs]       = useState<AppNotification[]>([])
-  const [unread, setUnread]       = useState(0)
-  const [showPanel, setShowPanel] = useState(false)
-  const [toasts, setToasts]       = useState<Toast[]>([])
-  const [panelPos, setPanelPos]   = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  const [notifs, setNotifs]         = useState<AppNotification[]>([])
+  const [unread, setUnread]         = useState(0)
+  const [showPanel, setShowPanel]   = useState(false)
+  const [toasts, setToasts]         = useState<Toast[]>([])
+  const [panelPos, setPanelPos]     = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  const [profileUserId, setProfileUserId] = useState<number | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<number>(0)
   const bellRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -80,6 +82,11 @@ export default function NotificationBell({ showToasts = false, collapsed = false
     connect()
     return () => { dead = true; ws?.close() }
   }, [pushToast])
+
+  // Fetch current user id once for profile modal
+  useEffect(() => {
+    api.authMe().then(u => setCurrentUserId(u.id)).catch(() => {})
+  }, [])
 
   // Polling fallback every 30s
   useEffect(() => {
@@ -183,10 +190,36 @@ export default function NotificationBell({ showToasts = false, collapsed = false
               ? <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No notifications yet</div>
               : notifs.map(n => {
                 const name = senderFirst(n)
-                const icon = n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : n.type === 'LISTING_SOLD' ? '🏷️' : n.type.startsWith('TRADE') ? '🔄' : n.type === 'ASSIGNMENT_CREATED' ? '📚' : '💬'
+                const icon = n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : n.type === 'LISTING_SOLD' ? '🏷️' : n.type.startsWith('TRADE') ? '🔄' : n.type === 'ASSIGNMENT_CREATED' ? '📚' : n.type === 'TEACHER_ASSIGNMENT' ? '📋' : n.type === 'CLASSROOM_JOINED' ? '🏫' : n.type === 'COUNSELOR_LINKED' ? '🤝' : n.type === 'COUNSELOR_NOTE_ADDED' ? '📝' : n.type === 'COUNSELOR_RECOMMENDATION_ADDED' ? '✨' : n.type === 'ACTION_ITEM_CREATED' ? '✅' : n.type === 'COIN_RECEIVED' ? '🪙' : '💬'
+
+                // Row-level navigation: where clicking the notification takes you
+                function handleRowClick() {
+                  setShowPanel(false)
+                  if (n.type === 'LISTING_SOLD' || n.type === 'GIVEAWAY_WIN' || n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED') {
+                    router.push('/marketplace')
+                  } else if (n.type === 'COIN_RECEIVED') {
+                    router.push('/marketplace')
+                  } else if (n.type === 'ASSIGNMENT_CREATED') {
+                    const isCanvas = n.preview?.includes('Canvas assignment') || n.preview?.includes('Canvas assignments')
+                    router.push(isCanvas ? '/grades/canvas' : '/grades/classwork')
+                  } else if (n.type === 'TEACHER_ASSIGNMENT' || n.type === 'CLASSROOM_JOINED') {
+                    router.push('/grades/classwork')
+                  } else if (n.type === 'COUNSELOR_LINKED' || n.type === 'COUNSELOR_NOTE_ADDED' || n.type === 'COUNSELOR_RECOMMENDATION_ADDED' || n.type === 'ACTION_ITEM_CREATED') {
+                    router.push('/my-counselor')
+                  } else {
+                    setProfileUserId(n.fromUserId)
+                  }
+                }
+
+                // Name link: always opens the sender's profile inline
                 const link = (label: React.ReactNode) => (
-                  <b onClick={() => { setShowPanel(false); if (onOpenProfile) { onOpenProfile(n.fromUserId) } else if (pathname === '/feed') { window.dispatchEvent(new CustomEvent('ns:open-profile', { detail: n.fromUserId })) } else { sessionStorage.setItem('ns_open_profile', String(n.fromUserId)); router.push('/feed') } }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
+                  <b onClick={(e) => {
+                    e.stopPropagation()
+                    setShowPanel(false)
+                    setProfileUserId(n.fromUserId)
+                  }} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}>{label}</b>
                 )
+
                 let body: React.ReactNode
                 if (n.type === 'FOLLOW')           body = <>{link(name)} started following you</>
                 else if (n.type === 'LIKE')        body = <>{link(name)} liked your post</>
@@ -196,10 +229,17 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 else if (n.type === 'TRADE_OFFER')    body = <>{link(name)} sent a trade offer</>
                 else if (n.type === 'TRADE_ACCEPTED') body = <>{link(name)} accepted your trade</>
                 else if (n.type === 'TRADE_DECLINED')    body = <>{link(name)} declined your trade</>
+                else if (n.type === 'COIN_RECEIVED') body = <>{link(name)} sent you {n.preview ?? 'coins'}!</>
                 else if (n.type === 'ASSIGNMENT_CREATED') body = n.preview ?? 'New assignment added'
+                else if (n.type === 'TEACHER_ASSIGNMENT') body = <>{link(name)} posted an assignment{n.preview ? <> — {n.preview}</> : null}</>
+                else if (n.type === 'CLASSROOM_JOINED') body = <>You joined <b>{n.preview ?? 'a classroom'}</b></>
+                else if (n.type === 'COUNSELOR_LINKED') body = <>{link(name)} is now your counselor</>
+                else if (n.type === 'COUNSELOR_NOTE_ADDED') body = <>{link(name)} added a note for you{n.preview ? <> — &quot;{n.preview}&quot;</> : null}</>
+                else if (n.type === 'COUNSELOR_RECOMMENDATION_ADDED') body = <>{link(name)} recommended <b>{n.preview ?? 'a course'}</b></>
+                else if (n.type === 'ACTION_ITEM_CREATED') body = <>{link(name)} assigned you a task: <b>{n.preview ?? 'Action item'}</b></>
                 else body = n.preview ?? 'New notification'
                 return (
-                  <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)' }}>
+                  <div key={n.id} onClick={handleRowClick} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)', cursor: 'pointer' }}>
                     <span style={{ fontSize: 15, flexShrink: 0 }}>{icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.4 }}>{body}</div>
@@ -228,8 +268,15 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 case 'TRADE_ACCEPTED':   return { emoji: '✅', accent: '#22C55E', text: `${name} accepted your trade` }
                 case 'TRADE_DECLINED':   return { emoji: '❌', accent: '#EF4444', text: `${name} declined your trade` }
                 case 'LISTING_SOLD':        return { emoji: '💰', accent: '#EAB308', text: `Your listing sold — ${t.notif.preview ?? ''}` }
-                case 'ASSIGNMENT_CREATED':  return { emoji: '📚', accent: '#6366F1', text: t.notif.preview ?? 'New assignment added' }
-                default:                    return { emoji: '🔔', accent: 'var(--primary)', text: t.notif.preview ?? 'New notification' }
+                case 'COIN_RECEIVED':       return { emoji: '🪙', accent: '#EAB308', text: `${name} sent you ${t.notif.preview ?? 'coins'}!` }
+                case 'ASSIGNMENT_CREATED':              return { emoji: '📚', accent: '#6366F1', text: t.notif.preview ?? 'New assignment added' }
+                case 'TEACHER_ASSIGNMENT':              return { emoji: '📋', accent: '#6366F1', text: `${name} posted: ${t.notif.preview ?? 'New assignment'}` }
+                case 'CLASSROOM_JOINED':                return { emoji: '🏫', accent: '#10B981', text: `You joined ${t.notif.preview ?? 'a classroom'}` }
+                case 'COUNSELOR_LINKED':                return { emoji: '🤝', accent: '#3B82F6', text: `${name} is now your counselor` }
+                case 'COUNSELOR_NOTE_ADDED':            return { emoji: '📝', accent: '#8B5CF6', text: `${name} added a note for you` }
+                case 'COUNSELOR_RECOMMENDATION_ADDED':  return { emoji: '✨', accent: '#EAB308', text: `${name} recommended ${t.notif.preview ?? 'a course'}` }
+                case 'ACTION_ITEM_CREATED':             return { emoji: '✅', accent: '#22C55E', text: `${name} assigned you: ${t.notif.preview ?? 'a task'}` }
+                default:                                return { emoji: '🔔', accent: 'var(--primary)', text: t.notif.preview ?? 'New notification' }
               }
             })()
             return (
@@ -244,6 +291,14 @@ export default function NotificationBell({ showToasts = false, collapsed = false
             )
           })}
         </div>
+      )}
+
+      {profileUserId !== null && currentUserId !== 0 && (
+        <UserProfileModal
+          userId={profileUserId}
+          currentUserId={currentUserId}
+          onClose={() => setProfileUserId(null)}
+        />
       )}
     </>
   )

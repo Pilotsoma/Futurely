@@ -422,13 +422,20 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
       try {
         const studentInfo = await getStudentInfo(sessionToken)
         if (studentInfo.name?.trim()) {
-          await prisma.user.update({ where: { id: userId }, data: { name: studentInfo.name.trim() } })
-          console.log('[GRADES ROUTER] Background sync: updated user name:', studentInfo.name.trim())
+          // Write to hacName — never overwrite the user's chosen display name
+          await prisma.user.update({ where: { id: userId }, data: { hacName: studentInfo.name.trim() } })
+          console.log('[GRADES ROUTER] Background sync: updated hacName:', studentInfo.name.trim())
         }
         const profileUpdate: Record<string, unknown> = {}
         if (studentInfo.counselor?.trim()) profileUpdate.counselorName = studentInfo.counselor.trim()
         const cohortNum = studentInfo.cohortYear ? parseInt(studentInfo.cohortYear.replace(/\D/g, ''), 10) : NaN
-        if (!isNaN(cohortNum) && cohortNum > 2000 && cohortNum < 2060) profileUpdate.graduationYear = cohortNum
+        if (!isNaN(cohortNum) && cohortNum > 2000 && cohortNum < 2060) {
+          profileUpdate.graduationYear = cohortNum
+          const now = new Date()
+          const effectiveYear = now.getMonth() >= 7 ? now.getFullYear() + 1 : now.getFullYear()
+          const derived = 12 - (cohortNum - effectiveYear)
+          if (derived >= 9 && derived <= 12) profileUpdate.gradeLevel = derived
+        }
         if (Object.keys(profileUpdate).length > 0) {
           await prisma.profile.upsert({ where: { userId }, create: { userId, ...profileUpdate }, update: profileUpdate })
         }
@@ -829,6 +836,18 @@ router.get('/gpa', asyncHandler(async (req: AuthRequest, res: Response): Promise
       weightedGpa   = gpa
     }
 
+    // Persist GPA to Profile so counselors can see it
+    const gpaUpdate: Record<string, number> = {}
+    if (weightedGpa !== null)   gpaUpdate.weightedGpa   = weightedGpa
+    if (unweightedGpa !== null) gpaUpdate.unweightedGpa = unweightedGpa
+    if (Object.keys(gpaUpdate).length > 0) {
+      await prisma.profile.upsert({
+        where:  { userId: req.userId! },
+        create: { userId: req.userId!, ...gpaUpdate },
+        update: gpaUpdate,
+      }).catch(() => { /* non-fatal */ })
+    }
+
     res.json({
       data: {
         gpa: unweightedGpa,
@@ -964,8 +983,13 @@ router.get('/classwork', asyncHandler(async (req: AuthRequest, res: Response): P
 
     const cached = await readHacCache(req.userId!, cacheKey, CLASSWORK_TTL_MS)
     if (cached) {
-      res.json({ data: cached })
-      return
+      // Bypass old cache entries that predate category-weight scraping
+      const hasWeights = (cached as { classes?: Array<{ categoryWeights?: unknown }> })
+        .classes?.some(c => c.categoryWeights != null)
+      if (hasWeights) {
+        res.json({ data: cached })
+        return
+      }
     }
 
     const { classes, availablePeriods, currentPeriod } = await hacGrades(entry.token, period)
@@ -1120,9 +1144,9 @@ router.post('/sync-profile', asyncHandler(async (req: AuthRequest, res: Response
     const profileUpdate: Record<string, unknown> = {}
     const userUpdate: Record<string, unknown> = {}
 
-    // Update name from HAC
+    // Write to hacName — never overwrite the user's chosen display name
     if (studentInfo.name?.trim()) {
-      userUpdate.name = studentInfo.name.trim()
+      userUpdate.hacName = studentInfo.name.trim()
     }
 
     // Update counselor from HAC
@@ -1148,7 +1172,22 @@ router.post('/sync-profile', asyncHandler(async (req: AuthRequest, res: Response
       console.log('[GRADES ROUTER] Synced user from HAC:', userUpdate)
     }
 
-    // Apply profile updates (counselor, graduation year, grade level)
+    // Fetch and persist GPA from transcript
+    try {
+      const cachedTranscript = await readHacCache(userId, 'transcript', HAC_CACHE_TTL_MS.transcript)
+      const rawTranscript = cachedTranscript ?? await (async () => {
+        const t = await hacTranscript(entry.token)
+        void writeHacCache(userId, 'transcript', t)
+        return t
+      })()
+      const tr = rawTranscript as { weightedGPA?: string | null; unweightedGPA?: string | null }
+      const w = parseFloat(tr.weightedGPA ?? '')
+      const u = parseFloat(tr.unweightedGPA ?? '')
+      if (!isNaN(w)) profileUpdate.weightedGpa   = Math.round(w * 1000) / 1000
+      if (!isNaN(u)) profileUpdate.unweightedGpa = Math.round(u * 1000) / 1000
+    } catch { /* GPA fetch is non-fatal */ }
+
+    // Apply profile updates (counselor, graduation year, grade level, GPA)
     // Note: satScore, actScore, futureDecision are NOT overwritten — those are user-set
     let syncedProfile: Record<string, unknown> | null = null
     if (Object.keys(profileUpdate).length > 0) {

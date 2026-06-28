@@ -1,17 +1,22 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useRef, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { api, ApiError } from '../../lib/api'
 import { setWebLogin } from '../../lib/authState'
 import { SORTED_ISD_LIST, type ISDEntry } from '../../lib/isds'
 
-type Mode = 'login' | 'register-student' | 'register-parent'
+type Mode = 'login' | 'register-student' | 'register-parent' | 'register-teacher'
+type RegisterStep = 'form' | 'otp'
 
-export default function LoginPage() {
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
+
+function LoginPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
+  const [registerStep, setRegisterStep] = useState<RegisterStep>('form')
 
   const [email, setEmail]                     = useState('')
   const [password, setPassword]               = useState('')
@@ -36,17 +41,83 @@ export default function LoginPage() {
 
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [agreedPrivacy, setAgreedPrivacy]       = useState(false)
+  const [agreedTos, setAgreedTos]               = useState(false)
   const [agreedAge, setAgreedAge]               = useState(false)
+  const [pendingOAuthNew, setPendingOAuthNew]   = useState(false)
+
+  const [institution, setInstitution] = useState('')
+  const [applyAsCounselor, setApplyAsCounselor] = useState(false)
+
+  const [schoolQuery, setSchoolQuery]       = useState('')
+  const [schoolResults, setSchoolResults]   = useState<Array<{ name: string; city: string; state: string }>>([])
+  const [schoolOpen, setSchoolOpen]         = useState(false)
+  const [schoolLoading, setSchoolLoading]   = useState(false)
+  const schoolRef = useRef<HTMLDivElement>(null)
+
+  const [showForgot, setShowForgot]       = useState(false)
+  const [forgotEmail, setForgotEmail]     = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotError, setForgotError]     = useState<string | null>(null)
+  const [forgotSent, setForgotSent]       = useState(false)
+
+  const [otpCode, setOtpCode]       = useState('')
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpError, setOtpError]     = useState<string | null>(null)
 
   useEffect(() => {
     function onOutsideClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setIsdOpen(false)
       }
+      if (schoolRef.current && !schoolRef.current.contains(e.target as Node)) {
+        setSchoolOpen(false)
+      }
     }
     document.addEventListener('mousedown', onOutsideClick)
     return () => document.removeEventListener('mousedown', onOutsideClick)
   }, [])
+
+  // Debounced school search
+  useEffect(() => {
+    if (schoolQuery.length < 2) { setSchoolResults([]); setSchoolOpen(false); return }
+    const timer = setTimeout(async () => {
+      setSchoolLoading(true)
+      try {
+        const results = await api.searchSchools(schoolQuery)
+        setSchoolResults(results)
+        setSchoolOpen(true)
+      } catch { setSchoolResults([]) }
+      finally { setSchoolLoading(false) }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [schoolQuery])
+
+  // Handle OAuth redirect back
+  useEffect(() => {
+    const oauthResult = searchParams.get('oauth')
+    const oauthError = searchParams.get('error')
+    if (oauthError) {
+      setError(oauthError === 'oauth_cancelled' ? 'Sign-in cancelled.' : 'Sign-in failed. Please try again.')
+    }
+    if (oauthResult === 'success') {
+      // Seed ns_user from authMe so the app layout has the role immediately on first load.
+      api.authMe().then(u => {
+        if (u) localStorage.setItem('ns_user', JSON.stringify(u))
+      }).catch(() => {})
+      router.push('/dashboard')
+    }
+    if (oauthResult === 'new') {
+      // New account created via OAuth — must agree to ToS before entering the app
+      api.authMe().then(u => {
+        if (u) localStorage.setItem('ns_user', JSON.stringify(u))
+      }).catch(() => {})
+      setAgreedPrivacy(false)
+      setAgreedTos(false)
+      setAgreedAge(false)
+      setPendingOAuthNew(true)
+      setShowPrivacyModal(true)
+    }
+  }, [searchParams, router])
 
   const filteredIsds = SORTED_ISD_LIST.filter(isd =>
     isd.hacUrl && (
@@ -61,7 +132,8 @@ export default function LoginPage() {
   function selectOther() {
     setSelectedIsd(null); setHacUrl(''); setUseCustomUrl(true); setIsdSearch(''); setIsdOpen(false)
   }
-  function reset() { setError(null); setHacError(null); setPortalDisconnected(false) }
+  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setSchoolQuery(''); setSchoolResults([]); setSchoolOpen(false) }
+  function fullReset() { reset(); setInstitution(''); setApplyAsCounselor(false) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -70,14 +142,36 @@ export default function LoginPage() {
       await doRegisterOrLogin()
       return
     }
-    // Registration — validate then show privacy modal
+    // Registration — validate first
     if (password !== confirmPassword) { setError('Passwords do not match'); return }
     if (password.length < 6)          { setError('Password must be at least 6 characters'); return }
     if (mode === 'register-student') {
       if (!hacUsername.trim() || !hacPassword.trim()) { setError('School portal credentials are required'); return }
       if (!hacUrl.trim()) { setError('Please select your school district'); return }
     }
+    // Send OTP before showing privacy modal
+    setOtpLoading(true)
+    setOtpError(null)
+    try {
+      await api.sendOtp(email.trim())
+      setOtpCode('')
+      setRegisterStep('otp')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send verification code.')
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault()
+    setOtpError(null)
+    if (!otpCode.trim() || otpCode.trim().length !== 6) {
+      setOtpError('Enter the 6-digit code we sent to your email.')
+      return
+    }
     setAgreedPrivacy(false)
+    setAgreedTos(false)
     setAgreedAge(false)
     setShowPrivacyModal(true)
   }
@@ -89,12 +183,24 @@ export default function LoginPage() {
       if (mode === 'login') {
         result = await api.login(email, password)
       } else if (mode === 'register-student') {
-        result = await api.register(email, password, name.trim() || undefined)
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined)
+      } else if (mode === 'register-teacher') {
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'TEACHER')
       } else {
-        result = await api.register(email, password, name.trim() || undefined, 'PARENT')
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'PARENT')
       }
       setWebLogin(result.token)
       localStorage.setItem('ns_user', JSON.stringify(result.user))
+      if (mode === 'register-teacher') {
+        const requestedRole = applyAsCounselor ? 'COUNSELOR' : 'TEACHER'
+        try {
+          await api.educatorRequestRole(requestedRole, institution.trim() || 'Not specified')
+        } catch {
+          // Role request failed (e.g. already submitted) — account was created, redirect anyway
+        }
+        router.push('/teacher/dashboard')
+        return
+      }
       if (mode === 'register-student') {
         setStep('connecting')
         try {
@@ -118,9 +224,15 @@ export default function LoginPage() {
           }
         }
       }
-      router.push(result.user.role === 'PARENT' ? '/parent/dashboard' : '/dashboard')
+      const role = result.user.role
+      if (role === 'PARENT') router.push('/parent/dashboard')
+      else if (role === 'TEACHER') router.push('/teacher/dashboard')
+      else if (role === 'COUNSELOR') router.push('/counselor/dashboard')
+      else router.push('/dashboard')
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'ACCOUNT_LOCKED' && err.secondsRemaining) {
+      if (err instanceof ApiError && err.code === 'NAME_TAKEN') {
+        setError('That display name is already taken. Please choose a different one.')
+      } else if (err instanceof ApiError && err.code === 'ACCOUNT_LOCKED' && err.secondsRemaining) {
         const totalMins = Math.ceil(err.secondsRemaining / 60)
         const hours = Math.floor(totalMins / 60)
         const mins = totalMins % 60
@@ -135,18 +247,35 @@ export default function LoginPage() {
     } finally { setIsLoading(false); setStep('auth') }
   }
 
-  const btnLabel = isLoading
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setForgotError(null)
+    setForgotLoading(true)
+    try {
+      await api.forgotPassword(forgotEmail.trim())
+      setForgotSent(true)
+    } catch (err) {
+      setForgotError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  const btnLabel = otpLoading
+    ? 'Sending code...'
+    : isLoading
     ? step === 'connecting' ? 'Connecting to school portal...'
     : step === 'syncing'    ? 'Syncing grades...'
     : mode === 'login'      ? 'Logging in...'
     : 'Creating account...'
     : mode === 'login'      ? 'Log In'
-    : 'Create Account'
+    : 'Send verification code'
 
   const headingText =
-    mode === 'login'           ? 'Your academic companion' :
-    mode === 'register-parent' ? 'Create a parent account' :
-                                 'Create your student account'
+    mode === 'login'            ? 'Your academic companion' :
+    mode === 'register-parent'  ? 'Create a parent account' :
+    mode === 'register-teacher' ? 'Create a teacher account' :
+                                  'Create your student account'
 
   const isdDisplayLabel = useCustomUrl ? 'Other / Not Listed' : selectedIsd ? `${selectedIsd.name} (${selectedIsd.state})` : ''
 
@@ -165,16 +294,63 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={e => void handleSubmit(e)} style={styles.form}>
+        {/* ── OAuth buttons (login + student register only — parent/teacher need extra fields) ── */}
+        {(mode === 'login' || mode === 'register-student') && registerStep === 'form' && (
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 4 }}>
+            <a href={`${BASE}/api/auth/oauth/google`} style={styles.oauthBtn}>
+              <svg width="18" height="18" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+              Continue with Google
+            </a>
+<div style={styles.dividerRow}>
+              <div style={styles.dividerLine}/>
+              <span style={styles.dividerText}>{mode === 'login' ? 'or sign in with email' : 'or use email'}</span>
+              <div style={styles.dividerLine}/>
+            </div>
+          </div>
+        )}
+
+        {/* ── OTP verification step ── */}
+        {registerStep === 'otp' && (
+          <form onSubmit={e => void handleVerifyOtp(e)} style={{ ...styles.form, marginBottom: 8 }}>
+            <div style={{ textAlign: 'center', marginBottom: 4 }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>📨</div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>Check your email</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                We sent a 6-digit code to <strong>{email}</strong>
+              </p>
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>Verification code</label>
+              <input
+                type="text" inputMode="numeric" maxLength={6} autoFocus
+                value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000" style={{ ...styles.input, textAlign: 'center', fontSize: 22, fontWeight: 700, letterSpacing: 8 }}
+              />
+            </div>
+            {otpError && <p style={styles.error}>{otpError}</p>}
+            <button type="submit" style={styles.btn}>Verify code</button>
+            <button type="button" onClick={() => setRegisterStep('form')}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, textAlign: 'center' as const }}>
+              ← Back / change email
+            </button>
+          </form>
+        )}
+
+        {registerStep === 'form' && <form onSubmit={e => void handleSubmit(e)} style={styles.form}>
           {mode !== 'login' && (
             <div style={styles.field}>
               <label style={styles.label}>
-                {mode === 'register-parent' ? 'Your Name' : 'Display Name'}{' '}
+                {mode === 'register-parent' || mode === 'register-teacher' ? 'Your Name' : 'Display Name'}{' '}
                 {mode === 'register-student' && <span style={{ color: 'var(--text-muted)' }}>(optional)</span>}
               </label>
               <input type="text" value={name} onChange={e => setName(e.target.value)}
-                placeholder={mode === 'register-parent' ? 'Jane Smith' : 'Jane Doe'}
-                required={mode === 'register-parent'} style={styles.input} />
+                placeholder={mode === 'register-parent' || mode === 'register-teacher' ? 'Jane Smith' : 'Jane Doe'}
+                required={mode === 'register-parent' || mode === 'register-teacher'} style={styles.input} />
             </div>
           )}
 
@@ -273,57 +449,249 @@ export default function LoginPage() {
             </>
           )}
 
+          {mode === 'register-teacher' && (
+            <>
+              <div style={styles.field}>
+                <label style={styles.label}>School / Organization</label>
+                <div ref={schoolRef} style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={schoolQuery || institution}
+                    onChange={e => { setSchoolQuery(e.target.value); setInstitution(e.target.value) }}
+                    onFocus={() => { if (schoolResults.length > 0) setSchoolOpen(true) }}
+                    placeholder="Start typing your school name..."
+                    autoComplete="off"
+                    style={styles.input}
+                  />
+                  {schoolLoading && (
+                    <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)' }}>searching…</span>
+                  )}
+                  {schoolOpen && schoolResults.length > 0 && (
+                    <div style={styles.dropdownPanel}>
+                      <div style={styles.dropdownList}>
+                        {schoolResults.map(s => (
+                          <button
+                            key={`${s.name}-${s.city}-${s.state}`}
+                            type="button"
+                            style={{ ...styles.dropdownItem, background: institution === s.name ? 'var(--primary-dim)' : 'transparent', color: institution === s.name ? 'var(--primary)' : 'var(--text)' }}
+                            onClick={() => { setInstitution(s.name); setSchoolQuery(''); setSchoolOpen(false) }}
+                          >
+                            <span style={{ fontWeight: 500 }}>{s.name}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>{s.city}{s.city && s.state ? ', ' : ''}{s.state}</span>
+                          </button>
+                        ))}
+                        <div style={styles.dropdownDivider} />
+                        <button
+                          type="button"
+                          style={{ ...styles.dropdownItem, color: 'var(--text-secondary)', fontStyle: 'italic' }}
+                          onClick={() => { setSchoolOpen(false) }}
+                        >
+                          Not listed — keep what I typed
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                <input type="checkbox" checked={applyAsCounselor} onChange={e => setApplyAsCounselor(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--primary)' }} />
+                I am applying as a <strong style={{ color: 'var(--text)' }}>counselor</strong> (includes all teacher features + student chat &amp; guidance tools)
+              </label>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, lineHeight: 1.5 }}>
+                Your request will be reviewed by an admin before educator features are unlocked. You&apos;ll receive a Teacher tag immediately.
+              </p>
+            </>
+          )}
+
           {error && <p style={styles.error}>{error}</p>}
 
           <button type="submit" disabled={isLoading} style={{ ...styles.btn, opacity: isLoading ? 0.6 : 1 }}>
             {btnLabel}
           </button>
-        </form>
+
+          {mode === 'login' && (
+            <button type="button" onClick={() => { setShowForgot(true); setForgotEmail(email); setForgotError(null); setForgotSent(false) }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, padding: 0, marginTop: 2, textAlign: 'center' as const, width: '100%' }}>
+              Forgot password?
+            </button>
+          )}
+        </form>}
 
         {mode === 'login' && (
           <>
             <p style={styles.switchText}>
               Don&apos;t have an account?{' '}
-              <button type="button" onClick={() => { setMode('register-student'); reset() }} style={styles.switchLink}>Create one</button>
+              <button type="button" onClick={() => { setMode('register-student'); fullReset() }} style={styles.switchLink}>Create one</button>
             </p>
             <p style={{ ...styles.switchText, marginTop: 4 }}>
               Parent or guardian?{' '}
-              <button type="button" onClick={() => { setMode('register-parent'); reset() }} style={styles.switchLink}>Create a parent account</button>
+              <button type="button" onClick={() => { setMode('register-parent'); fullReset() }} style={styles.switchLink}>Create a parent account</button>
+            </p>
+            <p style={{ ...styles.switchText, marginTop: 4 }}>
+              Teacher or counselor?{' '}
+              <button type="button" onClick={() => { setMode('register-teacher'); fullReset() }} style={styles.switchLink}>Create a teacher account</button>
             </p>
           </>
         )}
 
         {mode === 'register-student' && (
           <>
-            <p style={styles.switchText}>Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); reset() }} style={styles.switchLink}>Log In</button></p>
-            <p style={styles.switchText}>Parent or guardian?{' '}<button type="button" onClick={() => { setMode('register-parent'); reset() }} style={styles.switchLink}>Create a parent account instead</button></p>
+            <p style={styles.switchText}>Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); fullReset() }} style={styles.switchLink}>Log In</button></p>
+            <p style={styles.switchText}>Parent or guardian?{' '}<button type="button" onClick={() => { setMode('register-parent'); fullReset() }} style={styles.switchLink}>Create a parent account instead</button></p>
           </>
         )}
 
         {mode === 'register-parent' && (
           <p style={styles.switchText}>
-            Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); reset() }} style={styles.switchLink}>Log In</button>
-            {' · '}<button type="button" onClick={() => { setMode('register-student'); reset() }} style={styles.switchLink}>Student account</button>
+            Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); fullReset() }} style={styles.switchLink}>Log In</button>
+            {' · '}<button type="button" onClick={() => { setMode('register-student'); fullReset() }} style={styles.switchLink}>Student account</button>
+          </p>
+        )}
+
+        {mode === 'register-teacher' && (
+          <p style={styles.switchText}>
+            Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); fullReset() }} style={styles.switchLink}>Log In</button>
+            {' · '}<button type="button" onClick={() => { setMode('register-student'); fullReset() }} style={styles.switchLink}>Student account</button>
           </p>
         )}
       </div>
 
-      {/* ── Privacy Policy Modal ── */}
+      {/* ── Forgot Password Modal ── */}
+      {showForgot && (
+        <div style={styles.modalBackdrop} onClick={() => setShowForgot(false)}>
+          <div style={{ ...styles.modalCard, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Reset your password</span>
+              <button type="button" onClick={() => setShowForgot(false)} style={styles.modalClose}>✕</button>
+            </div>
+            <div style={{ padding: '28px 28px 32px' }}>
+              {forgotSent ? (
+                <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                  <div style={{ fontSize: 44 }}>📬</div>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Check your email</p>
+                  <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, maxWidth: 300 }}>
+                    A password reset link has been sent to <strong>{forgotEmail}</strong>. Check your spam folder if you don&apos;t see it.
+                  </p>
+                  <button type="button" onClick={() => setShowForgot(false)} style={{ ...styles.btn, marginTop: 8 }}>
+                    Back to login
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={e => void handleForgotPassword(e)} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                    Enter the email address for your Futurely account and we&apos;ll send you a reset link.
+                  </p>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Email address</label>
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={e => setForgotEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      autoFocus
+                      style={styles.input}
+                    />
+                  </div>
+                  {forgotError && <p style={styles.error}>{forgotError}</p>}
+                  <button type="submit" disabled={forgotLoading || !forgotEmail.trim()} style={{ ...styles.btn, marginTop: 0, opacity: forgotLoading || !forgotEmail.trim() ? 0.55 : 1 }}>
+                    {forgotLoading ? 'Sending...' : 'Send reset link'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Terms of Service & Privacy Policy Modal ── */}
       {showPrivacyModal && (
         <div style={styles.modalBackdrop} onClick={() => setShowPrivacyModal(false)}>
           <div style={styles.modalCard} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <span style={{ fontWeight: 700, fontSize: 16 }}>Privacy Policy</span>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Terms of Service &amp; Privacy Policy</span>
               <button type="button" onClick={() => setShowPrivacyModal(false)} style={styles.modalClose}>✕</button>
             </div>
 
             <div style={styles.modalBody}>
               <p style={styles.ppMeta}>Effective Date: June 18, 2026 · Futurely, Inc.</p>
 
+              {/* ── Terms of Service ── */}
+              <p style={{ ...styles.ppSection, marginTop: 0, fontSize: 14 }}>Terms of Service</p>
+
               <p style={styles.ppText}>
-                Welcome to Futurely. This Privacy Policy explains how we collect, use, and protect
-                your information when you use our platform. By creating an account you agree to
-                these terms.
+                By creating an account and using Futurely, you agree to be bound by these Terms of
+                Service. Please read them carefully.
+              </p>
+
+              <p style={styles.ppSection}>1. Eligibility</p>
+              <p style={styles.ppText}>
+                You must be at least 13 years of age to use Futurely. By registering, you confirm
+                that you meet this requirement. If you are under 18, a parent or guardian must
+                review and agree to these terms on your behalf.
+              </p>
+
+              <p style={styles.ppSection}>2. Acceptable Use</p>
+              <p style={styles.ppText}>
+                You agree to use Futurely only for lawful purposes. You may not use the platform
+                to harass, threaten, or harm others; post content that is obscene, defamatory, or
+                unlawful; attempt to gain unauthorized access to other accounts or systems; or
+                engage in any activity that disrupts the platform or other users&apos; experience.
+              </p>
+
+              <p style={styles.ppSection}>3. Account Responsibility</p>
+              <p style={styles.ppText}>
+                You are responsible for maintaining the confidentiality of your account credentials.
+                You agree to notify us immediately at <strong>support@futurely.app</strong> if you
+                suspect unauthorized use of your account. Futurely is not liable for losses
+                resulting from unauthorized access caused by your failure to keep credentials secure.
+              </p>
+
+              <p style={styles.ppSection}>4. Virtual Items &amp; Coins</p>
+              <p style={styles.ppText}>
+                Futurely&apos;s marketplace, virtual coins, and in-app items have no real-world
+                monetary value and are not redeemable for cash or external goods. Futurely
+                reserves the right to modify, adjust, or remove virtual items at any time.
+              </p>
+
+              <p style={styles.ppSection}>5. Intellectual Property</p>
+              <p style={styles.ppText}>
+                All content on Futurely — including the platform design, logos, and software — is
+                owned by Futurely, Inc. and protected by applicable intellectual property laws.
+                You may not copy, reproduce, or distribute any platform content without prior
+                written consent.
+              </p>
+
+              <p style={styles.ppSection}>6. Termination</p>
+              <p style={styles.ppText}>
+                Futurely reserves the right to suspend or terminate accounts that violate these
+                Terms of Service, engage in harmful behavior, or misuse the platform. You may
+                delete your account at any time via Settings → Account.
+              </p>
+
+              <p style={styles.ppSection}>7. Disclaimer &amp; Limitation of Liability</p>
+              <p style={styles.ppText}>
+                Futurely is provided &quot;as is&quot; without warranties of any kind. We do not
+                guarantee uninterrupted service or that academic data fetched from third-party
+                portals will be accurate or complete. To the extent permitted by law, Futurely
+                is not liable for indirect, incidental, or consequential damages arising from
+                your use of the platform.
+              </p>
+
+              <p style={styles.ppSection}>8. Changes to Terms</p>
+              <p style={styles.ppText}>
+                We may update these Terms periodically. Material changes will be communicated via
+                email or in-app notice. Continued use of Futurely after such notice constitutes
+                acceptance of the updated Terms.
+              </p>
+
+              {/* ── Privacy Policy ── */}
+              <p style={{ ...styles.ppSection, marginTop: 28, fontSize: 14 }}>Privacy Policy</p>
+
+              <p style={styles.ppText}>
+                This Privacy Policy explains how we collect, use, and protect your information
+                when you use our platform.
               </p>
 
               <p style={styles.ppSection}>1. Information We Collect</p>
@@ -399,6 +767,15 @@ export default function LoginPage() {
               <label style={styles.checkRow}>
                 <input
                   type="checkbox"
+                  checked={agreedTos}
+                  onChange={e => setAgreedTos(e.target.checked)}
+                  style={styles.checkbox}
+                />
+                <span style={styles.checkLabel}>I have read and agree to the Terms of Service</span>
+              </label>
+              <label style={styles.checkRow}>
+                <input
+                  type="checkbox"
                   checked={agreedPrivacy}
                   onChange={e => setAgreedPrivacy(e.target.checked)}
                   style={styles.checkbox}
@@ -416,11 +793,18 @@ export default function LoginPage() {
               </label>
               <button
                 type="button"
-                disabled={!agreedPrivacy || !agreedAge || isLoading}
-                onClick={() => { setShowPrivacyModal(false); void doRegisterOrLogin() }}
-                style={{ ...styles.btn, marginTop: 6, opacity: (!agreedPrivacy || !agreedAge || isLoading) ? 0.45 : 1 }}
+                disabled={!agreedTos || !agreedPrivacy || !agreedAge || isLoading}
+                onClick={() => {
+                  setShowPrivacyModal(false)
+                  if (pendingOAuthNew) {
+                    router.push('/dashboard')
+                  } else {
+                    void doRegisterOrLogin()
+                  }
+                }}
+                style={{ ...styles.btn, marginTop: 6, opacity: (!agreedTos || !agreedPrivacy || !agreedAge || isLoading) ? 0.45 : 1 }}
               >
-                {isLoading ? 'Creating account...' : 'Continue & Create Account'}
+                {isLoading ? 'Creating account...' : pendingOAuthNew ? 'Continue to Futurely' : 'Continue & Create Account'}
               </button>
             </div>
           </div>
@@ -447,6 +831,7 @@ const styles: Record<string, React.CSSProperties> = {
   error:           { color: 'var(--error)', fontSize: 13.5, lineHeight: 1.4 },
   hacError:        { color: 'var(--warning)', fontSize: 12, lineHeight: 1.5 },
   btn:             { background: 'var(--primary)', color: '#FFFFFF', border: 'none', borderRadius: 10, height: 48, fontWeight: 600, fontSize: 15, width: '100%', cursor: 'pointer', marginTop: 4, letterSpacing: '0.1px', transition: 'background 0.15s, box-shadow 0.15s' },
+  oauthBtn:        { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', height: 46, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, fontWeight: 600, textDecoration: 'none', cursor: 'pointer', transition: 'background 0.15s' },
   testHint:        { marginTop: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' as const },
   switchText:      { marginTop: 12, fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' as const },
   switchLink:      { background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: 0 },
@@ -469,4 +854,12 @@ const styles: Record<string, React.CSSProperties> = {
   checkRow:       { display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' },
   checkbox:       { width: 16, height: 16, marginTop: 1, flexShrink: 0, accentColor: 'var(--primary)', cursor: 'pointer' },
   checkLabel:     { fontSize: 13.5, color: 'var(--text)', lineHeight: 1.4 },
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
+  )
 }

@@ -7,7 +7,7 @@ import { clearWebAuth } from '../../../lib/authState'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import { CHANGELOG } from '../../../lib/changelog'
 
-function DeleteAccountModal({ onClose }: { onClose: () => void }) {
+function DeleteAccountModal({ onClose, hasPassword }: { onClose: () => void; hasPassword: boolean }) {
   const router = useRouter()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -16,10 +16,10 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
 
   async function handleDelete() {
     if (confirm !== 'DELETE') { setError('Type DELETE to confirm'); return }
-    if (!password) { setError('Password required'); return }
+    if (hasPassword && !password) { setError('Password required'); return }
     setLoading(true); setError(null)
     try {
-      await api.deleteAccount(password)
+      await api.deleteAccount(hasPassword ? password : undefined)
       clearWebAuth()
       localStorage.removeItem('ns_user')
       router.push('/login')
@@ -37,10 +37,12 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
           This permanently deletes your account, posts, grades, and all data. There is no undo — the only way to get access back is to create a new account.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Current Password</label>
-            <input type="password" className="ns-input" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
-          </div>
+          {hasPassword && (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Current Password</label>
+              <input type="password" className="ns-input" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+            </div>
+          )}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Type <strong>DELETE</strong> to confirm</label>
             <input type="text" className="ns-input" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="DELETE" />
@@ -91,6 +93,7 @@ const DEFAULT_GRADE_COLORS = { A: '#22C55E', B: '#10B981', C: '#F59E0B', D: '#F9
 export default function SettingsPage() {
   const router = useRouter()
   const [theme, setTheme]                   = useState<'dark' | 'light'>('dark')
+  const [reduceMotion, setReduceMotion]     = useState(false)
 
   const [gradeColors, setGradeColors]       = useState<Record<string, string>>(DEFAULT_GRADE_COLORS)
   const [data, setData]                     = useState<StudentData | null>(null)
@@ -149,6 +152,7 @@ export default function SettingsPage() {
   useEffect(() => {
     setTheme((localStorage.getItem('ns_theme') as 'dark' | 'light') || 'dark')
     setHideGpa(localStorage.getItem('ns_hide_gpa') === '1')
+    setReduceMotion(localStorage.getItem('rm') === '1')
     try {
       const saved = localStorage.getItem('ns_grade_colors_v2')
       if (saved) {
@@ -368,11 +372,17 @@ export default function SettingsPage() {
           {/* Profile card */}
           <div className="ns-card" style={S.profileCard}>
             <div style={S.avatar}>{initials(data?.name ?? null)}</div>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={S.profileName}>{parseHacName(data?.name) || 'Student'}</div>
               <div style={S.profileSub}>
                 {[profile?.gradeLevel ? `Grade ${profile.gradeLevel}` : '', profile?.graduationYear ? `Class of ${profile.graduationYear}` : ''].filter(Boolean).join(' · ') || 'Student account'}
               </div>
+              {data?.id && (
+                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                  Futurely ID: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1 }}>{data.id}</span>
+                  <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-muted)' }}>(share with your counselor to get linked)</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -740,6 +750,30 @@ export default function SettingsPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
               <div>
+                <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Reduce animations</span>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Disables tag, avatar, and name-color animations — helps if the app is lagging</div>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !reduceMotion
+                  setReduceMotion(next)
+                  localStorage.setItem('rm', next ? '1' : '0')
+                  if (next) document.documentElement.classList.add('reduce-motion')
+                  else document.documentElement.classList.remove('reduce-motion')
+                }}
+                style={{
+                  width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                  background: reduceMotion ? 'var(--primary)' : 'var(--border)', transition: 'background 0.2s',
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 3, left: reduceMotion ? 23 : 3, width: 18, height: 18,
+                  borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div>
                 <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Hide GPA on dashboard</span>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Blur your GPA so others can&apos;t see it over your shoulder</div>
               </div>
@@ -848,7 +882,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* DEV-only: profile picture URL */}
+          {/* DEV-only: avatar URL */}
           {data?.role === 'ADMIN' && (
             <div className="ns-card" style={{ ...S.card, border: '1px solid rgba(43,74,142,0.25)' }}>
               <p style={{ ...S.cardLabel, color: 'var(--primary)' }}>DEV — Avatar URL</p>
@@ -953,7 +987,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {showDeleteModal && <DeleteAccountModal onClose={() => setShowDeleteModal(false)} />}
+      {showDeleteModal && <DeleteAccountModal onClose={() => setShowDeleteModal(false)} hasPassword={data?.hasPassword ?? true} />}
     </div>
   )
 }

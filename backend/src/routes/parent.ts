@@ -126,8 +126,8 @@ router.post('/link-student', async (req: AuthRequest, res: Response): Promise<vo
 
     const { districtUrl, username, password } = parse.data
 
-    const existing = await prisma.parentPortalConnection.findUnique({
-      where: { parentId_hacUsername_districtUrl: { parentId, hacUsername: username, districtUrl } },
+    const existing = await prisma.parentPortalConnection.findFirst({
+      where: { parentId, hacUsername: username, districtUrl },
     })
     if (existing) {
       res.status(409).json({ error: { message: 'This student portal is already linked to your account' } })

@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification, getApiToken } from '@/lib/api'
 import CoinIcon from '@/components/ui/CoinIcon'
+import VerifiedBadge from '@/components/ui/VerifiedBadge'
+import { DevAdminPanel, ModPanel } from '@/components/ui/DevAdminPanel'
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -26,45 +28,52 @@ function parseHacName(raw: string | null | undefined): string {
   return raw
 }
 
-function displayName(user: { name: string | null }): string {
-  return parseHacName(user.name) || 'User'
+function displayName(user: { name: string | null; hacName?: string | null }): string {
+  if (user.name) return user.name
+  if (user.hacName) return parseHacName(user.hacName)
+  return 'User'
 }
 
-function initials(user: { name: string | null }): string {
-  const n = parseHacName(user.name) || 'U'
+function initials(user: { name: string | null; hacName?: string | null }): string {
+  const n = displayName(user)
   const parts = n.trim().split(' ')
   return parts.length >= 2
     ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
     : n.slice(0, 2).toUpperCase()
 }
 
-const PFP_BORDER_MAP: Record<string, string> = {
+const AVATAR_BORDER_MAP: Record<string, string> = {
   'border-green': '#22C55E', 'border-blue': '#3B82F6', 'border-red': '#EF4444',
   'border-navy': '#1D4ED8', 'border-teal': '#14B8A6', 'border-orange': '#F97316',
   'border-violet': '#7C3AED', 'border-cyan': '#06B6D4', 'border-hotpink': '#EC4899',
   'border-gold': '#D97706', 'border-lime': '#84CC16',
+  'border-yellow': '#EAB308', 'border-pink': '#F472B6', 'border-gray': '#6B7280',
+  'border-brown': '#92400E', 'border-rose': '#F43F5E', 'border-sky': '#0EA5E9',
+  'border-silver': '#C0C0C0',
 }
-const PFP_GLOW_MAP: Record<string, [string, string]> = {
+const AVATAR_GLOW_MAP: Record<string, [string, string]> = {
   'glow-pink':   ['#EC4899', '#EC489955'],
   'glow-purple': ['#8B5CF6', '#8B5CF655'],
+  'glow-blue':   ['#3B82F6', '#3B82F655'],
+  'glow-orange': ['#F97316', '#F9731655'],
 }
-function pfpStyle(effect: string | null | undefined): React.CSSProperties {
+function avatarStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
   if (effect === 'glow-gold')          return {}
   if (effect === 'frame-black')        return {}
   if (effect === 'fill-white')         return {}
   if (effect === 'unobtainable-curse') return { background: 'transparent' }
-  if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
-  if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
+  if (AVATAR_BORDER_MAP[effect]) return { border: `2px solid ${AVATAR_BORDER_MAP[effect]}` }
+  if (AVATAR_GLOW_MAP[effect]) return { border: `2px solid ${AVATAR_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${AVATAR_GLOW_MAP[effect][1]}` }
   return {}
 }
-function pfpClass(effect: string | null | undefined): string {
-  if (effect === 'rainbow')           return 'pfp-rainbow'
-  if (effect === 'glow-gold')         return 'pfp-gold-fill'
-  if (effect === 'frame-black')       return 'pfp-void-fill'
-  if (effect === 'fill-white')        return 'pfp-white-fill'
-  if (effect === 'unobtainable-curse') return 'pfp-curse'
+function avatarClass(effect: string | null | undefined): string {
+  if (effect === 'rainbow')           return 'avatar-rainbow'
+  if (effect === 'glow-gold')         return 'avatar-gold-fill'
+  if (effect === 'frame-black')       return 'avatar-void-fill'
+  if (effect === 'fill-white')        return 'avatar-white-fill'
+  if (effect === 'unobtainable-curse') return 'avatar-curse'
   return ''
 }
 
@@ -74,32 +83,52 @@ const GW_NAME_COLOR_ITEMS = [
   { id: 'dark-red',     name: 'Dark Red',     value: '#991B1B', rarity: 'Common' },
   { id: 'slate-blue',   name: 'Slate Blue',   value: '#4338CA', rarity: 'Common' },
   { id: 'teal',         name: 'Teal',         value: '#0F766E', rarity: 'Common' },
+  { id: 'maroon',       name: 'Maroon',       value: '#7F1D1D', rarity: 'Common' },
+  { id: 'olive',        name: 'Olive',        value: '#713F12', rarity: 'Common' },
+  { id: 'brown',        name: 'Brown',        value: '#78350F', rarity: 'Common' },
+  { id: 'steel',        name: 'Steel',        value: '#334155', rarity: 'Common' },
+  { id: 'midnight',     name: 'Midnight',     value: '#0F172A', rarity: 'Common' },
   { id: 'bright-orange',name: 'Bright Orange',value: '#EA580C', rarity: 'Uncommon' },
   { id: 'violet',       name: 'Violet',       value: '#7C3AED', rarity: 'Uncommon' },
   { id: 'cyan',         name: 'Cyan',         value: '#0891B2', rarity: 'Uncommon' },
+  { id: 'coral',        name: 'Coral',        value: '#F97066', rarity: 'Uncommon' },
+  { id: 'mint',         name: 'Mint',         value: '#6EE7B7', rarity: 'Uncommon' },
+  { id: 'amber',        name: 'Amber',        value: '#D97706', rarity: 'Uncommon' },
   { id: 'hot-pink',     name: 'Hot Pink',     value: '#DB2777', rarity: 'Rare' },
   { id: 'gold',         name: 'Gold',         value: '#D97706', rarity: 'Rare' },
   { id: 'lime-green',   name: 'Lime Green',   value: '#65A30D', rarity: 'Rare' },
+  { id: 'crimson',      name: 'Crimson',      value: '#DC2626', rarity: 'Rare' },
+  { id: 'sky-blue',     name: 'Sky Blue',     value: '#0EA5E9', rarity: 'Rare' },
   { id: 'electric-blue',name: 'Electric Blue',value: '#2563EB', rarity: 'Epic' },
   { id: 'magenta',      name: 'Magenta',      value: '#C026D3', rarity: 'Epic' },
+  { id: 'rose',         name: 'Rose',         value: '#F43F5E', rarity: 'Epic' },
   { id: 'pure-white',   name: 'Pure White',   value: '#F8FAFC', rarity: 'Legendary' },
   { id: 'black',        name: 'Black',        value: '#111111', rarity: 'Legendary' },
   { id: 'rainbow',      name: 'Rainbow RGB',  value: 'rainbow', rarity: 'Mythic' },
 ]
-const GW_PFP_ITEMS = [
-  { id: 'border-green',  name: 'Green Border',    value: 'border-green',   rarity: 'Common' },
+const GW_AVATAR_ITEMS = [
+  { id: 'border-green',  name: 'Green Border',    value: 'border-green',   rarity: 'Epic' },
   { id: 'border-blue',   name: 'Blue Border',     value: 'border-blue',    rarity: 'Common' },
   { id: 'border-red',    name: 'Red Border',      value: 'border-red',     rarity: 'Common' },
   { id: 'border-navy',   name: 'Navy Border',     value: 'border-navy',    rarity: 'Common' },
   { id: 'border-teal',   name: 'Teal Border',     value: 'border-teal',    rarity: 'Common' },
+  { id: 'glow-purple',   name: 'Purple Glow',     value: 'glow-purple',    rarity: 'Common' },
+  { id: 'border-yellow', name: 'Yellow Border',   value: 'border-yellow',  rarity: 'Common' },
+  { id: 'border-pink',   name: 'Pink Border',     value: 'border-pink',    rarity: 'Common' },
+  { id: 'border-gray',   name: 'Gray Border',     value: 'border-gray',    rarity: 'Common' },
+  { id: 'border-brown',  name: 'Brown Border',    value: 'border-brown',   rarity: 'Common' },
   { id: 'border-orange', name: 'Orange Border',   value: 'border-orange',  rarity: 'Uncommon' },
   { id: 'border-violet', name: 'Violet Border',   value: 'border-violet',  rarity: 'Uncommon' },
   { id: 'border-cyan',   name: 'Cyan Border',     value: 'border-cyan',    rarity: 'Uncommon' },
+  { id: 'border-rose',   name: 'Rose Border',     value: 'border-rose',    rarity: 'Uncommon' },
+  { id: 'border-sky',    name: 'Sky Border',      value: 'border-sky',     rarity: 'Uncommon' },
   { id: 'border-hotpink',name: 'Hot Pink Border', value: 'border-hotpink', rarity: 'Rare' },
   { id: 'border-gold',   name: 'Gold Border',     value: 'border-gold',    rarity: 'Rare' },
   { id: 'border-lime',   name: 'Lime Border',     value: 'border-lime',    rarity: 'Rare' },
+  { id: 'border-silver', name: 'Silver Border',   value: 'border-silver',  rarity: 'Rare' },
+  { id: 'glow-blue',     name: 'Blue Glow',       value: 'glow-blue',      rarity: 'Rare' },
   { id: 'glow-pink',     name: 'Pink Glow',       value: 'glow-pink',      rarity: 'Epic' },
-  { id: 'glow-purple',   name: 'Purple Glow',     value: 'glow-purple',    rarity: 'Epic' },
+  { id: 'glow-orange',   name: 'Orange Glow',     value: 'glow-orange',    rarity: 'Epic' },
   { id: 'glow-gold',     name: 'Gold Fill',       value: 'glow-gold',      rarity: 'Legendary' },
   { id: 'frame-black',   name: 'Void Fill',       value: 'frame-black',    rarity: 'Legendary' },
   { id: 'rainbow',       name: 'Rainbow Animated',value: 'rainbow',        rarity: 'Mythic' },
@@ -110,10 +139,13 @@ function avatarContent(user: { name: string | null; avatarUrl?: string | null })
   return initials(user)
 }
 function nameColorStyle(color: string | null | undefined): React.CSSProperties {
-  return color && color !== 'rainbow' ? { color } : {}
+  if (!color || color === 'rainbow' || color === 'curse') return {}
+  if (color === '#111111') return { color, textShadow: '0 0 6px rgba(180,180,180,0.65)' }
+  if (color === '#C0C0C0') return { color: '#E8E8FF', textShadow: '0 0 4px rgba(255,255,255,1), 0 0 8px rgba(255,255,255,0.95), 0 0 18px rgba(255,255,255,0.7), 0 0 35px rgba(210,220,255,0.35)' }
+  return { color }
 }
 function nameColorClass(color: string | null | undefined): string {
-  return color === 'rainbow' ? 'name-rainbow' : ''
+  return color === 'rainbow' ? 'name-rainbow' : color === 'curse' ? 'name-curse' : ''
 }
 
 // ── Notification row with clickable sender name ───────────────────────────────
@@ -130,8 +162,8 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
 
   const nameEl = (
     <button
-      className={isRainbowName ? 'name-rainbow' : ''}
-      style={{ background: 'none', border: 'none', padding: 0, color: isRainbowName ? undefined : (n.sender.nameColor ?? 'var(--primary)'), fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
+      className={isRainbowName ? 'name-rainbow' : n.sender.nameColor === 'curse' ? 'name-curse' : ''}
+      style={{ background: 'none', border: 'none', padding: 0, color: (isRainbowName || n.sender.nameColor === 'curse') ? undefined : (n.sender.nameColor ?? 'var(--primary)'), fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
       onClick={handleNameClick}
     >
       {name}
@@ -192,15 +224,20 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
   const [loading, setLoading] = useState(true)
   const [following, setFollowing] = useState(false)
   const [postsLoading, setPostsLoading] = useState(true)
+  const [postsError, setPostsError] = useState(false)
+  const [sendCoinAmount, setSendCoinAmount] = useState('')
+  const [sendCoinBusy, setSendCoinBusy] = useState(false)
+  const [sendCoinMsg, setSendCoinMsg] = useState('')
 
   useEffect(() => {
     let cancelled = false
+    setProfile(null); setLoading(true); setUserPosts([]); setPostsLoading(true); setPostsError(false)
     api.feedUserProfile(userId).then((data) => {
       if (!cancelled) { setProfile(data); setFollowing(data.isFollowing); setLoading(false) }
     }).catch(() => { if (!cancelled) setLoading(false) })
     api.feedUserPosts(userId).then((data) => {
       if (!cancelled) { setUserPosts(data.posts); setPostsLoading(false) }
-    }).catch(() => { if (!cancelled) setPostsLoading(false) })
+    }).catch(() => { if (!cancelled) { setPostsLoading(false); setPostsError(true) } })
     return () => { cancelled = true }
   }, [userId])
 
@@ -221,9 +258,9 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
 
   const isDevTag = profile?.tag === 'DEV'
   const isGodTag = profile?.tag === 'GOAT'
-  const isMythicTag = profile?.tag === 'GOD'
+  const isMythicTag = profile?.tag === 'VIP'
 
-  return (
+  return createPortal(
     <div style={O.overlay} onClick={onClose}>
       <div style={O.panel} onClick={e => e.stopPropagation()}>
         {loading ? (
@@ -233,9 +270,12 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
         ) : (
           <>
             <div style={O.header}>
-              <div className={pfpClass(profile.pfpEffect)} style={{ ...O.avatar, ...pfpStyle(profile.pfpEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(profile)}</div>
+              <div className={avatarClass(profile.avatarEffect)} style={{ ...O.avatar, ...avatarStyle(profile.avatarEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(profile)}</div>
               <div style={{ flex: 1 }}>
                 <div className={nameColorClass(profile.nameColor)} style={{ ...O.name, ...nameColorStyle(profile.nameColor) }}>{displayName(profile)}</div>
+                {profile.hacName && parseHacName(profile.hacName) !== displayName(profile) && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>{parseHacName(profile.hacName)}</div>
+                )}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 3 }}>
                   {(profile.chatBanned || (profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())) && (
                     <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, display: 'inline-block', ...(profile.chatBanned ? { color: '#EF4444', background: '#EF444422', border: '1px solid #EF4444' } : { color: '#f97316', background: '#f9731622', border: '1px solid #f97316' }) }}>
@@ -243,9 +283,14 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
                     </span>
                   )}
                   {profile.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
-                    <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''} style={isDevTag ? O.tagDev : isMythicTag ? O.tagGod : isGodTag ? O.tagGod : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
-                      {profile.tag}
-                    </span>
+                    profile.tagColor === 'verified-yellow' || profile.tagColor === 'verified-blue'
+                      ? <VerifiedBadge variant={profile.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
+                      : <span className={tagCssClass(profile.tag, profile.tagColor)} style={isAnimatedTag(profile.tag) ? { ...O.tag } : profile.tagColor === 'curse' ? { ...O.tag, border: '1px solid #ff0000' } : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
+                          {profile.tag}
+                        </span>
+                  )}
+                  {(profile.badge === 'verified-yellow' || profile.badge === 'verified-blue') && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
+                    <VerifiedBadge variant={profile.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
                   )}
                 </div>
               </div>
@@ -264,10 +309,56 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
             </div>
 
             {userId !== currentUserId && (
-              <button className={following ? 'ns-btn-ghost' : 'ns-btn-primary'} style={{ width: '100%', height: 40, marginBottom: 20, fontSize: 14 }} onClick={handleFollow}>
-                {following ? 'Following' : 'Follow'}
-              </button>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <button className={following ? 'ns-btn-ghost' : 'ns-btn-primary'} style={{ flex: 1, height: 40, fontSize: 14 }} onClick={handleFollow}>
+                  {following ? 'Following' : 'Follow'}
+                </button>
+              </div>
             )}
+
+            {/* Send Coins — visible to all users on other profiles */}
+            {userId !== currentUserId && (() => {
+              const amt = parseInt(sendCoinAmount)
+              const tax = (!isNaN(amt) && amt > 0) ? Math.ceil(amt * 0.05) : 0
+              return (
+                <div style={{ marginBottom: 20, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      className="ns-input"
+                      style={{ flex: 1, height: 34, fontSize: 13 }}
+                      type="number"
+                      min="1"
+                      placeholder="Amount"
+                      value={sendCoinAmount}
+                      onChange={e => { setSendCoinAmount(e.target.value); setSendCoinMsg('') }}
+                    />
+                    <button
+                      style={{ background: '#EAB308', color: '#000', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: sendCoinBusy ? 'not-allowed' : 'pointer', opacity: sendCoinBusy ? 0.6 : 1 }}
+                      disabled={sendCoinBusy}
+                      onClick={async () => {
+                        if (isNaN(amt) || amt <= 0 || sendCoinBusy) return
+                        setSendCoinBusy(true); setSendCoinMsg('')
+                        try {
+                          await api.sendCoins(userId, amt)
+                          setSendCoinMsg(`✓ Sent ${amt} coins (−${tax} tax)`)
+                          setSendCoinAmount('')
+                        } catch (e: unknown) {
+                          const msg = (e instanceof Error ? e.message : '') || 'Failed'
+                          setSendCoinMsg(msg.includes('INSUFFICIENT') ? 'Not enough coins' : 'Failed')
+                        } finally { setSendCoinBusy(false) }
+                      }}
+                    >{sendCoinBusy ? '…' : 'Send'}</button>
+                  </div>
+                  {tax > 0 && !sendCoinMsg && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5 }}>
+                      5% tax — you pay <strong style={{ color: '#EAB308' }}>{amt + tax}</strong> total ({amt} + {tax} tax)
+                    </div>
+                  )}
+                  {sendCoinMsg && <div style={{ fontSize: 11, color: sendCoinMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{sendCoinMsg}</div>}
+                </div>
+              )
+            })()}
 
             {/* DEV/Admin panel */}
             <DevAdminPanel
@@ -288,18 +379,12 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
               onUpdateMute={mu => setProfile(prev => prev ? { ...prev, chatMutedUntil: mu } : prev)}
             />
 
-            {/* Tag picker — only shown on own profile */}
-            {userId === currentUserId && (profile.allTags ?? []).length > 0 && (
-              <OwnTagPicker
-                profile={profile}
-                onUpdateTag={updated => setProfile(prev => prev ? { ...prev, tag: updated.tag, tagColor: updated.tagColor } : prev)}
-              />
-            )}
-
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
               <p style={O.postsTitle}>Posts</p>
               {postsLoading ? (
                 <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading posts…</div>
+              ) : postsError ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Could not load posts.</div>
               ) : userPosts.length === 0 ? (
                 <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No posts yet.</div>
               ) : userPosts.map(post => (
@@ -318,502 +403,8 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
           </>
         )}
       </div>
-    </div>
-  )
-}
-
-// ── DEV / Admin control panel ─────────────────────────────────────────────────
-
-function DevAdminPanel({
-  profile, userId, currentUserId, onUpdateTag, onUpdateBan, onUpdateMute, onUpdateRole, onDeleted,
-}: {
-  profile: FeedUserProfile
-  userId: number
-  currentUserId: number
-  onUpdateTag: (u: { tag: string | null; tagColor: string | null; allTags?: Array<{ tag: string; tagColor: string }> }) => void
-  onUpdateBan: (banned: boolean) => void
-  onUpdateMute: (mutedUntil: string | null) => void
-  onUpdateRole: (role: string) => void
-  onDeleted: () => void
-}) {
-  const [localTag, setLocalTag] = useState('')
-  const [localColor, setLocalColor] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [removingTag, setRemovingTag] = useState<string | null>(null)
-  const [muteMinutes, setMuteMinutes] = useState('60')
-  const [muteSaving, setMuteSaving] = useState(false)
-  const [roleSaving, setRoleSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [myTag, setMyTag] = useState<string | null>(null)
-  const [myRole, setMyRole] = useState<string | null>(null)
-  const [devStats, setDevStats] = useState<{ totalCoins: number; totalInventoryValue: number; userCount: number } | null>(null)
-  const [statsLoading, setStatsLoading] = useState(false)
-  const [coinAmount, setCoinAmount] = useState('')
-  const [coinSaving, setCoinSaving] = useState(false)
-  const [targetCoins, setTargetCoins] = useState<number | null>(profile.coins ?? null)
-
-  useEffect(() => {
-    api.feedUserProfile(currentUserId).then((p) => { setMyRole(p.role); setMyTag(p.tag) }).catch(() => {})
-  }, [currentUserId])
-
-  const canManage = myRole === 'ADMIN' || myTag === 'DEV'
-  const isOwnProfile = userId === currentUserId
-
-  useEffect(() => {
-    if (!canManage) return
-    setStatsLoading(true)
-    api.feedDevStats().then(d => { setDevStats(d); setStatsLoading(false) }).catch(() => setStatsLoading(false))
-  }, [canManage])
-
-  if (!canManage) return null
-
-  async function handleSetTag() {
-    if (!localTag.trim() || saving) return
-    setSaving(true)
-    try {
-      const updated = await api.feedAwardTag(userId, localTag.trim(), localColor.trim() || undefined)
-      onUpdateTag(updated)
-      setLocalTag('')
-      setLocalColor('')
-    } catch { /* ignore */ }
-    finally { setSaving(false) }
-  }
-
-  async function handleRemoveTag(tagName: string) {
-    if (removingTag) return
-    setRemovingTag(tagName)
-    try {
-      const updated = await api.feedRemoveTagFromUser(userId, tagName)
-      onUpdateTag(updated)
-    } catch { /* ignore */ }
-    finally { setRemovingTag(null) }
-  }
-
-  async function handleResetTag() {
-    if (saving) return
-    setSaving(true)
-    try {
-      const updated = await api.feedResetTag(userId)
-      onUpdateTag(updated)
-    } catch { /* ignore */ }
-    finally { setSaving(false) }
-  }
-
-  async function handleToggleBan() {
-    setSaving(true)
-    try {
-      const result = await api.feedBanUser(userId, !profile.chatBanned)
-      onUpdateBan(result.banned)
-    } catch { /* ignore */ }
-    finally { setSaving(false) }
-  }
-
-  async function handleDeleteAccount() {
-    if (deleting) return
-    if (!confirm(`Permanently delete this account? This cannot be undone.`)) return
-    setDeleting(true)
-    try {
-      await api.feedDeleteUser(userId)
-      onDeleted()
-    } catch { /* ignore */ }
-    finally { setDeleting(false) }
-  }
-
-  async function handleMute() {
-    const mins = parseInt(muteMinutes)
-    if (isNaN(mins) || muteSaving) return
-    setMuteSaving(true)
-    try {
-      const result = await api.feedMuteUser(userId, mins > 0 ? mins : null)
-      onUpdateMute(result.mutedUntil)
-    } catch { /* ignore */ }
-    finally { setMuteSaving(false) }
-  }
-
-  async function handleUnmute() {
-    if (muteSaving) return
-    setMuteSaving(true)
-    try {
-      const result = await api.feedMuteUser(userId, null)
-      onUpdateMute(result.mutedUntil)
-    } catch { /* ignore */ }
-    finally { setMuteSaving(false) }
-  }
-
-  async function handleSetRole(role: string) {
-    if (roleSaving) return
-    setRoleSaving(true)
-    try {
-      const result = await api.feedSetUserRole(userId, role)
-      onUpdateRole(result.role)
-    } catch { /* ignore */ }
-    finally { setRoleSaving(false) }
-  }
-
-  async function handleQuickGrantTag(tag: string, color: string) {
-    if (saving) return
-    setSaving(true)
-    try {
-      const updated = await api.feedAwardTag(userId, tag, color)
-      onUpdateTag(updated)
-    } catch { /* ignore */ }
-    finally { setSaving(false) }
-  }
-
-  async function handleCoinAction(action: 'add' | 'remove' | 'zero') {
-    if (coinSaving) return
-    const amount = action === 'zero' ? 0 : parseInt(coinAmount)
-    if (action !== 'zero' && (isNaN(amount) || amount <= 0)) return
-    setCoinSaving(true)
-    try {
-      const result = await api.feedAdjustCoins(userId, action, action !== 'zero' ? amount : undefined)
-      setTargetCoins(result.coins)
-      if (action !== 'zero') setCoinAmount('')
-    } catch { /* ignore */ }
-    finally { setCoinSaving(false) }
-  }
-
-  const isMutedTarget = profile.chatMutedUntil != null && new Date(profile.chatMutedUntil) > new Date()
-  const allTags = Array.from(new Map((profile.allTags ?? []).map(t => [t.tag, t])).values())
-  const hasDevTag = allTags.some(t => t.tag === 'DEV')
-  const hasModTag = allTags.some(t => t.tag === 'MOD')
-  const isAdmin = profile.role === 'ADMIN'
-
-  return (
-    <div style={{ background: 'rgba(255,200,50,0.06)', border: '1px solid rgba(255,200,50,0.2)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-      <p style={{ fontSize: 12, fontWeight: 700, color: '#ffc832', marginBottom: 10 }}>DEV — {isOwnProfile ? 'Platform Console' : 'Manage User'}</p>
-
-      {/* Platform stats — visible to DEVs on any profile */}
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>PLATFORM STATS</p>
-      {statsLoading ? (
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</p>
-      ) : devStats ? (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 12 }}>
-          <div style={{ flex: 1, minWidth: 120, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 6, padding: '8px 12px' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>TOTAL COINS IN CIRCULATION</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>{devStats.totalCoins.toLocaleString()} 🪙</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{devStats.userCount} active users</div>
-          </div>
-          <div style={{ flex: 1, minWidth: 120, background: 'rgba(43,74,142,0.08)', border: '1px solid rgba(43,74,142,0.2)', borderRadius: 6, padding: '8px 12px' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>TOTAL INVENTORY VALUE</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-blue)' }}>{devStats.totalInventoryValue.toLocaleString()} 🪙</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>combined across all users</div>
-          </div>
-        </div>
-      ) : (
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Stats unavailable</p>
-      )}
-
-      {/* Per-user controls — only when managing someone else */}
-      {!isOwnProfile && (<>
-
-      {/* Privileges: role + quick grant/revoke */}
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>PRIVILEGES</p>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, alignItems: 'center', marginBottom: 10 }}>
-        <span style={{
-          fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
-          background: isAdmin ? 'rgba(239,68,68,0.15)' : 'rgba(128,128,128,0.12)',
-          color: isAdmin ? '#EF4444' : 'var(--text-secondary)',
-          border: `1px solid ${isAdmin ? '#EF4444' : 'rgba(128,128,128,0.4)'}`,
-        }}>
-          {isAdmin ? 'ADMIN' : 'STUDENT'}
-        </span>
-        {!isAdmin ? (
-          <button
-            style={{ background: '#EF4444', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
-            onClick={() => void handleSetRole('ADMIN')}
-            disabled={roleSaving}
-          >
-            {roleSaving ? '…' : 'Grant Admin'}
-          </button>
-        ) : (
-          <button
-            style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid #EF4444', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
-            onClick={() => void handleSetRole('STUDENT')}
-            disabled={roleSaving}
-          >
-            {roleSaving ? '…' : 'Revoke Admin'}
-          </button>
-        )}
-        {!hasDevTag ? (
-          <button
-            style={{ background: 'rgba(173,216,230,0.15)', color: 'lightblue', border: '1px solid lightblue', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
-            onClick={() => void handleQuickGrantTag('DEV', 'lightblue')}
-            disabled={saving}
-          >
-            + DEV
-          </button>
-        ) : (
-          <button
-            style={{ background: 'rgba(173,216,230,0.15)', color: 'lightblue', border: '1px solid lightblue', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
-            onClick={() => void handleRemoveTag('DEV')}
-            disabled={!!removingTag}
-          >
-            − DEV
-          </button>
-        )}
-        {!hasModTag ? (
-          <button
-            style={{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid #a78bfa', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
-            onClick={() => void handleQuickGrantTag('MOD', '#a78bfa')}
-            disabled={saving}
-          >
-            + MOD
-          </button>
-        ) : (
-          <button
-            style={{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid #a78bfa', borderRadius: 6, padding: '4px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
-            onClick={() => void handleRemoveTag('MOD')}
-            disabled={!!removingTag}
-          >
-            − MOD
-          </button>
-        )}
-      </div>
-
-      {/* Existing tags */}
-      {allTags.length > 0 && (
-        <div style={{ marginBottom: 10 }}>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>AWARDED TAGS</p>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
-            {allTags.map(t => (
-              <div key={t.tag} style={{ display: 'flex', alignItems: 'center', gap: 4, background: t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`, border: `1px solid ${t.tagColor === 'grey' ? 'rgba(128,128,128,0.4)' : t.tagColor}`, borderRadius: 4, padding: '2px 6px 2px 8px' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor }}>{t.tag}</span>
-                <button
-                  style={{ background: 'none', border: 'none', padding: '0 0 0 2px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center' }}
-                  onClick={() => void handleRemoveTag(t.tag)}
-                  disabled={!!removingTag}
-                  title={`Remove ${t.tag} tag`}
-                >×</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Award new tag */}
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>AWARD TAG</p>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const, marginBottom: 10 }}>
-        <input className="ns-input" style={{ flex: 1, minWidth: 80, height: 34, fontSize: 12 }} placeholder="Tag (VIP, MOD…)" value={localTag} onChange={e => setLocalTag(e.target.value)} />
-        <input className="ns-input" style={{ width: 80, height: 34, fontSize: 12 }} placeholder="Color" value={localColor} onChange={e => setLocalColor(e.target.value)} />
-        <button style={{ background: '#ffc832', color: '#000', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={handleSetTag} disabled={saving}>{saving ? '…' : 'Award'}</button>
-        <button className="ns-btn-ghost" style={{ height: 34, padding: '0 10px', fontSize: 12 }} onClick={handleResetTag} disabled={saving}>Reset All</button>
-      </div>
-
-      {/* Mute */}
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>MUTE</p>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const, marginBottom: 10 }}>
-        <select
-          className="ns-input"
-          style={{ flex: 1, height: 34, fontSize: 12 }}
-          value={muteMinutes}
-          onChange={e => setMuteMinutes(e.target.value)}
-        >
-          <option value="5">5 minutes</option>
-          <option value="60">1 hour</option>
-          <option value="1440">1 day</option>
-          <option value="10080">1 week</option>
-          <option value="525600">1 year (perm)</option>
-        </select>
-        <button style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={handleMute} disabled={muteSaving}>{muteSaving ? '…' : 'Mute'}</button>
-        {isMutedTarget && (
-          <button className="ns-btn-ghost" style={{ height: 34, padding: '0 10px', fontSize: 12 }} onClick={handleUnmute} disabled={muteSaving}>Unmute</button>
-        )}
-      </div>
-      {isMutedTarget && (
-        <p style={{ fontSize: 11, color: '#f97316', marginBottom: 8 }}>
-          Muted until {new Date(profile.chatMutedUntil!).toLocaleString()}
-        </p>
-      )}
-
-      {/* Ban */}
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>CHAT BAN</p>
-      <button
-        style={{ width: '100%', border: 'none', borderRadius: 6, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: 'pointer', background: profile.chatBanned ? '#22C55E' : '#EF4444', color: '#fff' }}
-        onClick={handleToggleBan}
-        disabled={saving}
-      >
-        {profile.chatBanned ? 'Unban from Chat' : 'Ban from Chat'}
-      </button>
-      {profile.chatBanned && (
-        <p style={{ fontSize: 11, color: '#EF4444', marginTop: 6 }}>This user is banned from posting.</p>
-      )}
-
-      {/* Delete account — only available when user is already banned */}
-      {profile.chatBanned && (
-        <div style={{ marginTop: 12, borderTop: '1px solid rgba(239,68,68,0.2)', paddingTop: 12 }}>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>DANGER ZONE</p>
-          <button
-            style={{ width: '100%', border: '1px solid #7f1d1d', borderRadius: 6, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: deleting ? 'default' : 'pointer', background: '#450a0a', color: '#fca5a5', opacity: deleting ? 0.6 : 1 }}
-            onClick={() => void handleDeleteAccount()}
-            disabled={deleting}
-          >
-            {deleting ? 'Deleting…' : '🗑 Delete Account Permanently'}
-          </button>
-        </div>
-      )}
-
-      {/* Coins */}
-      <div style={{ marginTop: 12, borderTop: '1px solid rgba(255,200,50,0.15)', paddingTop: 12 }}>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>
-          COINS — current balance: <span style={{ color: '#ffc832', fontWeight: 800 }}>{targetCoins ?? '…'} 🪙</span>
-        </p>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const }}>
-          <input
-            className="ns-input"
-            style={{ flex: 1, minWidth: 80, height: 34, fontSize: 12 }}
-            type="number"
-            min="0"
-            placeholder="Amount"
-            value={coinAmount}
-            onChange={e => setCoinAmount(e.target.value)}
-          />
-          <button
-            style={{ background: '#22C55E', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
-            onClick={() => void handleCoinAction('add')}
-            disabled={coinSaving}
-          >{coinSaving ? '…' : '+ Add'}</button>
-          <button
-            style={{ background: '#EF4444', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
-            onClick={() => void handleCoinAction('remove')}
-            disabled={coinSaving}
-          >{coinSaving ? '…' : '− Remove'}</button>
-          <button
-            style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid #EF4444', borderRadius: 6, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
-            onClick={() => void handleCoinAction('zero')}
-            disabled={coinSaving}
-          >{coinSaving ? '…' : 'Set 0'}</button>
-        </div>
-      </div>
-
-      </>)}
-    </div>
-  )
-}
-
-// ── MOD Panel ─────────────────────────────────────────────────────────────────
-
-function ModPanel({ userId, currentUserId, profile, onUpdateMute }: {
-  userId: number
-  currentUserId: number
-  profile: FeedUserProfile
-  onUpdateMute: (mutedUntil: string | null) => void
-}) {
-  const [myAllTags, setMyAllTags] = useState<Array<{ tag: string; tagColor: string }>>([])
-  const [muteMinutes, setMuteMinutes] = useState('60')
-  const [muteSaving, setMuteSaving] = useState(false)
-
-  useEffect(() => {
-    api.feedUserProfile(currentUserId).then(p => setMyAllTags(p.allTags ?? [])).catch(() => {})
-  }, [currentUserId])
-
-  const isMod = myAllTags.some(t => t.tag === 'MOD')
-  const isDevOrAdmin = myAllTags.some(t => t.tag === 'DEV')
-  if (!isMod || isDevOrAdmin || userId === currentUserId) return null
-
-  const isMutedTarget = !!profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()
-
-  async function handleMute() {
-    const mins = parseInt(muteMinutes)
-    if (isNaN(mins) || muteSaving) return
-    setMuteSaving(true)
-    try {
-      const result = await api.feedMuteUser(userId, mins > 0 ? mins : null)
-      onUpdateMute(result.mutedUntil)
-    } catch { /* ignore */ }
-    finally { setMuteSaving(false) }
-  }
-
-  async function handleUnmute() {
-    if (muteSaving) return
-    setMuteSaving(true)
-    try {
-      const result = await api.feedMuteUser(userId, null)
-      onUpdateMute(result.mutedUntil)
-    } catch { /* ignore */ }
-    finally { setMuteSaving(false) }
-  }
-
-  return (
-    <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-      <p style={{ fontSize: 12, fontWeight: 700, color: '#818cf8', marginBottom: 10 }}>MOD — Moderation</p>
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>MUTE (max 24h)</p>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const }}>
-        <select className="ns-input" style={{ flex: 1, height: 34, fontSize: 12 }} value={muteMinutes} onChange={e => setMuteMinutes(e.target.value)}>
-          <option value="5">5 minutes</option>
-          <option value="60">1 hour</option>
-          <option value="1440">1 day (max)</option>
-        </select>
-        <button style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={handleMute} disabled={muteSaving}>
-          {muteSaving ? '…' : 'Mute'}
-        </button>
-        {isMutedTarget && (
-          <button className="ns-btn-ghost" style={{ height: 34, padding: '0 10px', fontSize: 12 }} onClick={handleUnmute} disabled={muteSaving}>
-            Unmute
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ── Own Tag Picker ────────────────────────────────────────────────────────────
-
-function OwnTagPicker({ profile, onUpdateTag }: {
-  profile: FeedUserProfile
-  onUpdateTag: (u: { tag: string | null; tagColor: string | null }) => void
-}) {
-  const [saving, setSaving] = useState<string | null>(null)
-  const isBannedOrMuted = profile.chatBanned || (!!profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())
-  const allTags = Array.from(new Map((profile.allTags ?? []).map(t => [t.tag, t])).values())
-
-  async function handleSelect(tag: string, tagColor: string) {
-    if (saving || isBannedOrMuted) return
-    setSaving(tag)
-    try {
-      const updated = await api.feedSetDisplayTag(tag, tagColor)
-      onUpdateTag(updated)
-    } catch { /* ignore */ }
-    finally { setSaving(null) }
-  }
-
-  return (
-    <div style={{ background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>YOUR DISPLAY TAG</p>
-      {isBannedOrMuted ? (
-        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Tag selection is disabled while banned or muted.</p>
-      ) : (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
-          {allTags.map(t => {
-            const isActive = profile.tag === t.tag
-            const isDev = t.tag === 'DEV'
-            const isGod = t.tag === 'GOAT'
-            const isMythic = t.tag === 'GOD'
-            return (
-              <button
-                key={t.tag}
-                disabled={!!saving}
-                onClick={() => void handleSelect(t.tag, t.tagColor)}
-                className={isDev && isActive ? 'tag-rainbow' : isMythic && isActive ? 'tag-mythic' : isGod && isActive ? 'tag-god' : ''}
-                style={{
-                  border: `2px solid ${isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.6)' : t.tagColor) : 'transparent'}`,
-                  background: isActive ? (t.tagColor === 'grey' ? 'rgba(128,128,128,0.12)' : `${t.tagColor}22`) : 'var(--surface-2)',
-                  borderRadius: 6, padding: '4px 10px',
-                  fontSize: 12, fontWeight: 700,
-                  color: t.tagColor === 'grey' ? 'var(--text-secondary)' : t.tagColor,
-                  cursor: saving ? 'default' : 'pointer',
-                  opacity: saving === t.tag ? 0.5 : 1,
-                  transition: 'all 0.15s',
-                }}
-              >
-                {saving === t.tag ? '…' : t.tag}
-                {isActive && <span style={{ marginLeft: 4, fontSize: 10 }}>✓</span>}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -860,7 +451,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
   const tagColor = (post.user as { tagColor?: string }).tagColor || 'grey'
   const isDevTag = post.user.tag === 'DEV'
   const isGodTag = post.user.tag === 'GOAT'
-  const isMythicTag = post.user.tag === 'GOD'
+  const isMythicTag = post.user.tag === 'VIP'
   const isFollowing = followedUsers.has(post.userId)
   const canDelete = post.userId === currentUserId || isDevUser || isModUser
   const isPinned = !!post.pinnedUntil && new Date(post.pinnedUntil) > new Date()
@@ -868,7 +459,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
   const isUnbox = post.type === 'UNBOX'
   const isCoinGiveaway = isGiveaway && !!post.giveawayCoinAmount
   const isNameColorGiveaway = isGiveaway && post.giveawayItemType === 'name-color'
-  const isPfpGiveaway = isGiveaway && post.giveawayItemType === 'pfp'
+  const isPfpGiveaway = isGiveaway && post.giveawayItemType === 'avatar'
   const isItemGiveaway = isNameColorGiveaway || isPfpGiveaway
   const giveawayEnded = !!post.giveawayEndsAt && new Date(post.giveawayEndsAt) <= new Date()
   const giveawayTagColor = post.giveawayTagColor || 'gold'
@@ -893,15 +484,18 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <div className={pfpClass(post.user.pfpEffect)} style={{ ...P.avatar, ...pfpStyle(post.user.pfpEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(post.user)}</div>
+        <div className={avatarClass(post.user.avatarEffect)} style={{ ...P.avatar, ...avatarStyle(post.user.avatarEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(post.user)}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
             <span className={nameColorClass(post.user.nameColor)} style={{ ...P.authorName, ...nameColorStyle(post.user.nameColor) }} onClick={() => onOpenProfile(post.user.id)}>{displayName(post.user)}</span>
             {post.user.tag && (
-              <span className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''} style={isDevTag ? P.tagDev : isMythicTag ? P.tagGod : isGodTag ? P.tagGod : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
-                {post.user.tag}
-              </span>
+              tagColor === 'verified-yellow' || tagColor === 'verified-blue'
+                ? <VerifiedBadge variant={tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
+                : <span className={tagCssClass(post.user.tag, tagColor)} style={isAnimatedTag(post.user.tag) ? { ...P.tag } : tagColor === 'curse' ? { ...P.tag, border: '1px solid #ff0000' } : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
+                    {post.user.tag}
+                  </span>
             )}
+            {(post.user.badge === 'verified-yellow' || post.user.badge === 'verified-blue') && <VerifiedBadge variant={post.user.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />}
             {post.userId !== currentUserId && (
               <button
                 style={{ ...P.followBtn, ...(isFollowing ? { background: 'var(--primary)', color: '#FFFFFF', border: '1px solid var(--primary)' } : {}) }}
@@ -909,7 +503,10 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
               >{isFollowing ? 'Following' : 'Follow'}</button>
             )}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{timeAgo(post.createdAt)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{timeAgo(post.createdAt)}</span>
+            {post.network === 'isd' && <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 4, padding: '1px 5px' }}>🏫 ISD</span>}
+          </div>
         </div>
         {canDelete && (
           <button style={P.deleteBtn} onClick={() => onDelete(post.id)}>
@@ -924,18 +521,14 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
       {/* Unbox section */}
       {isUnbox && post.unboxItemName && (
         (() => {
-          const unboxAccent = post.unboxItemType === 'tag' && post.unboxItemTagColor
-            ? post.unboxItemTagColor
-            : post.unboxItemType === 'name-color' && post.unboxItemValue && post.unboxItemValue !== 'rainbow'
-              ? post.unboxItemValue
-              : post.unboxItemRarity === 'Mythic' ? '#8B5CF6' : '#EAB308'
+          const unboxAccent = '#EAB308'
           return (
         <div style={{ border: `1px solid ${unboxAccent}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${unboxAccent}0d` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <span style={{ fontSize: 20 }}>{post.unboxItemRarity === 'Mythic' ? '👑' : '🌟'}</span>
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, color: unboxAccent, letterSpacing: '0.5px' }}>
-                {post.unboxItemType === 'tag' ? 'TAG SPIN' : post.unboxItemType === 'name-color' ? 'NAME COLOR SPIN' : 'PFP SPIN'}
+                {post.unboxItemType === 'tag' ? 'TAG SPIN' : post.unboxItemType === 'name-color' ? 'NAME COLOR SPIN' : 'AVATAR SPIN'}
               </div>
             </div>
             <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, color: unboxAccent, background: `${unboxAccent}18`, border: `1px solid ${unboxAccent}44` }}>
@@ -945,15 +538,15 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
           {/* Item preview card - profile-like preview of the won item */}
           <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)' }}>
-            {/* Avatar: pfp type uses won effect, others use default */}
-            {post.unboxItemType === 'pfp' ? (
-              <div className={pfpClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...pfpStyle(post.unboxItemValue) }}>D</div>
+            {/* Avatar: avatar type uses won effect, others use default */}
+            {post.unboxItemType === 'avatar' ? (
+              <div className={avatarClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...avatarStyle(post.unboxItemValue) }}>U</div>
             ) : (
-              <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>D</div>
+              <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>U</div>
             )}
             {/* Name + tag row */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
-              {post.unboxItemType === 'pfp' && (
+              {post.unboxItemType === 'avatar' && (
                 <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)' }}>
                   {post.unboxItemValue === 'rainbow' ? 'RGB' : post.unboxItemName}
                 </span>
@@ -961,15 +554,18 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
               <span
                 className={post.unboxItemType === 'name-color' ? nameColorClass(post.unboxItemValue) : ''}
                 style={{ fontSize: 13, fontWeight: 800, ...(post.unboxItemType === 'name-color' ? nameColorStyle(post.unboxItemValue) : { color: 'var(--text)' }) }}
-              >DUMMY</span>
+              >Username</span>
               {post.unboxItemType === 'tag' ? (
-                <span style={{ ...P.tag, color: post.unboxItemTagColor || '#6B7280', border: `1px solid ${post.unboxItemTagColor || '#6B7280'}`, background: post.unboxItemTagColor ? `${post.unboxItemTagColor}22` : 'rgba(107,114,128,0.12)' }}>
-                  {post.unboxItemName}
-                </span>
+                post.unboxItemTagColor === 'verified-yellow' || post.unboxItemTagColor === 'verified-blue'
+                  ? <VerifiedBadge variant={post.unboxItemTagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={18} />
+                  : <span
+                      className={tagCssClass(post.unboxItemName, post.unboxItemTagColor)}
+                      style={isAnimatedTag(post.unboxItemName) ? { ...P.tag } : post.unboxItemTagColor === 'curse' ? { ...P.tag, border: '1px solid #ff0000' } : { ...P.tag, color: post.unboxItemTagColor || '#6B7280', border: `1px solid ${post.unboxItemTagColor || '#6B7280'}`, background: post.unboxItemTagColor ? `${post.unboxItemTagColor}22` : 'rgba(107,114,128,0.12)' }}
+                    >
+                      {post.unboxItemName}
+                    </span>
               ) : (
-                <span style={{ ...P.tag, color: '#6B7280', border: '1px solid rgba(107,114,128,0.4)', background: 'rgba(107,114,128,0.12)' }}>
-                  DUMMY
-                </span>
+                <span style={{ ...P.tag, color: '#6B7280', border: '1px solid rgba(107,114,128,0.4)', background: 'rgba(107,114,128,0.12)' }}>TAG</span>
               )}
             </div>
           </div>
@@ -993,7 +589,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const }}>
             <span style={{ fontSize: 16 }}>🎁</span>
             <span style={{ fontSize: 12, fontWeight: 800, color: giveawayAccent, letterSpacing: '0.5px' }}>
-              {isCoinGiveaway ? 'COIN GIVEAWAY' : isNameColorGiveaway ? 'NAME COLOR GIVEAWAY' : isPfpGiveaway ? 'PFP GIVEAWAY' : 'TAG GIVEAWAY'}
+              {isCoinGiveaway ? 'COIN GIVEAWAY' : isNameColorGiveaway ? 'NAME COLOR GIVEAWAY' : isPfpGiveaway ? 'AVATAR GIVEAWAY' : 'TAG GIVEAWAY'}
             </span>
             {isCoinGiveaway ? (
               <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(234,179,8,0.15)', color: '#EAB308', border: '1px solid rgba(234,179,8,0.5)' }}>
@@ -1014,23 +610,23 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
             ) : null}
           </div>
 
-          {/* Item preview for name-color / pfp giveaways */}
+          {/* Item preview for name-color / avatar giveaways */}
           {isItemGiveaway && post.giveawayTag && (
             <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
               {isPfpGiveaway ? (
-                <div className={pfpClass(post.giveawayTagColor)} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, ...pfpStyle(post.giveawayTagColor) }}>D</div>
+                <div className={avatarClass(post.giveawayTagColor)} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, ...avatarStyle(post.giveawayTagColor) }}>U</div>
               ) : (
-                <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>D</div>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>U</div>
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
                   <span className={isNameColorGiveaway && giveawayRainbow ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(isNameColorGiveaway && !giveawayRainbow ? { color: post.giveawayTagColor ?? 'var(--text)' } : !isNameColorGiveaway ? { color: 'var(--text)' } : {}) }}>
-                    DUMMY
+                    Username
                   </span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>[Student]</span>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                  Preview of the {isNameColorGiveaway ? 'name color' : 'PFP effect'} ✨
+                  Preview of the {isNameColorGiveaway ? 'name color' : 'Avatar effect'} ✨
                 </div>
               </div>
               {post.giveawayItemRarity && (
@@ -1054,7 +650,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                     : isNameColorGiveaway
                       ? <><strong className={giveawayRainbow ? 'name-rainbow' : ''} style={giveawayRainbow ? {} : { color: post.giveawayTagColor ?? 'var(--text)' }}>{post.giveawayTag}</strong> name color</>
                       : isPfpGiveaway
-                        ? <><strong style={{ color: '#8B5CF6' }}>{post.giveawayTag}</strong> PFP effect</>
+                        ? <><strong style={{ color: '#8B5CF6' }}>{post.giveawayTag}</strong> Avatar effect</>
                         : <>the <strong style={{ color: giveawayTagColor }}>{post.giveawayTag}</strong> tag</>
                   }!
                 </div>
@@ -1206,7 +802,7 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
     finally { setSubmitting(false) }
   }
 
-  return (
+  return createPortal(
     <div style={O.overlay} onClick={onClose}>
       <div style={{ ...O.panel, maxWidth: 560 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
@@ -1225,8 +821,8 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
             {/* Post body */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
               <div
-                className={pfpClass(post.user.pfpEffect)}
-                style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, cursor: 'pointer', ...pfpStyle(post.user.pfpEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                className={avatarClass(post.user.avatarEffect)}
+                style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, cursor: 'pointer', ...avatarStyle(post.user.avatarEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                 onClick={() => { onClose(); onOpenProfile(post.user.id) }}
               >
                 {avatarContent(post.user)}
@@ -1257,8 +853,8 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
                 <div key={c.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <div
-                      className={pfpClass(c.user.pfpEffect)}
-                      style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                      className={avatarClass(c.user.avatarEffect)}
+                      style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...avatarStyle(c.user.avatarEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                       onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                     >{avatarContent(c.user)}</div>
                     <button
@@ -1298,7 +894,8 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -1363,7 +960,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
 
   const sorted = [...comments].sort((a, b) => (b._count?.likes ?? 0) - (a._count?.likes ?? 0))
 
-  return (
+  return createPortal(
     <div style={O.overlay} onClick={onClose}>
       <div style={{ ...O.panel, maxWidth: 500 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
@@ -1378,14 +975,14 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
           ) : sorted.map(c => {
             const isDevTag = c.user.tag === 'DEV'
             const isGodTag = c.user.tag === 'GOAT'
-            const isMythicTag = c.user.tag === 'GOD'
+            const isMythicTag = c.user.tag === 'VIP'
             const tagColor = c.user.tagColor || 'grey'
             return (
               <div key={c.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                   <div
-                    className={pfpClass(c.user.pfpEffect)}
-                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...pfpStyle(c.user.pfpEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                    className={avatarClass(c.user.avatarEffect)}
+                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...avatarStyle(c.user.avatarEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                     onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                   >
                     {avatarContent(c.user)}
@@ -1398,20 +995,21 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                     {displayName(c.user)}
                   </button>
                   {c.user.tag && (
-                    <span
-                      className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
-                      style={isDevTag
-                        ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' }
-                        : isMythicTag
-                        ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }
-                        : isGodTag
-                        ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' }
-                        : { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }
-                      }
-                    >
-                      {c.user.tag}
-                    </span>
+                    tagColor === 'verified-yellow' || tagColor === 'verified-blue'
+                      ? <VerifiedBadge variant={tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
+                      : <span
+                          className={tagCssClass(c.user.tag, tagColor)}
+                          style={isAnimatedTag(c.user.tag)
+                            ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }
+                            : tagColor === 'curse'
+                            ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff0000' }
+                            : { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }
+                          }
+                        >
+                          {c.user.tag}
+                        </span>
                   )}
+                  {(c.user.badge === 'verified-yellow' || c.user.badge === 'verified-blue') && <VerifiedBadge variant={c.user.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />}
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{timeAgo(c.createdAt)}</span>
                 </div>
                 <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text)', marginBottom: 6 }}>{c.body}</div>
@@ -1457,7 +1055,8 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -1465,7 +1064,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
 
 function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: { currentUserId: number; onOpenProfile: (userId: number) => void; followedUsers: Set<number>; onFollow: (userId: number) => void }) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Array<{ id: number; name: string | null; tag: string | null; tagColor: string | null; avatarUrl?: string | null }>>([])
+  const [results, setResults] = useState<Array<{ id: number; name: string | null; tag: string | null; tagColor: string | null; avatarUrl?: string | null; badge?: string | null }>>([])
   const [searching, setSearching] = useState(false)
 
   useEffect(() => {
@@ -1495,11 +1094,14 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 14, fontWeight: 600 }}>{displayName(u)}</span>
               {u.tag && (
-                <span
-                  className={u.tag === 'DEV' ? 'tag-rainbow' : u.tag === 'GOD' ? 'tag-mythic' : u.tag === 'GOAT' ? 'tag-god' : ''}
-                  style={u.tag === 'DEV' ? P.tagDev : u.tag === 'GOD' ? P.tagGod : u.tag === 'GOAT' ? P.tagGod : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
-                >{u.tag}</span>
+                u.tagColor === 'verified-yellow' || u.tagColor === 'verified-blue'
+                  ? <VerifiedBadge variant={u.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
+                  : <span
+                      className={tagCssClass(u.tag, u.tagColor)}
+                      style={isAnimatedTag(u.tag) ? { ...P.tag } : u.tagColor === 'curse' ? { ...P.tag } : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
+                    >{u.tag}</span>
               )}
+              {(u.badge === 'verified-yellow' || u.badge === 'verified-blue') && <VerifiedBadge variant={u.badge === 'verified-yellow' ? 'yellow' : 'blue'} />}
             </div>
           </div>
           <button style={{ ...P.followBtn, padding: '6px 14px', fontSize: 12.5, background: followedUsers.has(u.id) ? 'var(--primary)' : 'transparent', color: followedUsers.has(u.id) ? '#060D10' : 'var(--primary)' }} onClick={() => onFollow(u.id)}>
@@ -1518,11 +1120,14 @@ interface Toast { id: string; notif: AppNotification }
 export default function StudyFeedPage() {
   const searchParams = useSearchParams()
   const [posts, setPosts] = useState<FeedPost[]>([])
+  const [feedError, setFeedError] = useState<string | false>(false)
   const [loading, setLoading] = useState(true)
   const [newPostBody, setNewPostBody] = useState('')
   const [posting, setPosting] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const sentinelRef = useRef<HTMLDivElement>(null)
   const [followingPosts, setFollowingPosts] = useState<FeedPost[]>([])
   const [followingPage, setFollowingPage] = useState(1)
   const [followingHasMore, setFollowingHasMore] = useState(false)
@@ -1540,7 +1145,7 @@ export default function StudyFeedPage() {
   const [mutedUntil, setMutedUntil] = useState<string | null>(null)
   const [statusLoaded, setStatusLoaded] = useState(false)
   const [showGiveawayForm, setShowGiveawayForm] = useState(false)
-  const [gwType, setGwType] = useState<'tag' | 'coin' | 'name-color' | 'pfp'>('tag')
+  const [gwType, setGwType] = useState<'tag' | 'coin' | 'name-color' | 'avatar'>('tag')
   const [gwTag, setGwTag] = useState('')
   const [gwColor, setGwColor] = useState('gold')
   const [gwCoins, setGwCoins] = useState('')
@@ -1549,6 +1154,9 @@ export default function StudyFeedPage() {
   const [gwItemId, setGwItemId] = useState('')
   const [creatingGw, setCreatingGw] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
+  const [network, setNetwork] = useState<'global' | 'isd'>('global')
+  const [isdCode, setIsdCode] = useState<string | null>(null)
+  const [isdDisplayName, setIsdDisplayName] = useState<string | null>(null)
 
   const [viewPostId, setViewPostId] = useState<number | null>(null)
 
@@ -1588,14 +1196,19 @@ export default function StudyFeedPage() {
     }
   }, [searchParams])
 
-  const loadPosts = useCallback(async (p: number) => {
+  const loadPosts = useCallback(async (p: number, net?: 'global' | 'isd') => {
+    if (p > 1) setLoadingMore(true)
     try {
-      const data = await api.feedPosts(p, 20)
+      const data = await api.feedPosts(p, 20, net ?? network)
+      setFeedError(false)
       if (p === 1) setPosts(data.posts)
       else setPosts((prev) => [...prev, ...data.posts])
       setHasMore(data.hasMore)
-    } catch { /* ignore */ }
-    finally { setLoading(false) }
+    } catch (err) {
+      console.error('[feed] loadPosts error:', err)
+      if (p === 1) setFeedError(err instanceof Error ? err.message : String(err))
+    }
+    finally { setLoading(false); setLoadingMore(false) }
   }, [])
 
   const loadFollowingPosts = useCallback(async (p: number) => {
@@ -1625,6 +1238,7 @@ export default function StudyFeedPage() {
             const activeMute = !!p.chatMutedUntil && new Date(p.chatMutedUntil) > new Date()
             setIsMuted(activeMute)
             setMutedUntil(p.chatMutedUntil)
+            if (p.isdCode) { setIsdCode(p.isdCode); setIsdDisplayName(p.isdDisplayName ?? null) }
             setStatusLoaded(true)
           }).catch(() => { setStatusLoaded(true) })
         } else {
@@ -1652,7 +1266,23 @@ export default function StudyFeedPage() {
         try {
           const msg = JSON.parse(e.data as string) as { event: string; data: FeedPost }
           if (msg.event === 'NEW_POST') {
-            setPosts(prev => [{ ...msg.data, likedByMe: false, enteredByMe: false }, ...prev])
+            // Only add the post if it belongs to the currently selected network
+            setNetwork(currentNetwork => {
+              const postNetwork = msg.data.network ?? 'global'
+              if (postNetwork === currentNetwork) {
+                if (currentNetwork === 'isd') {
+                  setIsdCode(currentIsd => {
+                    if (msg.data.isdCode === currentIsd) {
+                      setPosts(prev => [{ ...msg.data, likedByMe: false, enteredByMe: false }, ...prev])
+                    }
+                    return currentIsd
+                  })
+                } else {
+                  setPosts(prev => [{ ...msg.data, likedByMe: false, enteredByMe: false }, ...prev])
+                }
+              }
+              return currentNetwork
+            })
           }
         } catch { /* ignore */ }
       }
@@ -1662,12 +1292,30 @@ export default function StudyFeedPage() {
     return () => { dead = true; ws?.close() }
   }, [])
 
+  // Infinite scroll — trigger next page when sentinel enters viewport
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore && !loadingMore && !loading) {
+          const next = page + 1
+          setPage(next)
+          void loadPosts(next)
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, loadingMore, loading, page, loadPosts])
+
   async function handleCreatePost() {
     if (!newPostBody.trim() || posting) return
     setPostError(null)
     setPosting(true)
     try {
-      const post = await api.feedCreatePost(newPostBody.trim())
+      const post = await api.feedCreatePost(newPostBody.trim(), network)
       setPosts(prev => [{ ...post, likedByMe: false }, ...prev])
       setNewPostBody('')
     } catch (err) {
@@ -1742,7 +1390,7 @@ export default function StudyFeedPage() {
     if (!gwBody.trim() || creatingGw) return
     if (gwType === 'tag' && !gwTag.trim()) return
     if (gwType === 'coin' && (!coinAmt || coinAmt < 1)) return
-    if ((gwType === 'name-color' || gwType === 'pfp') && !gwItemId) return
+    if ((gwType === 'name-color' || gwType === 'avatar') && !gwItemId) return
     setCreatingGw(true)
     try {
       let giveawayPayload: Parameters<typeof api.feedCreateGiveaway>[0]
@@ -1755,12 +1403,12 @@ export default function StudyFeedPage() {
           giveawayTag: item.name, giveawayTagColor: item.value,
           giveawayItemType: 'name-color', giveawayItemId: item.id, giveawayItemRarity: item.rarity,
         }
-      } else if (gwType === 'pfp') {
-        const item = GW_PFP_ITEMS.find(i => i.id === gwItemId)!
+      } else if (gwType === 'avatar') {
+        const item = GW_AVATAR_ITEMS.find(i => i.id === gwItemId)!
         giveawayPayload = {
           body: gwBody.trim(), durationMinutes: parseInt(gwDuration) || 60,
           giveawayTag: item.name, giveawayTagColor: item.value,
-          giveawayItemType: 'pfp', giveawayItemId: item.id, giveawayItemRarity: item.rarity,
+          giveawayItemType: 'avatar', giveawayItemId: item.id, giveawayItemRarity: item.rarity,
         }
       } else {
         giveawayPayload = { body: gwBody.trim(), durationMinutes: parseInt(gwDuration) || 60, giveawayTag: gwTag.trim(), giveawayTagColor: gwColor.trim() || 'gold' }
@@ -1819,6 +1467,35 @@ export default function StudyFeedPage() {
 
       {tab === 'social' || tab === 'following' ? (
         <>
+          {/* Network switcher — visible to everyone on Social tab */}
+          {tab === 'social' && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              {(['global', 'isd'] as const).map(net => (
+                <button
+                  key={net}
+                  onClick={() => {
+                    if (net !== network) {
+                      setNetwork(net)
+                      setPage(1)
+                      setLoading(true)
+                      setPosts([])
+                      void loadPosts(1, net)
+                    }
+                  }}
+                  style={{
+                    padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    border: `1.5px solid ${net === network ? 'var(--primary)' : 'var(--border)'}`,
+                    background: net === network ? 'var(--primary)' : 'var(--surface-2)',
+                    color: net === network ? '#fff' : 'var(--text-secondary)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {net === 'global' ? '🌐 Global' : '🏫 ISD'}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* New post composer / muted notice */}
           {isMuted ? (
             <div className="ns-card" style={{ padding: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1835,7 +1512,7 @@ export default function StudyFeedPage() {
               {!showGiveawayForm ? (
                 <>
                   <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, height: 'auto', minHeight: 80, fontSize: 14, lineHeight: 1.6, padding: 14 }}
-                    placeholder="What are you studying today?"
+                    placeholder={network === 'isd' ? 'Post to your ISD…' : 'What are you studying today?'}
                     value={newPostBody}
                     onChange={e => { setNewPostBody(e.target.value); if (postError) setPostError(null) }}
                     rows={3}
@@ -1878,7 +1555,7 @@ export default function StudyFeedPage() {
                   </div>
                   {/* Type toggle */}
                   <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const }}>
-                    {([['tag', '🏷️ Tag'], ['coin', null], ['name-color', '🎨 Name Color'], ['pfp', '🖼️ PFP Effect']] as const).map(([t, label]) => (
+                    {([['tag', '🏷️ Tag'], ['coin', null], ['name-color', '🎨 Name Color'], ['avatar', '🖼️ Avatar Effect']] as const).map(([t, label]) => (
                       <button key={t} onClick={() => { setGwType(t); setGwItemId('') }} style={{ flex: 1, minWidth: 80, height: 34, borderRadius: 8, border: `1px solid ${gwType === t ? 'gold' : 'var(--border)'}`, background: gwType === t ? 'rgba(255,215,0,0.12)' : 'transparent', color: gwType === t ? 'gold' : 'var(--text-secondary)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                         {t === 'coin' ? <><CoinIcon size={13} /> Coins</> : label}
                       </button>
@@ -1888,7 +1565,7 @@ export default function StudyFeedPage() {
                     placeholder={
                       gwType === 'coin' ? "Announce the giveaway… (e.g. 'Enter to win 500 coins!')"
                       : gwType === 'name-color' ? "Announce the giveaway… (e.g. 'Win a legendary name color!')"
-                      : gwType === 'pfp' ? "Announce the giveaway… (e.g. 'Enter to win a rare PFP effect!')"
+                      : gwType === 'avatar' ? "Announce the giveaway… (e.g. 'Enter to win a rare Avatar effect!')"
                       : "Announce the giveaway… (e.g. 'Enter to win a limited VIP tag!')"
                     }
                     value={gwBody}
@@ -1926,8 +1603,8 @@ export default function StudyFeedPage() {
                       </select>
                     ) : (
                       <select className="ns-input" style={{ flex: 1, height: 36, fontSize: 13 }} value={gwItemId} onChange={e => setGwItemId(e.target.value)}>
-                        <option value="">Pick a PFP effect…</option>
-                        {GW_PFP_ITEMS.map(i => (
+                        <option value="">Pick an Avatar effect…</option>
+                        {GW_AVATAR_ITEMS.map(i => (
                           <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>
                         ))}
                       </select>
@@ -1942,17 +1619,17 @@ export default function StudyFeedPage() {
                       <option value="10080">1 week</option>
                     </select>
                   </div>
-                  {/* Live preview for name-color / pfp */}
-                  {(gwType === 'name-color' || gwType === 'pfp') && gwItemId && (() => {
+                  {/* Live preview for name-color / avatar */}
+                  {(gwType === 'name-color' || gwType === 'avatar') && gwItemId && (() => {
                     const item = gwType === 'name-color'
                       ? GW_NAME_COLOR_ITEMS.find(i => i.id === gwItemId)
-                      : GW_PFP_ITEMS.find(i => i.id === gwItemId)
+                      : GW_AVATAR_ITEMS.find(i => i.id === gwItemId)
                     if (!item) return null
                     const isRainbow = item.value === 'rainbow'
                     return (
                       <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
-                        {gwType === 'pfp' ? (
-                          <div className={pfpClass(item.value)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, ...pfpStyle(item.value) }}>D</div>
+                        {gwType === 'avatar' ? (
+                          <div className={avatarClass(item.value)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, ...avatarStyle(item.value) }}>D</div>
                         ) : (
                           <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0 }}>D</div>
                         )}
@@ -1968,9 +1645,9 @@ export default function StudyFeedPage() {
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <button className="ns-btn-ghost" style={{ height: 36, padding: '0 14px', fontSize: 13 }} onClick={() => setShowGiveawayForm(false)}>Cancel</button>
                     <button
-                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, background: 'gold', color: '#000', border: 'none', borderRadius: 8, cursor: 'pointer', opacity: gwBody.trim() && (gwType === 'coin' ? parseInt(gwCoins) > 0 : gwType === 'name-color' || gwType === 'pfp' ? !!gwItemId : gwTag.trim()) && !creatingGw ? 1 : 0.5 }}
+                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, background: 'gold', color: '#000', border: 'none', borderRadius: 8, cursor: 'pointer', opacity: gwBody.trim() && (gwType === 'coin' ? parseInt(gwCoins) > 0 : gwType === 'name-color' || gwType === 'avatar' ? !!gwItemId : gwTag.trim()) && !creatingGw ? 1 : 0.5 }}
                       onClick={handleCreateGiveaway}
-                      disabled={!gwBody.trim() || (gwType === 'coin' ? !parseInt(gwCoins) : gwType === 'name-color' || gwType === 'pfp' ? !gwItemId : !gwTag.trim()) || creatingGw}
+                      disabled={!gwBody.trim() || (gwType === 'coin' ? !parseInt(gwCoins) : gwType === 'name-color' || gwType === 'avatar' ? !gwItemId : !gwTag.trim()) || creatingGw}
                     >
                       {creatingGw ? 'Creating…' : 'Launch Giveaway'}
                     </button>
@@ -1984,6 +1661,20 @@ export default function StudyFeedPage() {
           {tab === 'social' ? (
             loading ? (
               <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading feed…</div>
+            ) : feedError ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: '#EF4444', marginBottom: 6 }}>Failed to load feed</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Something went wrong on the server. Try refreshing.</p>
+                {feedError && typeof feedError === 'string' && <p style={{ fontSize: 11, color: '#EF4444', marginBottom: 16, fontFamily: 'monospace', background: 'var(--surface-2)', padding: '6px 10px', borderRadius: 6, wordBreak: 'break-all' }}>{feedError}</p>}
+                <button className="ns-btn-ghost" style={{ fontSize: 13 }} onClick={() => { setLoading(true); void loadPosts(1) }}>Retry</button>
+              </div>
+            ) : network === 'isd' && !isdCode ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ fontSize: 40, marginBottom: 16 }}>🏫</div>
+                <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Link your school to see ISD posts</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>Connect your school portal in Settings to view and post in your district feed.</p>
+                <a href="/settings" style={{ display: 'inline-block', padding: '9px 22px', borderRadius: 20, background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>Go to Settings</a>
+              </div>
             ) : posts.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px' }}>
                 <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
@@ -2001,11 +1692,9 @@ export default function StudyFeedPage() {
                     onDrawGiveaway={handleDrawGiveaway} onPin={handlePin}
                     currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} isModUser={isModUser} />
                 ))}
-                {hasMore && (
-                  <button className="ns-btn-ghost" style={{ width: '100%', height: 42, marginTop: 8 }}
-                    onClick={() => { setPage(p => p + 1); void loadPosts(page + 1) }}>
-                    Load more
-                  </button>
+                <div ref={sentinelRef} style={{ height: 1 }} />
+                {loadingMore && (
+                  <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '12px 0' }}>Loading…</div>
                 )}
               </>
             )
@@ -2103,6 +1792,19 @@ const P: Record<string, React.CSSProperties> = {
   followBtn:  { padding: '2px 9px', borderRadius: 5, border: '1px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontWeight: 600, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' as const },
   deleteBtn:  { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center' },
   actionBtn:  { background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 6, fontWeight: 600 },
+}
+
+function tagCssClass(tag?: string | null, tagColor?: string | null): string {
+  if (tag === 'DEV') return 'tag-rainbow'
+  if (tag === 'VIP') return 'tag-mythic'
+  if (tag === 'GOAT') return 'tag-god'
+  if (tag === 'Prodigy') return 'tag-prodigy'
+  if (tag === 'Valedictorian') return 'tag-valedictorian'
+  if (tagColor === 'curse') return 'tag-curse'
+  return ''
+}
+function isAnimatedTag(tag?: string | null): boolean {
+  return tag === 'DEV' || tag === 'VIP' || tag === 'GOAT' || tag === 'Prodigy' || tag === 'Valedictorian'
 }
 
 const N: Record<string, React.CSSProperties> = {

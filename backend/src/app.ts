@@ -22,6 +22,7 @@ if (!process.env.CREDENTIAL_ENCRYPTION_KEY) {
 
 import express from 'express'
 import cors from 'cors'
+import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
@@ -38,6 +39,13 @@ import parentRouter from './routes/parent'
 import notificationsRouter from './routes/notifications'
 import collegesRouter from './routes/colleges'
 import marketplaceRouter from './routes/marketplace'
+import educatorRouter from './routes/educator'
+import counselorRouter from './routes/counselor'
+import adminRouter from './routes/admin'
+import schoolsRouter from './routes/schools'
+import setsRouter from './routes/sets'
+import gamesRouter from './routes/games'
+
 import { requireAuth } from './middleware/auth'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
@@ -46,9 +54,12 @@ import { logger } from './common/logger'
 const app = express()
 const isProd = process.env.NODE_ENV === 'production'
 
-// Behind a reverse proxy (Render, Railway, Fly.io) req.ip is X-Forwarded-For.
-// trust proxy=1 tells Express to trust one hop, making rate-limit IP accurate.
-if (isProd) app.set('trust proxy', 1)
+// Always behind a reverse proxy (Vercel, Render, Railway) — trust one hop so
+// req.ip resolves to the real client IP from X-Forwarded-For.
+app.set('trust proxy', 1)
+
+// ── Gzip compression — dramatically reduces Neon egress / bandwidth ──────────
+app.use(compression())
 
 // ── Security headers ────────────────────────────────────────────────────────
 // crossOriginResourcePolicy is 'same-site': this is a pure JSON API with no
@@ -122,6 +133,7 @@ const globalLimiter = rateLimit({
   max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many requests, please slow down.' } },
   handler: (req, res, _next, options) => {
     logger.warn('rate_limit_hit', { type: 'global', ip: req.ip, path: req.originalUrl })
@@ -136,6 +148,7 @@ const authLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many auth attempts, try again later.' } },
   handler: (req, res, _next, options) => {
     logger.warn('rate_limit_hit', { type: 'auth', ip: req.ip, path: req.originalUrl })
@@ -148,6 +161,7 @@ const aiLimiter = rateLimit({
   max: 40,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'AI rate limit reached, wait a moment.' } },
   handler: (req, res, _next, options) => {
     logger.warn('rate_limit_hit', { type: 'ai', ip: req.ip, path: req.originalUrl })
@@ -160,6 +174,7 @@ const registerLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many accounts created from this IP.' } },
   handler: (req, res, _next, options) => {
     logger.warn('rate_limit_hit', { type: 'register', ip: req.ip })
@@ -196,8 +211,17 @@ app.use((req, res, next) => {
   next()
 })
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' })
+app.get('/health', async (_req, res) => {
+  const dbUrl = process.env.DATABASE_URL ?? ''
+  const dbHost = dbUrl.match(/@([^/]+)\//)?.[1] ?? 'unknown'
+  try {
+    const { prisma } = await import('./lib/prisma')
+    await prisma.$queryRaw`SELECT 1`
+    res.json({ status: 'ok', db: 'connected', dbHost })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    res.status(503).json({ status: 'error', db: 'unreachable', dbHost, error: msg })
+  }
 })
 
 app.get('/health/connectivity', async (_req, res) => {
@@ -232,6 +256,7 @@ app.get('/health/connectivity', async (_req, res) => {
 // Auth routes get their own tight limiter; register gets an even stricter one
 app.use('/auth/register', registerLimiter)
 app.use('/auth', authLimiter, authRoutes)
+app.use('/schools', schoolsRouter)
 app.use('/grades', gradesRoutes)
 
 /**
@@ -281,6 +306,12 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/integrations/canvas', devBypass, canvasRouter)
   app.use('/colleges', devBypass, collegesRouter)
   app.use('/marketplace', devBypass, marketplaceRouter)
+  app.use('/educator', devBypass, educatorRouter)
+  app.use('/counselor', devBypass, counselorRouter)
+  app.use('/admin', devBypass, adminRouter)
+  app.use('/sets', devBypass, setsRouter)
+  app.use('/games', devBypass, gamesRouter)
+
 } else {
   app.use('/assignments', requireAuth, assignmentsRouter)
   app.use('/students', requireAuth, studentsRouter)
@@ -292,6 +323,12 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/integrations/canvas', requireAuth, canvasRouter)
   app.use('/colleges', requireAuth, collegesRouter)
   app.use('/marketplace', requireAuth, marketplaceRouter)
+  app.use('/educator', requireAuth, educatorRouter)
+  app.use('/counselor', requireAuth, counselorRouter)
+  app.use('/admin', requireAuth, adminRouter)
+  app.use('/sets', requireAuth, setsRouter)
+  app.use('/games', requireAuth, gamesRouter)
+
 }
 
 app.use('/parent', authLimiter, parentRouter)

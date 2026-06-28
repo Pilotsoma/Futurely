@@ -1,7 +1,9 @@
 import app from '../src/app'
+import { ensureSchema } from '../src/lib/startup'
 
-// Vercel routes /api/* requests to this function.
-// Express routes are mounted without the /api prefix, so strip it here.
+// Run schema patches in the background — never block incoming requests.
+ensureSchema().catch(err => console.error('[startup]', err))
+
 export default function handler(req: any, res: any): void {
   req.url = (req.url ?? '/').replace(/^\/api/, '') || '/'
   app(req, res)

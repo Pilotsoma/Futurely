@@ -20,6 +20,15 @@ function touchLastSeen(userId: number) {
   }).catch(() => {})
 }
 
+// Runs on ~1% of authenticated requests — deletes rows that are already invalid anyway.
+function maybeCleanExpiredTokens() {
+  if (Math.random() > 0.01) return
+  const now = new Date()
+  prisma.refreshToken.deleteMany({ where: { expiresAt: { lt: now } } }).catch(() => {})
+  prisma.passwordResetToken.deleteMany({ where: { expiresAt: { lt: now } } }).catch(() => {})
+  prisma.emailOTP.deleteMany({ where: { expiresAt: { lt: now } } }).catch(() => {})
+}
+
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
   // Dev bypass already injected userId — skip JWT verification
   if (req.userId !== undefined) {
@@ -51,6 +60,7 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     const payload = jwt.verify(rawToken, secret, { algorithms: ['HS256'] }) as unknown as AccessTokenPayload
     req.userId = payload.sub
     touchLastSeen(payload.sub)
+    maybeCleanExpiredTokens()
     next()
   } catch {
     res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } })

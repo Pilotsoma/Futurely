@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -47,45 +47,80 @@ function newSessionId() {
 }
 
 function formatSessionDate(ts: number): string {
-  const diffDays = Math.floor((Date.now() - ts) / 86400000)
+  const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const today = toDay(new Date())
+  const day   = toDay(new Date(ts))
+  const diffDays = Math.round((today - day) / 86400000)
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Yesterday'
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export default function AIChatPage() {
+function AIChatInner() {
   const [sessions, setSessions]   = useState<ChatSession[]>([])
   const [activeId, setActiveId]   = useState<string | null>(null)
   const [messages, setMessages]   = useState<Msg[]>([])
   const [input, setInput]         = useState('')
   const [sending, setSending]     = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  // Holds a message that should be auto-sent once the component is ready
-  const pendingAutoSend = useRef<string | null>(null)
 
   useEffect(() => {
     const loaded = loadSessions()
     setSessions(loaded)
     saveSessions(loaded)
-
-    // Check for a message passed from the dashboard AiBar via sessionStorage
-    const pending = sessionStorage.getItem('ns_ai_pending')
-    if (pending) {
-      pendingAutoSend.current = pending
-      // Delay removal so React Strict Mode's double-invoke (dev only) can read it on remount
-      setTimeout(() => sessionStorage.removeItem('ns_ai_pending'), 100)
-    }
   }, [])
 
-  // Separate effect: fires after the initial state is set, then auto-sends
+  // Auto-send a message passed from the dashboard AiBar via sessionStorage.
+  // We use a cancel flag so React 18 Strict Mode's mount→unmount→remount
+  // cycle works correctly: the first mount's callbacks are cancelled on
+  // cleanup, the second (live) mount re-reads sessionStorage and completes
+  // the send. sessionStorage is only removed after a successful send so the
+  // second mount can still read the value.
   useEffect(() => {
-    if (pendingAutoSend.current && !sending) {
-      const msg = pendingAutoSend.current
-      pendingAutoSend.current = null
-      void handleSend(msg)
-    }
+    const msg = sessionStorage.getItem('ai_pending_msg')?.trim()
+    if (!msg) return
+
+    let cancelled = false
+    const sessionId = newSessionId()
+    const title = msg.length > 40 ? msg.slice(0, 40) + '…' : msg
+    const userMsg: Msg = { id: Date.now().toString(), role: 'user', text: msg }
+
+    setMessages([userMsg])
+    setSending(true)
+    setActiveId(sessionId)
+    setInput('')
+
+    api.chat(msg)
+      .then(({ reply }) => {
+        if (cancelled) return
+        sessionStorage.removeItem('ai_pending_msg')
+        const aiMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: reply }
+        setMessages([userMsg, aiMsg])
+        setSessions(prev => {
+          const next = [{ id: sessionId, title, messages: [userMsg, aiMsg], createdAt: Date.now(), updatedAt: Date.now() }, ...prev]
+          saveSessions(next)
+          return next
+        })
+      })
+      .catch(() => {
+        if (cancelled) return
+        sessionStorage.removeItem('ai_pending_msg')
+        const errMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: 'Something went wrong. Please try again.' }
+        setMessages([userMsg, errMsg])
+        setSessions(prev => {
+          const next = [{ id: sessionId, title, messages: [userMsg, errMsg], createdAt: Date.now(), updatedAt: Date.now() }, ...prev]
+          saveSessions(next)
+          return next
+        })
+      })
+      .finally(() => {
+        if (!cancelled) setSending(false)
+        if (!cancelled) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
+      })
+
+    return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessions])
+  }, [])
 
   function startNewChat() {
     setActiveId(null)
@@ -248,6 +283,14 @@ export default function AIChatPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AIChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <AIChatInner />
+    </Suspense>
   )
 }
 

@@ -1,7 +1,12 @@
 import { Router, Response } from 'express'
+import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { ASSIGNMENT_SOURCE } from '../constants/assignmentSource'
+import { writeAuditLog } from '../lib/auditLog'
+import { supabaseAdmin } from '../lib/supabaseAdmin'
+import { logger } from '../common/logger'
+import { sendToUser } from '../lib/websocket'
 
 const router = Router()
 
@@ -120,6 +125,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
         email: user.email,
         name: user.name,
         role: user.role,
+        hasPassword: !!user.passwordHash,
         profile: user.profile
           ? { ...user.profile, unweightedGpa: unweighted, weightedGpa: weighted }
           : null,
@@ -211,6 +217,533 @@ router.post('/me/streak-reward', requireAuth, async (req: AuthRequest, res: Resp
     res.json({ data: { newTags: newlyEarned } })
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to award streak tag' } })
+  }
+})
+
+// ── POST /students/classrooms/join ──
+const joinClassroomSchema = z.object({
+  inviteCode: z.string().length(6).regex(/^[A-Z0-9]{6}$/),
+})
+
+router.post('/classrooms/join', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const parse = joinClassroomSchema.safeParse(req.body)
+  if (!parse.success) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid invite code' } })
+    return
+  }
+  try {
+    const classroom = await prisma.classroom.findUnique({ where: { inviteCode: parse.data.inviteCode } })
+    if (!classroom) {
+      res.status(404).json({ data: null, error: { code: 'CLASSROOM_NOT_FOUND', message: 'Classroom not found' } })
+      return
+    }
+    const existing = await prisma.classroomMembership.findUnique({
+      where: { classroomId_studentId: { classroomId: classroom.id, studentId: req.userId } },
+    })
+    if (existing) {
+      res.status(409).json({ data: null, error: { code: 'ALREADY_MEMBER', message: 'You are already a member of this classroom' } })
+      return
+    }
+    const membership = await prisma.classroomMembership.create({
+      data: { classroomId: classroom.id, studentId: req.userId },
+    })
+    await writeAuditLog({
+      userId: req.userId,
+      resourceType: 'CLASSROOM_MEMBERSHIP',
+      resourceId: classroom.educatorId.toString(),
+      action: 'EDUCATOR_ACCESS_CONSENTED',
+      ipAddress: req.ip ?? 'unknown',
+    })
+    try {
+      const notif = await prisma.notification.create({
+        data: { userId: req.userId, fromUserId: classroom.educatorId, type: 'CLASSROOM_JOINED', preview: classroom.name },
+        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+      })
+      sendToUser(req.userId, 'NOTIFICATION', notif)
+    } catch { /* non-critical */ }
+    logger.info('student_joined_classroom', { studentId: req.userId, classroomId: classroom.id })
+    res.status(201).json({ data: membership, error: null })
+  } catch (err: unknown) {
+    logger.error('student_join_classroom_error', { studentId: req.userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to join classroom' } })
+  }
+})
+
+// ── GET /students/classrooms ──
+router.get('/classrooms', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  try {
+    const memberships = await prisma.classroomMembership.findMany({
+      where: { studentId: req.userId },
+      include: {
+        classroom: {
+          include: { educator: { select: { id: true, name: true, email: true } } },
+        },
+      },
+      orderBy: { joinedAt: 'asc' },
+    })
+    res.json({ data: memberships.map(m => m.classroom), error: null })
+  } catch (err: unknown) {
+    logger.error('student_classrooms_list_error', { studentId: req.userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch classrooms' } })
+  }
+})
+
+// ── GET /students/classrooms/:id ──
+router.get('/classrooms/:id', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const classroomId = parseInt(req.params.id)
+  if (isNaN(classroomId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid classroom id' } })
+    return
+  }
+  try {
+    // Verify the student is actually a member
+    const membership = await prisma.classroomMembership.findUnique({
+      where: { classroomId_studentId: { classroomId, studentId: req.userId! } },
+    })
+    if (!membership) {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'You are not a member of this classroom' } })
+      return
+    }
+    const classroom = await prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        educator: { select: { id: true, name: true, email: true } },
+        assignments: { orderBy: { dueDate: 'asc' } },
+        memberships: {
+          include: { student: { select: { id: true, name: true } } },
+          orderBy: { joinedAt: 'asc' },
+        },
+      },
+    })
+    if (!classroom) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Classroom not found' } })
+      return
+    }
+    res.json({ data: classroom, error: null })
+  } catch (err: unknown) {
+    logger.error('student_classroom_detail_error', { studentId: req.userId, classroomId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch classroom' } })
+  }
+})
+
+// ── GET /students/classrooms/:id/posts ──
+router.get('/classrooms/:id/posts', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const classroomId = parseInt(req.params.id)
+  if (isNaN(classroomId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid classroom id' } })
+    return
+  }
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  try {
+    const membership = await prisma.classroomMembership.findUnique({
+      where: { classroomId_studentId: { classroomId, studentId: req.userId } },
+    })
+    if (!membership) {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'You are not a member of this classroom' } })
+      return
+    }
+    const page  = Math.max(1, parseInt(req.query.page as string) || 1)
+    const limit = 20
+    const posts = await prisma.classroomPost.findMany({
+      where: { classroomId },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            tag: true,
+            tagColor: true,
+            nameColor: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    })
+    res.json({ data: posts, error: null })
+  } catch (err: unknown) {
+    logger.error('student_classroom_posts_list_error', { studentId: req.userId, classroomId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch posts' } })
+  }
+})
+
+// ── POST /students/classrooms/:id/posts ──
+const createClassroomPostSchema = z.object({
+  body: z.string().min(1).max(500),
+})
+
+router.post('/classrooms/:id/posts', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const classroomId = parseInt(req.params.id)
+  if (isNaN(classroomId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid classroom id' } })
+    return
+  }
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const parse = createClassroomPostSchema.safeParse(req.body)
+  if (!parse.success) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid body' } })
+    return
+  }
+  try {
+    const membership = await prisma.classroomMembership.findUnique({
+      where: { classroomId_studentId: { classroomId, studentId: req.userId } },
+    })
+    if (!membership) {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'You are not a member of this classroom' } })
+      return
+    }
+    const post = await prisma.classroomPost.create({
+      data: { classroomId, authorId: req.userId, body: parse.data.body },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            tag: true,
+            tagColor: true,
+            nameColor: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    })
+    sendToUser(req.userId, 'CLASSROOM_POST', { classroomId, post })
+    logger.info('classroom_post_created', { authorId: req.userId, classroomId, postId: post.id })
+    res.status(201).json({ data: post, error: null })
+  } catch (err: unknown) {
+    logger.error('student_classroom_post_create_error', { studentId: req.userId, classroomId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to create post' } })
+  }
+})
+
+// ── GET /students/action-items ──
+router.get('/action-items', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  try {
+    const items = await prisma.counselorActionItem.findMany({
+      where: { studentId: req.userId },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json({ data: items, error: null })
+  } catch (err: unknown) {
+    logger.error('student_action_items_error', { studentId: req.userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch action items' } })
+  }
+})
+
+// ── POST /students/counselor-chat/:counselorId ──
+const studentChatSchema = z.object({
+  body: z.string().min(1).max(2000),
+})
+
+router.post('/counselor-chat/:counselorId', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const counselorId = parseInt(req.params.counselorId)
+  if (isNaN(counselorId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid counselorId' } })
+    return
+  }
+  const parse = studentChatSchema.safeParse(req.body)
+  if (!parse.success) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid request' } })
+    return
+  }
+  const studentId = req.userId
+  try {
+    const link = await prisma.counselorStudentLink.findUnique({
+      where: { counselorId_studentId: { counselorId, studentId } },
+    })
+    if (!link || link.status !== 'ACTIVE') {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'No active counselor link found' } })
+      return
+    }
+    const message = await prisma.counselorChatMessage.create({
+      data: { counselorId, studentId, senderId: studentId, body: parse.data.body },
+    })
+    await writeAuditLog({
+      userId: studentId,
+      resourceType: 'COUNSELOR_CHAT',
+      resourceId: counselorId.toString(),
+      action: 'STUDENT_SENT_MESSAGE',
+      ipAddress: req.ip ?? 'unknown',
+    })
+    if (supabaseAdmin) {
+      await supabaseAdmin
+        .channel(`counselor-chat:${counselorId}:${studentId}`)
+        .send({ type: 'broadcast', event: 'message', payload: message })
+        .catch((broadcastErr: unknown) => {
+          logger.warn('student_chat_broadcast_failed', { counselorId, studentId, error: broadcastErr instanceof Error ? broadcastErr.message : String(broadcastErr) })
+        })
+    } else {
+      logger.warn('supabase_admin_not_configured', { note: 'Chat broadcast skipped — SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set' })
+    }
+    res.status(201).json({ data: message, error: null })
+  } catch (err: unknown) {
+    logger.error('student_chat_send_error', { studentId, counselorId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to send message' } })
+  }
+})
+
+// ── GET /students/counselor-chat/:counselorId ──
+router.get('/counselor-chat/:counselorId', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const counselorId = parseInt(req.params.counselorId)
+  if (isNaN(counselorId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid counselorId' } })
+    return
+  }
+  const studentId = req.userId
+  const cursorRaw = req.query.cursor !== undefined ? parseInt(req.query.cursor as string) : undefined
+  const limitRaw = req.query.limit !== undefined ? parseInt(req.query.limit as string) : 50
+  const limit = Math.min(isNaN(limitRaw) ? 50 : limitRaw, 100)
+  const cursor = cursorRaw !== undefined && !isNaN(cursorRaw) ? cursorRaw : undefined
+
+  try {
+    const link = await prisma.counselorStudentLink.findUnique({
+      where: { counselorId_studentId: { counselorId, studentId } },
+    })
+    if (!link || link.status !== 'ACTIVE') {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'No active counselor link found' } })
+      return
+    }
+    const messages = await prisma.counselorChatMessage.findMany({
+      where: {
+        counselorId,
+        studentId,
+        ...(cursor !== undefined && { id: { lt: cursor } }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    })
+    await writeAuditLog({
+      userId: studentId,
+      resourceType: 'COUNSELOR_CHAT',
+      resourceId: counselorId.toString(),
+      action: 'STUDENT_READ_CHAT',
+      ipAddress: req.ip ?? 'unknown',
+    })
+    const nextCursor = messages.length === limit ? messages[messages.length - 1]?.id : undefined
+    res.json({ data: { messages, nextCursor: nextCursor ?? null }, error: null })
+  } catch (err: unknown) {
+    logger.error('student_chat_list_error', { studentId, counselorId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch messages' } })
+  }
+})
+
+// ── POST /students/counselor-links/:counselorId/accept ── Student accepts a pending counselor link
+router.post('/counselor-links/:counselorId/accept', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const counselorId = parseInt(req.params.counselorId)
+  if (isNaN(counselorId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid counselorId' } })
+    return
+  }
+  const studentId = req.userId
+  try {
+    const link = await prisma.counselorStudentLink.findUnique({
+      where: { counselorId_studentId: { counselorId, studentId } },
+    })
+    if (!link) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'No pending counselor link found' } })
+      return
+    }
+    if (link.status === 'ACTIVE') {
+      res.status(409).json({ data: null, error: { code: 'ALREADY_ACCEPTED', message: 'Counselor link already active' } })
+      return
+    }
+    const updated = await prisma.counselorStudentLink.update({
+      where: { counselorId_studentId: { counselorId, studentId } },
+      data: { status: 'ACTIVE' },
+    })
+    await writeAuditLog({
+      userId: studentId,
+      resourceType: 'COUNSELOR_LINK',
+      resourceId: counselorId.toString(),
+      action: 'EDUCATOR_ACCESS_CONSENTED',
+      ipAddress: req.ip ?? 'unknown',
+    })
+    logger.info('counselor_link_accepted', { studentId, counselorId })
+    res.json({ data: updated, error: null })
+  } catch (err: unknown) {
+    logger.error('counselor_link_accept_error', { studentId, counselorId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to accept counselor link' } })
+  }
+})
+
+// ── DELETE /students/counselor-links/:counselorId/decline ── Student declines a pending counselor link
+router.delete('/counselor-links/:counselorId/decline', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const counselorId = parseInt(req.params.counselorId)
+  if (isNaN(counselorId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid counselorId' } })
+    return
+  }
+  const studentId = req.userId
+  try {
+    const link = await prisma.counselorStudentLink.findUnique({
+      where: { counselorId_studentId: { counselorId, studentId } },
+    })
+    if (!link) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'No counselor link found' } })
+      return
+    }
+    await prisma.counselorStudentLink.delete({
+      where: { counselorId_studentId: { counselorId, studentId } },
+    })
+    logger.info('counselor_link_declined', { studentId, counselorId })
+    res.json({ data: { deleted: true }, error: null })
+  } catch (err: unknown) {
+    logger.error('counselor_link_decline_error', { studentId, counselorId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to decline counselor link' } })
+  }
+})
+
+// ── GET /students/counselor-links/active ── Student sees their active counselors
+router.get('/counselor-links/active', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  try {
+    const activeLinks = await prisma.counselorStudentLink.findMany({
+      where: { studentId: req.userId, status: 'ACTIVE' },
+      include: { counselor: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'asc' },
+    })
+    res.json({ data: activeLinks, error: null })
+  } catch (err: unknown) {
+    logger.error('counselor_active_links_error', { studentId: req.userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch active counselor links' } })
+  }
+})
+
+// ── GET /students/counselor-links/pending ── Student sees pending counselor link requests
+router.get('/counselor-links/pending', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  try {
+    const pendingLinks = await prisma.counselorStudentLink.findMany({
+      where: { studentId: req.userId, status: 'PENDING' },
+      include: { counselor: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json({ data: pendingLinks, error: null })
+  } catch (err: unknown) {
+    logger.error('counselor_pending_links_error', { studentId: req.userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch pending counselor links' } })
+  }
+})
+
+// ── GET /students/counselor-portal/:counselorId ── Full portal data for a student's counselor
+router.get('/counselor-portal/:counselorId', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const counselorId = parseInt(req.params.counselorId)
+  if (isNaN(counselorId)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid counselorId' } })
+    return
+  }
+  const studentId = req.userId
+  try {
+    const link = await prisma.counselorStudentLink.findUnique({
+      where: { counselorId_studentId: { counselorId, studentId } },
+      include: { counselor: { select: { id: true, name: true, email: true } } },
+    })
+    if (!link || link.status !== 'ACTIVE') {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'No active counselor link found' } })
+      return
+    }
+    const [notes, recommendations, actionItems] = await Promise.all([
+      prisma.counselorNote.findMany({
+        where: { counselorId, studentId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.counselorCourseRecommendation.findMany({
+        where: { counselorId, studentId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.counselorActionItem.findMany({
+        where: { counselorId, studentId },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ])
+    await writeAuditLog({
+      userId: studentId,
+      resourceType: 'COUNSELOR_PORTAL',
+      resourceId: counselorId.toString(),
+      action: 'STUDENT_VIEWED_COUNSELOR_PORTAL',
+      ipAddress: req.ip ?? 'unknown',
+    })
+    res.json({
+      data: { counselor: link.counselor, notes, recommendations, actionItems },
+      error: null,
+    })
+  } catch (err: unknown) {
+    logger.error('student_counselor_portal_error', { studentId, counselorId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch portal data' } })
+  }
+})
+
+// ── PATCH /students/action-items/:id ── Toggle action item completion
+router.patch('/action-items/:id', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.userId) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Missing authentication' } })
+    return
+  }
+  const id = parseInt(req.params.id)
+  if (isNaN(id)) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid action item id' } })
+    return
+  }
+  try {
+    const item = await prisma.counselorActionItem.findUnique({ where: { id } })
+    if (!item || item.studentId !== req.userId) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Action item not found' } })
+      return
+    }
+    const updated = await prisma.counselorActionItem.update({
+      where: { id },
+      data: { completed: !item.completed },
+    })
+    res.json({ data: updated, error: null })
+  } catch (err: unknown) {
+    logger.error('student_action_item_toggle_error', { studentId: req.userId, id, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to update action item' } })
   }
 })
 

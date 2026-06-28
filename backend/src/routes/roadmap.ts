@@ -4,6 +4,19 @@ import { requireAuth, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
+// Derive current grade level from graduation year.
+// Grade 12 graduates in the spring of `graduationYear`.
+// In Aug+, the new school year has started so we increment by 1.
+function deriveGradeLevel(graduationYear: number | null, stored: number | null): number {
+  if (graduationYear) {
+    const now = new Date()
+    const effectiveYear = now.getMonth() >= 7 ? now.getFullYear() + 1 : now.getFullYear()
+    const derived = 12 - (graduationYear - effectiveYear)
+    if (derived >= 9 && derived <= 12) return derived
+  }
+  return stored ?? 9
+}
+
 function categorize(name: string): string {
   const n = name.toLowerCase()
   if (/english|literature|writing|composition|oral interp|reading/.test(n)) return 'English'
@@ -44,7 +57,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
-    const gradeLevel = profile?.gradeLevel ?? 9
+    const gradeLevel = deriveGradeLevel(profile?.graduationYear ?? null, profile?.gradeLevel ?? null)
     const creditsRequired = 26
 
     const milestones = [

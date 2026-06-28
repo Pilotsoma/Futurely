@@ -1,13 +1,28 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { api, type StudentData } from '../../../lib/api'
+import { consumeStudentPrefetch } from '../../../lib/prefetch'
 import AiBar from '../../../components/ui/AiBar'
 import PageLoader from '../../../components/ui/PageLoader'
 import CoinIcon from '../../../components/ui/CoinIcon'
 import NotificationBell from '../../../components/ui/NotificationBell'
+
+function tagCssClass(tag?: string | null, tagColor?: string | null): string {
+  if (tag === 'DEV') return 'tag-rainbow'
+  if (tag === 'VIP') return 'tag-mythic'
+  if (tag === 'GOAT') return 'tag-god'
+  if (tag === 'Prodigy') return 'tag-prodigy'
+  if (tag === 'Valedictorian') return 'tag-valedictorian'
+  if (tagColor === 'curse') return 'tag-curse'
+  return ''
+}
+function isAnimatedTag(tag?: string | null): boolean {
+  return tag === 'DEV' || tag === 'VIP' || tag === 'GOAT' || tag === 'Prodigy' || tag === 'Valedictorian'
+}
 
 function useCountUp(target: number | null, duration = 700): number {
   const [val, setVal] = useState(0)
@@ -55,15 +70,14 @@ const STREAK_MILESTONES: Array<{ days: number; emoji: string; tag?: string; tagC
   { days: 100, tag: 'GOAT',    tagColor: '#EAB308', emoji: '👑' },
 ]
 
-function streakCoinBonus(streak: number, perDay = 5) {
-  return Math.min(275, 30 + Math.max(0, streak - 1) * perDay)
+function streakCoinBonus(streak: number) {
+  return Math.min(400, 50 + Math.max(0, streak - 1) * 7)
 }
 
 function getNextMilestone(streak: number) {
   return STREAK_MILESTONES.find(m => m.days > streak) ?? null
 }
 
-// Normal CDF via Abramowitz & Stegun approximation
 function normalCdf(z: number): number {
   const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741
   const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911
@@ -74,29 +88,25 @@ function normalCdf(z: number): number {
   return 0.5 * (1 + sign * y)
 }
 
-// Returns GPA percentile (0–100) based on US national unweighted GPA distribution.
-// Returns null if GPA is unavailable or either GPA < 3.0 (not qualified for bonus).
+// National distribution (mean 2.96, sd 0.52). Weighted GPA normalized to 4.0 scale first.
+// Averages both when available — stricter than unweighted-only.
 function computeGpaPercentile(ugpa: number | null, wgpa: number | null): number | null {
   if (ugpa === null && wgpa === null) return null
-  if (ugpa !== null && ugpa < 3.0) return null
-  if (wgpa !== null && wgpa < 3.0) return null
-  const gpa = ugpa ?? wgpa!
-  // US national unweighted GPA distribution: mean ≈ 2.96, sd ≈ 0.52
-  const z = (gpa - 2.96) / 0.52
-  return Math.min(99.99, Math.max(50.01, normalCdf(z) * 100))
+  const pctFromGpa = (g: number) => Math.min(99.99, Math.max(0.01, normalCdf((g - 2.96) / 0.52) * 100))
+  const uPct = ugpa !== null ? pctFromGpa(ugpa) : null
+  const wPct = wgpa !== null ? pctFromGpa(wgpa * 4 / 5) : null
+  if (uPct !== null && wPct !== null) return (uPct + wPct) / 2
+  return uPct ?? wPct!
 }
 
-// Extra coins earned per additional streak day based on GPA percentile
-function gpaStreakIncrement(percentile: number | null): number {
-  if (percentile === null) return 5
-  if (percentile >= 99.99) return 15   // top 0.01%: 200% more than baseline
-  if (percentile >= 99.9)  return 12
-  if (percentile >= 99.0)  return 10
-  if (percentile >= 97.0)  return 9
-  if (percentile >= 95.0)  return 8
-  if (percentile >= 90.0)  return 7
-  if (percentile >= 75.0)  return 6
-  return 5
+// Returns 0–50 (percent). Averages unweighted (floor 2.0/max 4.0) and weighted (floor 2.5/max 5.0).
+function getGpaBonusPct(ugpa: number | null, wgpa: number | null): number {
+  const fromU = (g: number) => Math.max(0, Math.min(50, (g - 2.0) / 2.0 * 50))
+  const fromW = (g: number) => Math.max(0, Math.min(50, (g - 2.5) / 2.5 * 50))
+  if (ugpa === null && wgpa === null) return 0
+  if (ugpa !== null && wgpa !== null) return (fromU(ugpa) + fromW(wgpa)) / 2
+  if (ugpa !== null) return fromU(ugpa)
+  return fromW(wgpa!)
 }
 
 function percentileStr(p: number): string {
@@ -120,6 +130,7 @@ function getTimeOfDay() {
   return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
 }
 
+<<<<<<< HEAD
 const QUICK_LINKS = [
   { href: '/grades',  label: 'Grade Portal',   sub: 'Grades & GPA',        icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B4A8E" strokeWidth="1.8" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>, iconBg: 'rgba(43,74,142,0.09)' },
   { href: '/ai',      label: 'AI Chat',         sub: 'College guidance',     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>, iconBg: 'rgba(45,106,79,0.08)' },
@@ -127,6 +138,8 @@ const QUICK_LINKS = [
   { href: '/feed',    label: 'Study Feed',      sub: 'Connect with peers',   icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6A5A8A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>, iconBg: 'rgba(106,90,138,0.09)' },
   { href: '/colleges',label: 'Colleges',        sub: 'Track your college list', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C45A1A" strokeWidth="1.8" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, iconBg: 'rgba(196,90,26,0.09)' },
 ]
+=======
+>>>>>>> 840ac053f04d198dd69731be795b6c9272f10edc
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -147,6 +160,7 @@ export default function DashboardPage() {
   const [needsReconnect, setNeedsReconnect] = useState(false)
   const [showGpaWelcome, setShowGpaWelcome] = useState(false)
   const [hideGpa, setHideGpa] = useState(false)
+  const [showConnectModal, setShowConnectModal] = useState(false)
   const gpaNeedsResync = useRef(false)
 
   useEffect(() => {
@@ -154,10 +168,30 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    // Track day streak using localStorage
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('connect') === '1') {
+      setShowConnectModal(true)
+      window.history.replaceState({}, '', '/dashboard')
+    }
+  }, [])
+
+  useEffect(() => {
+    // Track day streak using user-specific localStorage keys so accounts
+    // on the same device don't inherit each other's streak.
+    const uid = (() => { try { return (JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { id?: number } | null)?.id ?? 'anon' } catch { return 'anon' } })()
+    const streakKey = `ns_streak_${uid}`
+    const visitKey  = `ns_lastVisit_${uid}`
+
+    // One-time migration from the old device-wide keys to user-specific keys
+    if (!localStorage.getItem(streakKey) && localStorage.getItem('ns_streak')) {
+      localStorage.setItem(streakKey, localStorage.getItem('ns_streak')!)
+      localStorage.setItem(visitKey, localStorage.getItem('ns_lastVisit') ?? '')
+      localStorage.removeItem('ns_streak')
+      localStorage.removeItem('ns_lastVisit')
+    }
+
     const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-    const lastVisit = localStorage.getItem('ns_lastVisit')
-    const streak = parseInt(localStorage.getItem('ns_streak') ?? '0', 10)
+    const lastVisit = localStorage.getItem(visitKey)
+    const streak = parseInt(localStorage.getItem(streakKey) ?? '0', 10)
 
     let currentStreak = streak
     if (lastVisit === today) {
@@ -168,25 +202,25 @@ export default function DashboardPage() {
       const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / 86400000)
       if (diffDays === 1) {
         currentStreak = streak + 1
-        localStorage.setItem('ns_streak', String(currentStreak))
+        localStorage.setItem(streakKey, String(currentStreak))
         setDayStreak(currentStreak)
       } else {
         currentStreak = 1
-        localStorage.setItem('ns_streak', '1')
+        localStorage.setItem(streakKey, '1')
         setDayStreak(1)
       }
     } else {
       currentStreak = 1
-      localStorage.setItem('ns_streak', '1')
+      localStorage.setItem(streakKey, '1')
       setDayStreak(1)
     }
-    localStorage.setItem('ns_lastVisit', today)
+    localStorage.setItem(visitKey, today)
 
     // Show milestone celebration popup once per milestone
     if (lastVisit !== today) {
       const milestone = STREAK_MILESTONES.find(m => m.days === currentStreak)
       if (milestone) {
-        const seenKey = `ns_milestone_seen_${milestone.days}`
+        const seenKey = `ns_milestone_seen_${uid}_${milestone.days}`
         if (!localStorage.getItem(seenKey)) {
           localStorage.setItem(seenKey, '1')
           setStreakMilestone(milestone)
@@ -203,7 +237,9 @@ export default function DashboardPage() {
     api.marketplaceDailyClaim(currentStreak)
       .then(r => setCoins(r.coins))
       .catch(() => {})
-    api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed'))
+    const prefetch = consumeStudentPrefetch()
+    const dataPromise = prefetch ?? api.me().catch(() => null)
+    dataPromise.then(d => { if (d) setData(d); else api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed')) })
     api.portalGpa()
       .then(g => { setPortalUGpa(g.unweightedGpa); setPortalWGpa(g.weightedGpa) })
       .catch(() => {})
@@ -306,7 +342,8 @@ export default function DashboardPage() {
   const effectiveUGpa = portalUGpa ?? data.profile?.unweightedGpa ?? null
   const effectiveWGpa = portalWGpa ?? data.profile?.weightedGpa ?? null
   const gpaPercentile = computeGpaPercentile(effectiveUGpa, effectiveWGpa)
-  const streakIncrement = gpaStreakIncrement(gpaPercentile)
+  const gpaBonusPct = getGpaBonusPct(effectiveUGpa, effectiveWGpa)
+  const totalDailyCoins = Math.round(streakCoinBonus(dayStreak) * (1 + gpaBonusPct / 100))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
@@ -399,7 +436,7 @@ export default function DashboardPage() {
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)} {...staggerItem(4)}>
           <div style={S.statNum}>{animStreak}</div>
           <div style={S.statLabel}>Day Streak 🔥</div>
-          <div style={{ ...S.statSub, color: '#EAB308' }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{streakCoinBonus(dayStreak, streakIncrement)} today{streakIncrement > 5 ? ` ✦` : ''}</div>
+          <div style={{ ...S.statSub, color: '#EAB308' }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{totalDailyCoins} today{gpaBonusPct > 0 ? ' ✦' : ''}</div>
           {(() => {
             const next = getNextMilestone(dayStreak)
             if (!next) return <div style={S.statSub} title="All streak rewards earned">👑 GOAT</div>
@@ -408,6 +445,7 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
+<<<<<<< HEAD
       {/* Quick navigation */}
       <motion.p style={{ ...S.cardLabel, marginBottom: 14 }} {...staggerItem(5)}>Quick Access</motion.p>
       <div style={S.tilesGrid}>
@@ -423,10 +461,12 @@ export default function DashboardPage() {
         ))}
       </div>
 
+=======
+>>>>>>> 840ac053f04d198dd69731be795b6c9272f10edc
       <div style={{ flex: 1 }} />
 
       {/* Streak Milestone Celebration Popup */}
-      {streakMilestone && (
+      {streakMilestone && createPortal(
         <div style={S.popupOverlay} onClick={() => setStreakMilestone(null)}>
           <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setStreakMilestone(null)} style={S.popupClose}>×</button>
@@ -465,11 +505,12 @@ export default function DashboardPage() {
               Let&apos;s go! 🚀
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Streak Popup */}
-      {showStreakPopup && (
+      {showStreakPopup && createPortal(
         <div style={S.popupOverlay} onClick={() => setShowStreakPopup(false)}>
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowStreakPopup(false)} style={S.popupClose}>×</button>
@@ -478,28 +519,28 @@ export default function DashboardPage() {
               {dayStreak} Day Streak!
             </h3>
             <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#EAB308', fontWeight: 600, textAlign: 'center' as const }}>
-              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{streakCoinBonus(dayStreak, streakIncrement)} coins today · +{streakIncrement} more each extra day
+              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{totalDailyCoins} coins today
             </div>
 
-            {/* GPA Rank Section */}
-            {gpaPercentile !== null ? (
+            {/* GPA Bonus Section */}
+            {gpaBonusPct > 0 ? (
               <div style={{ background: 'rgba(43,74,142,0.08)', border: '1px solid rgba(43,74,142,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 5 }}>GPA Rank</div>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 5 }}>GPA Bonus</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>{percentileStr(gpaPercentile)} Percentile</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                    +{streakIncrement}/day{streakIncrement > 5 ? ` (+${streakIncrement - 5} bonus)` : ''}
+                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>
+                    {gpaPercentile !== null ? `${percentileStr(gpaPercentile)} Percentile` : `${gpaBonusPct.toFixed(1)}% boost`}
                   </span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>+{gpaBonusPct.toFixed(1)}% on streak</span>
                 </div>
               </div>
-            ) : effectiveUGpa !== null ? (
+            ) : (effectiveUGpa !== null || effectiveWGpa !== null) ? (
               <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '9px 14px', marginBottom: 10, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' as const }}>
-                📚 GPA below 3.0 · Reach 3.0+ to unlock streak bonuses
+                📚 Raise your GPA to unlock daily bonus coins
               </div>
             ) : null}
 
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Start at +30 coins on day 1, and earn +{streakIncrement} more for every consecutive day. Log in every day to unlock exclusive tags too!
+              Start at +50 coins on day 1, earn +7 more per consecutive day, up to +400/day at day 51. Log in every day to unlock exclusive tags too!
             </p>
 
             {newlyAwardedTags.length > 0 && (
@@ -524,10 +565,10 @@ export default function DashboardPage() {
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{earned ? m.emoji : '🔒'}</span>
                     <div style={{ flex: 1 }}>
                       {m.tag ? (
-                        <span className={m.tag === 'GOD' ? 'tag-mythic' : m.tag === 'GOAT' ? 'tag-god' : ''} style={{
+                        <span className={tagCssClass(m.tag, m.tagColor)} style={{
                           fontSize: 13, fontWeight: 700,
-                          color: (m.tag === 'GOAT' || m.tag === 'GOD') ? undefined : '#fff',
-                          background: (m.tag === 'GOAT' || m.tag === 'GOD') ? undefined : m.tagColor,
+                          color: isAnimatedTag(m.tag) ? undefined : '#fff',
+                          background: isAnimatedTag(m.tag) ? undefined : m.tagColor,
                           borderRadius: 6, padding: '2px 8px',
                           marginRight: 4,
                         }}>
@@ -554,11 +595,12 @@ export default function DashboardPage() {
               Got it!
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* GPA Percentile Welcome Popup (one-time) */}
-      {showGpaWelcome && (
+      {showGpaWelcome && createPortal(
         <div style={S.popupOverlay} onClick={() => setShowGpaWelcome(false)}>
           <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowGpaWelcome(false)} style={S.popupClose}>×</button>
@@ -579,21 +621,21 @@ export default function DashboardPage() {
                     Your Daily Streak Bonus
                   </p>
                   <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-blue)', marginBottom: 4 }}>
-                    +{streakIncrement} coins per streak day
+                    +{gpaBonusPct.toFixed(1)}% daily boost
                   </p>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Average students earn +5/day{streakIncrement > 5 ? ` · You earn +${streakIncrement - 5} extra` : ''}
+                    Applied to your streak coins · perfect GPA = +50%
                   </p>
                 </div>
               </>
             ) : (
               <>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-                  Maintain a 3.0+ GPA in both unweighted and weighted to unlock enhanced daily streak bonuses.
+                  Raise your GPA to unlock daily coin bonuses that stack on top of your streak earnings.
                 </p>
                 <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: '#EAB308', lineHeight: 1.5 }}>
-                    Top 0.01% of students earn +15 coins/day<br />vs +5 for the average student
+                    Perfect GPA (4.0/5.0) → +50% on daily coins<br />Scales smoothly with both your GPAs
                   </p>
                 </div>
               </>
@@ -602,11 +644,12 @@ export default function DashboardPage() {
               Got it! 🚀
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* HAC session expired / resync popup */}
-      {showResyncPopup && (
+      {showResyncPopup && createPortal(
         <div style={S.popupOverlay} onClick={() => setShowResyncPopup(false)}>
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowResyncPopup(false)} style={S.popupClose}>×</button>
@@ -644,7 +687,37 @@ export default function DashboardPage() {
               Dismiss
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Connect school account modal (shown after OAuth sign-up) ── */}
+      {showConnectModal && createPortal(
+        <div style={S.popupOverlay} onClick={() => setShowConnectModal(false)}>
+          <div style={S.popupCard} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowConnectModal(false)} style={S.popupClose}>×</button>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🎓</div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+              Connect your school account
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+              You haven&apos;t connected your HAC or Canvas accounts yet. Connect them to unlock your grades, assignments, AI study tools, and much more.
+            </p>
+            <button
+              onClick={() => { setShowConnectModal(false); router.push('/settings') }}
+              style={S.popupButton}
+            >
+              Connect my school account
+            </button>
+            <button
+              onClick={() => setShowConnectModal(false)}
+              style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginTop: 8 }}
+            >
+              Skip for now
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* AI bar */}
@@ -662,6 +735,7 @@ const gradientStyle: React.CSSProperties = {
 }
 
 const S: Record<string, React.CSSProperties> = {
+<<<<<<< HEAD
   pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 },
   greeting:   { fontSize: 14, color: 'var(--text-secondary)', marginBottom: 3 },
   name:       { fontSize: 32, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' },
@@ -691,6 +765,32 @@ const S: Record<string, React.CSSProperties> = {
   tileIcon:   { width: 46, height: 46, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   tileTitle:  { fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 3 },
   tileSub:    { fontSize: 12.5, color: 'var(--text-secondary)' },
+=======
+  pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36 },
+  greeting:   { fontSize: 15, color: 'var(--text-secondary)', marginBottom: 4 },
+  name:       { fontSize: 38, fontWeight: 800, letterSpacing: '-0.8px', color: 'var(--text)' },
+  dateChip:   { fontSize: 13, color: 'var(--primary)', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 20, padding: '6px 14px', marginTop: 4 },
+  topRow:     { display: 'flex', gap: 20, marginBottom: 20 },
+  card:       { padding: 28, marginBottom: 20 },
+  cardLabel:  { fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)' },
+  gpaRow:     { display: 'flex', gap: 0, marginTop: 18, alignItems: 'center' },
+  gpaBlock:   { flex: 1, textAlign: 'center' as const },
+  gpaNum:     { fontSize: 48, fontWeight: 800, letterSpacing: '-1.5px', lineHeight: 1 },
+  gpaTag:     { fontSize: 13, color: 'var(--text-secondary)', marginTop: 6 },
+  gpaDivider: { width: 1, height: 56, background: 'var(--border)', flexShrink: 0 },
+  countPill:  { background: 'var(--error)', color: '#fff', borderRadius: 100, padding: '3px 10px', fontSize: 12, fontWeight: 700 },
+  emptyMsg:   { color: 'var(--success)', fontSize: 15, fontStyle: 'italic' },
+  dueRow:     { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 },
+  dueDot:     { width: 9, height: 9, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0 },
+  dueTitle:   { fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
+  dueSub:     { fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 },
+  dueTime:    { fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 },
+  statsRow:   { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 },
+  statCard:   { padding: '22px', textAlign: 'center' as const },
+  statNum:    { fontSize: 34, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6 },
+  statLabel:  { fontSize: 13, color: 'var(--text-secondary)' },
+  statSub:    { fontSize: 12, color: 'var(--text-muted)', marginTop: 5, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
+>>>>>>> 840ac053f04d198dd69731be795b6c9272f10edc
   aiBarWrap:  { paddingBottom: 24 },
   popupOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 },
   popupCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, maxWidth: 380, width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },

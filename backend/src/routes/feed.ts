@@ -3,9 +3,10 @@ import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { broadcast, sendToUser } from '../lib/websocket';
 import { filterContent, recordViolation } from '../lib/contentFilter';
-import { SEED_PRICES, TAG_BOX_ITEMS } from './marketplace';
+import { SEED_PRICES, TAG_BOX_ITEMS, SPECIAL_TAGS, DEV_CURSE_ITEMS } from './marketplace';
 import { AuthRequest } from '../middleware/auth';
 import { requireAdmin, requireMod, hasDevPowers } from '../middleware/requireAdmin';
+import { checkDevCoinLimit } from '../lib/devCoinLimit';
 
 // Keyed by authenticated userId so shared NAT IPs don't block other users.
 const userKey = (req: Request): string => String((req as AuthRequest).userId ?? req.ip ?? 'anon')
@@ -69,24 +70,23 @@ function recordModDelete(userId: number) {
 const USER_SELECT = {
   id: true, name: true,
   tag: true, tagColor: true,
-  nameColor: true, pfpEffect: true, avatarUrl: true,
+  nameColor: true, avatarEffect: true, badge: true, avatarUrl: true,
   chatBanned: true, chatMutedUntil: true,
-  deletedAt: true, role: true, allTags: true,
+  role: true, allTags: true,
 } as const;
 
 type RawUser = {
-  id: number; name: string | null;
+  id: number; name: string | null; hacName?: string | null;
   tag: string | null; tagColor: string | null;
-  nameColor: string | null; pfpEffect: string | null; avatarUrl: string | null;
+  nameColor: string | null; avatarEffect: string | null; badge?: string | null; avatarUrl: string | null;
   chatBanned: boolean; chatMutedUntil: Date | null;
-  deletedAt: Date | null; role: string; allTags: unknown;
+  role: string; allTags: unknown;
 };
 
 function toFeedUser(u: RawUser) {
-  if (u.deletedAt) return { id: u.id, name: u.name, tag: 'DELETED', tagColor: '#6B7280', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  if (u.chatBanned) return { id: u.id, name: u.name, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, pfpEffect: null as string | null, avatarUrl: null as string | null };
-  return { id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, pfpEffect: u.pfpEffect, avatarUrl: u.avatarUrl };
+  if (u.chatBanned) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'BANNED', tagColor: '#EF4444', nameColor: null as string | null, avatarEffect: null as string | null, badge: null as string | null, avatarUrl: null as string | null };
+  if (u.chatMutedUntil && u.chatMutedUntil > new Date()) return { id: u.id, name: u.name, hacName: u.hacName, tag: 'MUTED', tagColor: '#f97316', nameColor: null as string | null, avatarEffect: null as string | null, badge: null as string | null, avatarUrl: null as string | null };
+  return { id: u.id, name: u.name, hacName: u.hacName, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, avatarEffect: u.avatarEffect, badge: u.badge ?? null, avatarUrl: u.avatarUrl };
 }
 
 function parseAllTags(raw: unknown): Array<{ tag: string; tagColor: string }> {
@@ -118,13 +118,13 @@ async function autoDrawExpiredGiveaways() {
         owned.push({ id: ga.giveawayItemId, name: ga.giveawayTag, value: ga.giveawayTagColor, rarity: ga.giveawayItemRarity ?? 'Common' });
         await prisma.user.update({ where: { id: winner.userId }, data: { ownedNameColors: JSON.stringify(owned) } });
       }
-    } else if (ga.giveawayItemType === 'pfp' && ga.giveawayItemId && ga.giveawayTag && ga.giveawayTagColor) {
-      const winnerUser = await prisma.user.findUnique({ where: { id: winner.userId }, select: { ownedPfpEffects: true } });
+    } else if (ga.giveawayItemType === 'avatar' && ga.giveawayItemId && ga.giveawayTag && ga.giveawayTagColor) {
+      const winnerUser = await prisma.user.findUnique({ where: { id: winner.userId }, select: { ownedAvatarEffects: true } });
       if (winnerUser) {
         let owned: Array<{ id: string; name: string; value: string; rarity: string }> = [];
-        try { owned = JSON.parse(String(winnerUser.ownedPfpEffects ?? '[]')); } catch { owned = []; }
+        try { owned = JSON.parse(String(winnerUser.ownedAvatarEffects ?? '[]')); } catch { owned = []; }
         owned.push({ id: ga.giveawayItemId, name: ga.giveawayTag, value: ga.giveawayTagColor, rarity: ga.giveawayItemRarity ?? 'Common' });
-        await prisma.user.update({ where: { id: winner.userId }, data: { ownedPfpEffects: JSON.stringify(owned) } });
+        await prisma.user.update({ where: { id: winner.userId }, data: { ownedAvatarEffects: JSON.stringify(owned) } });
       }
     } else if (ga.giveawayTag) {
       const winnerUser = await prisma.user.findUnique({ where: { id: winner.userId } });
@@ -147,8 +147,8 @@ async function autoDrawExpiredGiveaways() {
       ? `🪙 ${ga.giveawayCoinAmount} coins`
       : ga.giveawayItemType === 'name-color'
         ? `the "${ga.giveawayTag}" name color`
-        : ga.giveawayItemType === 'pfp'
-          ? `the "${ga.giveawayTag}" PFP effect`
+        : ga.giveawayItemType === 'avatar'
+          ? `the "${ga.giveawayTag}" Avatar effect`
           : `the "${ga.giveawayTag}" tag`;
     const notif = await prisma.notification.create({
       data: { userId: winner.userId, fromUserId: ga.userId, type: 'GIVEAWAY_WIN', postId: ga.id, preview: `You won a giveaway and received ${prize}!` },
@@ -163,29 +163,39 @@ router.get('/posts', async (req: Request, res: Response) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const network = (req.query.network as string) || 'global';
     const userId = (req as any).userId as number;
     const now = new Date();
     const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    // Auto-draw any giveaways that have expired
-    await autoDrawExpiredGiveaways();
+    // Auto-draw any giveaways that have expired (isolated — must not crash the feed)
+    await autoDrawExpiredGiveaways().catch(err => console.error('[feed] autoDrawExpiredGiveaways failed:', err));
+
+    // For ISD network, resolve requesting user's district
+    let isdCode: string | null = null;
+    if (network === 'isd') {
+      const sc = await prisma.schoolConnection.findUnique({ where: { userId }, select: { districtUrl: true } });
+      if (!sc) return res.status(403).json({ error: 'You must link your HAC to access the ISD feed.' });
+      isdCode = sc.districtUrl;
+    }
 
     // Social feed: last 24h posts + currently-pinned posts (all types expire after 24h)
     const allPosts = await prisma.post.findMany({
       where: {
-        user: { deletedAt: null },
+        network,
+        ...(network === 'isd' && isdCode ? { isdCode } : {}),
         OR: [
           { createdAt: { gte: cutoff } },
           { pinnedUntil: { gt: now } },
         ],
       },
-      take: 1000,
+      take: 200,
       include: {
         user: {
           select: {
             id: true, name: true,
-            tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true,
-            chatBanned: true, chatMutedUntil: true, deletedAt: true,
+            tag: true, tagColor: true, nameColor: true, avatarEffect: true, badge: true, avatarUrl: true,
+            chatBanned: true, chatMutedUntil: true,
             role: true, allTags: true,
             _count: { select: { followers: true } },
           },
@@ -235,6 +245,7 @@ router.get('/posts', async (req: Request, res: Response) => {
 
     res.json({ data: { posts: postsOut, total, page, pageSize: limit, hasMore: skip + limit < total } });
   } catch (err) {
+    console.error('[feed] GET /posts error:', err);
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
 });
@@ -243,7 +254,8 @@ router.get('/posts', async (req: Request, res: Response) => {
 router.post('/posts', postCreateLimiter, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as number;
-    const { body } = req.body as { body?: string };
+    const { body, network: rawNetwork } = req.body as { body?: string; network?: string };
+    const network = rawNetwork === 'isd' ? 'isd' : 'global';
     if (!body?.trim()) return res.status(400).json({ error: 'Body is required' });
 
     const poster = await prisma.user.findUnique({ where: { id: userId } });
@@ -262,8 +274,16 @@ router.post('/posts', postCreateLimiter, async (req: Request, res: Response) => 
       return res.status(400).json({ error: contentCheck.reason });
     }
 
+    // Resolve ISD code if posting to ISD network
+    let isdCode: string | undefined;
+    if (network === 'isd') {
+      const sc = await prisma.schoolConnection.findUnique({ where: { userId }, select: { districtUrl: true } });
+      if (!sc) return res.status(403).json({ error: 'You must link your HAC to post in the ISD feed.' });
+      isdCode = sc.districtUrl;
+    }
+
     const post = await prisma.post.create({
-      data: { body: body.trim(), userId },
+      data: { body: body.trim(), userId, network, ...(isdCode ? { isdCode } : {}) },
       include: {
         user: { select: USER_SELECT },
         likes: { select: { userId: true } },
@@ -361,7 +381,7 @@ router.get('/posts/following', async (req: Request, res: Response) => {
 
     const [posts, total] = await Promise.all([
       prisma.post.findMany({
-        where: { userId: { in: followingIds }, user: { deletedAt: null } },
+        where: { userId: { in: followingIds } },
         orderBy: { createdAt: 'desc' },
         skip, take: limit,
         include: {
@@ -370,7 +390,7 @@ router.get('/posts/following', async (req: Request, res: Response) => {
           _count: { select: { likes: true, comments: true } },
         },
       }),
-      prisma.post.count({ where: { userId: { in: followingIds }, user: { deletedAt: null } } }),
+      prisma.post.count({ where: { userId: { in: followingIds } } }),
     ]);
 
     const postsOut = posts.map(p => ({
@@ -624,13 +644,13 @@ router.post('/posts/:id/giveaway/draw', async (req: Request, res: Response) => {
         owned.push({ id: post.giveawayItemId, name: post.giveawayTag, value: post.giveawayTagColor, rarity: post.giveawayItemRarity ?? 'Common' });
         await prisma.user.update({ where: { id: winnerEntry.userId }, data: { ownedNameColors: JSON.stringify(owned) } });
       }
-    } else if (post.giveawayItemType === 'pfp' && post.giveawayItemId && post.giveawayTag && post.giveawayTagColor) {
-      const winnerUser = await prisma.user.findUnique({ where: { id: winnerEntry.userId }, select: { ownedPfpEffects: true } });
+    } else if (post.giveawayItemType === 'avatar' && post.giveawayItemId && post.giveawayTag && post.giveawayTagColor) {
+      const winnerUser = await prisma.user.findUnique({ where: { id: winnerEntry.userId }, select: { ownedAvatarEffects: true } });
       if (winnerUser) {
         let owned: Array<{ id: string; name: string; value: string; rarity: string }> = [];
-        try { owned = JSON.parse(String(winnerUser.ownedPfpEffects ?? '[]')); } catch { owned = []; }
+        try { owned = JSON.parse(String(winnerUser.ownedAvatarEffects ?? '[]')); } catch { owned = []; }
         owned.push({ id: post.giveawayItemId, name: post.giveawayTag, value: post.giveawayTagColor, rarity: post.giveawayItemRarity ?? 'Common' });
-        await prisma.user.update({ where: { id: winnerEntry.userId }, data: { ownedPfpEffects: JSON.stringify(owned) } });
+        await prisma.user.update({ where: { id: winnerEntry.userId }, data: { ownedAvatarEffects: JSON.stringify(owned) } });
       }
     } else if (post.giveawayTag) {
       const winnerUser = await prisma.user.findUnique({ where: { id: winnerEntry.userId } });
@@ -657,8 +677,8 @@ router.post('/posts/:id/giveaway/draw', async (req: Request, res: Response) => {
       ? `🪙 ${post.giveawayCoinAmount} coins`
       : post.giveawayItemType === 'name-color'
         ? `the "${post.giveawayTag}" name color`
-        : post.giveawayItemType === 'pfp'
-          ? `the "${post.giveawayTag}" PFP effect`
+        : post.giveawayItemType === 'avatar'
+          ? `the "${post.giveawayTag}" Avatar effect`
           : `the "${post.giveawayTag}" tag`;
     const notif = await prisma.notification.create({
       data: { userId: winnerEntry.userId, fromUserId: post.userId, type: 'GIVEAWAY_WIN', postId, preview: `You won a giveaway and received ${prize}!` },
@@ -767,11 +787,10 @@ router.get('/search', async (req: Request, res: Response) => {
     const userId = (req as any).userId as number;
     const q = (req.query.q as string || '').trim();
     if (!q) return res.json({ data: [] });
-    const isDev = await hasDevPowers(userId);
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
+      where: { AND: [{ id: { not: userId } }, { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
-      select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
+      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, avatarEffect: true, badge: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -812,11 +831,10 @@ router.get('/users/search', async (req: Request, res: Response) => {
     const userId = (req as any).userId as number;
     const q = (req.query.q as string || '').trim();
     if (!q) return res.json({ data: [] });
-    const isDev = await hasDevPowers(userId);
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, ...(isDev ? [] : [{ deletedAt: null }]), { OR: [{ name: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
+      where: { AND: [{ id: { not: userId } }, { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
-      select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, pfpEffect: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, deletedAt: true, role: true, allTags: true },
+      select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, avatarEffect: true, badge: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, role: true, allTags: true },
     });
     res.json({ data: users.map(toFeedUser) });
   } catch (err) {
@@ -829,17 +847,18 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
   try {
     const targetId = parseInt(req.params.id);
     const userId = (req as any).userId as number;
+    const isSelf = targetId === userId;
     const [profile, requesterIsDev] = await Promise.all([
       prisma.user.findUnique({
         where: { id: targetId },
-        include: { _count: { select: { followers: true, following: true, posts: true } } },
+        include: {
+          _count: { select: { followers: true, following: true, posts: true } },
+          ...(isSelf ? { schoolConnection: { select: { districtUrl: true } } } : {}),
+        },
       }),
       hasDevPowers(userId),
     ]);
     if (!profile) return res.status(404).json({ error: 'User not found' });
-    if (profile.deletedAt && !requesterIsDev && userId !== targetId) {
-      return res.status(404).json({ error: 'User not found' });
-    }
 
     const [totalLikes, isFollowingRow] = await Promise.all([
       prisma.like.count({ where: { post: { userId: targetId } } }),
@@ -849,11 +868,11 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
     // Compute effective tag for display
     let effectiveTag = profile.tag;
     let effectiveTagColor = profile.tagColor;
-    if (profile.deletedAt) { effectiveTag = 'DELETED'; effectiveTagColor = '#6B7280'; }
-    else if (profile.chatBanned) { effectiveTag = 'BANNED'; effectiveTagColor = '#EF4444'; }
+    if (profile.chatBanned) { effectiveTag = 'BANNED'; effectiveTagColor = '#EF4444'; }
     else if (profile.chatMutedUntil && profile.chatMutedUntil > new Date()) { effectiveTag = 'MUTED'; effectiveTagColor = '#f97316'; }
 
-    const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, allTags: rawAllTags, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; allTags: string };
+    const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, allTags: rawAllTags, schoolConnection: sc, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; allTags: string; schoolConnection?: { districtUrl: string } | null };
+    const isdCode = sc?.districtUrl ?? null;
     res.json({
       data: {
         ...rest,
@@ -862,6 +881,7 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
         allTags: parseAllTags(rawAllTags || '[]'),
         totalLikes,
         isFollowing: !!isFollowingRow,
+        ...(isSelf ? { isdCode, isdDisplayName: isdCode ? isdCode.split('.')[0].replace(/isd$/i, ' ISD').replace(/^(.)/, (c: string) => c.toUpperCase()).trim() : null } : {}),
         ...(requesterIsDev ? { coins: (profile as any).coins ?? 0 } : {}),
       },
     });
@@ -1090,13 +1110,18 @@ router.put('/users/:id/role', requireAdmin, async (req: AuthRequest, res: Respon
 });
 
 /* ---------- DEV: Platform Stats (total coins + inventory value) ---------- */
+let devStatsCache: { data: { totalCoins: number; totalInventoryValue: number; userCount: number }; expiresAt: number } | null = null
+
 router.get('/dev-stats', requireAdmin, async (req: AuthRequest, res: Response) => {
+  if (devStatsCache && Date.now() < devStatsCache.expiresAt) {
+    res.json({ data: devStatsCache.data }); return
+  }
   try {
     const [coinsAgg, allUsers, itemPrices] = await Promise.all([
-      prisma.user.aggregate({ _sum: { coins: true }, where: { deletedAt: null } }),
+      prisma.user.aggregate({ _sum: { coins: true }, where: {} }),
       prisma.user.findMany({
-        where: { deletedAt: null },
-        select: { allTags: true, ownedNameColors: true, ownedPfpEffects: true },
+        where: {},
+        select: { allTags: true, ownedNameColors: true, ownedAvatarEffects: true },
       }),
       prisma.itemPrice.findMany({ where: { itemType: { not: 'meta' } } }),
     ]);
@@ -1109,23 +1134,31 @@ router.get('/dev-stats', requireAdmin, async (req: AuthRequest, res: Response) =
       dynamicPrices[`${row.itemType}:${row.itemId}`] = row.price;
     }
 
-    let totalInventoryValue = 0;
-    for (const user of allUsers) {
-      try {
-        const tags = JSON.parse((user.allTags as string) || '[]') as Array<{ tag: string }>;
-        const colors = JSON.parse((user.ownedNameColors as string) || '[]') as Array<{ id: string }>;
-        const pfps = JSON.parse((user.ownedPfpEffects as string) || '[]') as Array<{ id: string }>;
-        for (const t of tags) {
-          const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag);
-          const itemId = def?.id ?? t.tag.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-          totalInventoryValue += dynamicPrices[`tag:${itemId}`] ?? SEED_PRICES[`tag:${itemId}`] ?? 0;
-        }
-        for (const c of colors) totalInventoryValue += dynamicPrices[`name-color:${c.id}`] ?? SEED_PRICES[`name-color:${c.id}`] ?? 0;
-        for (const p of pfps) totalInventoryValue += dynamicPrices[`pfp:${p.id}`] ?? SEED_PRICES[`pfp:${p.id}`] ?? 0;
-      } catch { /* malformed JSON — skip */ }
+    function parseArr<T>(raw: unknown): T[] {
+      if (Array.isArray(raw)) return raw as T[]
+      try { return JSON.parse(String(raw ?? '[]')) } catch { return [] }
     }
 
-    res.json({ data: { totalCoins, totalInventoryValue, userCount: allUsers.length } });
+    let totalInventoryValue = 0;
+    for (const user of allUsers) {
+      const tags = parseArr<{ tag: string; tagColor?: string }>(user.allTags);
+      const colors = parseArr<{ id: string }>(user.ownedNameColors);
+      const avatars = parseArr<{ id: string }>(user.ownedAvatarEffects);
+      for (const t of tags) {
+        const def = TAG_BOX_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
+               ?? SPECIAL_TAGS.find(d => d.tag === t.tag && d.tagColor === t.tagColor)
+               ?? DEV_CURSE_ITEMS.find(d => d.tag === t.tag && d.tagColor === t.tagColor && d.itemType === 'tag')
+               ?? TAG_BOX_ITEMS.find(d => d.tag === t.tag)
+        const itemId = def?.id ?? t.tag
+        totalInventoryValue += dynamicPrices[`tag:${itemId}`] ?? SEED_PRICES[`tag:${itemId}`] ?? 0;
+      }
+      for (const c of colors) totalInventoryValue += dynamicPrices[`name-color:${c.id}`] ?? SEED_PRICES[`name-color:${c.id}`] ?? 0;
+      for (const p of avatars) totalInventoryValue += dynamicPrices[`avatar:${p.id}`] ?? SEED_PRICES[`avatar:${p.id}`] ?? 0;
+    }
+
+    const result = { totalCoins, totalInventoryValue, userCount: allUsers.length }
+    devStatsCache = { data: result, expiresAt: Date.now() + 5 * 60 * 1000 }
+    res.json({ data: result });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch dev stats' });
   }
@@ -1139,6 +1172,11 @@ router.put('/users/:id/coins', requireAdmin, async (req: AuthRequest, res: Respo
     if (!['add', 'remove', 'zero'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
     if (action !== 'zero' && (typeof amount !== 'number' || amount < 0)) {
       return res.status(400).json({ error: 'amount must be a non-negative number' });
+    }
+
+    if (action === 'add' && amount && targetId === req.userId) {
+      const err = checkDevCoinLimit(req.userId!, amount)
+      if (err) return res.status(429).json({ error: err })
     }
 
     const target = await prisma.user.findUnique({ where: { id: targetId }, select: { coins: true } });

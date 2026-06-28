@@ -52,6 +52,7 @@ export interface HACClass {
   room: string
   average: string | null
   scores: HACScore[]
+  categoryWeights?: Record<string, number>  // e.g. { Daily: 0.4, Minor: 0.3, Major: 0.3 }
 }
 
 export interface HACScore {
@@ -950,7 +951,30 @@ function parseClassBlock(
     })
   })
 
-  return { name, period: periodText, teacher, room: '', average, scores }
+  // Scrape category weights from the dgCourseCategories summary table.
+  // HAC renders a hidden "sg-view-quick" section per class with columns:
+  // Category | Student's Points | / Max Points | = Percent | * Category Weight | = Category Points
+  // The weight column (index 4) holds values like 70.00, 20.00, 10.00 (summing to 100).
+  const categoryWeights: Record<string, number> = {}
+  $el.find('[id*="dgCourseCategories"] tr.sg-asp-table-data-row, .sg-view-quick table tr.sg-asp-table-data-row').each((_k, row) => {
+    const cells = $(row).find('td')
+    if (cells.length < 5) return
+    const catName = cells.eq(0).text().trim()
+    const weightVal = parseFloat(cells.eq(4).text().trim())
+    if (catName && !isNaN(weightVal) && weightVal > 0) {
+      categoryWeights[catName] = weightVal / 100
+    }
+  })
+
+  return {
+    name,
+    period: periodText,
+    teacher,
+    room: '',
+    average,
+    scores,
+    ...(Object.keys(categoryWeights).length > 0 ? { categoryWeights } : {}),
+  }
 }
 
 export async function getTranscript(sessionToken: string): Promise<HACTranscript> {

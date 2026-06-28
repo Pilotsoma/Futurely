@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, FeedPost, FeedUserProfile } from '@/lib/api'
+import Portal from './Portal'
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -10,6 +11,18 @@ function timeAgo(dateStr: string): string {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
   return `${Math.floor(diff / 86400)}d ago`
+}
+
+const VERIFIED_BADGE_URL = 'https://static.vecteezy.com/system/resources/thumbnails/047/309/918/small/verified-badge-profile-icon-png.png'
+function VerifiedBadge({ variant, size = 18 }: { variant: 'yellow' | 'blue'; size?: number }) {
+  return (
+    <img
+      src={VERIFIED_BADGE_URL}
+      alt="Verified"
+      style={{ width: size, height: size, verticalAlign: 'middle', flexShrink: 0, display: 'inline-block',
+        filter: variant === 'yellow' ? 'hue-rotate(195deg) saturate(2) brightness(1.3)' : undefined }}
+    />
+  )
 }
 
 function parseHacName(raw: string | null | undefined): string {
@@ -36,32 +49,40 @@ function avatarContent(user: { name: string | null; avatarUrl?: string | null })
   return initials(user)
 }
 
-const PFP_BORDER_MAP: Record<string, string> = {
+const AVATAR_BORDER_MAP: Record<string, string> = {
   'border-green': '#22C55E', 'border-blue': '#3B82F6', 'border-red': '#EF4444',
   'border-navy': '#1D4ED8', 'border-teal': '#14B8A6', 'border-orange': '#F97316',
   'border-violet': '#7C3AED', 'border-cyan': '#06B6D4', 'border-hotpink': '#EC4899',
   'border-gold': '#D97706', 'border-lime': '#84CC16',
+  'border-yellow': '#EAB308', 'border-pink': '#F472B6', 'border-gray': '#6B7280',
+  'border-brown': '#92400E', 'border-rose': '#F43F5E', 'border-sky': '#0EA5E9',
+  'border-silver': '#C0C0C0',
 }
-const PFP_GLOW_MAP: Record<string, [string, string]> = {
-  'glow-pink': ['#EC4899', '#EC489955'],
+const AVATAR_GLOW_MAP: Record<string, [string, string]> = {
+  'glow-pink':   ['#EC4899', '#EC489955'],
   'glow-purple': ['#8B5CF6', '#8B5CF655'],
+  'glow-blue':   ['#3B82F6', '#3B82F655'],
+  'glow-orange': ['#F97316', '#F9731655'],
 }
-function pfpStyle(effect: string | null | undefined): React.CSSProperties {
+function avatarStyle(effect: string | null | undefined): React.CSSProperties {
   if (!effect) return {}
   if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
   if (effect === 'glow-gold' || effect === 'frame-black') return {}
-  if (PFP_BORDER_MAP[effect]) return { border: `2px solid ${PFP_BORDER_MAP[effect]}` }
-  if (PFP_GLOW_MAP[effect]) return { border: `2px solid ${PFP_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${PFP_GLOW_MAP[effect][1]}` }
+  if (AVATAR_BORDER_MAP[effect]) return { border: `2px solid ${AVATAR_BORDER_MAP[effect]}` }
+  if (AVATAR_GLOW_MAP[effect]) return { border: `2px solid ${AVATAR_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${AVATAR_GLOW_MAP[effect][1]}` }
   return {}
 }
-function pfpClass(effect: string | null | undefined): string {
-  if (effect === 'rainbow') return 'pfp-rainbow'
-  if (effect === 'glow-gold') return 'pfp-gold-fill'
-  if (effect === 'frame-black') return 'pfp-void-fill'
+function avatarClass(effect: string | null | undefined): string {
+  if (effect === 'rainbow') return 'avatar-rainbow'
+  if (effect === 'glow-gold') return 'avatar-gold-fill'
+  if (effect === 'frame-black') return 'avatar-void-fill'
   return ''
 }
 function nameColorStyle(color: string | null | undefined): React.CSSProperties {
-  return color && color !== 'rainbow' ? { color } : {}
+  if (!color || color === 'rainbow' || color === 'curse') return {}
+  if (color === '#111111') return { color, textShadow: '0 0 6px rgba(180,180,180,0.65)' }
+  if (color === '#C0C0C0') return { color, textShadow: '0 0 8px rgba(255,255,255,0.9), 0 0 2px rgba(255,255,255,0.6)' }
+  return { color }
 }
 function nameColorClass(color: string | null | undefined): string {
   return color === 'rainbow' ? 'name-rainbow' : ''
@@ -124,6 +145,7 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
   const isMythicTag = profile?.tag === 'GOD'
 
   return (
+    <Portal>
     <div style={S.overlay} onClick={onClose}>
       <div style={S.panel} onClick={e => e.stopPropagation()}>
         {loading ? (
@@ -134,8 +156,8 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
           <>
             <div style={S.header}>
               <div
-                className={pfpClass(profile.pfpEffect)}
-                style={{ ...S.avatar, ...pfpStyle(profile.pfpEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}
+                className={avatarClass(profile.avatarEffect)}
+                style={{ ...S.avatar, ...avatarStyle(profile.avatarEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}
               >
                 {avatarContent(profile)}
               </div>
@@ -144,15 +166,17 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
                   {displayName(profile)}
                 </div>
                 {profile.tag && !profile.chatBanned && (
-                  <span
-                    className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
-                    style={isDevTag ? S.tagDev : isMythicTag ? { ...S.tagGod, color: undefined, background: undefined, border: undefined } : isGodTag ? S.tagGod : {
-                      ...S.tag,
-                      color: profile.tagColor || 'var(--text-secondary)',
-                      background: profile.tagColor ? `${profile.tagColor}22` : 'rgba(128,128,128,0.12)',
-                      border: `1px solid ${profile.tagColor || 'rgba(128,128,128,0.4)'}`,
-                    }}
-                  >{profile.tag}</span>
+                  profile.tagColor === 'verified-yellow' || profile.tagColor === 'verified-blue'
+                    ? <VerifiedBadge variant={profile.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
+                    : <span
+                        className={isDevTag ? 'tag-rainbow' : isMythicTag ? 'tag-mythic' : isGodTag ? 'tag-god' : ''}
+                        style={isDevTag ? S.tagDev : isMythicTag ? { ...S.tagGod, color: undefined, background: undefined, border: undefined } : isGodTag ? S.tagGod : {
+                          ...S.tag,
+                          color: profile.tagColor || 'var(--text-secondary)',
+                          background: profile.tagColor ? `${profile.tagColor}22` : 'rgba(128,128,128,0.12)',
+                          border: `1px solid ${profile.tagColor || 'rgba(128,128,128,0.4)'}`,
+                        }}
+                      >{profile.tag}</span>
                 )}
               </div>
               <button style={S.closeBtn} onClick={onClose}>
@@ -216,6 +240,7 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
         )}
       </div>
     </div>
+    </Portal>
   )
 }
 

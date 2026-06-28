@@ -18,17 +18,60 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+// Prevents concurrent token refreshes — all callers share the same in-flight promise.
+let _refreshPromise: Promise<boolean> | null = null
+
+async function silentRefresh(): Promise<boolean> {
+  if (_refreshPromise) return _refreshPromise
+  _refreshPromise = (async () => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+    try {
+      const res = await fetch(`${BASE}/api/auth/refresh`, {
+        method: 'POST',
+        signal: controller.signal,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (!res.ok) { _apiToken = null; return false }
+      const { data } = (await res.json()) as { data: { token: string } }
+      _apiToken = data.token
+      return true
+    } catch {
+      _apiToken = null
+      return false
+    } finally {
+      clearTimeout(timeout)
+      _refreshPromise = null
+    }
+  })()
+  return _refreshPromise
+}
+
+async function request<T>(path: string, options?: RequestInit, _retried = false): Promise<T> {
   const token = _apiToken
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    credentials: 'include',  // sends httpOnly cookies (access_token, refresh_token) automatically
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
+  let res: Response
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...options,
+      signal: controller.signal,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options?.headers,
+      },
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
+  // On 401, attempt a silent token refresh and retry once.
+  if (res.status === 401 && !_retried) {
+    const refreshed = await silentRefresh()
+    if (refreshed) return request<T>(path, options, true)
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }
     const msg  = typeof body?.error === 'string' ? body.error : body?.error?.message
@@ -49,6 +92,7 @@ interface StudentData {
   name: string | null
   email: string
   role: string
+  hasPassword: boolean
   profile: {
     weightedGpa: number
     unweightedGpa: number
@@ -101,10 +145,10 @@ interface StudentData {
 }
 
 export const api = {
-  register: (email: string, password: string, name?: string, role?: string) =>
+  register: (email: string, password: string, otp: string, name?: string, role?: string) =>
     request<LoginResult>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, name, role }),
+      body: JSON.stringify({ email, password, otp, name, role }),
     }),
   login: (email: string, password: string) =>
     request<LoginResult>('/api/auth/login', {
@@ -113,6 +157,25 @@ export const api = {
     }),
   logout: () =>
     request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
+  authMe: () =>
+    request<{ id: number; email: string; name: string | null; role: string; emailVerified: boolean }>('/api/auth/me'),
+  searchSchools: (q: string) =>
+    request<Array<{ name: string; city: string; state: string }>>(`/api/schools/search?q=${encodeURIComponent(q)}`),
+  sendOtp: (email: string) =>
+    request<{ sent: boolean }>('/api/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  forgotPassword: (email: string) =>
+    request<{ message: string }>('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (token: string, password: string) =>
+    request<{ message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    }),
   me: () => request<StudentData>('/api/students/me'),
   updateProfile: (fields: { satScore?: number | null; actScore?: number | null; futureDecision?: string | null }) =>
     request<{ id: number }>('/api/students/me/profile', {
@@ -301,14 +364,14 @@ export const api = {
 
   // ── Study Feed ──────────────────────────────────────────────────────────────
 
-  feedPosts: (page = 1, limit = 20) =>
+  feedPosts: (page = 1, limit = 20, network: 'global' | 'isd' = 'global') =>
     request<{
       posts: FeedPost[]
       total: number
       page: number
       pageSize: number
       hasMore: boolean
-    }>(`/api/feed/posts?page=${page}&limit=${limit}`),
+    }>(`/api/feed/posts?page=${page}&limit=${limit}&network=${network}`),
 
   feedFollowingPosts: (page = 1, limit = 20) =>
     request<{
@@ -319,10 +382,10 @@ export const api = {
       hasMore: boolean
     }>(`/api/feed/posts/following?page=${page}&limit=${limit}`),
 
-  feedCreatePost: (body: string) =>
+  feedCreatePost: (body: string, network: 'global' | 'isd' = 'global') =>
     request<FeedPost>('/api/feed/posts', {
       method: 'POST',
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, network }),
     }),
 
   feedDeletePost: (postId: number) =>
@@ -544,6 +607,29 @@ export const api = {
       `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}${canvasInstanceUrl ? `?canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
     ),
 
+  canvasStartQuizSubmission: (courseId: number, quizId: number, canvasInstanceUrl?: string) =>
+    request<CanvasActiveQuizSubmission>(
+      `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}/submissions`,
+      { method: 'POST', body: JSON.stringify({ canvasInstanceUrl }) },
+    ),
+
+  canvasGetSubmissionQuestions: (courseId: number, quizId: number, submissionId: number, validationToken: string, canvasInstanceUrl?: string) =>
+    request<CanvasSubmissionQuestion[]>(
+      `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}/submissions/${submissionId}/questions?validationToken=${encodeURIComponent(validationToken)}${canvasInstanceUrl ? `&canvasInstanceUrl=${encodeURIComponent(canvasInstanceUrl)}` : ''}`,
+    ),
+
+  canvasSaveQuizAnswers: (courseId: number, quizId: number, submissionId: number, body: { validationToken: string; attempt: number; quizQuestions: Array<{ id: number; flagged: boolean; answer: unknown }>; canvasInstanceUrl?: string }) =>
+    request<{ ok: boolean }>(
+      `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}/submissions/${submissionId}/questions`,
+      { method: 'PUT', body: JSON.stringify(body) },
+    ),
+
+  canvasCompleteQuizSubmission: (courseId: number, quizId: number, submissionId: number, body: { validationToken: string; attempt: number; canvasInstanceUrl?: string }) =>
+    request<{ ok: boolean }>(
+      `/api/integrations/canvas/courses/${courseId}/quizzes/${quizId}/submissions/${submissionId}/complete`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+
   canvasSubmitAssignment: (courseId: number, assignmentId: number, submission: { submissionType: 'online_text_entry' | 'online_url'; body?: string; url?: string; canvasInstanceUrl?: string }) =>
     request<{ ok: boolean }>(
       `/api/integrations/canvas/courses/${courseId}/assignments/${assignmentId}/submit`,
@@ -582,7 +668,7 @@ export const api = {
   collegeRemove: (id: number) =>
     request<{ deleted: boolean }>(`/api/colleges/${id}`, { method: 'DELETE' }),
 
-  deleteAccount: (password: string) =>
+  deleteAccount: (password?: string) =>
     request<{ deleted: boolean }>('/api/auth/account', {
       method: 'DELETE',
       body: JSON.stringify({ password }),
@@ -604,13 +690,16 @@ export const api = {
       body: JSON.stringify({ streak: streak ?? 1 }),
     }),
 
+  marketplaceFreeSpin: () =>
+    request<{ coins: number; reward: number; rarity: string }>('/api/marketplace/free-spin', { method: 'POST' }),
+
   marketplaceInventory: () =>
     request<InventoryData>('/api/marketplace/inventory'),
 
   marketplaceOpenBox: (boxType: string, quantity = 1) =>
     request<BoxResult & { results?: Array<{ won: BoxResult['won']; alreadyHad: boolean }> }>('/api/marketplace/open-box', { method: 'POST', body: JSON.stringify({ boxType, quantity }) }),
 
-  marketplaceQuicksell: (itemType: 'tag' | 'name-color' | 'pfp', itemId: string) =>
+  marketplaceQuicksell: (itemType: 'tag' | 'name-color' | 'avatar', itemId: string) =>
     request<{ coins: number; payout: number }>('/api/marketplace/quicksell', {
       method: 'POST',
       body: JSON.stringify({ itemType, itemId }),
@@ -619,13 +708,19 @@ export const api = {
   marketplaceQuicksellDuplicates: (exclude: string[] = []) =>
     request<{ coins: number; sold: number; totalPayout: number }>('/api/marketplace/quicksell/duplicates', { method: 'POST', body: JSON.stringify({ exclude }), headers: { 'Content-Type': 'application/json' } }),
 
-  marketplaceEquip: (type: 'name-color' | 'pfp' | 'tag', itemId: string | null) =>
-    request<{ nameColor?: string | null; pfpEffect?: string | null }>('/api/marketplace/equip', {
+  marketplaceEquip: (type: 'name-color' | 'avatar' | 'tag', itemId: string | null) =>
+    request<{ nameColor?: string | null; avatarEffect?: string | null }>('/api/marketplace/equip', {
       method: 'PUT',
       body: JSON.stringify({ type, itemId }),
     }),
 
-  marketplaceAdminGrant: (payload: { type: 'coins'; amount: number } | { type: 'name-color' | 'pfp' | 'tag'; itemId: string }) =>
+  equipBadge: (itemId: string | null) =>
+    request<{ badge: string | null }>('/api/marketplace/equip', {
+      method: 'PUT',
+      body: JSON.stringify({ type: 'badge', itemId }),
+    }),
+
+  marketplaceAdminGrant: (payload: { type: 'coins'; amount: number } | { type: 'name-color' | 'avatar' | 'tag'; itemId: string }) =>
     request<{ coins?: number; granted?: MarketplaceItem & { tag?: string; tagColor?: string }; tag?: string; tagColor?: string }>('/api/marketplace/admin/grant', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -649,7 +744,7 @@ export const api = {
   marketplaceGetUserInventory: (userId: number) =>
     request<UserPublicInventory>(`/api/marketplace/users/${userId}/inventory`),
 
-  marketplaceCreateTrade: (payload: { receiverId: number; senderItems: TradeItem[]; receiverItems: TradeItem[] }) =>
+  marketplaceCreateTrade: (payload: { receiverId: number; senderItems: TradeItem[]; receiverItems: TradeItem[]; note?: string }) =>
     request<TradeOffer>('/api/marketplace/trades', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -680,10 +775,42 @@ export const api = {
     request<ItemSalePoint[]>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/history`),
 
   marketplaceItemOwners: (itemType: string, itemId: string) =>
-    request<ItemOwner[]>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/owners`),
+    request<ItemOwnersData>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/owners`),
 
   marketplaceLeaderboard: () =>
     request<LeaderboardData>('/api/marketplace/leaderboard'),
+
+  // ── Wandering Trader ──────────────────────────────────────────────────────────
+
+  traderStatus: () =>
+    request<{ sellsUsed: number; sellsRemaining: number; buysUsed: number; buysRemaining: number; tradesUsed: number; tradesRemaining: number }>('/api/marketplace/trader/status'),
+
+  traderCatalog: () =>
+    request<Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; traderPrice: number; tag?: string; tagColor?: string; value?: string }>>('/api/marketplace/trader/catalog'),
+
+  traderSell: (itemType: 'tag' | 'name-color' | 'avatar', itemId: string) =>
+    request<{ ok: boolean; payout: number; sellsRemaining: number }>('/api/marketplace/trader/sell', {
+      method: 'POST',
+      body: JSON.stringify({ itemType, itemId }),
+    }),
+
+  traderBuy: (itemType: 'tag' | 'name-color' | 'avatar', itemId: string) =>
+    request<{ ok: boolean; price: number; buysRemaining: number }>('/api/marketplace/trader/buy', {
+      method: 'POST',
+      body: JSON.stringify({ itemType, itemId }),
+    }),
+
+  traderTrade: (
+    offerItems: Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string }>,
+    wantItems: Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string }>,
+  ) =>
+    request<{ ok: boolean; tradesRemaining: number }>('/api/marketplace/trader/trade', {
+      method: 'POST',
+      body: JSON.stringify({ offerItems, wantItems }),
+    }),
+
+  spinStats: () =>
+    request<SpinStats>('/api/marketplace/spin-stats'),
 
   // ── Parent API ────────────────────────────────────────────────────────────────
 
@@ -715,6 +842,268 @@ export const api = {
 
   adminStats: () =>
     request<{ totalUsers: number; activeUsers: number; liveUsers: number }>('/api/marketplace/admin/stats'),
+
+  adminLookupUser: (userId: number) =>
+    request<{ id: number; name: string | null; hacName: string | null; email: string; role: string; tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; coins: number; loginStreak: number; chatBanned: boolean; marketplaceBanned: boolean; marketplaceAccess: boolean; deletedAt: string | null; createdAt: string; lastSeenAt: string | null }>(`/api/admin/users/${userId}`),
+
+  adminGrantMarketAccess: (userId: number) =>
+    request<{ ok: boolean }>('/api/admin/grant-market-access', { method: 'POST', body: JSON.stringify({ userId }) }),
+
+  adminBanMarketplace: (userId: number, banned: boolean) =>
+    request<{ ok: boolean }>('/api/admin/ban-marketplace', { method: 'POST', body: JSON.stringify({ userId, banned }) }),
+
+  sendCoins: (receiverId: number, amount: number) =>
+    request<{ ok: boolean; newBalance: number }>('/api/marketplace/coins/send', { method: 'POST', body: JSON.stringify({ receiverId, amount }) }),
+
+  // ── Educator (Teacher + Counselor shared) ─────────────────────────────────
+
+  educatorMe: () =>
+    request<{ role: string; name: string | null; email: string; requestStatus: string | null; requestedRole: string | null }>('/api/educator/me'),
+
+  educatorRequestRole: (requestedRole: 'TEACHER' | 'COUNSELOR', institution: string) =>
+    request<{ id: number }>('/api/educator/request-role', {
+      method: 'POST',
+      body: JSON.stringify({ requestedRole, institution }),
+    }),
+
+  educatorClassrooms: () =>
+    request<EducatorClassroom[]>('/api/educator/classrooms'),
+
+  educatorCreateClassroom: (name: string, description?: string) =>
+    request<EducatorClassroom>('/api/educator/classrooms', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    }),
+
+  educatorClassroomDetail: (classroomId: number) =>
+    request<EducatorClassroomDetail>(`/api/educator/classrooms/${classroomId}`),
+
+  educatorDeleteClassroom: (classroomId: number) =>
+    request<{ deleted: boolean }>(`/api/educator/classrooms/${classroomId}`, { method: 'DELETE' }),
+
+  educatorCreateAssignment: (classroomId: number, payload: { title: string; description?: string; subject: string; dueDate: string }) =>
+    request<EducatorAssignment>(`/api/educator/classrooms/${classroomId}/assignments`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  educatorGrantCoins: (classroomId: number, studentId: number, coins: number, reason?: string) =>
+    request<{ ok: boolean }>(`/api/educator/classrooms/${classroomId}/coins`, {
+      method: 'POST',
+      body: JSON.stringify({ studentId, coins, reason }),
+    }),
+
+  educatorStudentDetail: (classroomId: number, studentId: number) =>
+    request<EducatorStudentProfile>(`/api/educator/classrooms/${classroomId}/students/${studentId}`),
+
+  // ── Counselor ─────────────────────────────────────────────────────────────
+
+  counselorAddStudent: (studentId: number) =>
+    request<{ id: number }>('/api/counselor/students', {
+      method: 'POST',
+      body: JSON.stringify({ studentId }),
+    }),
+
+  counselorStudents: () =>
+    request<CounselorStudentSummary[]>('/api/counselor/students'),
+
+  counselorSearchStudents: (q: string) =>
+    request<Array<{ id: number; name: string | null; email: string; hacUsername: string | null }>>(`/api/counselor/students/search?q=${encodeURIComponent(q)}`),
+
+  counselorRemoveStudent: (studentId: number) =>
+    request<{ removed: boolean }>(`/api/counselor/students/${studentId}`, { method: 'DELETE' }),
+
+  counselorStudentDetail: (studentId: number) =>
+    request<CounselorStudentDetail>(`/api/counselor/students/${studentId}`),
+
+  counselorStudentCourses: (studentId: number) =>
+    request<CounselorStudentCourse[]>(`/api/counselor/students/${studentId}/courses`),
+
+  counselorAddCourseComment: (studentId: number, courseId: number, body: string) =>
+    request<CounselorComment>(`/api/counselor/students/${studentId}/courses/${courseId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+
+  counselorGetCourseComments: (studentId: number, courseId: number) =>
+    request<CounselorComment[]>(`/api/counselor/students/${studentId}/courses/${courseId}/comments`),
+
+  counselorAddRecommendation: (studentId: number, payload: { courseName: string; courseCode?: string; rationale?: string; semester: string }) =>
+    request<CounselorRecommendation>(`/api/counselor/students/${studentId}/recommendations`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  counselorGetRecommendations: (studentId: number) =>
+    request<CounselorRecommendation[]>(`/api/counselor/students/${studentId}/recommendations`),
+
+  counselorDeleteRecommendation: (id: number) =>
+    request<{ deleted: boolean }>(`/api/counselor/recommendations/${id}`, { method: 'DELETE' }),
+
+  counselorAddNote: (studentId: number, body: string) =>
+    request<CounselorNote>(`/api/counselor/students/${studentId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+
+  counselorGetNotes: (studentId: number) =>
+    request<CounselorNote[]>(`/api/counselor/students/${studentId}/notes`),
+
+  counselorUpdateNote: (id: number, body: string) =>
+    request<CounselorNote>(`/api/counselor/notes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ body }),
+    }),
+
+  counselorDeleteNote: (id: number) =>
+    request<{ deleted: boolean }>(`/api/counselor/notes/${id}`, { method: 'DELETE' }),
+
+  counselorAddActionItem: (studentId: number, payload: { title: string; description?: string; dueDate?: string }) =>
+    request<CounselorActionItem>(`/api/counselor/students/${studentId}/action-items`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  counselorGetActionItems: (studentId: number) =>
+    request<CounselorActionItem[]>(`/api/counselor/students/${studentId}/action-items`),
+
+  counselorUpdateActionItem: (id: number, payload: { title?: string; description?: string; dueDate?: string; completed?: boolean }) =>
+    request<CounselorActionItem>(`/api/counselor/action-items/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  counselorDeleteActionItem: (id: number) =>
+    request<{ deleted: boolean }>(`/api/counselor/action-items/${id}`, { method: 'DELETE' }),
+
+  counselorSendChat: (studentId: number, body: string) =>
+    request<CounselorChatMessage>(`/api/counselor/students/${studentId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+
+  counselorGetChat: (studentId: number, cursor?: string, limit = 50) =>
+    request<CounselorChatPage>(`/api/counselor/students/${studentId}/chat?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
+
+  counselorMarkChatRead: (studentId: number) =>
+    request<{ ok: boolean }>(`/api/counselor/students/${studentId}/chat/read`, { method: 'PUT' }),
+
+  counselorUnreadTotal: () =>
+    request<{ total: number }>('/api/counselor/unread-total'),
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+
+  adminEducatorRequests: (status: 'PENDING' | 'APPROVED' | 'DENIED' = 'PENDING') =>
+    request<EducatorRequest[]>(`/api/admin/educator-requests?status=${status}`),
+
+  adminApproveEducatorRequest: (id: number) =>
+    request<{ ok: boolean }>(`/api/admin/educator-requests/${id}/approve`, { method: 'POST' }),
+
+  adminDenyEducatorRequest: (id: number) =>
+    request<{ ok: boolean }>(`/api/admin/educator-requests/${id}/deny`, { method: 'POST' }),
+
+  adminRevokeEducatorRequest: (id: number) =>
+    request<{ ok: boolean }>(`/api/admin/educator-requests/${id}/revoke`, { method: 'POST' }),
+
+  adminReinstateEducatorRequest: (id: number) =>
+    request<{ ok: boolean }>(`/api/admin/educator-requests/${id}/reinstate`, { method: 'POST' }),
+
+  // ── Student classroom + counselor ────────────────────────────────────────
+
+  studentClassrooms: () =>
+    request<StudentClassroom[]>('/api/students/classrooms'),
+
+  studentClassroomDetail: (id: number) =>
+    request<ClassroomDetail>(`/api/students/classrooms/${id}`),
+
+  studentJoinClassroom: (inviteCode: string) =>
+    request<{ id: number }>('/api/students/classrooms/join', {
+      method: 'POST',
+      body: JSON.stringify({ inviteCode: inviteCode.toUpperCase() }),
+    }),
+
+  classroomPosts: (classroomId: number, page = 1) =>
+    request<ClassroomPost[]>(`/api/students/classrooms/${classroomId}/posts?page=${page}`),
+
+  classroomCreatePost: (classroomId: number, body: string) =>
+    request<ClassroomPost>(`/api/students/classrooms/${classroomId}/posts`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+
+  // ── Question Sets ──────────────────────────────────────────────────────────
+  sets: (params?: { q?: string; subject?: string; mine?: boolean }) => {
+    const qs = new URLSearchParams()
+    if (params?.q) qs.set('q', params.q)
+    if (params?.subject) qs.set('subject', params.subject)
+    if (params?.mine) qs.set('mine', 'true')
+    return request<QuestionSet[]>(`/api/sets?${qs.toString()}`)
+  },
+  createSet: (data: { title: string; description?: string | null; subject?: string | null; visibility: 'PUBLIC' | 'PRIVATE'; questions?: QuestionInput[] }) =>
+    request<QuestionSetWithQuestions>('/api/sets', { method: 'POST', body: JSON.stringify(data) }),
+  getSet: (id: number) =>
+    request<QuestionSetWithQuestions>(`/api/sets/${id}`),
+  updateSet: (id: number, data: Partial<{ title: string; description: string | null; subject: string | null; visibility: 'PUBLIC' | 'PRIVATE' }>) =>
+    request<QuestionSetWithQuestions>(`/api/sets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteSet: (id: number) =>
+    request<{ id: number }>(`/api/sets/${id}`, { method: 'DELETE' }),
+  addQuestion: (setId: number, q: QuestionInput) =>
+    request<Question>(`/api/sets/${setId}/questions`, { method: 'POST', body: JSON.stringify(q) }),
+  updateQuestion: (setId: number, qid: number, q: Partial<QuestionInput>) =>
+    request<Question>(`/api/sets/${setId}/questions/${qid}`, { method: 'PUT', body: JSON.stringify(q) }),
+  deleteQuestion: (setId: number, qid: number) =>
+    request<{ id: number }>(`/api/sets/${setId}/questions/${qid}`, { method: 'DELETE' }),
+  reorderQuestions: (setId: number, order: number[]) =>
+    request<{ ok: boolean }>(`/api/sets/${setId}/questions/reorder`, { method: 'PUT', body: JSON.stringify({ order }) }),
+
+  // ── Game Sessions ──────────────────────────────────────────────────────────
+  createGame: (setId: number) =>
+    request<GameSession>('/api/games', { method: 'POST', body: JSON.stringify({ setId }) }),
+  createBattleGame: (setId: number) =>
+    request<GameSession>('/api/games', { method: 'POST', body: JSON.stringify({ setId, type: 'BATTLE' }) }),
+  getGame: (code: string) =>
+    request<GameSession>(`/api/games/${code.toUpperCase()}`),
+  joinGame: (code: string) =>
+    request<GameSession>(`/api/games/${code.toUpperCase()}/join`, { method: 'POST' }),
+  startGame: (code: string) =>
+    request<GameSession>(`/api/games/${code.toUpperCase()}/start`, { method: 'POST' }),
+  submitAnswer: (code: string, data: { questionId: number; answer: string; timeMs: number }) =>
+    request<{ isCorrect: boolean; pointsEarned: number }>(`/api/games/${code.toUpperCase()}/answer`, { method: 'POST', body: JSON.stringify(data) }),
+  revealResults: (code: string) =>
+    request<{ ok: boolean }>(`/api/games/${code.toUpperCase()}/reveal`, { method: 'POST' }),
+  nextQuestion: (code: string) =>
+    request<{ status: string; questionIndex?: number }>(`/api/games/${code.toUpperCase()}/next`, { method: 'POST' }),
+
+  studentActionItems: () =>
+    request<StudentActionItem[]>('/api/students/action-items'),
+
+  studentPendingCounselorLinks: () =>
+    request<CounselorLink[]>('/api/students/counselor-links/pending'),
+
+  studentActiveCounselorLinks: () =>
+    request<CounselorLink[]>('/api/students/counselor-links/active'),
+
+  studentAcceptCounselorLink: (counselorId: number) =>
+    request<{ ok: boolean }>(`/api/students/counselor-links/${counselorId}/accept`, { method: 'POST' }),
+
+  studentDeclineCounselorLink: (counselorId: number) =>
+    request<{ deleted: boolean }>(`/api/students/counselor-links/${counselorId}/decline`, { method: 'DELETE' }),
+
+  studentSendCounselorMessage: (counselorId: number, body: string) =>
+    request<CounselorChatMessage>(`/api/students/counselor-chat/${counselorId}`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+
+  studentGetCounselorChat: (counselorId: number) =>
+    request<{ messages: CounselorChatMessage[]; nextCursor: string | null }>(`/api/students/counselor-chat/${counselorId}`),
+
+  studentCounselorPortal: (counselorId: number) =>
+    request<StudentCounselorPortal>(`/api/students/counselor-portal/${counselorId}`),
+
+  studentToggleActionItem: (id: number) =>
+    request<StudentActionItem>(`/api/students/action-items/${id}`, { method: 'PATCH' }),
+
 }
 
 // ── Planner types ─────────────────────────────────────────────────────────
@@ -916,6 +1305,34 @@ export interface CanvasQuizSubmission {
   submission_data?: CanvasQuizSubmissionData[]
 }
 
+export interface CanvasActiveQuizSubmission {
+  id: number
+  quiz_id: number
+  attempt: number
+  validation_token: string
+  started_at: string | null
+  end_at: string | null
+  workflow_state: string
+  time_limit: number | null
+}
+
+export interface CanvasSubmissionQuestionAnswer {
+  id: number
+  text: string
+  html?: string
+  match_id?: number
+}
+
+export interface CanvasSubmissionQuestion {
+  id: number
+  question_name: string
+  question_text: string
+  question_type: string
+  points_possible: number
+  answers?: CanvasSubmissionQuestionAnswer[]
+  matches?: Array<{ text: string; match_id: number }>
+}
+
 export interface CanvasCourseFile {
   id: number
   display_name: string
@@ -971,7 +1388,8 @@ export interface FeedUser {
   tag: string | null
   tagColor: string | null
   nameColor: string | null
-  pfpEffect: string | null
+  avatarEffect: string | null
+  badge?: string | null
   avatarUrl?: string | null
 }
 
@@ -1002,6 +1420,8 @@ export interface FeedPost {
   unboxItemRarity: string | null
   unboxItemEstValue: number | null
   unboxItemTagColor: string | null
+  network: string
+  isdCode: string | null
   _count: { likes: number; comments: number; giveawayEntries: number }
 }
 
@@ -1019,10 +1439,12 @@ export interface FeedComment {
 export interface FeedUserProfile {
   id: number
   name: string | null
+  hacName?: string | null
   tag: string | null
   tagColor: string | null
   nameColor: string | null
-  pfpEffect: string | null
+  avatarEffect: string | null
+  badge?: string | null
   avatarUrl?: string | null
   role: string
   isFollowing: boolean
@@ -1033,6 +1455,8 @@ export interface FeedUserProfile {
   allTags: Array<{ tag: string; tagColor: string }>
   _count: { followers: number; following: number; posts: number }
   coins?: number
+  isdCode?: string | null
+  isdDisplayName?: string | null
 }
 
 export interface MarketplaceItem {
@@ -1051,15 +1475,33 @@ export interface TagInventoryItem {
 }
 
 export interface InventoryData {
+  name?: string | null
   coins: number
   canClaimToday: boolean
   tag: string | null
   tagColor: string | null
   nameColor: string | null
-  pfpEffect: string | null
+  avatarEffect: string | null
+  badge?: string | null
   ownedTags: TagInventoryItem[]
   ownedNameColors: MarketplaceItem[]
-  ownedPfpEffects: MarketplaceItem[]
+  ownedAvatarEffects: MarketplaceItem[]
+  marketplaceAccess?: boolean
+  nextFreeSpin?: string | null
+  isdCode?: string | null
+  isdDisplayName?: string | null
+}
+
+export interface SpinStats {
+  spinCoinsSpent: number
+  spinTotalSpins: number
+  spinCommon: number
+  spinUncommon: number
+  spinRare: number
+  spinEpic: number
+  spinLegendary: number
+  spinMythic: number
+  spinCurse: number
 }
 
 export interface BoxResult {
@@ -1069,7 +1511,7 @@ export interface BoxResult {
 }
 
 export interface TradeItem {
-  type: 'tag' | 'name-color' | 'pfp'
+  type: 'tag' | 'name-color' | 'avatar'
   id: string
   tag?: string
   tagColor?: string
@@ -1091,7 +1533,7 @@ export interface MarketplaceListing {
   status: string
   buyerId: number | null
   createdAt: string
-  seller: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }
+  seller: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
 }
 
 export interface TradeOffer {
@@ -1101,28 +1543,32 @@ export interface TradeOffer {
   senderItems: TradeItem[]
   receiverItems: TradeItem[]
   status: string
+  note?: string | null
   createdAt: string
-  sender: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }
-  receiver: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }
+  sender: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
+  receiver: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
 }
 
 export interface UserPublicInventory {
-  user: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null }
+  user: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
   tags: TagInventoryItem[]
   nameColors: MarketplaceItem[]
-  pfpEffects: MarketplaceItem[]
+  avatarEffects: MarketplaceItem[]
 }
 
 export interface ItemSalePoint { price: number; soldAt: string }
 
 export interface ItemOwner {
   rank: number; id: number; name: string | null
-  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null
+  tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; badge?: string | null
+  qty: number
 }
+
+export interface ItemOwnersData { owners: ItemOwner[]; total: number }
 
 export interface LeaderboardEntry {
   rank: number; id: number; name: string | null
-  tag: string | null; tagColor: string | null; nameColor: string | null; pfpEffect: string | null; value: number
+  tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; badge?: string | null; value: number
 }
 
 export interface LeaderboardData {
@@ -1187,10 +1633,280 @@ export interface AppNotification {
   id: number
   userId: number
   fromUserId: number
-  type: 'FOLLOW' | 'LIKE' | 'COMMENT' | 'GIVEAWAY_WIN' | 'TRADE_OFFER' | 'TRADE_ACCEPTED' | 'TRADE_DECLINED' | 'LISTING_SOLD' | 'ASSIGNMENT_CREATED'
+  type: 'FOLLOW' | 'LIKE' | 'COMMENT' | 'GIVEAWAY_WIN' | 'TRADE_OFFER' | 'TRADE_ACCEPTED' | 'TRADE_DECLINED' | 'LISTING_SOLD' | 'ASSIGNMENT_CREATED' | 'TEACHER_ASSIGNMENT' | 'CLASSROOM_JOINED' | 'COUNSELOR_LINKED' | 'COUNSELOR_NOTE_ADDED' | 'COUNSELOR_RECOMMENDATION_ADDED' | 'ACTION_ITEM_CREATED' | 'COIN_RECEIVED'
   postId: number | null
   preview: string | null
   read: boolean
   createdAt: string
   sender: FeedUser
+}
+
+// ── Educator types ─────────────────────────────────────────────────────────
+
+export interface EducatorClassroom {
+  id: number
+  name: string
+  inviteCode: string
+  description: string | null
+  _count: { memberships: number }
+}
+
+export interface EducatorAssignment {
+  id: number
+  title: string
+  subject: string
+  description: string | null
+  dueDate: string
+}
+
+export interface EducatorClassroomDetail {
+  id: number
+  name: string
+  inviteCode: string
+  description: string | null
+  memberships: Array<{
+    student: { id: number; name: string | null; email: string }
+  }>
+  assignments: EducatorAssignment[]
+}
+
+export interface EducatorStudentProfile {
+  id: number
+  name: string | null
+  email: string
+  courses: Array<{ id: number; name: string; grade: { letterGrade: string; percentage: number } | null }>
+}
+
+// ── Counselor types ─────────────────────────────────────────────────────────
+
+export interface CounselorStudentProfile {
+  gradeLevel: number | null
+  graduationYear: number | null
+  weightedGpa: number | null
+  unweightedGpa: number | null
+  satScore: number | null
+  actScore: number | null
+}
+
+export interface CounselorStudentSummary {
+  id: number
+  name: string | null
+  email: string
+  profile: CounselorStudentProfile | null
+  unreadCount: number
+}
+
+export interface CounselorStudentDetail {
+  id: number
+  name: string | null
+  email: string
+  profile: CounselorStudentProfile | null
+}
+
+export interface CounselorStudentCourse {
+  id: number
+  name: string
+  teacher: string
+  period: number | string
+  grade: { letterGrade: string; percentage: number } | null
+}
+
+export interface CounselorComment {
+  id: number
+  body: string
+  createdAt: string
+  author?: { id: number; name: string | null }
+}
+
+export interface CounselorRecommendation {
+  id: number
+  courseName: string
+  courseCode: string | null
+  rationale: string | null
+  semester: string
+  createdAt: string
+}
+
+export interface CounselorNote {
+  id: number
+  body: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CounselorActionItem {
+  id: number
+  title: string
+  description: string | null
+  dueDate: string | null
+  completed: boolean
+  createdAt: string
+}
+
+export interface CounselorChatMessage {
+  id: number
+  body: string
+  senderId: number | null
+  senderName: string | null
+  createdAt: string
+}
+
+export interface CounselorChatPage {
+  messages: CounselorChatMessage[]
+  nextCursor: string | null
+}
+
+// ── Student classroom + counselor types ────────────────────────────────────
+
+export interface StudentClassroom {
+  id: number
+  name: string
+  description: string | null
+  inviteCode: string
+  educator: { id: number; name: string | null; email: string }
+}
+
+export interface ClassroomAssignment {
+  id: number
+  title: string
+  description: string | null
+  subject: string
+  dueDate: string
+  createdAt: string
+}
+
+export interface ClassroomDetail extends StudentClassroom {
+  assignments: ClassroomAssignment[]
+  memberships: Array<{ id: number; student: { id: number; name: string | null } }>
+}
+
+export interface ClassroomPost {
+  id: number
+  classroomId: number
+  body: string
+  createdAt: string
+  author: {
+    id: number
+    name: string | null
+    tag: string | null
+    tagColor: string | null
+    nameColor: string | null
+    avatarUrl: string | null
+  }
+}
+
+export interface StudentActionItem {
+  id: number
+  title: string
+  description: string | null
+  dueDate: string | null
+  completed: boolean
+  createdAt: string
+}
+
+export interface StudentCounselorNote {
+  id: number
+  body: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudentCounselorRecommendation {
+  id: number
+  courseName: string
+  courseCode: string | null
+  rationale: string | null
+  semester: string
+  createdAt: string
+}
+
+export interface StudentCounselorPortal {
+  counselor: { id: number; name: string | null; email: string }
+  notes: StudentCounselorNote[]
+  recommendations: StudentCounselorRecommendation[]
+  actionItems: StudentActionItem[]
+}
+
+export interface CounselorLink {
+  id: number
+  counselorId: number
+  studentId: number
+  status: string
+  createdAt: string
+  counselor: { id: number; name: string | null; email: string }
+}
+
+// ── Admin educator-request types ───────────────────────────────────────────
+
+export interface EducatorRequest {
+  id: number
+  requestedRole: 'TEACHER' | 'COUNSELOR'
+  institution: string
+  status: 'PENDING' | 'APPROVED' | 'DENIED'
+  createdAt: string
+  user: { id: number; name: string | null; email: string }
+}
+
+// ── Review Game types ───────────────────────────────────────────────────────
+
+export interface QuestionInput {
+  questionText: string
+  questionType: 'MULTIPLE_CHOICE' | 'TRUE_FALSE'
+  options: string[]
+  correctAnswer: string
+  timeLimit?: number
+}
+
+export interface Question {
+  id: number
+  setId: number
+  orderIndex: number
+  questionText: string
+  questionType: 'MULTIPLE_CHOICE' | 'TRUE_FALSE'
+  options: string[]
+  correctAnswer: string
+  timeLimit: number
+}
+
+export interface QuestionSet {
+  id: number
+  creatorId: number
+  title: string
+  description: string | null
+  subject: string | null
+  visibility: 'PUBLIC' | 'PRIVATE'
+  createdAt: string
+  updatedAt: string
+  creator: { id: number; name: string | null }
+  _count?: { questions: number }
+}
+
+export interface QuestionSetWithQuestions extends QuestionSet {
+  questions: Question[]
+}
+
+export interface GameParticipant {
+  id: number
+  sessionId: number
+  userId: number
+  score: number
+  joinedAt: string
+  user: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; avatarUrl: string | null }
+}
+
+export interface GameSession {
+  id: number
+  setId: number
+  hostId: number
+  joinCode: string
+  status: 'WAITING' | 'ACTIVE' | 'FINISHED'
+  type: 'QUIZ' | 'BATTLE'
+  currentQuestion: number
+  createdAt: string
+  set: {
+    title: string
+    questions: Array<{ id: number; questionText: string; questionType: string; options: string[]; timeLimit: number; correctAnswer?: string }>
+  }
+  host: { id: number; name: string | null }
+  participants: GameParticipant[]
 }
