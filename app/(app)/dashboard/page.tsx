@@ -62,7 +62,6 @@ function useCountUpFloat(target: number | null, duration = 900): string {
 }
 
 const STREAK_MILESTONES: Array<{ days: number; emoji: string; tag?: string; tagColor?: string; perk?: string; perkColor?: string }> = [
-  { days: 3,   perk: 'Marketplace Access', perkColor: '#F97316', emoji: '🛒' },
   { days: 7,   tag: 'Novice',  tagColor: '#22C55E', emoji: '✅' },
   { days: 14,  tag: 'Pro',     tagColor: '#3B82F6', emoji: '⚡' },
   { days: 30,  tag: 'Veteran', tagColor: '#F97316', emoji: '🏅' },

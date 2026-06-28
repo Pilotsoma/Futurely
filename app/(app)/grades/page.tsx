@@ -59,13 +59,6 @@ const CARDS = [
     icon: '📅',
     iconBg: 'rgba(239,68,68,0.1)',
   },
-  {
-    href: '/grades/canvas',
-    title: 'Canvas',
-    desc: 'Visit Canvas in Futurely',
-    icon: '🎓',
-    iconBg: 'rgba(234,179,8,0.1)',
-  },
 ]
 
 export default function GradesHubPage() {
@@ -75,7 +68,7 @@ export default function GradesHubPage() {
       <h1 style={S.title}>Grade Portal</h1>
       <div style={S.grid}>
         {CARDS.map(card => (
-          <button key={card.href} onClick={() => router.push(card.href)} style={S.card}>
+          <button key={card.href} onClick={() => router.push(card.href)} className="ns-card" style={S.card}>
             <div style={{ ...S.iconBox, background: card.iconBg }}>
               <span style={{ fontSize: 22 }}>{card.icon}</span>
             </div>
@@ -96,7 +89,7 @@ export default function GradesHubPage() {
 const S: Record<string, React.CSSProperties> = {
   title:    { fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 24 },
   grid:     { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 },
-  card:     { display: 'flex', alignItems: 'center', gap: 16, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'border-color 0.15s' },
+  card:     { display: 'flex', alignItems: 'center', gap: 16, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'border-color 0.15s, box-shadow 0.2s, transform 0.2s' },
   iconBox:  { width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   cardTitle:{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 3 },
   cardDesc: { fontSize: 12.5, color: 'var(--text-secondary)' },
