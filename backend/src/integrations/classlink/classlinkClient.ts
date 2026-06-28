@@ -1,11 +1,11 @@
-import axios from 'axios';
+import axios, { type AxiosInstance } from 'axios';
 import { CookieJar } from 'tough-cookie';
 import { wrapper } from 'axios-cookiejar-support';
 import * as cheerio from 'cheerio';
 import { DistrictConfig } from './districtConfig';
 
 export interface ClasslinkSession {
-  http: ReturnType<typeof wrapper>;
+  http: AxiosInstance;
   cookieJar: CookieJar;
   districtId: string;
   userId: number;
@@ -100,19 +100,37 @@ export async function loginClasslink(
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'Referer': finalLandingUrl,
+      'Origin': new URL(finalLandingUrl).origin,
     },
     maxRedirects: 15,
   });
   const postFinalUrl: string = (postResp.request?.res?.responseUrl as string) || '';
   console.log(`[ClassLink:${district.id}] postFinalUrl=${postFinalUrl}`);
 
-  // Step 4: Verify — if we ended up back on a login/signin page, credentials were wrong
-  const isOnLoginPage =
+  // Step 4: Verify login success.
+  // Primary check: inspect the session cookies on the ClassLink domain.
+  // A successful ClassLink login sets a session cookie (e.g. clsession, .AspNet.Cookies, or similar).
+  const classlinkCookies = jar.getCookiesSync('https://launchpad.classlink.com');
+  const hasSessionCookie = classlinkCookies.some(c =>
+    c.key.toLowerCase().includes('session') ||
+    c.key.toLowerCase().includes('clsession') ||
+    c.key.toLowerCase().includes('auth') ||
+    c.key.toLowerCase().includes('.aspnet')
+  );
+  console.log(`[ClassLink:${district.id}] cookies after login: ${classlinkCookies.map(c => c.key).join(', ')}`);
+
+  // Secondary check: if the POST redirect ended back on a login/error page
+  const landedOnLoginPage =
     postFinalUrl.includes('idp/login') ||
+    postFinalUrl.includes('/login') ||
     postFinalUrl.includes('accounts.google.com');
 
-  if (isOnLoginPage) {
-    // Double-check with a fresh launchpad fetch before declaring failure
+  if (landedOnLoginPage && !hasSessionCookie) {
+    throw new Error('CLASSLINK_INVALID_CREDENTIALS: Login failed. Check username and password.');
+  }
+
+  if (landedOnLoginPage && hasSessionCookie) {
+    // Redirected to login page but have a cookie — verify by fetching launchpad
     const verifyResp = await http.get(launchpadUrl);
     const verifyUrl: string = (verifyResp.request?.res?.responseUrl as string) || '';
     console.log(`[ClassLink:${district.id}] verifyUrl=${verifyUrl}`);
@@ -130,6 +148,7 @@ export async function loginClasslink(
   };
 
   sessions.set(userId, session);
+  console.log(`[ClassLink:${district.id}] Session stored for userId=${userId}`);
   return session;
 }
 

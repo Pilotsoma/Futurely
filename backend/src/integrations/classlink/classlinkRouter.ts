@@ -98,11 +98,36 @@ router.get('/schoology/gradebook', asyncHandler(async (req, res) => {
     return;
   }
 
-  const password = decryptPassword(connection.encryptedPassword);
-  const district = getDistrict(connection.districtUrl);
-  const session = await getOrRefreshSession(userId, connection.hacUsername, password, district);
-  const gradebook = await getSchoologyGradebook(session, district);
-  res.json(gradebook);
+  let district;
+  try {
+    district = getDistrict(connection.districtUrl);
+  } catch {
+    res.status(400).json({ error: { code: 'UNKNOWN_DISTRICT', message: `Stored district "${connection.districtUrl}" is no longer configured.` } });
+    return;
+  }
+
+  if (!district.schoology.enabled) {
+    res.status(400).json({ error: { code: 'SCHOOLOGY_DISABLED', message: `Schoology is not enabled for district "${district.id}".` } });
+    return;
+  }
+
+  try {
+    const password = decryptPassword(connection.encryptedPassword);
+    const session = await getOrRefreshSession(userId, connection.hacUsername, password, district);
+    const gradebook = await getSchoologyGradebook(session, district);
+    res.json(gradebook);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.startsWith('SCHOOLOGY_SSO_FAILED')) {
+      res.status(502).json({ error: { code: 'SCHOOLOGY_SSO_FAILED', message: 'Could not establish Schoology session via ClassLink. Try reconnecting.' } });
+      return;
+    }
+    if (msg.startsWith('CLASSLINK_INVALID_CREDENTIALS')) {
+      res.status(401).json({ error: { code: 'INVALID_CREDENTIALS', message: 'ClassLink credentials are no longer valid. Please reconnect.' } });
+      return;
+    }
+    throw err; // re-throw for the global error handler
+  }
 }));
 
 // GET /integrations/classlink/infinitecampus
@@ -118,11 +143,36 @@ router.get('/infinitecampus', asyncHandler(async (req, res) => {
     return;
   }
 
-  const password = decryptPassword(connection.encryptedPassword);
-  const district = getDistrict(connection.districtUrl);
-  const session = await getOrRefreshSession(userId, connection.hacUsername, password, district);
-  const data = await getInfiniteCampusData(session, district);
-  res.json(data);
+  let district;
+  try {
+    district = getDistrict(connection.districtUrl);
+  } catch {
+    res.status(400).json({ error: { code: 'UNKNOWN_DISTRICT', message: `Stored district "${connection.districtUrl}" is no longer configured.` } });
+    return;
+  }
+
+  if (!district.infiniteCampus.enabled) {
+    res.status(400).json({ error: { code: 'IC_DISABLED', message: `Infinite Campus is not enabled for district "${district.id}".` } });
+    return;
+  }
+
+  try {
+    const password = decryptPassword(connection.encryptedPassword);
+    const session = await getOrRefreshSession(userId, connection.hacUsername, password, district);
+    const data = await getInfiniteCampusData(session, district);
+    res.json(data);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.startsWith('IC_SSO_FAILED')) {
+      res.status(502).json({ error: { code: 'IC_SSO_FAILED', message: 'Could not establish Infinite Campus session via ClassLink. Try reconnecting.' } });
+      return;
+    }
+    if (msg.startsWith('CLASSLINK_INVALID_CREDENTIALS')) {
+      res.status(401).json({ error: { code: 'INVALID_CREDENTIALS', message: 'ClassLink credentials are no longer valid. Please reconnect.' } });
+      return;
+    }
+    throw err;
+  }
 }));
 
 export default router;

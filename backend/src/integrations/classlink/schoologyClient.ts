@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { AxiosInstance } from 'axios';
 import { ClasslinkSession } from './classlinkClient';
 import { DistrictConfig } from './districtConfig';
 
@@ -45,15 +46,41 @@ export async function getSchoologyGradebook(
   const { http } = session;
   const schoologyBase = `https://${district.schoology.domain}`;
 
-  // Navigate to Schoology via ClassLink SSO to establish Schoology cookies
-  await http.get(`https://launchpad.classlink.com/${district.classlink.tenant}/apps`);
-  const schoologyHome = await http.get(schoologyBase);
+  // Navigate to Schoology via ClassLink SSO:
+  // Step 1 — load the launchpad apps page, find the Schoology app link, and follow it.
+  // Going directly to the Schoology domain skips the SSO handshake and results in a redirect
+  // to Schoology's own login page instead of the ClassLink-authenticated session.
+  console.log(`[Schoology:${district.id}] Navigating launchpad for SSO...`);
+  const appsResp = await http.get(`https://launchpad.classlink.com/${district.classlink.tenant}/apps`);
+  const $apps = cheerio.load(appsResp.data as string);
+
+  // Find any link pointing to the Schoology domain
+  let ssoEntryUrl: string | undefined;
+  $apps('a[href]').each((_i, el) => {
+    const href = $apps(el).attr('href') ?? '';
+    if (href.includes('schoology') || href.includes(district.schoology.domain)) {
+      ssoEntryUrl = href.startsWith('http') ? href : `https://launchpad.classlink.com${href}`;
+      return false; // break
+    }
+  });
+
+  if (ssoEntryUrl) {
+    console.log(`[Schoology:${district.id}] Following SSO entry link: ${ssoEntryUrl}`);
+    await http.get(ssoEntryUrl, { maxRedirects: 15 });
+  } else {
+    // Fallback: try navigating directly — may work if already have Schoology cookies
+    console.log(`[Schoology:${district.id}] No SSO link found on launchpad — trying direct navigation`);
+  }
+
+  // Step 2 — now fetch Schoology home to confirm we have a valid session
+  const schoologyHome = await http.get(schoologyBase, { maxRedirects: 15 });
   const finalUrl: string = (schoologyHome.request?.res?.responseUrl as string) || '';
+  console.log(`[Schoology:${district.id}] finalUrl after SSO: ${finalUrl}`);
 
   if (!finalUrl.includes(district.schoology.domain)) {
     throw new Error(
       `SCHOOLOGY_SSO_FAILED: Could not reach Schoology for district "${district.id}". ` +
-      `Run debug-classlink.ts to inspect the redirect chain.`
+      `Final URL was: ${finalUrl}. Run debug-classlink.ts to inspect the redirect chain.`
     );
   }
 
@@ -64,11 +91,18 @@ export async function getSchoologyGradebook(
   try {
     const sectionsResp = await http.get(`${schoologyBase}/iapi2/sections/student/me`, {
       headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+      validateStatus: (s) => s < 500, // don't throw on 403/404
     });
-    if (sectionsResp.status === 200 && sectionsResp.data?.sections) {
-      courses = parseSectionsFromAPI(sectionsResp.data.sections);
+    console.log(`[Schoology:${district.id}] iapi2 sections status=${sectionsResp.status}`);
+    if (sectionsResp.status === 200) {
+      const rawSections = sectionsResp.data?.sections ?? sectionsResp.data?.section;
+      if (Array.isArray(rawSections) && rawSections.length > 0) {
+        courses = parseSectionsFromAPI(rawSections);
+        console.log(`[Schoology:${district.id}] Parsed ${courses.length} courses from iapi2`);
+      }
     }
-  } catch {
+  } catch (err) {
+    console.warn(`[Schoology:${district.id}] iapi2 sections error:`, err instanceof Error ? err.message : String(err));
     // fall through to HTML scrape
   }
 
@@ -115,7 +149,7 @@ function parseSectionsFromGradesPage($: cheerio.CheerioAPI): SchoologyCourse[] {
 }
 
 async function getAssignmentsForSection(
-  http: any,
+  http: AxiosInstance,
   base: string,
   sectionId: string,
   _courseId: string
@@ -125,9 +159,13 @@ async function getAssignmentsForSection(
   try {
     const resp = await http.get(`${base}/iapi2/gradebook/student/${sectionId}`, {
       headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+      validateStatus: (s) => s < 500,
     });
-    if (resp.status === 200 && resp.data?.grade_items) {
-      return parseAssignmentsFromAPI(resp.data.grade_items, sectionId);
+    if (resp.status === 200) {
+      const items = resp.data?.grade_items ?? resp.data?.gradeItems;
+      if (Array.isArray(items) && items.length > 0) {
+        return parseAssignmentsFromAPI(items, sectionId);
+      }
     }
   } catch { /* fall through */ }
 

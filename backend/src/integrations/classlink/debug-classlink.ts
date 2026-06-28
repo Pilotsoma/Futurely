@@ -28,14 +28,28 @@ async function main() {
     process.exit(1);
   }
 
-  const district = getDistrict(districtId);
-  const outDir = path.join(__dirname, '..', '..', '..', '..', 'debug-classlink-output');
+  let district;
+  try {
+    district = getDistrict(districtId);
+  } catch (e: any) {
+    console.error(`Error: ${e.message}`);
+    process.exit(1);
+  }
+
+  // __dirname is available in CommonJS (ts-node default). Fall back to process.cwd() if undefined.
+  const baseDir = (typeof __dirname !== 'undefined' ? __dirname : process.cwd());
+  const outDir = path.join(baseDir, '..', '..', '..', '..', 'debug-classlink-output');
   fs.mkdirSync(outDir, { recursive: true });
 
   console.log(`\nLogging into ClassLink for district: ${district.name}`);
   // Use a dummy numeric userId for debug purposes
   const session = await loginClasslink(999999, username, password, district);
   console.log('ClassLink login succeeded\n');
+
+  // Dump cookies after login
+  const cookies = session.cookieJar.getCookiesSync('https://launchpad.classlink.com');
+  console.log(`Session cookies on launchpad.classlink.com (${cookies.length}):`);
+  cookies.forEach(c => console.log(`  ${c.key}=${c.value.slice(0, 30)}...`));
 
   // ── Dump 1: ClassLink Launchpad ──────────────────────────────────────────
   if (dumpAll || flags.includes('--dump-classlink')) {
