@@ -49,6 +49,7 @@ import gamesRouter from './routes/games'
 import { requireAuth } from './middleware/auth'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
+import classlinkRouter from './integrations/classlink/classlinkRouter'
 import { logger } from './common/logger'
 
 const app = express()
@@ -304,6 +305,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/notifications', devBypass, notificationsRouter)
   app.use('/integrations/grades', devBypass, gradesIntegrationRouter)
   app.use('/integrations/canvas', devBypass, canvasRouter)
+  app.use('/integrations/classlink', devBypass, classlinkRouter)
   app.use('/colleges', devBypass, collegesRouter)
   app.use('/marketplace', devBypass, marketplaceRouter)
   app.use('/educator', devBypass, educatorRouter)
@@ -321,6 +323,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/notifications', requireAuth, notificationsRouter)
   app.use('/integrations/grades', requireAuth, gradesIntegrationRouter)
   app.use('/integrations/canvas', requireAuth, canvasRouter)
+  app.use('/integrations/classlink', requireAuth, classlinkRouter)
   app.use('/colleges', requireAuth, collegesRouter)
   app.use('/marketplace', requireAuth, marketplaceRouter)
   app.use('/educator', requireAuth, educatorRouter)

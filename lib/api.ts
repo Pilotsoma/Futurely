@@ -1104,6 +1104,27 @@ export const api = {
   studentToggleActionItem: (id: number) =>
     request<StudentActionItem>(`/api/students/action-items/${id}`, { method: 'PATCH' }),
 
+  // ── ClassLink Integration ─────────────────────────────────────────────────────
+
+  classlinkDistricts: () =>
+    request<{ districts: { id: string; name: string; state: string }[] }>('/api/integrations/classlink/districts'),
+
+  classlinkConnect: (districtId: string, username: string, password: string) =>
+    request<{ success: boolean; districtName: string; schoology: boolean; infiniteCampus: boolean }>(
+      '/api/integrations/classlink/connect',
+      { method: 'POST', body: JSON.stringify({ districtId, username, password }) }
+    ),
+
+  classlinkSchoologyGradebook: () =>
+    request<{ courses: unknown[]; assignments: unknown[]; lastUpdated: string }>(
+      '/api/integrations/classlink/schoology/gradebook'
+    ),
+
+  classlinkInfiniteCampus: () =>
+    request<{ schedule: unknown[]; reportCards: unknown[]; attendance: unknown[]; transcript: unknown[]; counselorName: string | null; counselorEmail: string | null }>(
+      '/api/integrations/classlink/infinitecampus'
+    ),
+
 }
 
 // ── Planner types ─────────────────────────────────────────────────────────
