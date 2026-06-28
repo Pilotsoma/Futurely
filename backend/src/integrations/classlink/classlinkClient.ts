@@ -55,14 +55,7 @@ export async function loginClasslink(
     );
   }
 
-  // Extract CSRF token from the login form
-  const csrfToken =
-    ($('input[name="_csrf"]').val() as string) ||
-    ($('input[name="csrf_token"]').val() as string) ||
-    ($('input[name="authenticity_token"]').val() as string) ||
-    '';
-
-  // Determine the form action — ClassLink IdP uses /idp/login or the form's own action
+  // Determine the form action — resolve relative URLs against where we landed
   const formAction = ($('form').attr('action') as string | undefined) || '';
   const loginPostUrl = formAction.startsWith('http')
     ? formAction
@@ -70,25 +63,42 @@ export async function loginClasslink(
       ? new URL(formAction, finalLandingUrl).toString()
       : `https://launchpad.classlink.com/idp/login`;
 
-  // Step 2: POST credentials
+  // Step 2: Extract ALL hidden form fields (state, nonce, client_id, redirect_uri, etc.)
+  // ClassLink uses OAuth/OIDC — these tokens are required for the session to be established.
   const formData = new URLSearchParams();
-  formData.append('username', username);
-  formData.append('password', password);
-  if (csrfToken) formData.append('_csrf', csrfToken);
+  $('form input').each((_, el) => {
+    const name = $(el).attr('name');
+    const value = ($(el).val() as string) ?? '';
+    if (name) formData.set(name, value);
+  });
+  // Override with actual credentials
+  formData.set('username', username);
+  formData.set('password', password);
 
-  await http.post(loginPostUrl, formData.toString(), {
+  // Step 3: POST credentials — follow redirects back to the launchpad
+  const postResp = await http.post(loginPostUrl, formData.toString(), {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'Referer': finalLandingUrl,
     },
+    maxRedirects: 15,
   });
+  const postFinalUrl: string = (postResp.request?.res?.responseUrl as string) || '';
 
-  // Step 3: Verify login — launchpad should load without redirecting back to /login
-  const verifyResp = await http.get(launchpadUrl);
-  const verifyUrl: string = (verifyResp.request?.res?.responseUrl as string) || '';
+  // Step 4: Verify — if we ended up back on a login/signin page, credentials were wrong
+  const isOnLoginPage =
+    postFinalUrl.includes('/login') ||
+    postFinalUrl.includes('/signin') ||
+    postFinalUrl.includes('idp/login') ||
+    postFinalUrl.includes('accounts.google.com');
 
-  if (verifyUrl.includes('/login') || verifyUrl.includes('/signin') || verifyUrl.includes('idp/login')) {
-    throw new Error('CLASSLINK_INVALID_CREDENTIALS: Login failed. Check username and password.');
+  if (isOnLoginPage) {
+    // Double-check with a fresh launchpad fetch before declaring failure
+    const verifyResp = await http.get(launchpadUrl);
+    const verifyUrl: string = (verifyResp.request?.res?.responseUrl as string) || '';
+    if (verifyUrl.includes('/login') || verifyUrl.includes('/signin') || verifyUrl.includes('idp/login')) {
+      throw new Error('CLASSLINK_INVALID_CREDENTIALS: Login failed. Check username and password.');
+    }
   }
 
   const session: ClasslinkSession = {
