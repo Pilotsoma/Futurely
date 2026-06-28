@@ -100,11 +100,16 @@ export default function SettingsPage() {
   const [portalStatus, setPortalStatus]     = useState<PortalStatus | null>(null)
   const [portalLoading, setPortalLoading]   = useState(true)
   const [portalSystem, setPortalSystem]     = useState<SystemType>('HAC')
-  const [portalUrl, setPortalUrl]           = useState('https://homeaccess.katyisd.org/')
+  const [portalUrl, setPortalUrl]           = useState('')
   const [portalUsername, setPortalUsername] = useState('')
   const [portalPassword, setPortalPassword] = useState('')
   const [portalConnecting, setPortalConnecting] = useState(false)
   const [portalError, setPortalError]       = useState<string | null>(null)
+  const [portalIsdSearch, setPortalIsdSearch]   = useState('')
+  const [portalIsdOpen, setPortalIsdOpen]       = useState(false)
+  const [portalSelectedIsd, setPortalSelectedIsd] = useState<(typeof SORTED_ISD_LIST)[0] | null>(null)
+  const [portalCustomUrl, setPortalCustomUrl]   = useState(false)
+  const portalIsdRef = useRef<HTMLDivElement>(null)
   const [syncing, setSyncing]             = useState(false)
   const [syncMsg, setSyncMsg]             = useState<string | null>(null)
 
@@ -223,6 +228,9 @@ export default function SettingsPage() {
       if (districtRef.current && !districtRef.current.contains(e.target as Node)) {
         setDistrictOpen(false)
       }
+      if (portalIsdRef.current && !portalIsdRef.current.contains(e.target as Node)) {
+        setPortalIsdOpen(false)
+      }
     }
     document.addEventListener('mousedown', onClickOutside)
     return () => document.removeEventListener('mousedown', onClickOutside)
@@ -287,12 +295,22 @@ export default function SettingsPage() {
     router.push('/login')
   }
 
+  const isPortalClasslink = !!(portalSelectedIsd?.classlinkId && !portalSelectedIsd?.hacUrl)
+
   async function handleConnect() {
-    if (!portalUrl || !portalUsername || !portalPassword) { setPortalError('Please fill in all fields.'); return }
+    if (!portalUsername || !portalPassword) { setPortalError('Please enter your username and password.'); return }
+    const needsUrl = !isPortalClasslink && (portalCustomUrl || !portalSelectedIsd)
+    if (needsUrl && !portalUrl) { setPortalError('Please select your school district or enter a portal URL.'); return }
+    if (!isPortalClasslink && !portalCustomUrl && !portalSelectedIsd) { setPortalError('Please select your school district.'); return }
     setPortalConnecting(true); setPortalError(null)
     try {
-      if (portalSystem === 'HAC') await api.portalLoginHAC(portalUrl, portalUsername, portalPassword)
-      else await api.portalLoginPS(portalUrl, portalUsername, portalPassword)
+      if (isPortalClasslink && portalSelectedIsd?.classlinkId) {
+        await api.classlinkConnect(portalSelectedIsd.classlinkId, portalUsername, portalPassword)
+      } else if (portalSystem === 'HAC') {
+        await api.portalLoginHAC(portalUrl, portalUsername, portalPassword)
+      } else {
+        await api.portalLoginPS(portalUrl, portalUsername, portalPassword)
+      }
       setPortalPassword(''); setPortalUsername('')
       const [status, fresh] = await Promise.all([api.portalStatus(), api.me()])
       setPortalStatus(status)
@@ -536,25 +554,101 @@ export default function SettingsPage() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={S.sysToggle}>
-                  {(['HAC', 'PowerSchool'] as SystemType[]).map(s => (
-                    <button key={s} onClick={() => { setPortalSystem(s); setPortalUrl(s === 'HAC' ? 'https://homeaccess.katyisd.org/' : ''); setPortalError(null) }}
-                      style={{ ...S.sysBtn, background: portalSystem === s ? 'var(--primary)' : 'transparent', color: portalSystem === s ? '#060D10' : 'var(--text-secondary)' }}>
-                      {s}
+
+                {/* ── District picker ── */}
+                <div>
+                  <label style={S.fieldLabel}>School District</label>
+                  <div ref={portalIsdRef} style={{ position: 'relative' }}>
+                    <button type="button" onClick={() => { setPortalIsdOpen(v => !v); setPortalIsdSearch('') }}
+                      style={{ ...S.districtBtn, color: portalSelectedIsd ? 'var(--text)' : 'var(--text-muted)' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flex: 1, textAlign: 'left' as const }}>
+                        {portalSelectedIsd
+                          ? `${portalSelectedIsd.name} (${portalSelectedIsd.state})`
+                          : portalCustomUrl ? 'Other / Not listed'
+                          : 'Search for your school district…'}
+                      </span>
+                      <span style={{ fontSize: 11, flexShrink: 0 }}>{portalIsdOpen ? '▲' : '▼'}</span>
                     </button>
-                  ))}
-                </div>
-                {[
-                  { label: 'Portal URL', value: portalUrl, onChange: setPortalUrl, type: 'url', placeholder: 'https://', ac: '' },
-                  { label: 'Username',   value: portalUsername, onChange: setPortalUsername, type: 'text', placeholder: 'Your school username', ac: 'username' },
-                  { label: 'Password',   value: portalPassword, onChange: setPortalPassword, type: 'password', placeholder: 'Your school password', ac: 'current-password' },
-                ].map(f => (
-                  <div key={f.label}>
-                    <label style={S.fieldLabel}>{f.label}</label>
-                    <input className="ns-input" type={f.type} value={f.value} onChange={e => f.onChange(e.target.value)}
-                      placeholder={f.placeholder} disabled={portalConnecting} autoComplete={f.ac} />
+                    {portalIsdOpen && (
+                      <div style={S.isdPanel}>
+                        <div style={{ padding: '8px 8px 4px' }}>
+                          <input autoFocus type="text" value={portalIsdSearch}
+                            onChange={e => setPortalIsdSearch(e.target.value)}
+                            placeholder="Type to search…"
+                            style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' as const }}
+                            onClick={e => e.stopPropagation()} />
+                        </div>
+                        <div style={{ maxHeight: 220, overflowY: 'auto' as const }}>
+                          {SORTED_ISD_LIST
+                            .filter(isd => (isd.hacUrl || isd.classlinkId) && (
+                              isd.name.toLowerCase().includes(portalIsdSearch.toLowerCase()) ||
+                              isd.state.toLowerCase().includes(portalIsdSearch.toLowerCase())
+                            ))
+                            .map(isd => (
+                              <button key={isd.hacUrl ?? isd.classlinkId ?? isd.name} type="button"
+                                onClick={() => {
+                                  setPortalSelectedIsd(isd)
+                                  setPortalUrl(isd.hacUrl ?? '')
+                                  setPortalCustomUrl(false)
+                                  setPortalIsdOpen(false)
+                                  // Reset system toggle: ClassLink districts skip HAC/PS entirely
+                                  if (!isd.classlinkId) setPortalSystem('HAC')
+                                  setPortalError(null)
+                                }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 12px', background: portalSelectedIsd === isd ? 'var(--primary-dim)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' as const, color: portalSelectedIsd === isd ? 'var(--primary)' : 'var(--text)' }}>
+                                <span style={{ fontWeight: 500, fontSize: 13 }}>{isd.name}</span>
+                                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8, flexShrink: 0 }}>
+                                  {isd.state}{isd.classlinkId ? ' · ClassLink' : ''}
+                                </span>
+                              </button>
+                            ))}
+                          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+                          <button type="button"
+                            onClick={() => { setPortalSelectedIsd(null); setPortalCustomUrl(true); setPortalUrl(''); setPortalIsdOpen(false); setPortalError(null) }}
+                            style={{ display: 'block', width: '100%', padding: '9px 12px', background: portalCustomUrl ? 'var(--primary-dim)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' as const, color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: 13 }}>
+                            Other / My district is not listed
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ))}
+                </div>
+
+                {/* ── HAC / PowerSchool toggle — only for non-ClassLink districts ── */}
+                {!isPortalClasslink && (
+                  <div style={S.sysToggle}>
+                    {(['HAC', 'PowerSchool'] as SystemType[]).map(s => (
+                      <button key={s} onClick={() => { setPortalSystem(s); setPortalError(null) }}
+                        style={{ ...S.sysBtn, background: portalSystem === s ? 'var(--primary)' : 'transparent', color: portalSystem === s ? '#060D10' : 'var(--text-secondary)' }}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* ── Custom portal URL — only when "Other" selected ── */}
+                {portalCustomUrl && !isPortalClasslink && (
+                  <div>
+                    <label style={S.fieldLabel}>Portal URL</label>
+                    <input className="ns-input" type="url" value={portalUrl} onChange={e => setPortalUrl(e.target.value)}
+                      placeholder="https://homeaccess.yourisd.org/" disabled={portalConnecting} />
+                  </div>
+                )}
+
+                {/* ── Credentials ── */}
+                <div>
+                  <label style={S.fieldLabel}>{isPortalClasslink ? 'ClassLink Username' : 'Username'}</label>
+                  <input className="ns-input" type="text" value={portalUsername} onChange={e => setPortalUsername(e.target.value)}
+                    placeholder={isPortalClasslink ? 'Your ClassLink username' : 'Your school username'}
+                    disabled={portalConnecting} autoComplete="username" />
+                </div>
+                <div>
+                  <label style={S.fieldLabel}>{isPortalClasslink ? 'ClassLink Password' : 'Password'}</label>
+                  <input className="ns-input" type="password" value={portalPassword} onChange={e => setPortalPassword(e.target.value)}
+                    placeholder={isPortalClasslink ? 'Your ClassLink password' : 'Your school password'}
+                    disabled={portalConnecting} autoComplete="current-password" />
+                </div>
+
                 {portalError && <p style={{ color: 'var(--error)', fontSize: 12.5, lineHeight: 1.4 }}>{portalError}</p>}
                 <button className="ns-btn-primary" style={{ height: 44, marginTop: 2 }} onClick={handleConnect} disabled={portalConnecting}>
                   {portalConnecting ? 'Connecting…' : 'Connect Portal'}
@@ -1024,6 +1118,8 @@ const S: Record<string, React.CSSProperties> = {
   disconnectBtn:{ color: 'var(--error)', borderColor: 'rgba(239,68,68,0.3)', fontSize: 13 },
   sysToggle:    { display: 'flex', background: 'var(--surface-2)', borderRadius: 8, padding: 3, border: '1px solid var(--border)' },
   sysBtn:       { flex: 1, borderRadius: 6, padding: '7px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', transition: 'background 0.15s, color 0.15s' },
+  districtBtn:  { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 13px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' },
+  isdPanel:     { position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', overflow: 'hidden' },
   fieldLabel:   { display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 },
   logoutBtn:    { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: 'transparent', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '10px 0', color: 'var(--error)', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 4 },
 }
