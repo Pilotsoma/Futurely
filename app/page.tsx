@@ -277,7 +277,7 @@ export default function LandingPage() {
           </Reveal>
           <Reveal delay={0.18}>
             <BentoCard accent="#C45A1A" icon={ICON_STREAK} label="Daily Streaks"
-              desc="Log in every day. Build your streak. Earn coins, exclusive tags, and unlock the Marketplace." />
+              desc="Log in every day. Build your streak. Earn coins and unlock exclusive tags the longer you stay consistent." />
           </Reveal>
         </div>
 
@@ -292,8 +292,8 @@ export default function LandingPage() {
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
               </svg>
-            } label="Marketplace"
-              desc="Unlock at a 3-day streak. Buy, sell, and trade items with coins you earn by showing up. Earn enough coins and you can snag exclusive profile effects, name colors, and gear."
+            } label="Reward Shop"
+              desc="Earn coins from daily streaks and use them to unlock exclusive profile effects, name colors, and cosmetic gear — the more you show up, the more you can earn."
               large />
           </Reveal>
         </div>

@@ -47,7 +47,7 @@ function useCountUpFloat(target: number | null, duration = 900): string {
 }
 
 const STREAK_MILESTONES: Array<{ days: number; emoji: string; tag?: string; tagColor?: string; perk?: string; perkColor?: string }> = [
-  { days: 3,   perk: 'Marketplace Access', perkColor: '#F97316', emoji: '🛒' },
+  { days: 3,   tag: 'Early Bird', tagColor: '#F97316', emoji: '⭐' },
   { days: 7,   tag: 'Novice',  tagColor: '#22C55E', emoji: '✅' },
   { days: 14,  tag: 'Pro',     tagColor: '#3B82F6', emoji: '⚡' },
   { days: 30,  tag: 'Veteran', tagColor: '#F97316', emoji: '🏅' },
@@ -126,7 +126,6 @@ const QUICK_LINKS = [
   { href: '/planner', label: 'Planner',         sub: 'Assignments & tasks',  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A6E2D" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, iconBg: 'rgba(138,110,45,0.09)' },
   { href: '/feed',    label: 'Study Feed',      sub: 'Connect with peers',   icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6A5A8A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>, iconBg: 'rgba(106,90,138,0.09)' },
   { href: '/colleges',label: 'Colleges',        sub: 'Track your college list', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C45A1A" strokeWidth="1.8" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, iconBg: 'rgba(196,90,26,0.09)' },
-  { href: '/marketplace',label: 'Marketplace',   sub: 'Buy, sell & trade items', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A5A2D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>, iconBg: 'rgba(138,90,45,0.09)' },
 ]
 
 export default function DashboardPage() {
@@ -413,7 +412,7 @@ export default function DashboardPage() {
       <motion.p style={{ ...S.cardLabel, marginBottom: 14 }} {...staggerItem(5)}>Quick Access</motion.p>
       <div style={S.tilesGrid}>
         {QUICK_LINKS.map((tile, i) => (
-          <motion.button key={tile.href} onClick={() => router.push(tile.href)} style={S.tile} {...staggerItem(6 + i)}>
+          <motion.button key={tile.href} onClick={() => router.push(tile.href)} style={S.tile} whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }} {...staggerItem(6 + i)}>
             <div style={{ ...S.tileIcon, background: tile.iconBg }}>{tile.icon}</div>
             <div>
               <div style={S.tileTitle}>{tile.label}</div>
@@ -663,36 +662,36 @@ const gradientStyle: React.CSSProperties = {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 },
-  greeting:   { fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 },
-  name:       { fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' },
+  pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 },
+  greeting:   { fontSize: 14, color: 'var(--text-secondary)', marginBottom: 3 },
+  name:       { fontSize: 32, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' },
   dateChip:   { fontSize: 12, color: 'var(--primary)', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 20, padding: '5px 12px', marginTop: 4 },
-  topRow:     { display: 'flex', gap: 16, marginBottom: 16 },
-  card:       { padding: 20, marginBottom: 16 },
+  topRow:     { display: 'flex', gap: 20, marginBottom: 20 },
+  card:       { padding: 24, marginBottom: 20 },
   cardLabel:  { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)' },
-  gpaRow:     { display: 'flex', gap: 0, marginTop: 14, alignItems: 'center' },
+  gpaRow:     { display: 'flex', gap: 0, marginTop: 16, alignItems: 'center' },
   gpaBlock:   { flex: 1, textAlign: 'center' as const },
-  gpaNum:     { fontSize: 36, fontWeight: 800, letterSpacing: '-1px', lineHeight: 1 },
-  gpaTag:     { fontSize: 11, color: 'var(--text-secondary)', marginTop: 5 },
-  gpaDivider: { width: 1, height: 44, background: 'var(--border)', flexShrink: 0 },
+  gpaNum:     { fontSize: 40, fontWeight: 800, letterSpacing: '-1px', lineHeight: 1 },
+  gpaTag:     { fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 },
+  gpaDivider: { width: 1, height: 48, background: 'var(--border)', flexShrink: 0 },
   countPill:  { background: 'var(--error)', color: '#fff', borderRadius: 100, padding: '2px 9px', fontSize: 11, fontWeight: 700 },
-  emptyMsg:   { color: 'var(--success)', fontSize: 13, fontStyle: 'italic' },
-  dueRow:     { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 },
+  emptyMsg:   { color: 'var(--success)', fontSize: 14, fontStyle: 'italic' },
+  dueRow:     { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
   dueDot:     { width: 7, height: 7, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0 },
-  dueTitle:   { fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
-  dueSub:     { fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 1 },
-  dueTime:    { fontSize: 11.5, color: 'var(--text-muted)', flexShrink: 0 },
-  statsRow:   { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 },
-  statCard:   { padding: '16px', textAlign: 'center' as const },
-  statNum:    { fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 4 },
-  statLabel:  { fontSize: 11.5, color: 'var(--text-secondary)' },
-  statSub:    { fontSize: 10, color: 'var(--text-muted)', marginTop: 4, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
-  tilesGrid:  { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 },
-  tile:       { display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'border-color 0.15s' },
-  tileIcon:   { width: 42, height: 42, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  tileTitle:  { fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 2 },
-  tileSub:    { fontSize: 12, color: 'var(--text-secondary)' },
-  aiBarWrap:  { paddingBottom: 20 },
+  dueTitle:   { fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
+  dueSub:     { fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 },
+  dueTime:    { fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 },
+  statsRow:   { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 },
+  statCard:   { padding: '20px', textAlign: 'center' as const, transition: 'transform 0.2s, box-shadow 0.2s' },
+  statNum:    { fontSize: 32, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6 },
+  statLabel:  { fontSize: 12, color: 'var(--text-secondary)' },
+  statSub:    { fontSize: 11, color: 'var(--text-muted)', marginTop: 4, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
+  tilesGrid:  { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginBottom: 24 },
+  tile:       { display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s' },
+  tileIcon:   { width: 46, height: 46, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  tileTitle:  { fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 3 },
+  tileSub:    { fontSize: 12.5, color: 'var(--text-secondary)' },
+  aiBarWrap:  { paddingBottom: 24 },
   popupOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 },
   popupCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, maxWidth: 380, width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
   popupClose: { position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', padding: 4, lineHeight: 1 },

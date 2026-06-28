@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const CARDS = [
@@ -59,23 +60,23 @@ const CARDS = [
     icon: '📅',
     iconBg: 'rgba(239,68,68,0.1)',
   },
-  {
-    href: '/grades/canvas',
-    title: 'Canvas',
-    desc: 'Visit Canvas in Futurely',
-    icon: '🎓',
-    iconBg: 'rgba(234,179,8,0.1)',
-  },
 ]
 
 export default function GradesHubPage() {
   const router = useRouter()
+  const [hovered, setHovered] = useState<string | null>(null)
   return (
     <div className="fade-up">
       <h1 style={S.title}>Grade Portal</h1>
       <div style={S.grid}>
         {CARDS.map(card => (
-          <button key={card.href} onClick={() => router.push(card.href)} style={S.card}>
+          <button
+            key={card.href}
+            onClick={() => router.push(card.href)}
+            onMouseEnter={() => setHovered(card.href)}
+            onMouseLeave={() => setHovered(null)}
+            style={{ ...S.card, ...(hovered === card.href ? { transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', borderColor: 'var(--border-hover)' } : {}) }}
+          >
             <div style={{ ...S.iconBox, background: card.iconBg }}>
               <span style={{ fontSize: 22 }}>{card.icon}</span>
             </div>
@@ -94,10 +95,10 @@ export default function GradesHubPage() {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  title:    { fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 24 },
-  grid:     { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 },
-  card:     { display: 'flex', alignItems: 'center', gap: 16, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'border-color 0.15s' },
-  iconBox:  { width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  cardTitle:{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 3 },
-  cardDesc: { fontSize: 12.5, color: 'var(--text-secondary)' },
+  title:    { fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 28 },
+  grid:     { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 },
+  card:     { display: 'flex', alignItems: 'center', gap: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s' },
+  iconBox:  { width: 52, height: 52, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  cardTitle:{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 4 },
+  cardDesc: { fontSize: 13, color: 'var(--text-secondary)' },
 }
