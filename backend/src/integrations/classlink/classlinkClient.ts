@@ -71,9 +71,29 @@ export async function loginClasslink(
     const value = ($(el).val() as string) ?? '';
     if (name) formData.set(name, value);
   });
-  // Override with actual credentials
-  formData.set('username', username);
-  formData.set('password', password);
+
+  // Detect the actual field names for username and password — ClassLink uses 'username',
+  // but some districts use 'email', 'j_username', or the first text/email input on the page.
+  const usernameFieldName =
+    $('form input[name="username"]').length ? 'username' :
+    $('form input[name="email"]').length ? 'email' :
+    $('form input[name="j_username"]').length ? 'j_username' :
+    $('form input[name="user"]').length ? 'user' :
+    ($('form input[type="email"]').attr('name') as string | undefined) ||
+    ($('form input[type="text"]').first().attr('name') as string | undefined) ||
+    'username';
+
+  const passwordFieldName =
+    $('form input[name="password"]').length ? 'password' :
+    $('form input[name="j_password"]').length ? 'j_password' :
+    $('form input[name="pass"]').length ? 'pass' :
+    ($('form input[type="password"]').attr('name') as string | undefined) ||
+    'password';
+
+  console.log(`[ClassLink:${district.id}] loginUrl=${finalLandingUrl} postUrl=${loginPostUrl} userField=${usernameFieldName} passField=${passwordFieldName}`);
+
+  formData.set(usernameFieldName, username);
+  formData.set(passwordFieldName, password);
 
   // Step 3: POST credentials — follow redirects back to the launchpad
   const postResp = await http.post(loginPostUrl, formData.toString(), {
@@ -84,11 +104,10 @@ export async function loginClasslink(
     maxRedirects: 15,
   });
   const postFinalUrl: string = (postResp.request?.res?.responseUrl as string) || '';
+  console.log(`[ClassLink:${district.id}] postFinalUrl=${postFinalUrl}`);
 
   // Step 4: Verify — if we ended up back on a login/signin page, credentials were wrong
   const isOnLoginPage =
-    postFinalUrl.includes('/login') ||
-    postFinalUrl.includes('/signin') ||
     postFinalUrl.includes('idp/login') ||
     postFinalUrl.includes('accounts.google.com');
 
@@ -96,7 +115,8 @@ export async function loginClasslink(
     // Double-check with a fresh launchpad fetch before declaring failure
     const verifyResp = await http.get(launchpadUrl);
     const verifyUrl: string = (verifyResp.request?.res?.responseUrl as string) || '';
-    if (verifyUrl.includes('/login') || verifyUrl.includes('/signin') || verifyUrl.includes('idp/login')) {
+    console.log(`[ClassLink:${district.id}] verifyUrl=${verifyUrl}`);
+    if (verifyUrl.includes('idp/login') || verifyUrl.includes('accounts.google.com')) {
       throw new Error('CLASSLINK_INVALID_CREDENTIALS: Login failed. Check username and password.');
     }
   }
