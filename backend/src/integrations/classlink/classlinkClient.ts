@@ -1,3 +1,4 @@
+// DISABLED: ClassLink integration paused, pending completion
 import axios, { type AxiosInstance } from 'axios';
 import { CookieJar } from 'tough-cookie';
 import { wrapper } from 'axios-cookiejar-support';
@@ -173,3 +174,4 @@ export async function getOrRefreshSession(
   }
   return loginClasslink(userId, username, password, district);
 }
+

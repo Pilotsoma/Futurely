@@ -273,7 +273,7 @@ export default function CounselorDashboardPage() {
 
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 14 }}>
-              No students match "{filterQuery}"
+              No students match &quot;{filterQuery}&quot;
             </div>
           ) : (
             <div style={S.grid}>

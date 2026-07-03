@@ -525,11 +525,10 @@ router.get('/prices', async (_req, res: Response): Promise<void> => {
 router.post('/daily-coins', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ error: 'Unauthorized' }); return }
   try {
-    const { streak } = req.body as { streak?: number }
-    const streakDay = typeof streak === 'number' && streak >= 1 ? streak : 1
-    const streakBonus = Math.min(400, 50 + (streakDay - 1) * 7)
+    // Flat daily base — the streak feature (and its escalating bonus) was removed.
+    const dailyBase = 50
 
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { coins: true, lastCoinClaim: true, profile: { select: { weightedGpa: true, unweightedGpa: true } } } })
+    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { coins: true, lastCoinClaim: true, marketplaceAccess: true, profile: { select: { weightedGpa: true, unweightedGpa: true } } } })
     if (!user) { res.status(404).json({ error: 'User not found' }); return }
 
     const ugpa = user.profile?.unweightedGpa ?? null
@@ -542,19 +541,20 @@ router.post('/daily-coins', requireAuth, async (req: AuthRequest, res: Response)
       if (ugpa !== null) return fromU(ugpa)
       return fromW(wgpa!)
     })()
-    const coinBonus = Math.round(streakBonus * (1 + gpaBonusPct / 100))
+    const coinBonus = Math.round(dailyBase * (1 + gpaBonusPct / 100))
 
     const todayUTC = new Date().toISOString().slice(0, 10)
     const lastClaimDate = user.lastCoinClaim ? user.lastCoinClaim.toISOString().slice(0, 10) : null
     const alreadyClaimed = lastClaimDate === todayUTC
 
-    // Always sync loginStreak so the leaderboard stays accurate.
     // Only award coins + update lastCoinClaim on the first claim of the day.
+    // marketplaceAccess: the old 3-day-streak gate is gone — the first daily
+    // claim now unlocks the marketplace (admin can still ban via marketplaceBanned).
     const updated = await prisma.user.update({
       where: { id: req.userId },
       data: {
         ...(alreadyClaimed ? {} : { coins: { increment: coinBonus }, lastCoinClaim: new Date() }),
-        loginStreak: streakDay,
+        ...(user.marketplaceAccess ? {} : { marketplaceAccess: true }),
       },
       select: { coins: true },
     })
@@ -2178,20 +2178,12 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
   try {
     const userSelect = { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarEffect: true, badge: true }
 
-    const [coinsRows, streakRows] = await Promise.all([
-      prisma.user.findMany({
-        where: { deletedAt: null },
-        select: { ...userSelect, coins: true },
-        orderBy: { coins: 'desc' },
-        take: 15,
-      }),
-      prisma.user.findMany({
-        where: { deletedAt: null },
-        select: { ...userSelect, loginStreak: true },
-        orderBy: { loginStreak: 'desc' },
-        take: 15,
-      }),
-    ])
+    const coinsRows = await prisma.user.findMany({
+      where: { deletedAt: null },
+      select: { ...userSelect, coins: true },
+      orderBy: { coins: 'desc' },
+      take: 15,
+    })
 
     // Inventory value: scan all active users, compute value from item prices
     const [activeUsers, allPrices] = await Promise.all([
@@ -2221,7 +2213,6 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
 
     const leaderboardData = {
       coins: coinsRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, avatarEffect: u.avatarEffect, value: u.coins })),
-      streak: streakRows.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, avatarEffect: u.avatarEffect, value: u.loginStreak })),
       inventory: withValue.map((u, i) => ({ rank: i + 1, id: u.id, name: u.name, tag: u.tag, tagColor: u.tagColor, nameColor: u.nameColor, avatarEffect: u.avatarEffect, value: u.inventoryValue })),
     }
     leaderboardCache = { data: leaderboardData, expiresAt: Date.now() + 2 * 60 * 1000 }

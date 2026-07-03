@@ -3,14 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+// DISABLED: ClassLink integration paused, pending completion — card removed from hub.
+// Restore the '/grades/classlink' entry here when the integration is production-ready.
 const CARDS = [
-  {
-    href: '/grades/classlink',
-    title: 'ClassLink',
-    desc: 'Schoology grades & Infinite Campus',
-    icon: '🔗',
-    iconBg: 'rgba(99,102,241,0.12)',
-  },
   {
     href: '/grades/classwork',
     title: 'Grades',

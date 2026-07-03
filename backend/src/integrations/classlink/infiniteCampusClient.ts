@@ -1,3 +1,4 @@
+// DISABLED: ClassLink integration paused, pending completion
 import * as cheerio from 'cheerio';
 import { AxiosInstance } from 'axios';
 import { ClasslinkSession } from './classlinkClient';
@@ -322,3 +323,4 @@ function parseICTranscript($: cheerio.CheerioAPI, districtId: string): ICCourse[
   console.log(`[IC:${districtId}] transcript parsed ${courses.length} courses`);
   return courses;
 }
+

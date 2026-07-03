@@ -12,7 +12,6 @@ const PATCHES: string[] = [
     ADD COLUMN IF NOT EXISTS "ownedNameColors"          JSONB        NOT NULL DEFAULT '[]',
     ADD COLUMN IF NOT EXISTS "ownedAvatarEffects"       JSONB        NOT NULL DEFAULT '[]',
     ADD COLUMN IF NOT EXISTS "allTags"                  JSONB        NOT NULL DEFAULT '[]',
-    ADD COLUMN IF NOT EXISTS "loginStreak"              INTEGER      NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS "marketplaceAccess"        BOOLEAN      NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS "lastSeenAt"               TIMESTAMP(3),
     ADD COLUMN IF NOT EXISTS "chatBanned"               BOOLEAN      NOT NULL DEFAULT false,

@@ -11,7 +11,6 @@ import { startStudentPrefetch } from '../../lib/prefetch'
 import NotificationBell from '../../components/ui/NotificationBell'
 import UpdatePopup from '../../components/ui/UpdatePopup'
 import ForcedLogoutWatcher from '../../components/ui/ForcedLogoutWatcher'
-import InactivityWatcher from '../../components/ui/InactivityWatcher'
 import ExternalLinkGuard from '../../components/ui/ExternalLinkGuard'
 import CanvasTokenExpiredBanner from '../../components/ui/CanvasTokenExpiredBanner'
 import LagDetector from '../../components/ui/LagDetector'
@@ -459,7 +458,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <UpdatePopup />
       <ForcedLogoutWatcher />
-      <InactivityWatcher />
+      {/* Idle auto-logout removed — sessions persist via silent refresh-token
+          renewal (15-min access JWT + 7-day rotating refresh cookie). */}
       <ExternalLinkGuard />
       <CanvasTokenExpiredBanner />
       <LagDetector />

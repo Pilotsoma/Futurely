@@ -1,3 +1,4 @@
+// DISABLED: ClassLink integration paused, pending completion
 export interface DistrictConfig {
   id: string;
   name: string;
@@ -87,3 +88,4 @@ export function getDistrict(districtId: string): DistrictConfig {
 export function listDistricts(): { id: string; name: string; state: string }[] {
   return Object.values(DISTRICTS).map(({ id, name, state }) => ({ id, name, state }));
 }
+

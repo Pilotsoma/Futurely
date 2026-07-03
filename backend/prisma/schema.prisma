@@ -38,7 +38,6 @@ model User {
   emailVerificationToken   String?                  @unique
   emailVerificationExpiry  DateTime?
   lastSeenAt               DateTime?
-  loginStreak              Int                      @default(0)
   marketplaceAccess        Boolean                  @default(false)
   marketplaceBanned        Boolean                  @default(false)
   createdAt                DateTime                 @default(now())

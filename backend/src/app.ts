@@ -49,7 +49,8 @@ import gamesRouter from './routes/games'
 import { requireAuth } from './middleware/auth'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
-import classlinkRouter from './integrations/classlink/classlinkRouter'
+// DISABLED: ClassLink integration paused, pending completion — router left in place, not mounted.
+// import classlinkRouter from './integrations/classlink/classlinkRouter'
 import { logger } from './common/logger'
 
 const app = express()
@@ -183,6 +184,21 @@ const registerLimiter = rateLimit({
   },
 })
 
+// Portal credential + scrape endpoints: each request triggers a live login or
+// scrape against a school portal, so throttle harder than the global limiter.
+const portalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many portal requests, please wait before retrying.' } },
+  handler: (req, res, _next, options) => {
+    logger.warn('rate_limit_hit', { type: 'portal', ip: req.ip, path: req.originalUrl })
+    res.status(options.statusCode).json(options.message)
+  },
+})
+
 
 // ── Request logger — never log sensitive fields ──────────────────────────────
 const SENSITIVE_FIELDS = new Set(['password', 'token', 'refreshToken', 'newPassword', 'currentPassword'])
@@ -257,6 +273,11 @@ app.get('/health/connectivity', async (_req, res) => {
 // Auth routes get their own tight limiter; register gets an even stricter one
 app.use('/auth/register', registerLimiter)
 app.use('/auth', authLimiter, authRoutes)
+
+// Portal login + forced re-sync hit the school portal directly — strict limit.
+app.use('/integrations/grades/hac/login', portalLimiter)
+app.use('/integrations/grades/powerschool/login', portalLimiter)
+app.use('/integrations/grades/sync-profile', portalLimiter)
 app.use('/schools', schoolsRouter)
 app.use('/grades', gradesRoutes)
 
@@ -305,7 +326,8 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/notifications', devBypass, notificationsRouter)
   app.use('/integrations/grades', devBypass, gradesIntegrationRouter)
   app.use('/integrations/canvas', devBypass, canvasRouter)
-  app.use('/integrations/classlink', devBypass, classlinkRouter)
+  // DISABLED: ClassLink integration paused, pending completion
+  // app.use('/integrations/classlink', devBypass, classlinkRouter)
   app.use('/colleges', devBypass, collegesRouter)
   app.use('/marketplace', devBypass, marketplaceRouter)
   app.use('/educator', devBypass, educatorRouter)
@@ -323,7 +345,8 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/notifications', requireAuth, notificationsRouter)
   app.use('/integrations/grades', requireAuth, gradesIntegrationRouter)
   app.use('/integrations/canvas', requireAuth, canvasRouter)
-  app.use('/integrations/classlink', requireAuth, classlinkRouter)
+  // DISABLED: ClassLink integration paused, pending completion
+  // app.use('/integrations/classlink', requireAuth, classlinkRouter)
   app.use('/colleges', requireAuth, collegesRouter)
   app.use('/marketplace', requireAuth, marketplaceRouter)
   app.use('/educator', requireAuth, educatorRouter)

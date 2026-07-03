@@ -388,8 +388,8 @@ export default function LandingPage() {
           </Reveal>
           <Reveal delay={0.18}>
             <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
-              <BentoCard accent="#C45A1A" icon={ICON_STREAK} label="Daily Streaks"
-                desc="Show up every day. Build your streak. Earn coins and unlock exclusive tags — because consistency is how grades actually move." />
+              <BentoCard accent="#C45A1A" icon={ICON_STREAK} label="Daily Rewards"
+                desc="Show up and earn coins every day — with bonus coins for a strong GPA, because consistency is how grades actually move." />
             </BorderGlow>
           </Reveal>
         </div>
@@ -409,7 +409,7 @@ export default function LandingPage() {
                   <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
                 </svg>
               } label="Reward Shop"
-                desc="Earn coins from daily streaks and use them to unlock exclusive profile effects, name colors, and cosmetic gear — the more you show up, the more you can earn."
+                desc="Earn coins from daily rewards and use them to unlock exclusive profile effects, name colors, and cosmetic gear — the more you show up, the more you can earn."
                 large />
             </BorderGlow>
           </Reveal>
@@ -555,7 +555,7 @@ export default function LandingPage() {
                 { feature: 'AI advisor trained on your own grades',   vals: [true, false, false, false, false] },
                 { feature: 'GPA simulator & what-if scenarios',       vals: [true, false, false, false, false] },
                 { feature: 'Student-owned account (not school-controlled)', vals: [true, false, false, false, false] },
-                { feature: 'Gamification — coins, streaks, marketplace',    vals: [true, false, false, false, false] },
+                { feature: 'Gamification — coins, rewards, marketplace',    vals: [true, false, false, false, false] },
                 { feature: 'Student social feed & community',         vals: [true, false, false, false, false] },
                 { feature: 'Privacy-first, no data selling',          vals: [true, '?', false, '?', '?'] },
                 { feature: 'Free for students',                       vals: [true, true, true, true, false] },
@@ -655,12 +655,12 @@ export default function LandingPage() {
                   <div style={{ width: 46, height: 46, borderRadius: 12, background: 'rgba(245,158,11,0.09)', border: '1px solid rgba(245,158,11,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F59E0B', marginBottom: 20 }}>
                     {ICON_STREAK}
                   </div>
-                  <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.25 }}>Daily Login Streaks</h3>
+                  <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.25 }}>Daily Login Rewards</h3>
                   <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 16 }}>
-                    Every day you open Futurely, your streak grows. Miss one day and it resets. Keep it alive and earn bonus coins, exclusive drop chances, and eventually a Marketplace key.
+                    Every day you open Futurely, you claim a coin reward — and a strong GPA boosts it by up to 50%. Showing up literally pays.
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {['🔥 Streak bonus coins', '🎁 Random item drops', '🏆 Streak milestones'].map(t => (
+                    {['🪙 Daily coin rewards', '🎁 Random item drops', '📈 GPA bonus boost'].map(t => (
                       <span key={t} style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px' }}>{t}</span>
                     ))}
                   </div>
@@ -678,7 +678,7 @@ export default function LandingPage() {
                   </div>
                   <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.25 }}>Coin Economy</h3>
                   <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 16 }}>
-                    Earn coins by logging in, maintaining streaks, participating in giveaways, and winning trades. Coins are the currency of Futurely — and they&apos;re earned, not bought.
+                    Earn coins by logging in, participating in giveaways, and winning trades. Coins are the currency of Futurely — and they&apos;re earned, not bought.
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {['💰 Daily login coins', '🤝 Trade rewards', '🎉 Giveaway winnings'].map(t => (
@@ -699,7 +699,7 @@ export default function LandingPage() {
                   </div>
                   <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.25 }}>The Marketplace</h3>
                   <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 16 }}>
-                    Unlock at a 3-day streak. Buy, sell, and trade avatar effects, animated profile frames, rare name colors, and exclusive tags. The rarest items go to the most consistent students.
+                    Buy, sell, and trade avatar effects, animated profile frames, rare name colors, and exclusive tags. The rarest items go to the most consistent students.
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {['✨ Avatar effects', '🏷️ Rare name colors', '🎴 Exclusive tags'].map(t => (

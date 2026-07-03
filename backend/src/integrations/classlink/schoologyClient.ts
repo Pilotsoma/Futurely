@@ -1,3 +1,4 @@
+// DISABLED: ClassLink integration paused, pending completion
 import * as cheerio from 'cheerio';
 import { AxiosInstance } from 'axios';
 import { ClasslinkSession } from './classlinkClient';
@@ -222,3 +223,4 @@ function parseAssignmentsFromHTML($: cheerio.CheerioAPI, sectionId: string): Sch
   });
   return assignments;
 }
+

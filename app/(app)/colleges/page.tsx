@@ -282,7 +282,7 @@ export default function CollegesPage() {
         <div className="ns-card" style={S.empty}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>🎓</div>
           <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>No colleges yet</p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Search above to add colleges you're interested in.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Search above to add colleges you&apos;re interested in.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
