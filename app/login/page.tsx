@@ -119,15 +119,13 @@ function LoginPageInner() {
     }
   }, [searchParams, router])
 
+  // DISABLED: ClassLink integration paused, pending completion — classlinkId districts no longer listed
   const filteredIsds = SORTED_ISD_LIST.filter(isd =>
-    (isd.hacUrl || isd.classlinkId) && (
+    isd.hacUrl && (
       isd.name.toLowerCase().includes(isdSearch.toLowerCase()) ||
       isd.state.toLowerCase().includes(isdSearch.toLowerCase())
     )
   )
-
-  // True when the selected district uses ClassLink instead of HAC
-  const isClasslinkDistrict = !!(selectedIsd?.classlinkId && !selectedIsd?.hacUrl)
 
   function selectIsd(isd: ISDEntry) {
     setSelectedIsd(isd); setHacUrl(isd.hacUrl ?? ''); setUseCustomUrl(false); setIsdSearch(''); setIsdOpen(false)
@@ -150,7 +148,7 @@ function LoginPageInner() {
     if (password.length < 6)          { setError('Password must be at least 6 characters'); return }
     if (mode === 'register-student') {
       if (!hacUsername.trim() || !hacPassword.trim()) { setError('School portal credentials are required'); return }
-      if (!isClasslinkDistrict && !hacUrl.trim() && !useCustomUrl) { setError('Please select your school district'); return }
+      if (!hacUrl.trim() && !useCustomUrl) { setError('Please select your school district'); return }
     }
     // Send OTP before showing privacy modal
     setOtpLoading(true)
@@ -207,12 +205,8 @@ function LoginPageInner() {
       if (mode === 'register-student') {
         setStep('connecting')
         try {
-          if (isClasslinkDistrict && selectedIsd?.classlinkId) {
-            await api.classlinkConnect(selectedIsd.classlinkId, hacUsername.trim(), hacPassword.trim())
-          } else {
-            await api.portalLoginHAC(hacUrl.trim(), hacUsername.trim(), hacPassword.trim())
-            localStorage.setItem('ns_hac_url', hacUrl.trim())
-          }
+          await api.portalLoginHAC(hacUrl.trim(), hacUsername.trim(), hacPassword.trim())
+          localStorage.setItem('ns_hac_url', hacUrl.trim())
         } catch (hacErr) {
           setHacError(hacErr instanceof Error ? hacErr.message : 'School portal connection failed')
           await new Promise(r => setTimeout(r, 2000))
@@ -431,7 +425,7 @@ function LoginPageInner() {
                   </div>
                 </div>
 
-                {useCustomUrl && !isClasslinkDistrict && (
+                {useCustomUrl && (
                   <div style={styles.field}>
                     <label style={styles.label}>Portal URL</label>
                     <input type="url" value={hacUrl} onChange={e => setHacUrl(e.target.value)}
@@ -441,14 +435,14 @@ function LoginPageInner() {
                 )}
 
                 <div style={styles.field}>
-                  <label style={styles.label}>{isClasslinkDistrict ? 'ClassLink Username' : 'HAC Username'}</label>
+                  <label style={styles.label}>HAC Username</label>
                   <input type="text" value={hacUsername} onChange={e => setHacUsername(e.target.value)}
-                    placeholder={isClasslinkDistrict ? 'Your ClassLink username' : 'Your HAC username'} autoComplete="username" style={styles.input} />
+                    placeholder="Your HAC username" autoComplete="username" style={styles.input} />
                 </div>
                 <div style={styles.field}>
-                  <label style={styles.label}>{isClasslinkDistrict ? 'ClassLink Password' : 'HAC Password'}</label>
+                  <label style={styles.label}>HAC Password</label>
                   <input type="password" value={hacPassword} onChange={e => setHacPassword(e.target.value)}
-                    placeholder={isClasslinkDistrict ? 'Your ClassLink password' : 'Your HAC password'} autoComplete="current-password" style={styles.input} />
+                    placeholder="Your HAC password" autoComplete="current-password" style={styles.input} />
                 </div>
                 <p style={styles.hint}>Your school credentials are never stored — used only to fetch grades.</p>
                 {hacError && <p style={styles.hacError}>⚠ {hacError} — you can reconnect later in Settings.</p>}

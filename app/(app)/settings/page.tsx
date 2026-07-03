@@ -6,6 +6,7 @@ import { api, type StudentData, type CanvasStatus } from '../../../lib/api'
 import { clearWebAuth } from '../../../lib/authState'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import { CHANGELOG } from '../../../lib/changelog'
+import PortalResyncButton from '../../../components/ui/PortalResyncButton'
 
 function DeleteAccountModal({ onClose, hasPassword }: { onClose: () => void; hasPassword: boolean }) {
   const router = useRouter()
@@ -110,8 +111,6 @@ export default function SettingsPage() {
   const [portalSelectedIsd, setPortalSelectedIsd] = useState<(typeof SORTED_ISD_LIST)[0] | null>(null)
   const [portalCustomUrl, setPortalCustomUrl]   = useState(false)
   const portalIsdRef = useRef<HTMLDivElement>(null)
-  const [syncing, setSyncing]             = useState(false)
-  const [syncMsg, setSyncMsg]             = useState<string | null>(null)
 
   // Editable academic fields
   const [satScore, setSatScore]         = useState('')
@@ -295,18 +294,13 @@ export default function SettingsPage() {
     router.push('/login')
   }
 
-  const isPortalClasslink = !!(portalSelectedIsd?.classlinkId && !portalSelectedIsd?.hacUrl)
-
   async function handleConnect() {
     if (!portalUsername || !portalPassword) { setPortalError('Please enter your username and password.'); return }
-    const needsUrl = !isPortalClasslink && (portalCustomUrl || !portalSelectedIsd)
-    if (needsUrl && !portalUrl) { setPortalError('Please select your school district or enter a portal URL.'); return }
-    if (!isPortalClasslink && !portalCustomUrl && !portalSelectedIsd) { setPortalError('Please select your school district.'); return }
+    if (!portalUrl) { setPortalError('Please select your school district or enter a portal URL.'); return }
+    if (!portalCustomUrl && !portalSelectedIsd) { setPortalError('Please select your school district.'); return }
     setPortalConnecting(true); setPortalError(null)
     try {
-      if (isPortalClasslink && portalSelectedIsd?.classlinkId) {
-        await api.classlinkConnect(portalSelectedIsd.classlinkId, portalUsername, portalPassword)
-      } else if (portalSystem === 'HAC') {
+      if (portalSystem === 'HAC') {
         await api.portalLoginHAC(portalUrl, portalUsername, portalPassword)
       } else {
         await api.portalLoginPS(portalUrl, portalUsername, portalPassword)
@@ -327,25 +321,6 @@ export default function SettingsPage() {
       setPortalStatus({ connected: false, systemType: null, districtUrl: null, sessionExpiresIn: 0, lastSynced: null })
     } catch { /* ignore */ }
     finally { setPortalConnecting(false) }
-  }
-
-  async function handleSyncProfile() {
-    setSyncing(true); setSyncMsg(null)
-    try {
-      await api.portalSyncProfile()
-      setSyncMsg('Profile synced from HAC!')
-      // Refresh the user data to reflect the updated profile
-      const fresh = await api.me()
-      setData(fresh)
-      setSatScore(fresh.profile?.satScore?.toString() ?? '')
-      setActScore(fresh.profile?.actScore?.toString() ?? '')
-      setFuturePlan(fresh.profile?.futureDecision ?? '')
-    } catch (err) {
-      setSyncMsg(err instanceof Error ? err.message : 'Sync failed')
-    } finally {
-      setSyncing(false)
-      setTimeout(() => setSyncMsg(null), 4000)
-    }
   }
 
   async function handleSaveScores() {
@@ -494,57 +469,20 @@ export default function SettingsPage() {
                 </div>
                 <p style={S.distUrl}>{portalStatus.districtUrl}</p>
 
-                {/* Re-sync profile from HAC — refreshes counselor, graduation year, name */}
-                {portalStatus.systemType === 'HAC' && (
-                  <div style={{ marginTop: 12 }}>
-                    <button
-                      className="ns-btn-ghost"
-                      style={{
-                        height: 36,
-                        padding: '0 16px',
-                        fontSize: 13,
-                        color: 'var(--primary)',
-                        borderColor: 'rgba(43,74,142,0.3)',
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 6,
-                      }}
-                      onClick={handleSyncProfile}
-                      disabled={syncing}
-                    >
-                      {syncing ? (
-                        <>
-                          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
-                          Syncing…
-                        </>
-                      ) : (
-                        <>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 2v6h-6"/>
-                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
-                            <path d="M3 22v-6h6"/>
-                            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-                          </svg>
-                          Re-sync from HAC
-                        </>
-                      )}
-                    </button>
-                    {syncMsg && (
-                      <p style={{
-                        fontSize: 12,
-                        color: syncMsg.includes('fail') || syncMsg.includes('Error') ? 'var(--error)' : '#22C55E',
-                        marginTop: 6,
-                        textAlign: 'center',
-                      }}>
-                        {syncMsg}
-                      </p>
-                    )}
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, textAlign: 'center' }}>
-                      Fetches counselor & graduation year from your school portal
-                    </p>
-                  </div>
+                {/* Re-sync from the connected portal — works for every supported portal type */}
+                {portalStatus.systemType && (
+                  <PortalResyncButton
+                    portalType={portalStatus.systemType}
+                    districtUrl={portalStatus.districtUrl}
+                    onSynced={async () => {
+                      // Refresh the user data to reflect the updated profile
+                      const fresh = await api.me()
+                      setData(fresh)
+                      setSatScore(fresh.profile?.satScore?.toString() ?? '')
+                      setActScore(fresh.profile?.actScore?.toString() ?? '')
+                      setFuturePlan(fresh.profile?.futureDecision ?? '')
+                    }}
+                  />
                 )}
 
                 <button className="ns-btn-ghost" style={{ ...S.disconnectBtn, marginTop: 14 }}
@@ -579,26 +517,26 @@ export default function SettingsPage() {
                             onClick={e => e.stopPropagation()} />
                         </div>
                         <div style={{ maxHeight: 220, overflowY: 'auto' as const }}>
+                          {/* DISABLED: ClassLink integration paused, pending completion — classlinkId districts no longer listed */}
                           {SORTED_ISD_LIST
-                            .filter(isd => (isd.hacUrl || isd.classlinkId) && (
+                            .filter(isd => isd.hacUrl && (
                               isd.name.toLowerCase().includes(portalIsdSearch.toLowerCase()) ||
                               isd.state.toLowerCase().includes(portalIsdSearch.toLowerCase())
                             ))
                             .map(isd => (
-                              <button key={isd.hacUrl ?? isd.classlinkId ?? isd.name} type="button"
+                              <button key={isd.hacUrl ?? isd.name} type="button"
                                 onClick={() => {
                                   setPortalSelectedIsd(isd)
                                   setPortalUrl(isd.hacUrl ?? '')
                                   setPortalCustomUrl(false)
                                   setPortalIsdOpen(false)
-                                  // Reset system toggle: ClassLink districts skip HAC/PS entirely
-                                  if (!isd.classlinkId) setPortalSystem('HAC')
+                                  setPortalSystem('HAC')
                                   setPortalError(null)
                                 }}
                                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '9px 12px', background: portalSelectedIsd === isd ? 'var(--primary-dim)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' as const, color: portalSelectedIsd === isd ? 'var(--primary)' : 'var(--text)' }}>
                                 <span style={{ fontWeight: 500, fontSize: 13 }}>{isd.name}</span>
                                 <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8, flexShrink: 0 }}>
-                                  {isd.state}{isd.classlinkId ? ' · ClassLink' : ''}
+                                  {isd.state}
                                 </span>
                               </button>
                             ))}
@@ -614,20 +552,18 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* ── HAC / PowerSchool toggle — only for non-ClassLink districts ── */}
-                {!isPortalClasslink && (
-                  <div style={S.sysToggle}>
-                    {(['HAC', 'PowerSchool'] as SystemType[]).map(s => (
-                      <button key={s} onClick={() => { setPortalSystem(s); setPortalError(null) }}
-                        style={{ ...S.sysBtn, background: portalSystem === s ? 'var(--primary)' : 'transparent', color: portalSystem === s ? '#060D10' : 'var(--text-secondary)' }}>
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {/* ── HAC / PowerSchool toggle ── */}
+                <div style={S.sysToggle}>
+                  {(['HAC', 'PowerSchool'] as SystemType[]).map(s => (
+                    <button key={s} onClick={() => { setPortalSystem(s); setPortalError(null) }}
+                      style={{ ...S.sysBtn, background: portalSystem === s ? 'var(--primary)' : 'transparent', color: portalSystem === s ? '#060D10' : 'var(--text-secondary)' }}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
 
                 {/* ── Custom portal URL — only when "Other" selected ── */}
-                {portalCustomUrl && !isPortalClasslink && (
+                {portalCustomUrl && (
                   <div>
                     <label style={S.fieldLabel}>Portal URL</label>
                     <input className="ns-input" type="url" value={portalUrl} onChange={e => setPortalUrl(e.target.value)}
@@ -637,15 +573,15 @@ export default function SettingsPage() {
 
                 {/* ── Credentials ── */}
                 <div>
-                  <label style={S.fieldLabel}>{isPortalClasslink ? 'ClassLink Username' : 'Username'}</label>
+                  <label style={S.fieldLabel}>Username</label>
                   <input className="ns-input" type="text" value={portalUsername} onChange={e => setPortalUsername(e.target.value)}
-                    placeholder={isPortalClasslink ? 'Your ClassLink username' : 'Your school username'}
+                    placeholder="Your school username"
                     disabled={portalConnecting} autoComplete="username" />
                 </div>
                 <div>
-                  <label style={S.fieldLabel}>{isPortalClasslink ? 'ClassLink Password' : 'Password'}</label>
+                  <label style={S.fieldLabel}>Password</label>
                   <input className="ns-input" type="password" value={portalPassword} onChange={e => setPortalPassword(e.target.value)}
-                    placeholder={isPortalClasslink ? 'Your ClassLink password' : 'Your school password'}
+                    placeholder="Your school password"
                     disabled={portalConnecting} autoComplete="current-password" />
                 </div>
 

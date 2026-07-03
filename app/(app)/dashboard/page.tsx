@@ -8,21 +8,16 @@ import { api, type StudentData } from '../../../lib/api'
 import { consumeStudentPrefetch } from '../../../lib/prefetch'
 import AiBar from '../../../components/ui/AiBar'
 import PageLoader from '../../../components/ui/PageLoader'
-import CoinIcon from '../../../components/ui/CoinIcon'
 import NotificationBell from '../../../components/ui/NotificationBell'
 
-function tagCssClass(tag?: string | null, tagColor?: string | null): string {
-  if (tag === 'DEV') return 'tag-rainbow'
-  if (tag === 'VIP') return 'tag-mythic'
-  if (tag === 'GOAT') return 'tag-god'
-  if (tag === 'Prodigy') return 'tag-prodigy'
-  if (tag === 'Valedictorian') return 'tag-valedictorian'
-  if (tagColor === 'curse') return 'tag-curse'
-  return ''
-}
-function isAnimatedTag(tag?: string | null): boolean {
-  return tag === 'DEV' || tag === 'VIP' || tag === 'GOAT' || tag === 'Prodigy' || tag === 'Valedictorian'
-}
+// Quick links between the stat row and the AI bar. "Chatbot" from the design
+// spec maps to the same /ai surface as AI Chat, so Colleges fills the 4th slot.
+const QUICK_LINKS = [
+  { href: '/grades',   label: 'Grade Portal', icon: '📊', iconBg: 'rgba(16,185,129,0.1)' },
+  { href: '/ai',       label: 'AI Chat',      icon: '🤖', iconBg: 'rgba(99,102,241,0.12)' },
+  { href: '/planner',  label: 'Planner',      icon: '📅', iconBg: 'rgba(245,158,11,0.1)' },
+  { href: '/colleges', label: 'Colleges',     icon: '🎓', iconBg: 'rgba(59,130,246,0.12)' },
+]
 
 function useCountUp(target: number | null, duration = 700): number {
   const [val, setVal] = useState(0)
@@ -59,23 +54,6 @@ function useCountUpFloat(target: number | null, duration = 900): string {
     return () => cancelAnimationFrame(raf)
   }, [target, duration])
   return val.toFixed(3)
-}
-
-const STREAK_MILESTONES: Array<{ days: number; emoji: string; tag?: string; tagColor?: string; perk?: string; perkColor?: string }> = [
-  { days: 3,   tag: 'Early Bird', tagColor: '#F97316', emoji: '⭐' },
-  { days: 7,   tag: 'Novice',  tagColor: '#22C55E', emoji: '✅' },
-  { days: 14,  tag: 'Pro',     tagColor: '#3B82F6', emoji: '⚡' },
-  { days: 30,  tag: 'Veteran', tagColor: '#F97316', emoji: '🏅' },
-  { days: 50,  tag: 'Legend',  tagColor: '#EC4899', emoji: '💎' },
-  { days: 100, tag: 'GOAT',    tagColor: '#EAB308', emoji: '👑' },
-]
-
-function streakCoinBonus(streak: number) {
-  return Math.min(400, 50 + Math.max(0, streak - 1) * 7)
-}
-
-function getNextMilestone(streak: number) {
-  return STREAK_MILESTONES.find(m => m.days > streak) ?? null
 }
 
 function normalCdf(z: number): number {
@@ -119,9 +97,6 @@ function percentileStr(p: number): string {
   return `${s}${suffix}`
 }
 
-const GRADE_COLOR: Record<string, string> = { A: 'var(--gc-a)', B: 'var(--gc-b)', C: 'var(--gc-c)', D: 'var(--gc-d)', F: 'var(--gc-f)' }
-const gradeColor = (g: string) => GRADE_COLOR[g?.charAt(0).toUpperCase()] ?? 'var(--text-muted)'
-
 function formatDate() {
   return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 }
@@ -139,11 +114,6 @@ export default function DashboardPage() {
   const [portalWGpa, setPortalWGpa] = useState<number | null>(null)
   const [courseCount, setCourseCount] = useState<number | null>(null)
   const [semesterLabel, setSemesterLabel] = useState<string>('')
-  const [dayStreak, setDayStreak] = useState(0)
-  const [coins, setCoins] = useState<number | null>(null)
-  const [newlyAwardedTags, setNewlyAwardedTags] = useState<Array<{ tag: string; tagColor: string }>>([])
-  const [showStreakPopup, setShowStreakPopup] = useState(false)
-  const [streakMilestone, setStreakMilestone] = useState<typeof STREAK_MILESTONES[0] | null>(null)
   const [showResyncPopup, setShowResyncPopup] = useState(false)
   const [resyncing, setResyncing] = useState(false)
   const [resyncError, setResyncError] = useState<string | null>(null)
@@ -165,68 +135,8 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    // Track day streak using user-specific localStorage keys so accounts
-    // on the same device don't inherit each other's streak.
-    const uid = (() => { try { return (JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { id?: number } | null)?.id ?? 'anon' } catch { return 'anon' } })()
-    const streakKey = `ns_streak_${uid}`
-    const visitKey  = `ns_lastVisit_${uid}`
-
-    // One-time migration from the old device-wide keys to user-specific keys
-    if (!localStorage.getItem(streakKey) && localStorage.getItem('ns_streak')) {
-      localStorage.setItem(streakKey, localStorage.getItem('ns_streak')!)
-      localStorage.setItem(visitKey, localStorage.getItem('ns_lastVisit') ?? '')
-      localStorage.removeItem('ns_streak')
-      localStorage.removeItem('ns_lastVisit')
-    }
-
-    const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-    const lastVisit = localStorage.getItem(visitKey)
-    const streak = parseInt(localStorage.getItem(streakKey) ?? '0', 10)
-
-    let currentStreak = streak
-    if (lastVisit === today) {
-      setDayStreak(streak)
-    } else if (lastVisit) {
-      const lastDate = new Date(lastVisit)
-      const todayDate = new Date(today)
-      const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / 86400000)
-      if (diffDays === 1) {
-        currentStreak = streak + 1
-        localStorage.setItem(streakKey, String(currentStreak))
-        setDayStreak(currentStreak)
-      } else {
-        currentStreak = 1
-        localStorage.setItem(streakKey, '1')
-        setDayStreak(1)
-      }
-    } else {
-      currentStreak = 1
-      localStorage.setItem(streakKey, '1')
-      setDayStreak(1)
-    }
-    localStorage.setItem(visitKey, today)
-
-    // Show milestone celebration popup once per milestone
-    if (lastVisit !== today) {
-      const milestone = STREAK_MILESTONES.find(m => m.days === currentStreak)
-      if (milestone) {
-        const seenKey = `ns_milestone_seen_${uid}_${milestone.days}`
-        if (!localStorage.getItem(seenKey)) {
-          localStorage.setItem(seenKey, '1')
-          setStreakMilestone(milestone)
-        }
-      }
-    }
-
-    // Claim daily coins + award any streak milestone tags
-    if (currentStreak > 0) {
-      api.streakReward(currentStreak)
-        .then(r => { if (r.newTags?.length) setNewlyAwardedTags(r.newTags) })
-        .catch(() => {})
-    }
-    api.marketplaceDailyClaim(currentStreak)
-      .then(r => setCoins(r.coins))
-      .catch(() => {})
+    // Claim the daily coin reward (flat daily amount + GPA bonus, streak-free)
+    api.marketplaceDailyClaim().catch(() => {})
     const prefetch = consumeStudentPrefetch()
     const dataPromise = prefetch ?? api.me().catch(() => null)
     dataPromise.then(d => { if (d) setData(d); else api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed')) })
@@ -299,7 +209,6 @@ export default function DashboardPage() {
   const animCourses = useCountUp(data ? displayCourseCount : null, 600)
   const animDueWeek = useCountUp(data ? data.stats.assignmentsDueThisWeek : null, 700)
   const animPending = useCountUp(data ? data.stats.pendingAssignments : null, 750)
-  const animStreak  = useCountUp(dayStreak, 500)
   const animUGpa    = useCountUpFloat(portalUGpa ?? data?.profile?.unweightedGpa ?? null, 900)
   const animWGpa    = useCountUpFloat(portalWGpa ?? data?.profile?.weightedGpa ?? null, 900)
 
@@ -333,7 +242,6 @@ export default function DashboardPage() {
   const effectiveWGpa = portalWGpa ?? data.profile?.weightedGpa ?? null
   const gpaPercentile = computeGpaPercentile(effectiveUGpa, effectiveWGpa)
   const gpaBonusPct = getGpaBonusPct(effectiveUGpa, effectiveWGpa)
-  const totalDailyCoins = Math.round(streakCoinBonus(dayStreak) * (1 + gpaBonusPct / 100))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
@@ -382,7 +290,7 @@ export default function DashboardPage() {
               style={S.resyncBanner}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
-              Some data didn't load · Re-sync
+              Some data didn&apos;t load · Re-sync
             </button>
           )}
         </div>
@@ -423,153 +331,30 @@ export default function DashboardPage() {
           <div style={S.statNum}>{animPending}</div>
           <div style={S.statLabel}>Pending</div>
         </motion.div>
-        <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)} {...staggerItem(4)}>
-          <div style={S.statNum}>{animStreak}</div>
-          <div style={S.statLabel}>Day Streak 🔥</div>
-          <div style={{ ...S.statSub, color: '#EAB308' }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{totalDailyCoins} today{gpaBonusPct > 0 ? ' ✦' : ''}</div>
-          {(() => {
-            const next = getNextMilestone(dayStreak)
-            if (!next) return <div style={S.statSub} title="All streak rewards earned">👑 GOAT</div>
-            return <div style={S.statSub}>Next: {next.days}d → {next.tag}</div>
-          })()}
-        </motion.div>
+      </div>
+
+      {/* Quick Access */}
+      <div style={S.quickAccessWrap}>
+        <p style={{ ...S.cardLabel, marginBottom: 12 }}>Quick Access</p>
+        <div style={S.quickAccessRow}>
+          {QUICK_LINKS.map((link, i) => (
+            <motion.button
+              key={link.href}
+              className="ns-card"
+              style={S.quickAccessCard}
+              onClick={() => router.push(link.href)}
+              {...staggerItem(4 + i)}
+            >
+              <div style={{ ...S.quickAccessIcon, background: link.iconBg }}>
+                <span style={{ fontSize: 20 }}>{link.icon}</span>
+              </div>
+              <span style={S.quickAccessLabel}>{link.label}</span>
+            </motion.button>
+          ))}
+        </div>
       </div>
 
       <div style={{ flex: 1 }} />
-
-      {/* Streak Milestone Celebration Popup */}
-      {streakMilestone && createPortal(
-        <div style={S.popupOverlay} onClick={() => setStreakMilestone(null)}>
-          <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setStreakMilestone(null)} style={S.popupClose}>×</button>
-            <div style={{ fontSize: 52, marginBottom: 14 }}>{streakMilestone.emoji}</div>
-            <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6, color: 'var(--text)', letterSpacing: '-0.5px' }}>
-              {streakMilestone.days}-Day Streak!
-            </h3>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 18 }}>
-              You&apos;ve logged in {streakMilestone.days} days in a row. That&apos;s dedication — keep it going!
-            </p>
-            <div style={{
-              background: (streakMilestone.tagColor ?? streakMilestone.perkColor ?? '#22C55E') + '18',
-              border: `1px solid ${(streakMilestone.tagColor ?? streakMilestone.perkColor ?? '#22C55E')}44`,
-              borderRadius: 12, padding: '14px 18px', marginBottom: 20,
-            }}>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', marginBottom: 8 }}>
-                You just unlocked
-              </p>
-              {streakMilestone.tag ? (
-                <span style={{
-                  display: 'inline-block',
-                  fontSize: 16, fontWeight: 800,
-                  color: '#fff',
-                  background: streakMilestone.tagColor,
-                  borderRadius: 8, padding: '4px 14px',
-                }}>
-                  {streakMilestone.tag}
-                </span>
-              ) : (
-                <span style={{ fontSize: 16, fontWeight: 800, color: streakMilestone.perkColor }}>
-                  {streakMilestone.perk}
-                </span>
-              )}
-            </div>
-            <button onClick={() => setStreakMilestone(null)} style={S.popupButton}>
-              Let&apos;s go! 🚀
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Streak Popup */}
-      {showStreakPopup && createPortal(
-        <div style={S.popupOverlay} onClick={() => setShowStreakPopup(false)}>
-          <div style={S.popupCard} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowStreakPopup(false)} style={S.popupClose}>×</button>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🔥</div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>
-              {dayStreak} Day Streak!
-            </h3>
-            <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#EAB308', fontWeight: 600, textAlign: 'center' as const }}>
-              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{totalDailyCoins} coins today
-            </div>
-
-            {/* GPA Bonus Section */}
-            {gpaBonusPct > 0 ? (
-              <div style={{ background: 'rgba(43,74,142,0.08)', border: '1px solid rgba(43,74,142,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 5 }}>GPA Bonus</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>
-                    {gpaPercentile !== null ? `${percentileStr(gpaPercentile)} Percentile` : `${gpaBonusPct.toFixed(1)}% boost`}
-                  </span>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>+{gpaBonusPct.toFixed(1)}% on streak</span>
-                </div>
-              </div>
-            ) : (effectiveUGpa !== null || effectiveWGpa !== null) ? (
-              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '9px 14px', marginBottom: 10, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' as const }}>
-                📚 Raise your GPA to unlock daily bonus coins
-              </div>
-            ) : null}
-
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Start at +50 coins on day 1, earn +7 more per consecutive day, up to +400/day at day 51. Log in every day to unlock exclusive tags too!
-            </p>
-
-            {newlyAwardedTags.length > 0 && (
-              <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#22C55E', fontWeight: 600 }}>
-                🎉 You just earned: {newlyAwardedTags.map(t => t.tag).join(', ')}!
-              </div>
-            )}
-
-            <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 10 }}>Tag Rewards</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              {STREAK_MILESTONES.map(m => {
-                const earned = dayStreak >= m.days
-                const accentColor = m.tagColor ?? m.perkColor ?? '#6B7280'
-                return (
-                  <div key={m.days} style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '9px 12px', borderRadius: 10,
-                    background: earned ? 'var(--surface-2)' : 'transparent',
-                    border: `1px solid ${earned ? accentColor + '44' : 'var(--border)'}`,
-                    opacity: earned ? 1 : 0.6,
-                  }}>
-                    <span style={{ fontSize: 16, flexShrink: 0 }}>{earned ? m.emoji : '🔒'}</span>
-                    <div style={{ flex: 1 }}>
-                      {m.tag ? (
-                        <span className={tagCssClass(m.tag, m.tagColor)} style={{
-                          fontSize: 13, fontWeight: 700,
-                          color: isAnimatedTag(m.tag) ? undefined : '#fff',
-                          background: isAnimatedTag(m.tag) ? undefined : m.tagColor,
-                          borderRadius: 6, padding: '2px 8px',
-                          marginRight: 4,
-                        }}>
-                          {m.tag}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 13, fontWeight: 700, color: accentColor }}>
-                          {m.perk}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: m.tag ? 4 : 8 }}>
-                        {m.days}d{!m.perk && <> · <CoinIcon size={11} style={{ margin: '0 2px' }} /> +{streakCoinBonus(m.days)}/day</>}
-                      </span>
-                    </div>
-                    {earned && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: accentColor, background: accentColor + '22', borderRadius: 6, padding: '2px 7px' }}>Earned</span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            <button onClick={() => setShowStreakPopup(false)} style={S.popupButton}>
-              Got it!
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
 
       {/* GPA Percentile Welcome Popup (one-time) */}
       {showGpaWelcome && createPortal(
@@ -590,20 +375,20 @@ export default function DashboardPage() {
                 </p>
                 <div style={{ background: 'rgba(43,74,142,0.1)', border: '1px solid rgba(43,74,142,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', marginBottom: 6 }}>
-                    Your Daily Streak Bonus
+                    Your Daily Coin Bonus
                   </p>
                   <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-blue)', marginBottom: 4 }}>
                     +{gpaBonusPct.toFixed(1)}% daily boost
                   </p>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Applied to your streak coins · perfect GPA = +50%
+                    Applied to your daily coins · perfect GPA = +50%
                   </p>
                 </div>
               </>
             ) : (
               <>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-                  Raise your GPA to unlock daily coin bonuses that stack on top of your streak earnings.
+                  Raise your GPA to unlock daily coin bonuses that stack on top of your daily earnings.
                 </p>
                 <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: '#EAB308', lineHeight: 1.5 }}>
@@ -631,8 +416,8 @@ export default function DashboardPage() {
             </h3>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
               {needsReconnect
-                ? 'Your saved HAC credentials couldn\'t be used to sign in — your password may have changed, or credentials weren\'t saved. Go to Settings to sign in again and everything will sync automatically.'
-                : 'Your GPA loaded fine, but your course list couldn\'t be fetched — your HAC session may have expired mid-load. Hit "Re-sync" to reconnect and pull everything in together.'}
+                ? 'Your saved school portal credentials couldn\'t be used to sign in — your password may have changed, or credentials weren\'t saved. Go to Settings to sign in again and everything will sync automatically.'
+                : 'Your GPA loaded fine, but your course list couldn\'t be fetched — your school portal session may have expired mid-load. Hit "Re-sync" to reconnect and pull everything in together.'}
             </p>
             {resyncError && (
               <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--error)' }}>
@@ -652,7 +437,7 @@ export default function DashboardPage() {
                 disabled={resyncing}
                 style={{ ...S.popupButton, opacity: resyncing ? 0.7 : 1, cursor: resyncing ? 'not-allowed' : 'pointer' }}
               >
-                {resyncing ? 'Syncing…' : 'Re-sync with HAC'}
+                {resyncing ? 'Syncing…' : 'Re-sync now'}
               </button>
             )}
             <button onClick={() => setShowResyncPopup(false)} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginTop: 8 }}>
@@ -726,11 +511,15 @@ const S: Record<string, React.CSSProperties> = {
   dueTitle:   { fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
   dueSub:     { fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 },
   dueTime:    { fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 },
-  statsRow:   { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 },
+  statsRow:   { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 20 },
   statCard:   { padding: '22px', textAlign: 'center' as const },
   statNum:    { fontSize: 34, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6 },
   statLabel:  { fontSize: 13, color: 'var(--text-secondary)' },
-  statSub:    { fontSize: 12, color: 'var(--text-muted)', marginTop: 5, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
+  quickAccessWrap: { marginBottom: 20 },
+  quickAccessRow:  { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 },
+  quickAccessCard: { display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', borderRadius: 14, textAlign: 'left' as const },
+  quickAccessIcon: { width: 40, height: 40, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  quickAccessLabel:{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' },
   aiBarWrap:  { paddingBottom: 24 },
   popupOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 },
   popupCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, maxWidth: 380, width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },

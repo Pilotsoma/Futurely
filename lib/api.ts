@@ -182,11 +182,6 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(fields),
     }),
-  streakReward: (streak: number) =>
-    request<{ newTags: Array<{ days: number; tag: string; tagColor: string }> }>(
-      '/api/students/me/streak-reward',
-      { method: 'POST', body: JSON.stringify({ streak }) }
-    ),
   updateAvatarUrl: (avatarUrl: string | null) =>
     request<{ avatarUrl: string | null }>('/api/students/me/avatar', {
       method: 'PATCH',
@@ -684,10 +679,10 @@ export const api = {
 
   // ── Marketplace ───────────────────────────────────────────────────────────────
 
-  marketplaceDailyClaim: (streak?: number) =>
+  marketplaceDailyClaim: () =>
     request<{ coins: number; claimed: boolean; alreadyClaimed: boolean; coinBonus: number }>('/api/marketplace/daily-coins', {
       method: 'POST',
-      body: JSON.stringify({ streak: streak ?? 1 }),
+      body: JSON.stringify({}),
     }),
 
   marketplaceFreeSpin: () =>
@@ -844,7 +839,7 @@ export const api = {
     request<{ totalUsers: number; activeUsers: number; liveUsers: number }>('/api/marketplace/admin/stats'),
 
   adminLookupUser: (userId: number) =>
-    request<{ id: number; name: string | null; hacName: string | null; email: string; role: string; tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; coins: number; loginStreak: number; chatBanned: boolean; marketplaceBanned: boolean; marketplaceAccess: boolean; deletedAt: string | null; createdAt: string; lastSeenAt: string | null }>(`/api/admin/users/${userId}`),
+    request<{ id: number; name: string | null; hacName: string | null; email: string; role: string; tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; coins: number; chatBanned: boolean; marketplaceBanned: boolean; marketplaceAccess: boolean; deletedAt: string | null; createdAt: string; lastSeenAt: string | null }>(`/api/admin/users/${userId}`),
 
   adminGrantMarketAccess: (userId: number) =>
     request<{ ok: boolean }>('/api/admin/grant-market-access', { method: 'POST', body: JSON.stringify({ userId }) }),
@@ -1105,6 +1100,9 @@ export const api = {
     request<StudentActionItem>(`/api/students/action-items/${id}`, { method: 'PATCH' }),
 
   // ── ClassLink Integration ─────────────────────────────────────────────────────
+  // DISABLED: ClassLink integration paused, pending completion.
+  // These calls are kept for when the integration resumes, but the backend router
+  // is unmounted (backend/src/app.ts) and no UI reaches them.
 
   classlinkDistricts: () =>
     request<{ districts: { id: string; name: string; state: string }[] }>('/api/integrations/classlink/districts'),
@@ -1594,7 +1592,6 @@ export interface LeaderboardEntry {
 
 export interface LeaderboardData {
   coins: LeaderboardEntry[]
-  streak: LeaderboardEntry[]
   inventory: LeaderboardEntry[]
 }
 

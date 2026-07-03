@@ -1579,7 +1579,6 @@ const TraderBuyGrid = React.memo(function TraderBuyGrid({
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function MarketplacePage() {
-  const [streak, setStreak] = useState<number | null>(null)
   const [tab, setTab] = useState<Tab>('boxes')
   const [tradeSubTab, setTradeSubTab] = useState<TradeSubTab>('new')
 
@@ -1639,7 +1638,7 @@ export default function MarketplacePage() {
   const [devBanMarketMsg, setDevBanMarketMsg] = useState('')
   const [devLookupId, setDevLookupId] = useState('')
   const [devLookupBusy, setDevLookupBusy] = useState(false)
-  type LookupUser = { id: number; name: string | null; hacName: string | null; email: string; role: string; tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; coins: number; loginStreak: number; chatBanned: boolean; marketplaceBanned: boolean; marketplaceAccess: boolean; deletedAt: string | null; createdAt: string; lastSeenAt: string | null }
+  type LookupUser = { id: number; name: string | null; hacName: string | null; email: string; role: string; tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; coins: number; chatBanned: boolean; marketplaceBanned: boolean; marketplaceAccess: boolean; deletedAt: string | null; createdAt: string; lastSeenAt: string | null }
   const [devLookupResult, setDevLookupResult] = useState<LookupUser | null>(null)
   const [devLookupError, setDevLookupError] = useState('')
   const [profileMarketGranting, setProfileMarketGranting] = useState(false)
@@ -1690,7 +1689,7 @@ export default function MarketplacePage() {
   // Leaderboard
   const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null)
   const [leaderboardLoading, setLeaderboardLoading] = useState(false)
-  const [leaderboardSub, setLeaderboardSub] = useState<'coins' | 'streak' | 'inventory'>('coins')
+  const [leaderboardSub, setLeaderboardSub] = useState<'coins' | 'inventory'>('coins')
 
   // Trade — lists
   const [incomingTrades, setIncomingTrades] = useState<TradeOffer[]>([])
@@ -1739,14 +1738,11 @@ export default function MarketplacePage() {
 
   useEffect(() => {
     const nsUser = (() => { try { return JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { id?: number } | null } catch { return null } })()
-    const uid = nsUser?.id ?? 'anon'
     setCurrentUserId(nsUser?.id ?? null)
-    setStreak(parseInt(localStorage.getItem(`ns_streak_${uid}`) ?? '0', 10))
 
     api.marketplaceInventory()
       .then(d => {
         setInv(d)
-        if (d.marketplaceAccess) setStreak(prev => Math.max(prev ?? 0, 3))
         if (d.nextFreeSpin) setFreeSpinCooldownUntil(new Date(d.nextFreeSpin))
         if ((d as { marketplaceBanned?: boolean }).marketplaceBanned) setMarketplaceBanned(true)
         setLoading(false)
@@ -2502,28 +2498,6 @@ export default function MarketplacePage() {
     )
   }
 
-  if (streak !== null && streak < 3 && !isDevUser) {
-    return (
-      <div className="fade-up" style={{ maxWidth: 700, margin: '0 auto', paddingBottom: 40 }}>
-        <div style={{ marginBottom: 20 }}>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>Spend your coins</p>
-          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>Marketplace</h1>
-        </div>
-        <div className="ns-card" style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <div style={{ fontSize: 52 }}>🔒</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px' }}>Marketplace Locked</div>
-          <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 320 }}>
-            You need a <strong style={{ color: '#EAB308' }}>3-day login streak</strong> to access the Marketplace.
-            Keep logging in every day to unlock it!
-          </div>
-          <div style={{ marginTop: 8, padding: '10px 20px', borderRadius: 99, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', fontSize: 13, fontWeight: 700, color: '#EAB308' }}>
-            🔥 Current streak: {streak} / 3 day{streak === 1 ? '' : 's'}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   if (loading) {
     return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: 'var(--text-muted)', fontSize: 13 }}>Loading marketplace…</div>
   }
@@ -3208,12 +3182,12 @@ export default function MarketplacePage() {
                   {tradeMsg && <div style={{ fontSize: 12, color: tradeMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 10 }}>{tradeMsg}</div>}
                   {selectedOffer.length === 0 && selectedRequest.length > 0 && (
                     <div style={{ fontSize: 12, color: '#F97316', fontWeight: 600, marginBottom: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)' }}>
-                      ⚠️ You're offering nothing — this is a gift request
+                      ⚠️ You&apos;re offering nothing — this is a gift request
                     </div>
                   )}
                   {selectedOffer.length > 0 && selectedRequest.length === 0 && (
                     <div style={{ fontSize: 12, color: '#F97316', fontWeight: 600, marginBottom: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)' }}>
-                      ⚠️ You're asking for nothing — this is a free gift
+                      ⚠️ You&apos;re asking for nothing — this is a free gift
                     </div>
                   )}
                   <button onClick={() => void handleSendTrade()}
@@ -3522,7 +3496,7 @@ export default function MarketplacePage() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>The Wandering Trader</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 10 }}>
-                  I travel far and wide collecting rarities. I'll buy your items — but don't expect full value.
+                  I travel far and wide collecting rarities. I&apos;ll buy your items — but don&apos;t expect full value.
                   And yes, I have <em>everything</em>, but my prices reflect my trouble.
                 </div>
                 {traderStatus && (
@@ -3758,9 +3732,9 @@ export default function MarketplacePage() {
       {tab === 'leaderboard' && (
         <>
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            {(['coins', 'streak', 'inventory'] as const).map(sub => (
+            {(['coins', 'inventory'] as const).map(sub => (
               <button key={sub} onClick={() => setLeaderboardSub(sub)} style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid var(--border)', background: leaderboardSub === sub ? 'var(--primary)' : 'var(--surface-2)', color: leaderboardSub === sub ? '#060D10' : 'var(--text-muted)', fontWeight: leaderboardSub === sub ? 700 : 500, fontSize: 12, cursor: 'pointer' }}>
-                {sub === 'coins' ? '💰 Richest' : sub === 'streak' ? '🔥 Streak' : '💼 Inventory'}
+                {sub === 'coins' ? '💰 Richest' : '💼 Inventory'}
               </button>
             ))}
           </div>
@@ -3806,7 +3780,6 @@ export default function MarketplacePage() {
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       {leaderboardSub === 'coins' && <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#EAB308', fontWeight: 700, fontSize: 14 }}><CoinIcon size={14} />{entry.value.toLocaleString()}</div>}
-                      {leaderboardSub === 'streak' && <div style={{ color: '#F97316', fontWeight: 700, fontSize: 14 }}>🔥 {entry.value.toLocaleString()}</div>}
                       {leaderboardSub === 'inventory' && <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#A855F7', fontWeight: 700, fontSize: 14 }}><CoinIcon size={14} />{entry.value.toLocaleString()}</div>}
                     </div>
                   </div>
@@ -4155,7 +4128,6 @@ export default function MarketplacePage() {
                   ['Name Color', u.nameColor ?? '—'],
                   ['Avatar Effect', u.avatarEffect ?? '—'],
                   ['Coins', u.coins.toLocaleString()],
-                  ['Streak', `${u.loginStreak}d`],
                   ['Market Access', u.marketplaceAccess ? '✓ Yes' : '✗ No'],
                   ['Market Banned', u.marketplaceBanned ? '🚫 Yes' : '✓ No'],
                   ['Chat Banned', u.chatBanned ? '🚫 Yes' : '✓ No'],
@@ -4390,7 +4362,7 @@ export default function MarketplacePage() {
             <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>{traderBuyConfirm.type === 'tag' ? `[${traderBuyConfirm.name}]` : traderBuyConfirm.name}</div>
             <div style={{ fontSize: 12, color: getRarityColor(traderBuyConfirm.rarity, traderBuyConfirm.id), fontWeight: 700, marginBottom: 16 }}>{traderBuyConfirm.rarity}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6 }}>
-              Trader's price: <strong style={{ color: '#8B5CF6', display: 'inline-flex', alignItems: 'center', gap: 3 }}><CoinIcon size={12} />{traderBuyConfirm.traderPrice.toLocaleString()}</strong>
+              Trader&apos;s price: <strong style={{ color: '#8B5CF6', display: 'inline-flex', alignItems: 'center', gap: 3 }}><CoinIcon size={12} />{traderBuyConfirm.traderPrice.toLocaleString()}</strong>
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 20 }}>
               You have <strong style={{ color: '#EAB308' }}>{(inv?.coins ?? 0).toLocaleString()}</strong> coins

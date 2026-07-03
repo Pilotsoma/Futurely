@@ -1,3 +1,4 @@
+// DISABLED: ClassLink integration paused, pending completion
 import { Router, Response } from 'express';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../lib/prisma';
@@ -176,3 +177,4 @@ router.get('/infinitecampus', asyncHandler(async (req, res) => {
 }));
 
 export default router;
+

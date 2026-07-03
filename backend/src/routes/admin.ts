@@ -24,7 +24,7 @@ router.get('/users/:id', async (req: AuthRequest, res: Response): Promise<void> 
       select: {
         id: true, name: true, hacName: true, email: true, role: true,
         tag: true, tagColor: true, nameColor: true, avatarEffect: true,
-        coins: true, loginStreak: true,
+        coins: true,
         chatBanned: true, marketplaceBanned: true, marketplaceAccess: true,
         deletedAt: true, createdAt: true, lastSeenAt: true,
       },

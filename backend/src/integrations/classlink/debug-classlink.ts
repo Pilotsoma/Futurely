@@ -1,3 +1,4 @@
+// DISABLED: ClassLink integration paused, pending completion
 // DEBUG HARNESS for ClassLink / Schoology / Infinite Campus
 // Usage:
 //   npx ts-node src/integrations/classlink/debug-classlink.ts <districtId> <username> <password> [flags]
@@ -144,3 +145,4 @@ main().catch(e => {
   console.error(e.stack);
   process.exit(1);
 });
+
