@@ -109,6 +109,11 @@ model User {
   spinLegendary             Int                         @default(0)
   spinMythic                Int                         @default(0)
   spinCurse                 Int                         @default(0)
+  // COPPA compliance fields
+  dateOfBirth               DateTime?                   @db.Date
+  coppaConsentStatus        String                      @default("not_required")
+  coppaConsentTimestamp     DateTime?
+  coppaParentEmail          String?
 }
 
 model OAuthAccount {
@@ -413,6 +418,43 @@ model CollegeListItem {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, name])
+  @@index([userId])
+}
+
+// Reference catalog of college admission stats, seeded from data/colleges.csv
+// (see prisma/seedColleges.ts). Not linked to CollegeListItem — that model is a
+// free-text per-user saved list; this is shared reference data with no FERPA
+// implications (no student records). acceptanceRate is a 0-1 decimal (0.06 = 6%),
+// matching the CSV convention.
+model College {
+  id             Int      @id @default(autoincrement())
+  name           String   @unique
+  avgSat         Int
+  avgAct         Float
+  avgGpa         Float
+  acceptanceRate Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// AI-generated "path to admission" qualitative steps, cached per (userId,
+// collegeId) since Anthropic calls are slower/costlier than the numeric
+// model server. No FK to College — same soft-reference convention as
+// CollegeListItem. expiresAt is precomputed at write time (generatedAt + 14
+// days) so freshness is a plain index-friendly comparison, not date math on
+// every read. studentStatsHash is SHA-256 of "sat:act:gpa" — a mismatch means
+// the student's stats changed since the cache was generated, which also
+// invalidates it regardless of expiresAt.
+model CollegePathCache {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  collegeId        Int
+  steps            Json
+  studentStatsHash String
+  generatedAt      DateTime @default(now())
+  expiresAt        DateTime
+
+  @@unique([userId, collegeId])
   @@index([userId])
 }
 

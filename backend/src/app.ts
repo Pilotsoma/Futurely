@@ -38,6 +38,7 @@ import feedRouter from './routes/feed'
 import parentRouter from './routes/parent'
 import notificationsRouter from './routes/notifications'
 import collegesRouter from './routes/colleges'
+import collegeCatalogRouter from './routes/collegeCatalog'
 import marketplaceRouter from './routes/marketplace'
 import educatorRouter from './routes/educator'
 import counselorRouter from './routes/counselor'
@@ -199,6 +200,36 @@ const portalLimiter = rateLimit({
   },
 })
 
+// Each prediction triggers a call to the external ML model server — throttle
+// harder than the global limiter, same rationale as aiLimiter.
+const collegePredictLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many prediction requests, please wait before retrying.' } },
+  handler: (req, res, _next, options) => {
+    logger.warn('rate_limit_hit', { type: 'college_predict', ip: req.ip, path: req.originalUrl })
+    res.status(options.statusCode).json(options.message)
+  },
+})
+
+// Path calls the model server twice AND Anthropic per request — tighter limit
+// than /predict (10/min vs 30/min) to reflect the materially higher cost.
+const collegePathLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many path requests, please wait before retrying.' } },
+  handler: (req, res, _next, options) => {
+    logger.warn('rate_limit_hit', { type: 'college_path', ip: req.ip, path: req.originalUrl })
+    res.status(options.statusCode).json(options.message)
+  },
+})
+
 
 // ── Request logger — never log sensitive fields ──────────────────────────────
 const SENSITIVE_FIELDS = new Set(['password', 'token', 'refreshToken', 'newPassword', 'currentPassword'])
@@ -314,6 +345,15 @@ function devBypass(req: any, _res: any, next: any): void {
   req.userId = 1
   next()
 }
+
+// College catalog — no auth required (shared reference data, no FERPA/COPPA implications).
+// Must be registered BEFORE the auth-gated /colleges mount so Express matches this first.
+app.use('/colleges/catalog', collegeCatalogRouter)
+
+// Predict calls the ML model server per request — stricter limit than the rest of /colleges.
+app.use('/colleges/predict', collegePredictLimiter)
+// Path calls model server twice + Anthropic — tighter limit than /predict.
+app.use('/colleges/path', collegePathLimiter)
 
 if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   console.warn('⚠️  [DEV] Auth bypass active — requests will use real JWT userId or fall back to userId=1')

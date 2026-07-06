@@ -17,6 +17,16 @@ Do not skip this — the answers change how you work.
 Wait for their answer. If it's vague ("work on the app"), ask a clarifying follow-up:
 > "Which part — backend, frontend, mobile, AI features, integrations, or infrastructure?"
 
+### Question 1a — Declare task scope (guardrail system)
+Immediately after Question 1 is answered, update `.claude/guardrails/task-scope.json`'s
+`in_scope` array with glob patterns covering the files/dirs this task will touch. A
+`PreToolUse` hook (`.claude/hooks/guard-protected-paths.js`) enforces this: any `Edit`/
+`Write` on an existing, git-tracked file that isn't in scope triggers a permission
+prompt instead of running silently, and a fixed list of paths (env files, lockfiles,
+applied migrations, the guardrail config itself) is always denied outright regardless of
+scope. New/untracked files are never blocked. See `.claude/context/GUARDRAILS.md` for
+the full policy. Narrow or clear `in_scope` back to `[]` when the task wraps up.
+
 ### Question 2 — What MCP tools do you have active?
 > "Are any MCP tools connected right now? For example:
 > - **Database tool** — I can query your database directly, verify schema, and check live data
@@ -30,10 +40,25 @@ Wait for their answer. If it's vague ("work on the app"), ask a clarifying follo
 ### Question 3 — Are your services running? (ask only if task requires it)
 If the task involves backend code or testing:
 > "Quick check before I write backend code:
-> - Is your database running and reachable?
-> - Do you have all required env vars set (DATABASE_URL, API keys, etc.)?
-> - Is the local dev server running?
+> - Is your database running and reachable? (This project's `DATABASE_URL` points at a
+>   **live Neon Postgres** — it can be unreachable if it's scaled to zero. Never run
+>   `prisma migrate dev` against it; see ARCHITECTURE.md.)
+> - Do you have all required env vars set (see `backend/.env.example`)?
+> - Is the local dev server running (`npm run dev` at repo root starts web + backend, but
+>   NOT the mobile app)?
 > I'll need these to verify changes work."
+
+If the task involves the **mobile app** (`nextstep-mobile/`):
+> "Quick check before I touch mobile code:
+> - Is the Expo dev server running? (`cd nextstep-mobile && npm start`, separate from the
+>   root `npm run dev`.)
+> - Are you testing on a physical device (Expo Go), iOS Simulator, or Android Emulator?
+> - Does `nextstep-mobile/src/constants/api.ts` `API_BASE_URL` currently point at a host your
+>   device/simulator can actually reach? (Physical device → your computer's LAN IP; Android
+>   emulator → `10.0.2.2`; iOS simulator → `localhost`.) This is hardcoded per-developer and
+>   the most common reason the app can't reach the backend.
+> - Is the backend server it's pointing at actually running?
+> I'll need these to verify mobile changes work."
 
 ---
 
@@ -45,8 +70,13 @@ If the user hasn't mentioned these, proactively recommend them based on what the
 |------|----------------|-------------------|
 | **Database MCP** | I can directly inspect schema, run queries, verify migrations, and check live data — instead of inferring everything from Prisma schema files | Anytime we're changing the database or debugging data issues |
 | **GitHub MCP** | I can create PRs, check CI status, read open issues, and post comments without switching to the browser | Anytime we're near shipping or reviewing code |
-| **Playwright / Browser MCP** | I can open the running app and verify UI flows live — not just review code | Anytime we're building or fixing frontend/mobile screens |
-| **Expo / React Native MCP** | I can interact with the Expo dev server and get device logs in real time | When debugging mobile-specific issues |
+| **Chrome DevTools MCP** (`claude-in-chrome`) | I can drive the web app (`app/`) directly, and inspect the Expo Metro bundler's web dev-tools page | Web-portal work, or checking Metro/bundler state via its browser UI |
+| **Computer-use MCP** | I can screenshot and interact with the iOS Simulator or Android Emulator window on your desktop directly — the closest thing to a live device-testing loop available here | Any mobile screen/navigation work where you want me to actually see and tap through the running app, not just review code |
+
+There is no dedicated "Expo MCP" connected in this environment — mobile verification goes
+through the computer-use MCP driving a running Simulator/Emulator window, not a
+device-log-streaming tool. If you want real-time device logs beyond what's visible in the
+Metro terminal output, that's a manual copy/paste from your terminal into the conversation.
 
 > To add an MCP tool: run `/mcp` in Claude Code or open `.claude/settings.json`.
 > I can help you configure any of these if you want to add one.
@@ -62,6 +92,8 @@ Read these files at the start of every session, in this order:
 3. `.claude/context/ENGINEERING_RULES.md` — code standards (apply to all agents, non-negotiable)
 4. `.claude/context/COMPLIANCE.md` — regulatory and data-handling requirements (read before any user-data work)
 5. `.claude/context/DESIGN_SYSTEM.md` — colors, typography, component standards (frontend/UI work only)
+6. `.claude/context/GUARDRAILS.md` — how the protected-file hook works and how to declare task scope (read before any edit)
+7. `.claude/context/PLUGINS.md` — which enabled marketplace plugin reinforces which project agent
 
 If any context file is missing or noticeably outdated, tell the user before proceeding:
 > "The context file [filename] seems missing / hasn't been updated since [date]. 
@@ -182,5 +214,32 @@ These commands are available via the `.claude/commands/` folder:
 > Keep each note short. If it grows long, move it to a context file.
 
 - See `.claude/context/PROJECT.md` for current MVP scope and phase
-- See `.claude/context/ARCHITECTURE.md` for full tech stack details
+- See `.claude/context/ARCHITECTURE.md` for full tech stack details (rewritten to match the
+  actual Express/Prisma/Expo stack — the old version described a fictional NestJS/Firebase
+  stack; if ARCHITECTURE.md ever drifts from the code again, fix it before trusting it)
 - See `.claude/DIAGNOSTIC_REPORT.md` for known integration blockers
+- `nextstep-mobile/` is the real mobile app. `nextstep-mobile/Futurely/` is an unrelated,
+  nested Expo starter template with its own `node_modules`, excluded from `tsconfig.json` —
+  don't edit it or treat it as part of this product.
+- No `lint` script exists in any package; run `npx eslint app components lib` with the root
+  flat config if you need to lint the web app.
+- `backend/.env`'s `DATABASE_URL` points at a **live Neon Postgres** — never run
+  `prisma migrate dev` locally (can prompt a destructive reset). Hand-author migration SQL
+  under `backend/prisma/migrations/` and let `prisma migrate deploy` (part of `npm start`)
+  apply it.
+- No test runner (Jest/Detox/Playwright) is installed anywhere in this repo yet, despite
+  ENGINEERING_RULES.md describing target testing standards — verify before claiming tests ran.
+- `nextstep-mobile/AGENTS.md` currently tells every session to fetch Expo's "v56.0.0" versioned
+  docs before writing any code — the pinned Expo version in `package.json` is `^54.0.35`, so
+  that instruction points at the wrong SDK version. Treat it as unreliable until updated;
+  check `package.json` for the real version instead of fetching that URL.
+- A `PreToolUse` hook now guards every `Edit`/`Write` against silently touching existing,
+  working, git-tracked code — see `.claude/context/GUARDRAILS.md`. Declare task scope in
+  `.claude/guardrails/task-scope.json` before editing existing files, or expect an `ask`
+  permission prompt. A fixed list in `.claude/guardrails/protected-paths.json` (env files,
+  lockfiles, applied Prisma migrations, the guardrail config itself) is denied outright no
+  matter what.
+- The plugin marketplace catalog described in the user's downloaded `message.txt` maps onto
+  the 9 plugins actually enabled in `.claude/settings.json` — see `.claude/context/PLUGINS.md`
+  for the mapping and routing table. Don't scaffold a local copy of the marketplace's folder
+  tree; it isn't how Claude Code loads plugins and it would drift immediately.

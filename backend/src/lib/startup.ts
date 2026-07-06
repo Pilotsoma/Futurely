@@ -110,6 +110,13 @@ const PATCHES: string[] = [
     ADD COLUMN IF NOT EXISTS "spinLegendary"   INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS "spinMythic"      INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS "spinCurse"       INTEGER NOT NULL DEFAULT 0`,
+
+  // ── COPPA compliance columns ─────────────────────────────────────────
+  `ALTER TABLE "User"
+    ADD COLUMN IF NOT EXISTS "dateOfBirth"           DATE        DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS "coppaConsentStatus"    TEXT        NOT NULL DEFAULT 'not_required',
+    ADD COLUMN IF NOT EXISTS "coppaConsentTimestamp" TIMESTAMP(3) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS "coppaParentEmail"      TEXT        DEFAULT NULL`,
 ]
 
 // Data-level repairs that are always idempotent and safe to re-run on every cold start.
@@ -154,7 +161,7 @@ export function ensureSchema(): Promise<void> {
     // Probe checks the two newest schema additions. If both exist, schema patches are skipped.
     // IMPORTANT: update this probe whenever a new column/table is added to PATCHES above.
     try {
-      await prisma.$queryRawUnsafe(`SELECT "spinCoinsSpent" FROM "User" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT "coppaConsentStatus" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
     } catch {
       // Schema is incomplete — run patches below.

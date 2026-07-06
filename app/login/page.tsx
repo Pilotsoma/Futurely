@@ -39,10 +39,11 @@ function LoginPageInner() {
   const [step, setStep]       = useState<'auth' | 'connecting' | 'syncing'>('auth')
   const [portalDisconnected, setPortalDisconnected] = useState(false)
 
+  const [dateOfBirth, setDateOfBirth]           = useState('')
+
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [agreedPrivacy, setAgreedPrivacy]       = useState(false)
   const [agreedTos, setAgreedTos]               = useState(false)
-  const [agreedAge, setAgreedAge]               = useState(false)
   const [pendingOAuthNew, setPendingOAuthNew]   = useState(false)
 
   const [institution, setInstitution] = useState('')
@@ -113,7 +114,6 @@ function LoginPageInner() {
       }).catch(() => {})
       setAgreedPrivacy(false)
       setAgreedTos(false)
-      setAgreedAge(false)
       setPendingOAuthNew(true)
       setShowPrivacyModal(true)
     }
@@ -133,7 +133,7 @@ function LoginPageInner() {
   function selectOther() {
     setSelectedIsd(null); setHacUrl(''); setUseCustomUrl(true); setIsdSearch(''); setIsdOpen(false)
   }
-  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setSchoolQuery(''); setSchoolResults([]); setSchoolOpen(false) }
+  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setSchoolQuery(''); setSchoolResults([]); setSchoolOpen(false); setDateOfBirth('') }
   function fullReset() { reset(); setInstitution(''); setApplyAsCounselor(false) }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -146,6 +146,7 @@ function LoginPageInner() {
     // Registration — validate first
     if (password !== confirmPassword) { setError('Passwords do not match'); return }
     if (password.length < 6)          { setError('Password must be at least 6 characters'); return }
+    if (!dateOfBirth.trim())          { setError('Please enter your date of birth.'); return }
     if (mode === 'register-student') {
       if (!hacUsername.trim() || !hacPassword.trim()) { setError('School portal credentials are required'); return }
       if (!hacUrl.trim() && !useCustomUrl) { setError('Please select your school district'); return }
@@ -173,7 +174,6 @@ function LoginPageInner() {
     }
     setAgreedPrivacy(false)
     setAgreedTos(false)
-    setAgreedAge(false)
     setShowPrivacyModal(true)
   }
 
@@ -184,11 +184,11 @@ function LoginPageInner() {
       if (mode === 'login') {
         result = await api.login(email, password)
       } else if (mode === 'register-student') {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined)
+        result = await api.register(email, password, otpCode.trim(), dateOfBirth.trim(), name.trim() || undefined)
       } else if (mode === 'register-teacher') {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'TEACHER')
+        result = await api.register(email, password, otpCode.trim(), dateOfBirth.trim(), name.trim() || undefined, 'TEACHER')
       } else {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'PARENT')
+        result = await api.register(email, password, otpCode.trim(), dateOfBirth.trim(), name.trim() || undefined, 'PARENT')
       }
       setWebLogin(result.token)
       localStorage.setItem('ns_user', JSON.stringify(result.user))
@@ -360,6 +360,14 @@ function LoginPageInner() {
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com" required style={styles.input} />
           </div>
+
+          {mode !== 'login' && (
+            <div style={styles.field}>
+              <label style={styles.label}>Date of Birth</label>
+              <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)}
+                max={new Date().toISOString().split('T')[0]} required style={styles.input} />
+            </div>
+          )}
 
           <div style={styles.field}>
             <label style={styles.label}>Password</label>
@@ -783,18 +791,9 @@ function LoginPageInner() {
                 />
                 <span style={styles.checkLabel}>I have read and agree to the Privacy Policy</span>
               </label>
-              <label style={styles.checkRow}>
-                <input
-                  type="checkbox"
-                  checked={agreedAge}
-                  onChange={e => setAgreedAge(e.target.checked)}
-                  style={styles.checkbox}
-                />
-                <span style={styles.checkLabel}>I am at least 13 years of age</span>
-              </label>
               <button
                 type="button"
-                disabled={!agreedTos || !agreedPrivacy || !agreedAge || isLoading}
+                disabled={!agreedTos || !agreedPrivacy || isLoading}
                 onClick={() => {
                   setShowPrivacyModal(false)
                   if (pendingOAuthNew) {
@@ -803,7 +802,7 @@ function LoginPageInner() {
                     void doRegisterOrLogin()
                   }
                 }}
-                style={{ ...styles.btn, marginTop: 6, opacity: (!agreedTos || !agreedPrivacy || !agreedAge || isLoading) ? 0.45 : 1 }}
+                style={{ ...styles.btn, marginTop: 6, opacity: (!agreedTos || !agreedPrivacy || isLoading) ? 0.45 : 1 }}
               >
                 {isLoading ? 'Creating account...' : pendingOAuthNew ? 'Continue to Futurely' : 'Continue & Create Account'}
               </button>

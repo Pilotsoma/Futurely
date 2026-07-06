@@ -291,19 +291,28 @@ async function autoRelogin(userId: number): Promise<{ token: string; session: Re
 async function resolveSession(userId: number, res: Response): Promise<ReturnType<typeof getSessionByUserId>> {
   // 1. Fast path: in-memory session is still valid
   let entry = getSessionByUserId(userId)
-  if (entry) return entry
+  if (entry) {
+    console.log('[SCRAPE_DEBUG] resolveSession: in-memory hit', { userId, origin: entry.session.baseUrl, systemType: entry.session.systemType })
+    return entry
+  }
+  console.log('[SCRAPE_DEBUG] resolveSession: no in-memory session, trying auto-relogin', { userId })
 
   // 2. No in-memory session → try auto-relogin with stored credentials
   const reloginResult = await autoRelogin(userId)
   if (reloginResult?.session) {
     entry = reloginResult.session
-    if (entry) return entry
+    if (entry) {
+      console.log('[SCRAPE_DEBUG] resolveSession: auto-relogin succeeded', { userId, origin: entry.session.baseUrl })
+      return entry
+    }
   }
+  console.log('[SCRAPE_DEBUG] resolveSession: auto-relogin failed or returned no session', { userId })
 
   // 3. Auto-relogin failed → last resort: restore from DB cache only if fresh
   // (cookies older than 50 min are dead on HAC's side — restoring them just
   // puts a stale entry in memory that fails on the very next HAC request)
   const connection = await prisma.schoolConnection.findUnique({ where: { userId } }).catch(() => null)
+  console.log('[SCRAPE_DEBUG] resolveSession: SchoolConnection lookup', { userId, found: Boolean(connection), districtUrl: connection?.districtUrl, hasCachedSession: Boolean(connection?.cachedSession), hasEncryptedPassword: Boolean(connection?.encryptedPassword) })
   if (connection?.cachedSession) {
     const unwrapped = unwrapCachedSession(connection.cachedSession)
     if (unwrapped) {
@@ -321,6 +330,7 @@ async function resolveSession(userId: number, res: Response): Promise<ReturnType
   }
 
   if (!entry) {
+    console.log('[SCRAPE_DEBUG] resolveSession: FAILED — no session could be established', { userId })
     res.status(401).json({
       data: null,
       error: {
@@ -331,6 +341,7 @@ async function resolveSession(userId: number, res: Response): Promise<ReturnType
     return null
   }
 
+  console.log('[SCRAPE_DEBUG] resolveSession: resolved via DB-cache restore', { userId, origin: entry.session.baseUrl })
   return entry
 }
 
@@ -542,6 +553,10 @@ router.post('/hac/login', asyncHandler(async (req: AuthRequest, res: Response): 
     console.log('[GRADES ROUTER] loginHAC success:', {
       hasSessionToken: Boolean(sessionToken),
     })
+    {
+      const savedEntry = getSessionByUserId(userId)
+      console.log('[SCRAPE_DEBUG] Session saved in-memory after login', { userId, origin: savedEntry?.session.baseUrl, resolvedBaseUrlSentToLoginHAC: resolvedBaseUrl })
+    }
 
     // Block if another account already owns this school username
     const taken = await prisma.schoolConnection.findFirst({
@@ -713,6 +728,7 @@ router.post('/powerschool/login', asyncHandler(async (req: AuthRequest, res: Res
 
 router.get('/current', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId!
+  console.log('[SCRAPE_DEBUG] GET /current — request received', { userId })
   const entry = await resolveSession(userId, res)
   if (!entry) return
 
@@ -721,15 +737,20 @@ router.get('/current', asyncHandler(async (req: AuthRequest, res: Response): Pro
     touchSession(userId)
 
     if (entry.session.systemType === 'HAC') {
+      console.log('[SCRAPE_DEBUG] Calling hacGrades(token) — origin in use:', entry.session.baseUrl)
       const { classes: rawHacGrades } = await hacGrades(entry.token)
+      console.log('[SCRAPE_DEBUG] hacGrades() returned', { rawClassCount: rawHacGrades?.length ?? 0, firstClassRaw: rawHacGrades?.[0] ? JSON.stringify(rawHacGrades[0]).slice(0, 300) : null })
       const normalizedGrades = normalizeHacGrades(rawHacGrades)
+      console.log('[SCRAPE_DEBUG] normalizeHacGrades() output', { normalizedCourseCount: normalizedGrades.length, firstCourse: normalizedGrades[0] ? JSON.stringify(normalizedGrades[0]).slice(0, 300) : null })
 
-      res.json({
+      const responsePayload = {
         data: {
           systemType: entry.session.systemType,
           grades: normalizedGrades,
         },
-      })
+      }
+      console.log('[SCRAPE_DEBUG] Sending response to mobile', { payloadBytes: JSON.stringify(responsePayload).length })
+      res.json(responsePayload)
     } else {
       const rawPsGrades = await psGrades(entry.token)
       const normalizedGrades = normalizePsGrades(rawPsGrades)
@@ -742,6 +763,7 @@ router.get('/current', asyncHandler(async (req: AuthRequest, res: Response): Pro
       })
     }
   } catch (err: unknown) {
+    console.log('[SCRAPE_DEBUG] GET /current — threw error', { message: err instanceof Error ? err.message : String(err) })
     sendError(res, 'FETCH_CURRENT_GRADES', err, 'FETCH_ERROR')
   }
 }))

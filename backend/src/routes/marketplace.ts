@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import rateLimit from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
@@ -11,7 +11,10 @@ import { sendToUser, broadcast } from '../lib/websocket'
 const txLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
-  keyGenerator: (req: Request): string => String((req as AuthRequest).userId ?? req.ip ?? 'anon'),
+  keyGenerator: (req: Request): string => {
+    const userId = (req as AuthRequest).userId
+    return userId !== undefined ? String(userId) : ipKeyGenerator(req.ip ?? 'anon')
+  },
   standardHeaders: true,
   legacyHeaders: false,
   message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many marketplace actions. Slow down.' } },

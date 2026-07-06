@@ -102,6 +102,29 @@ function validatePassword(password: string): string | null {
   return null
 }
 
+const COPPA_MIN_AGE_YEARS = 13
+
+function computeAge(dateOfBirth: Date): number {
+  const today = new Date()
+  let age = today.getFullYear() - dateOfBirth.getFullYear()
+  const monthDiff = today.getMonth() - dateOfBirth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dateOfBirth.getDate())) {
+    age -= 1
+  }
+  return age
+}
+
+function parseAndValidateDob(raw: string): { dob: Date } | { error: string } {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return { error: 'Date of birth must be in YYYY-MM-DD format.' }
+  }
+  const dob = new Date(raw + 'T00:00:00Z')
+  if (isNaN(dob.getTime())) return { error: 'Invalid date of birth.' }
+  const age = computeAge(dob)
+  if (age < 0 || age > 120) return { error: 'Please enter a valid date of birth.' }
+  return { dob }
+}
+
 function issueAccessToken(userId: number, role = 'STUDENT'): string {
   return jwt.sign({ sub: userId, role }, process.env.JWT_SECRET!, { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_EXPIRY })
 }
@@ -219,14 +242,44 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
 // ── POST /auth/register ───────────────────────────────────────────────────────
 
 router.post('/register', registerLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email, password, name, role: roleInput, otp } = req.body as {
-    email?: string; password?: string; name?: string; role?: string; otp?: string
+  const { email, password, name, role: roleInput, otp, dateOfBirth: rawDob } = req.body as {
+    email?: string; password?: string; name?: string; role?: string; otp?: string; dateOfBirth?: string
   }
 
   if (!email || !password) {
     res.status(400).json({
       data: null,
       error: { code: 'VALIDATION_ERROR', message: 'email and password required' },
+    })
+    return
+  }
+
+  // COPPA age-gate — validate DOB before any DB work or OTP verification
+  if (!rawDob) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'Date of birth is required.' },
+    })
+    return
+  }
+  const dobResult = parseAndValidateDob(rawDob)
+  if ('error' in dobResult) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: dobResult.error },
+    })
+    return
+  }
+  const { dob } = dobResult
+  const age = computeAge(dob)
+  if (age < COPPA_MIN_AGE_YEARS) {
+    logger.info('auth.coppa_block', { ip: req.ip })
+    res.status(403).json({
+      data: null,
+      error: {
+        code: 'COPPA_BLOCK',
+        message: 'Futurely requires users to be at least 13 years old. If you are under 13, a parent or guardian must contact support@futurely.app to request account access.',
+      },
     })
     return
   }
@@ -319,6 +372,9 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
         tag: defaultTag,
         tagColor: 'grey',
         emailVerified: true,
+        dateOfBirth: dob,
+        coppaConsentStatus: 'not_required',
+        coppaConsentTimestamp: new Date(),
       },
     })
 

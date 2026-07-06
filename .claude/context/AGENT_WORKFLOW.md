@@ -5,13 +5,16 @@
 | Agent | File | Owns |
 |-------|------|------|
 | Lead Architect | `agents/lead-architect.md` | System design, task breakdown, code review, final approval |
-| Backend Engineer | `agents/backend.md` | NestJS API, Prisma, Firebase Auth, GPA logic |
-| Frontend Engineer | `agents/frontend.md` | React Native screens, RTK Query, navigation |
-| UI Design System Engineer | `agents/ui.md` | Components, styling, animations, accessibility |
-| School Systems Integration | `agents/integration.md` | Canvas, Google Classroom, HAC, Skyward, PowerSchool |
-| AI Engineer | `agents/ai-engineer.md` | Prompts, LLM calls, smart planner, GPA predictions |
+| Backend Engineer | `agents/backend.md` | Express API, Prisma/Neon, JWT auth, GPA logic |
+| Frontend Engineer | `agents/frontend.md` | Expo/React Native screens, Context API + per-domain API modules, React Navigation v7 |
+| UI Design System Engineer | `agents/ui.md` | Components, NativeWind styling, animations, accessibility |
+| School Systems Integration | `agents/integration.md` | ClassLink, Canvas, HAC (Home Access Center) scraping/connectors |
+| AI Engineer | `agents/ai-engineer.md` | Prompts, Claude/OpenAI/Gemini/OpenRouter calls, GPA predictions |
 | QA & Security Engineer | `agents/qa.md` | Tests, security review, FERPA/COPPA audit, verdicts |
-| DevOps Engineer | `agents/devops.md` | CI/CD, AWS, EAS Build, secrets, monitoring |
+| DevOps Engineer | `agents/devops.md` | Vercel deploy config, EAS Build (once introduced), env vars, monitoring |
+
+See `.claude/context/ARCHITECTURE.md` for the actual stack — it is Express + Prisma/Neon +
+JWT, not NestJS + Firebase. This roster should stay in sync with that file.
 
 ---
 
@@ -59,7 +62,7 @@ Read: .claude/context/ARCHITECTURE.md, ENGINEERING_RULES.md, COMPLIANCE.md
 Implement this feature based on the Architect's design:
 [paste Architect output]
 
-Deliver: NestJS controllers, services, DTOs, Prisma schema changes.
+Deliver: Express route handlers, Zod schemas, Prisma schema changes.
 All ENGINEERING_RULES.md standards apply. Include handoff block.
 ```
 
@@ -99,7 +102,7 @@ Act as Frontend Engineer for NextStep.
 
 Read: .claude/context/ARCHITECTURE.md, DESIGN_SYSTEM.md, ENGINEERING_RULES.md
 
-Build the React Native screens for: [feature name]
+Build the Expo/React Native screens for: [feature name]
 
 Backend API contracts:
 [paste Backend output — endpoints, request/response shapes]
@@ -107,7 +110,8 @@ Backend API contracts:
 AI feature context (if applicable):
 [paste AI Engineer output]
 
-Deliver: screens, RTK Query slices, navigation wiring. Include handoff block.
+Deliver: screens, a typed function in src/api/[domain]Api.ts, navigation wiring
+(React Navigation v7). Include handoff block.
 ```
 
 ### Step 6 — UI: Polish components
@@ -149,10 +153,10 @@ Read: .claude/context/ARCHITECTURE.md, COMPLIANCE.md
 Set up deployment for: [feature name]
 
 New infrastructure needed:
-[describe: new env vars, new AWS resources, new build config]
+[describe: new env vars, EAS config, Vercel project settings]
 
-Deliver: GitHub Actions workflow changes, EAS config, AWS config, env var documentation.
-Include handoff block.
+Deliver: GitHub Actions workflow changes (if any), EAS config (if introducing native builds),
+Vercel env var documentation. Include handoff block.
 ```
 
 ### Step 9 — Architect: Final review

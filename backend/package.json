@@ -12,6 +12,7 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force && prisma db seed",
     "seed:students": "ts-node --transpile-only prisma/seedStudents.ts",
+    "seed:colleges": "ts-node --transpile-only prisma/seedColleges.ts",
     "demo:students": "ts-node --transpile-only scripts/listDemoStudents.ts"
   },
   "prisma": {

@@ -59,6 +59,8 @@ export async function sendEmail(opts: MailOptions): Promise<void> {
     return
   }
 
-  // No email provider configured — log for local dev
-  console.log(`[EMAIL] Not configured. To=${opts.to} Subject="${opts.subject}"`)
+  // No email provider configured — log the full email for local dev so codes/links are usable.
+  console.log(`[EMAIL] Not configured — would have sent to ${opts.to}`)
+  console.log(`[EMAIL] Subject: ${opts.subject}`)
+  console.log(`[EMAIL] Body:\n${opts.html}`)
 }

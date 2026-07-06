@@ -145,10 +145,10 @@ interface StudentData {
 }
 
 export const api = {
-  register: (email: string, password: string, otp: string, name?: string, role?: string) =>
+  register: (email: string, password: string, otp: string, dateOfBirth: string, name?: string, role?: string) =>
     request<LoginResult>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, otp, name, role }),
+      body: JSON.stringify({ email, password, otp, dateOfBirth, name, role }),
     }),
   login: (email: string, password: string) =>
     request<LoginResult>('/api/auth/login', {
@@ -662,6 +662,41 @@ export const api = {
 
   collegeRemove: (id: number) =>
     request<{ deleted: boolean }>(`/api/colleges/${id}`, { method: 'DELETE' }),
+
+  collegeCatalog: (q: string, limit?: number) => {
+    const params = new URLSearchParams({ q })
+    if (limit !== undefined) params.set('limit', String(limit))
+    return request<CatalogCollege[]>(`/api/colleges/catalog?${params.toString()}`)
+  },
+
+  collegePredict: (payload: {
+    collegeId: number
+    studentSat: number
+    studentAct?: number | null
+    studentGpa: number
+  }) =>
+    request<{ collegeName: string; probability: number; tier: 'Reach' | 'Target' | 'Safety' }>(
+      '/api/colleges/predict',
+      { method: 'POST', body: JSON.stringify(payload) },
+    ),
+
+  collegePath: (payload: {
+    collegeId: number
+    studentSat: number
+    studentAct?: number | null
+    studentGpa: number
+  }) =>
+    request<{
+      collegeName: string
+      baselineProbability: number
+      steps: Array<{
+        type: 'quantitative' | 'qualitative'
+        title: string
+        description: string
+        percentBoost: number
+        source: 'model' | 'ai_estimate'
+      }>
+    }>('/api/colleges/path', { method: 'POST', body: JSON.stringify(payload) }),
 
   deleteAccount: (password?: string) =>
     request<{ deleted: boolean }>('/api/auth/account', {
@@ -1645,6 +1680,16 @@ export interface CollegeListItem {
   userId: number
   name: string
   createdAt: string
+}
+
+export interface CatalogCollege {
+  id: number
+  name: string
+  avgSat: number
+  avgAct: number
+  avgGpa: number
+  /** 0-1 decimal — multiply by 100 for display */
+  acceptanceRate: number
 }
 
 export interface AppNotification {

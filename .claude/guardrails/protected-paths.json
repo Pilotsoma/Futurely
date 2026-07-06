@@ -1,0 +1,22 @@
+{
+  "_comment": "Glob patterns (relative to project root, ** and * and ? supported). Any Edit/Write matching one of these is DENIED outright by .claude/hooks/guard-protected-paths.js, no matter what the current task scope says. Edit this list by hand when you genuinely need to change one of these paths.",
+  "protected": [
+    ".env",
+    ".env.*",
+    "backend/.env",
+    "backend/.env.*",
+    "nextstep-mobile/.env",
+    "nextstep-mobile/.env.*",
+    "**/*.pem",
+    "**/*.key",
+    "**/*.p12",
+    "package-lock.json",
+    "backend/package-lock.json",
+    "nextstep-mobile/package-lock.json",
+    "backend/prisma/migrations/**",
+    ".git/**",
+    ".claude/settings.json",
+    ".claude/hooks/**",
+    ".claude/guardrails/protected-paths.json"
+  ]
+}

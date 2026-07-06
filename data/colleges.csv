@@ -1,0 +1,199 @@
+# APPROXIMATE DATA — for planning/estimation purposes only. Figures are rounded,
+# best-available approximations (enrolled-student middle-50%-ish SAT/ACT/GPA and
+# overall acceptance rate) and are NOT sourced from a live data feed. Periodically
+# verify against each school's Common Data Set (CDS) or official admissions page
+# before relying on this for anything beyond a rough estimate. avg_act values were
+# derived from the official SAT-ACT concordance table where independent ACT data
+# was not separately confirmed, so treat avg_act as directionally correct rather
+# than precise. Schools this maintainer wasn't reasonably confident about were
+# left out entirely rather than padded with guesses.
+college_name,avg_sat,avg_act,avg_gpa,acceptance_rate
+Harvard University,1520,34,3.9,0.032
+Yale University,1515,34,3.9,0.045
+Princeton University,1510,33,3.9,0.038
+Columbia University,1505,33,3.9,0.039
+University of Pennsylvania,1505,33,3.9,0.054
+Brown University,1500,33,3.9,0.05
+Dartmouth College,1490,32,3.9,0.06
+Cornell University,1480,32,3.85,0.075
+Massachusetts Institute of Technology,1545,35,3.95,0.04
+Stanford University,1510,33,3.95,0.04
+California Institute of Technology,1545,35,3.95,0.03
+University of Chicago,1520,34,3.9,0.05
+Duke University,1510,33,3.9,0.06
+Northwestern University,1505,33,3.9,0.07
+Johns Hopkins University,1505,33,3.9,0.07
+Rice University,1510,33,3.9,0.09
+Vanderbilt University,1500,33,3.85,0.07
+Washington University in St. Louis,1505,33,3.85,0.11
+University of Notre Dame,1475,32,3.9,0.13
+Carnegie Mellon University,1510,33,3.85,0.11
+Georgetown University,1440,31,3.85,0.12
+Emory University,1450,31,3.8,0.11
+Tufts University,1465,32,3.85,0.09
+University of Southern California,1440,31,3.85,0.1
+New York University,1450,31,3.7,0.09
+Boston College,1440,31,3.8,0.15
+Boston University,1410,30,3.7,0.14
+Northeastern University,1475,32,3.85,0.07
+Tulane University,1400,29,3.6,0.13
+Case Western Reserve University,1440,31,3.8,0.3
+University of Miami,1400,29,3.7,0.19
+Wake Forest University,1420,30,3.8,0.22
+Villanova University,1370,28,3.7,0.2
+Lehigh University,1360,27,3.7,0.35
+Rensselaer Polytechnic Institute,1400,29,3.7,0.5
+Brandeis University,1420,30,3.7,0.35
+University of Rochester,1420,30,3.7,0.3
+George Washington University,1350,27,3.6,0.44
+Fordham University,1330,26,3.6,0.45
+Santa Clara University,1360,27,3.7,0.48
+Pepperdine University,1330,26,3.6,0.34
+Southern Methodist University,1310,26,3.6,0.52
+Texas Christian University,1250,23,3.7,0.41
+Baylor University,1270,24,3.71,0.45
+University of California-Berkeley,1415,30,3.89,0.17
+University of California-Los Angeles,1390,29,3.9,0.14
+University of California-San Diego,1350,27,3.8,0.3
+University of California-Davis,1300,25,3.7,0.44
+University of California-Irvine,1300,25,3.8,0.29
+University of California-Santa Barbara,1330,26,3.8,0.31
+University of California-Santa Cruz,1250,23,3.6,0.51
+University of California-Riverside,1180,21,3.6,0.7
+University of Michigan,1420,30,3.88,0.2
+University of Virginia,1390,29,3.95,0.21
+University of North Carolina at Chapel Hill,1370,28,3.9,0.17
+Georgia Institute of Technology,1440,31,3.95,0.17
+University of Florida,1360,27,3.95,0.23
+University of Texas at Austin,1310,26,3.74,0.31
+University of Wisconsin-Madison,1320,26,3.83,0.49
+Ohio State University,1320,26,3.73,0.54
+Pennsylvania State University,1230,23,3.59,0.54
+Purdue University,1300,25,3.67,0.53
+University of Illinois Urbana-Champaign,1400,29,3.83,0.44
+University of Washington,1330,26,3.8,0.48
+University of Maryland-College Park,1370,28,3.8,0.44
+Rutgers University-New Brunswick,1280,24,3.6,0.66
+University of Georgia,1330,26,3.9,0.4
+Indiana University Bloomington,1250,23,3.72,0.8
+University of Minnesota Twin Cities,1340,27,3.7,0.68
+Michigan State University,1180,21,3.5,0.83
+Texas A&M University,1240,23,3.72,0.63
+University of Colorado Boulder,1240,23,3.5,0.84
+University of Pittsburgh,1350,27,3.7,0.51
+Virginia Tech,1280,24,3.8,0.57
+William & Mary,1400,29,3.9,0.33
+North Carolina State University,1300,25,3.9,0.44
+Clemson University,1290,25,3.9,0.43
+University of South Carolina,1230,23,3.7,0.65
+University of Delaware,1220,22,3.6,0.67
+University of Connecticut,1300,25,3.7,0.56
+University of Vermont,1250,23,3.6,0.66
+University of New Hampshire,1170,21,3.5,0.86
+University of Massachusetts Amherst,1290,25,3.7,0.64
+Stony Brook University,1320,26,3.7,0.44
+University at Buffalo,1240,23,3.6,0.65
+Binghamton University,1350,27,3.8,0.4
+Florida State University,1220,22,3.8,0.37
+University of Iowa,1180,21,3.6,0.86
+Iowa State University,1160,20,3.5,0.91
+University of Kansas,1150,20,3.5,0.91
+Kansas State University,1120,19,3.4,0.94
+University of Missouri,1180,21,3.5,0.79
+University of Nebraska-Lincoln,1160,20,3.5,0.85
+University of Oklahoma,1190,21,3.6,0.8
+Oklahoma State University,1130,19,3.5,0.7
+University of Kentucky,1170,21,3.6,0.94
+University of Tennessee,1230,23,3.75,0.7
+University of Alabama,1170,21,3.7,0.8
+Auburn University,1220,22,3.7,0.44
+University of Mississippi,1130,19,3.5,0.93
+Mississippi State University,1110,19,3.5,0.8
+University of Arkansas,1150,20,3.6,0.79
+Louisiana State University,1160,20,3.5,0.73
+University of Utah,1210,22,3.6,0.9
+Utah State University,1090,18,3.4,0.95
+University of Nevada-Reno,1080,18,3.4,0.88
+University of Nevada-Las Vegas,1050,17,3.3,0.9
+University of Idaho,1080,18,3.4,0.78
+University of Montana,1050,17,3.3,0.94
+University of Wyoming,1080,18,3.4,0.96
+University of Arizona,1190,21,3.4,0.85
+Arizona State University,1220,22,3.5,0.88
+University of Oregon,1200,22,3.5,0.83
+Oregon State University,1180,21,3.5,0.85
+Washington State University,1090,18,3.4,0.83
+University of Hawaii at Manoa,1130,19,3.4,0.72
+University of Houston,1190,21,3.5,0.66
+Texas Tech University,1180,21,3.55,0.72
+UT Dallas,1330,26,3.82,0.82
+UT Arlington,1160,20,3.4,0.88
+UT San Antonio,1110,19,3.3,0.91
+UT El Paso,1030,16,3.1,0.99
+UT Tyler,1100,18,3.2,0.95
+UT Rio Grande Valley,1010,15,3.1,0.99
+Texas State University,1140,20,3.45,0.88
+University of North Texas,1140,20,3.4,0.76
+Sam Houston State University,1060,17,3.2,0.74
+Stephen F. Austin State University,1050,17,3.1,0.85
+Lamar University,1020,16,3.1,0.95
+Texas Southern University,960,14,2.9,0.67
+Prairie View A&M University,980,14,3.0,0.68
+Tarleton State University,1050,17,3.2,0.72
+Texas A&M University-Commerce,1030,16,3.1,0.65
+Texas A&M University-Corpus Christi,1040,16,3.1,0.89
+Texas A&M University-Kingsville,990,15,3.0,0.79
+Angelo State University,1050,17,3.1,0.85
+Midwestern State University,1040,16,3.1,0.79
+Houston Baptist University,1100,18,3.3,0.74
+Williams College,1500,33,3.9,0.08
+Amherst College,1495,32,3.9,0.07
+Swarthmore College,1480,32,3.9,0.07
+Pomona College,1500,33,3.9,0.06
+Wellesley College,1460,31,3.9,0.13
+Bowdoin College,1460,31,3.9,0.08
+Middlebury College,1420,30,3.8,0.13
+Carleton College,1470,32,3.9,0.15
+Claremont McKenna College,1450,31,3.85,0.1
+Davidson College,1400,29,3.8,0.17
+Colgate University,1420,30,3.7,0.13
+Colby College,1440,31,3.8,0.08
+Hamilton College,1420,30,3.8,0.11
+Vassar College,1420,30,3.8,0.19
+Wesleyan University,1440,31,3.8,0.14
+Haverford College,1440,31,3.8,0.14
+Grinnell College,1420,30,3.8,0.1
+Smith College,1400,29,3.8,0.29
+Barnard College,1440,31,3.85,0.08
+Bates College,1400,29,3.7,0.13
+Oberlin College,1400,29,3.7,0.3
+Scripps College,1400,29,3.8,0.28
+Washington and Lee University,1400,29,3.7,0.16
+Bryn Mawr College,1370,28,3.7,0.3
+Trinity College (CT),1350,27,3.6,0.32
+Kenyon College,1370,28,3.7,0.3
+Mount Holyoke College,1330,26,3.7,0.48
+Macalester College,1400,29,3.7,0.3
+Pitzer College,1380,28,3.7,0.16
+Union College,1330,26,3.6,0.4
+DePauw University,1250,23,3.6,0.62
+Skidmore College,1330,26,3.6,0.35
+Franklin & Marshall College,1310,26,3.6,0.38
+Dickinson College,1280,24,3.5,0.45
+Connecticut College,1350,27,3.6,0.34
+Sewanee: The University of the South,1300,25,3.6,0.63
+Whitman College,1330,26,3.7,0.48
+Colorado College,1370,28,3.7,0.13
+Reed College,1400,29,3.7,0.35
+Occidental College,1330,26,3.6,0.36
+St. Olaf College,1300,25,3.6,0.53
+Denison University,1350,27,3.6,0.24
+Wheaton College (MA),1230,23,3.5,0.68
+Bard College,1330,26,3.6,0.65
+Beloit College,1250,23,3.5,0.65
+Centre College,1280,24,3.7,0.68
+Rhodes College,1280,24,3.7,0.55
+Furman University,1290,25,3.7,0.62
+Hendrix College,1230,23,3.6,0.65
+Trinity University (TX),1350,27,3.7,0.42
+Southwestern University,1200,22,3.6,0.55
