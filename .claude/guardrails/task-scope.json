@@ -24,6 +24,7 @@
     "nextstep-mobile/src/screens/CollegesScreen.tsx",
     "nextstep-mobile/src/api/collegesApi.ts",
     "nextstep-mobile/src/api/collegeCatalogApi.ts",
-    "README.md"
+    "README.md",
+    "backend/src/lib/startup.ts"
   ]
 }

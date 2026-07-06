@@ -63,8 +63,10 @@ const PATCHES: string[] = [
     END IF;
   END $$`,
 
-  // IF NOT EXISTS avoids the AccessExclusiveLock when the constraint already exists.
-  `ALTER TABLE "User" ADD CONSTRAINT IF NOT EXISTS "User_name_key" UNIQUE ("name")`,
+  // Postgres has no "ADD CONSTRAINT IF NOT EXISTS" syntax — a bare ADD CONSTRAINT
+  // throws a "already exists" error on re-run, which the catch below already
+  // treats as a non-fatal, ignorable case.
+  `ALTER TABLE "User" ADD CONSTRAINT "User_name_key" UNIQUE ("name")`,
 
   // ── Tables ───────────────────────────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS "GiveawayEntry" (
