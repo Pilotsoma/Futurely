@@ -798,14 +798,17 @@ function LoginPageInner() {
                 />
                 <span style={styles.checkLabel}>I am at least 13 years of age</span>
               </label>
+              {error && <p style={styles.error}>{error}</p>}
+
               <button
                 type="button"
                 disabled={!agreedTos || !agreedPrivacy || !agreedAge || isLoading}
                 onClick={() => {
-                  setShowPrivacyModal(false)
                   if (pendingOAuthNew) {
+                    setShowPrivacyModal(false)
                     router.push('/dashboard')
                   } else {
+                    setError(null)
                     void doRegisterOrLogin()
                   }
                 }}
