@@ -49,26 +49,20 @@ export interface ScorecardSchool {
 
 // ── Raw API response types ───────────────────────────────────────────────────
 
-interface RawSatPercentile {
-  critical_reading: number | null
-  math: number | null
-}
-
+// The College Scorecard API returns fields as flat dot-notation keys matching
+// the requested `fields` query param verbatim — it does NOT nest them into
+// objects. e.g. `{"school.name": "MIT", "admissions.admission_rate.overall": 0.04}`.
 interface RawSchoolResult {
   id: number
-  school: {
-    name: string
-    city: string | null
-    state: string | null
-  }
-  admissions: {
-    admission_rate: { overall: number | null } | null
-    sat_scores: {
-      '25th_percentile': RawSatPercentile | null
-      '75th_percentile': RawSatPercentile | null
-    } | null
-  } | null
-  student: { size: number | null } | null
+  'school.name': string
+  'school.city': string | null
+  'school.state': string | null
+  'admissions.admission_rate.overall': number | null
+  'admissions.sat_scores.25th_percentile.critical_reading': number | null
+  'admissions.sat_scores.25th_percentile.math': number | null
+  'admissions.sat_scores.75th_percentile.critical_reading': number | null
+  'admissions.sat_scores.75th_percentile.math': number | null
+  'student.size': number | null
 }
 
 interface ScorecardApiResponse {
@@ -90,10 +84,7 @@ function getApiKey(): string {
   return key
 }
 
-function compositeScore(percentile: RawSatPercentile | null | undefined): number | null {
-  if (!percentile) return null
-  const reading = percentile.critical_reading
-  const math = percentile.math
+function compositeScore(reading: number | null | undefined, math: number | null | undefined): number | null {
   if (reading === null || reading === undefined || math === null || math === undefined) {
     return null
   }
@@ -103,13 +94,19 @@ function compositeScore(percentile: RawSatPercentile | null | undefined): number
 function normalizeResult(raw: RawSchoolResult): ScorecardSchool {
   return {
     unitId: String(raw.id),
-    name: raw.school.name,
-    city: raw.school.city ?? null,
-    state: raw.school.state ?? null,
-    admissionRate: raw.admissions?.admission_rate?.overall ?? null,
-    sat25th: compositeScore(raw.admissions?.sat_scores?.['25th_percentile']),
-    sat75th: compositeScore(raw.admissions?.sat_scores?.['75th_percentile']),
-    enrollment: raw.student?.size ?? null,
+    name: raw['school.name'],
+    city: raw['school.city'] ?? null,
+    state: raw['school.state'] ?? null,
+    admissionRate: raw['admissions.admission_rate.overall'] ?? null,
+    sat25th: compositeScore(
+      raw['admissions.sat_scores.25th_percentile.critical_reading'],
+      raw['admissions.sat_scores.25th_percentile.math']
+    ),
+    sat75th: compositeScore(
+      raw['admissions.sat_scores.75th_percentile.critical_reading'],
+      raw['admissions.sat_scores.75th_percentile.math']
+    ),
+    enrollment: raw['student.size'] ?? null,
   }
 }
 
