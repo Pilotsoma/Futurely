@@ -11,6 +11,13 @@ import PageLoader from '../../../components/ui/PageLoader'
 import CoinIcon from '../../../components/ui/CoinIcon'
 import NotificationBell from '../../../components/ui/NotificationBell'
 
+const QUICK_ACCESS_LINKS = [
+  { href: '/grades/classwork',  label: 'Grades',       icon: '📊' },
+  { href: '/grades/transcript', label: 'Transcript',   icon: '📄' },
+  { href: '/grades/attendance', label: 'Attendance',   icon: '📅' },
+  { href: '/grades/report-card',label: 'Report Card',  icon: '📋' },
+]
+
 function tagCssClass(tag?: string | null, tagColor?: string | null): string {
   if (tag === 'DEV') return 'tag-rainbow'
   if (tag === 'VIP') return 'tag-mythic'
@@ -435,6 +442,23 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
+      {/* Quick Access */}
+      <motion.p style={{ ...S.cardLabel, marginBottom: 14 }} {...staggerItem(5)}>Quick Access</motion.p>
+      <div style={S.quickAccessRow}>
+        {QUICK_ACCESS_LINKS.map((link, i) => (
+          <motion.button
+            key={link.href}
+            className="ns-card"
+            style={S.quickAccessTile}
+            onClick={() => router.push(link.href)}
+            {...staggerItem(6 + i)}
+          >
+            <span style={{ fontSize: 20 }}>{link.icon}</span>
+            <span style={S.quickAccessLabel}>{link.label}</span>
+          </motion.button>
+        ))}
+      </div>
+
       <div style={{ flex: 1 }} />
 
       {/* Streak Milestone Celebration Popup */}
@@ -731,6 +755,9 @@ const S: Record<string, React.CSSProperties> = {
   statNum:    { fontSize: 34, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6 },
   statLabel:  { fontSize: 13, color: 'var(--text-secondary)' },
   statSub:    { fontSize: 12, color: 'var(--text-muted)', marginTop: 5, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
+  quickAccessRow:   { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 },
+  quickAccessTile:  { display: 'flex', alignItems: 'center', gap: 10, padding: '16px 18px', cursor: 'pointer', textAlign: 'left' as const, width: '100%' },
+  quickAccessLabel: { fontSize: 14, fontWeight: 700, color: 'var(--text)' },
   aiBarWrap:  { paddingBottom: 24 },
   popupOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 },
   popupCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, maxWidth: 380, width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
