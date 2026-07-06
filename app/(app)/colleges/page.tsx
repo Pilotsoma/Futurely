@@ -1,149 +1,32 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { api, type CollegeListItem, type StudentData } from '../../../lib/api'
+import { api, type CollegeListItem, type CollegeSearchResult, type StudentData } from '../../../lib/api'
 
-// ── College dataset ────────────────────────────────────────────────────────────
-// avgGPA: middle-50% enrolled student unweighted GPA
-// avgSAT: middle-50% enrolled student SAT (combined)
-// acceptRate: overall acceptance rate (%)
-const COLLEGES = [
-  { name: 'MIT',                              avgGPA: 3.96, avgSAT: 1545, acceptRate: 4  },
-  { name: 'Harvard University',               avgGPA: 3.92, avgSAT: 1520, acceptRate: 4  },
-  { name: 'Stanford University',              avgGPA: 3.96, avgSAT: 1510, acceptRate: 4  },
-  { name: 'Princeton University',             avgGPA: 3.91, avgSAT: 1510, acceptRate: 5  },
-  { name: 'Yale University',                  avgGPA: 3.95, avgSAT: 1515, acceptRate: 5  },
-  { name: 'Columbia University',              avgGPA: 3.91, avgSAT: 1505, acceptRate: 5  },
-  { name: 'UChicago',                         avgGPA: 3.90, avgSAT: 1520, acceptRate: 6  },
-  { name: 'UPenn',                            avgGPA: 3.90, avgSAT: 1505, acceptRate: 7  },
-  { name: 'Dartmouth College',                avgGPA: 3.90, avgSAT: 1490, acceptRate: 8  },
-  { name: 'Brown University',                 avgGPA: 3.90, avgSAT: 1500, acceptRate: 6  },
-  { name: 'Cornell University',               avgGPA: 3.90, avgSAT: 1480, acceptRate: 11 },
-  { name: 'Caltech',                          avgGPA: 3.97, avgSAT: 1560, acceptRate: 4  },
-  { name: 'Duke University',                  avgGPA: 3.90, avgSAT: 1510, acceptRate: 8  },
-  { name: 'Northwestern University',          avgGPA: 3.92, avgSAT: 1505, acceptRate: 7  },
-  { name: 'Johns Hopkins University',         avgGPA: 3.90, avgSAT: 1505, acceptRate: 11 },
-  { name: 'Rice University',                  avgGPA: 3.93, avgSAT: 1510, acceptRate: 9  },
-  { name: 'Vanderbilt University',            avgGPA: 3.83, avgSAT: 1500, acceptRate: 9  },
-  { name: 'Washington University in St. Louis',avgGPA: 3.90, avgSAT: 1505, acceptRate: 15 },
-  { name: 'Notre Dame',                       avgGPA: 3.92, avgSAT: 1475, acceptRate: 13 },
-  { name: 'Carnegie Mellon',                  avgGPA: 3.83, avgSAT: 1510, acceptRate: 15 },
-  { name: 'Georgetown University',            avgGPA: 3.89, avgSAT: 1430, acceptRate: 14 },
-  { name: 'Emory University',                 avgGPA: 3.83, avgSAT: 1440, acceptRate: 19 },
-  { name: 'Tufts University',                 avgGPA: 3.88, avgSAT: 1465, acceptRate: 12 },
-  { name: 'Tulane University',                avgGPA: 3.70, avgSAT: 1420, acceptRate: 13 },
-  { name: 'UC Berkeley',                      avgGPA: 3.89, avgSAT: 1415, acceptRate: 17 },
-  { name: 'UCLA',                             avgGPA: 3.90, avgSAT: 1390, acceptRate: 14 },
-  { name: 'University of Michigan',           avgGPA: 3.88, avgSAT: 1420, acceptRate: 20 },
-  { name: 'University of Virginia',           avgGPA: 4.18, avgSAT: 1390, acceptRate: 21 },
-  { name: 'Georgia Tech',                     avgGPA: 4.07, avgSAT: 1440, acceptRate: 17 },
-  { name: 'USC',                              avgGPA: 3.79, avgSAT: 1400, acceptRate: 16 },
-  { name: 'Northeastern University',          avgGPA: 3.88, avgSAT: 1475, acceptRate: 7  },
-  { name: 'NYU',                              avgGPA: 3.70, avgSAT: 1380, acceptRate: 21 },
-  { name: 'Boston University',                avgGPA: 3.70, avgSAT: 1370, acceptRate: 19 },
-  { name: 'Case Western Reserve',             avgGPA: 3.80, avgSAT: 1440, acceptRate: 30 },
-  { name: 'UIUC',                             avgGPA: 3.83, avgSAT: 1400, acceptRate: 45 },
-  { name: 'SMU',                              avgGPA: 3.60, avgSAT: 1310, acceptRate: 52 },
-  { name: 'Baylor University',                avgGPA: 3.71, avgSAT: 1270, acceptRate: 45 },
-  { name: 'TCU',                              avgGPA: 3.70, avgSAT: 1250, acceptRate: 41 },
-  { name: 'UT Austin',                        avgGPA: 3.74, avgSAT: 1310, acceptRate: 31 },
-  { name: 'University of Washington',         avgGPA: 3.80, avgSAT: 1330, acceptRate: 56 },
-  { name: 'University of Wisconsin',          avgGPA: 3.83, avgSAT: 1320, acceptRate: 57 },
-  { name: 'Texas A&M',                        avgGPA: 3.72, avgSAT: 1240, acceptRate: 57 },
-  { name: 'Ohio State University',            avgGPA: 3.73, avgSAT: 1320, acceptRate: 54 },
-  { name: 'Penn State',                       avgGPA: 3.59, avgSAT: 1230, acceptRate: 54 },
-  { name: 'Purdue University',                avgGPA: 3.67, avgSAT: 1300, acceptRate: 67 },
-  { name: 'University of Florida',            avgGPA: 4.10, avgSAT: 1360, acceptRate: 31 },
-  { name: 'Florida State University',         avgGPA: 3.80, avgSAT: 1220, acceptRate: 37 },
-  { name: 'University of Tennessee',          avgGPA: 3.75, avgSAT: 1230, acceptRate: 70 },
-  { name: 'Indiana University',               avgGPA: 3.72, avgSAT: 1250, acceptRate: 80 },
-  { name: 'University of Houston',            avgGPA: 3.50, avgSAT: 1190, acceptRate: 66 },
-  { name: 'Texas Tech University',            avgGPA: 3.55, avgSAT: 1180, acceptRate: 72 },
-  { name: 'University of Colorado',           avgGPA: 3.50, avgSAT: 1240, acceptRate: 84 },
-  { name: 'Arizona State University',         avgGPA: 3.50, avgSAT: 1220, acceptRate: 88 },
-  { name: 'University of Arizona',            avgGPA: 3.40, avgSAT: 1190, acceptRate: 85 },
-  { name: 'University of Oregon',             avgGPA: 3.50, avgSAT: 1200, acceptRate: 83 },
-  // Texas UT System
-  { name: 'UT Dallas (UTD)',                  avgGPA: 3.82, avgSAT: 1330, acceptRate: 82 },
-  { name: 'UT Arlington (UTA)',               avgGPA: 3.40, avgSAT: 1160, acceptRate: 88 },
-  { name: 'UT San Antonio (UTSA)',            avgGPA: 3.30, avgSAT: 1110, acceptRate: 91 },
-  { name: 'UT El Paso (UTEP)',                avgGPA: 3.10, avgSAT: 1030, acceptRate: 99 },
-  { name: 'UT Tyler',                         avgGPA: 3.20, avgSAT: 1100, acceptRate: 95 },
-  { name: 'UT Rio Grande Valley (UTRGV)',     avgGPA: 3.10, avgSAT: 1010, acceptRate: 99 },
-  // Texas other
-  { name: 'Texas State University',           avgGPA: 3.45, avgSAT: 1140, acceptRate: 88 },
-  { name: 'University of North Texas (UNT)',  avgGPA: 3.40, avgSAT: 1140, acceptRate: 76 },
-  { name: 'Sam Houston State University',     avgGPA: 3.20, avgSAT: 1060, acceptRate: 74 },
-  { name: 'Stephen F. Austin (SFA)',          avgGPA: 3.10, avgSAT: 1050, acceptRate: 85 },
-  { name: 'Lamar University',                 avgGPA: 3.10, avgSAT: 1020, acceptRate: 95 },
-  { name: 'Texas Southern University',        avgGPA: 2.90, avgSAT: 960,  acceptRate: 67 },
-  { name: 'Prairie View A&M',                 avgGPA: 3.00, avgSAT: 980,  acceptRate: 68 },
-  { name: 'Tarleton State University',        avgGPA: 3.20, avgSAT: 1050, acceptRate: 72 },
-  { name: 'Texas A&M - Commerce',             avgGPA: 3.10, avgSAT: 1030, acceptRate: 65 },
-  { name: 'Texas A&M - Corpus Christi',       avgGPA: 3.10, avgSAT: 1040, acceptRate: 89 },
-  { name: 'Texas A&M - Kingsville',           avgGPA: 3.00, avgSAT: 990,  acceptRate: 79 },
-  { name: 'Angelo State University',          avgGPA: 3.10, avgSAT: 1050, acceptRate: 85 },
-  { name: 'Midwestern State University',      avgGPA: 3.10, avgSAT: 1040, acceptRate: 79 },
-  { name: 'Houston Baptist University',       avgGPA: 3.30, avgSAT: 1100, acceptRate: 74 },
-]
+// ── Display helpers ────────────────────────────────────────────────────────────
 
-// ── Likelihood score ───────────────────────────────────────────────────────────
-// Formula: start from the school's acceptance rate as the baseline probability,
-// then multiply by an adjustment factor based on how the student's stats compare
-// to the school's enrolled-student averages. Being above average boosts the score;
-// being below average reduces it. Uses a geometric-mean exponential so that
-// a highly selective school (3% accept rate) stays hard even with great stats,
-// and an open-access school stays easy even with weak stats.
-function calcScore(studentGPA: number | null, studentSAT: number | null, college: typeof COLLEGES[0]): number | null {
-  const hasGPA = studentGPA !== null && studentGPA > 0
-  const hasSAT = studentSAT !== null && studentSAT > 0
-  if (!hasGPA && !hasSAT) return null
-
-  // How far the student's stats deviate from the school's averages, normalised
-  // GPA std-dev ≈ 0.4 for enrolled students; SAT std-dev ≈ 120
-  let factor = 1.0
-  if (hasGPA && hasSAT) {
-    const gpaZ = (studentGPA! - college.avgGPA) / 0.4
-    const satZ = (studentSAT! - college.avgSAT) / 120
-    const z = gpaZ * 0.6 + satZ * 0.4
-    factor = Math.exp(z * 0.9)
-  } else if (hasGPA) {
-    const gpaZ = (studentGPA! - college.avgGPA) / 0.4
-    factor = Math.exp(gpaZ * 0.9)
-  } else {
-    const satZ = (studentSAT! - college.avgSAT) / 120
-    factor = Math.exp(satZ * 0.9)
-  }
-
-  const raw = college.acceptRate * factor
-  return Math.min(98, Math.max(1, Math.round(raw)))
-}
-
-function scoreColor(s: number) {
+function scoreColor(s: number): string {
   if (s >= 75) return '#22C55E'
   if (s >= 50) return '#F59E0B'
   if (s >= 25) return '#F97316'
   return '#EF4444'
 }
 
-function scoreLabel(s: number) {
-  if (s >= 75) return 'Likely'
-  if (s >= 50) return 'Possible'
-  if (s >= 25) return 'Reach'
-  return 'Far Reach'
-}
-
 export default function CollegesPage() {
   const [list, setList]           = useState<CollegeListItem[]>([])
   const [profile, setProfile]     = useState<StudentData['profile'] | null>(null)
   const [portalGpa, setPortalGpa] = useState<{ unweightedGpa: number | null; weightedGpa: number | null } | null>(null)
-  const [profileLoaded, setProfileLoaded]   = useState(false)
+  const [profileLoaded, setProfileLoaded]     = useState(false)
   const [portalGpaLoaded, setPortalGpaLoaded] = useState(false)
   const [query, setQuery]         = useState('')
+  const [suggestions, setSuggestions] = useState<CollegeSearchResult[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
   const [adding, setAdding]       = useState<string | null>(null)
   const [removing, setRemoving]   = useState<number | null>(null)
   const [showDropdown, setShowDropdown] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef      = useRef<HTMLInputElement>(null)
+  const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const currentQueryRef = useRef('')
 
   useEffect(() => {
     api.collegeList().then(setList).catch(() => {})
@@ -153,19 +36,49 @@ export default function CollegesPage() {
 
   const statsReady = profileLoaded && portalGpaLoaded
 
-  const suggestions = query.trim().length > 0
-    ? COLLEGES.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
-    : []
+  function handleQueryChange(value: string) {
+    setQuery(value)
+    setShowDropdown(true)
+
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    if (!value.trim()) {
+      setSuggestions([])
+      setSearchLoading(false)
+      return
+    }
+
+    setSearchLoading(true)
+    debounceRef.current = setTimeout(async () => {
+      const q = value
+      currentQueryRef.current = q
+      try {
+        const results = await api.collegeSearch(q)
+        if (currentQueryRef.current === q) {
+          setSuggestions(results.slice(0, 8))
+        }
+      } catch {
+        if (currentQueryRef.current === q) {
+          setSuggestions([])
+        }
+      } finally {
+        if (currentQueryRef.current === q) {
+          setSearchLoading(false)
+        }
+      }
+    }, 300)
+  }
 
   const addedNames = new Set(list.map(l => l.name))
 
-  async function handleAdd(name: string) {
+  async function handleAdd(name: string, scorecardUnitId?: string) {
     if (addedNames.has(name)) return
     setAdding(name)
     try {
-      const item = await api.collegeAdd(name)
+      const item = await api.collegeAdd(name, scorecardUnitId)
       setList(prev => [...prev, item])
       setQuery('')
+      setSuggestions([])
       setShowDropdown(false)
     } catch { /* duplicate or error — ignore */ }
     finally { setAdding(null) }
@@ -184,9 +97,8 @@ export default function CollegesPage() {
   // where the stored profile GPA (higher) shows briefly before the live portal GPA loads
   const unweightedGpa = statsReady ? ((portalGpa?.unweightedGpa ?? 0) > 0 ? portalGpa!.unweightedGpa : (profile?.unweightedGpa ?? null)) : null
   const weightedGpa   = statsReady ? ((portalGpa?.weightedGpa ?? 0) > 0   ? portalGpa!.weightedGpa   : (profile?.weightedGpa   ?? null)) : null
-  const studentGPA    = unweightedGpa
   const studentSAT    = statsReady ? (profile?.satScore ?? null) : null
-  const hasStats      = statsReady && ((studentGPA && studentGPA > 0) || (studentSAT && studentSAT > 0))
+  const hasStats      = statsReady && ((unweightedGpa && unweightedGpa > 0) || (studentSAT && studentSAT > 0))
 
   return (
     <div className="fade-up" style={{ maxWidth: 680, margin: '0 auto' }}>
@@ -238,33 +150,35 @@ export default function CollegesPage() {
             style={S.searchInput}
             placeholder="Search colleges…"
             value={query}
-            onChange={e => { setQuery(e.target.value); setShowDropdown(true) }}
+            onChange={e => handleQueryChange(e.target.value)}
             onFocus={() => setShowDropdown(true)}
             onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
           />
           {query && (
-            <button onClick={() => { setQuery(''); setShowDropdown(false) }} style={S.clearBtn}>×</button>
+            <button onClick={() => { setQuery(''); setSuggestions([]); setShowDropdown(false) }} style={S.clearBtn}>×</button>
           )}
         </div>
 
-        {showDropdown && suggestions.length > 0 && (
+        {showDropdown && query.trim().length > 0 && (searchLoading || suggestions.length > 0) && (
           <div style={S.dropdown}>
+            {searchLoading && suggestions.length === 0 && (
+              <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-muted)' }}>Searching…</div>
+            )}
             {suggestions.map(c => {
               const already = addedNames.has(c.name)
-              const score   = calcScore(studentGPA, studentSAT, c)
               return (
                 <button
-                  key={c.name}
+                  key={c.unitId}
                   style={{ ...S.dropdownRow, opacity: already ? 0.5 : 1 }}
-                  onClick={() => !already && handleAdd(c.name)}
+                  onClick={() => !already && handleAdd(c.name, c.unitId)}
                   disabled={already || adding === c.name}
                 >
                   <div style={{ flex: 1, textAlign: 'left' as const }}>
                     <div style={S.dropdownName}>{c.name}</div>
-                    <div style={S.dropdownMeta}>Avg GPA {c.avgGPA} · Avg SAT {c.avgSAT}</div>
+                    <div style={S.dropdownMeta}>{[c.city, c.state].filter(Boolean).join(', ') || 'College'}</div>
                   </div>
-                  {score !== null && (
-                    <span style={{ ...S.dropdownScore, color: scoreColor(score) }}>{score}</span>
+                  {c.score !== null && (
+                    <span style={{ ...S.dropdownScore, color: scoreColor(c.score) }}>{c.score}</span>
                   )}
                   {already
                     ? <span style={S.addedBadge}>Added</span>
@@ -287,17 +201,16 @@ export default function CollegesPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {list.map(item => {
-            const college = COLLEGES.find(c => c.name === item.name)
-            const score   = college ? calcScore(studentGPA, studentSAT, college) : null
-            const color   = score !== null ? scoreColor(score) : 'var(--text-muted)'
-            const label   = score !== null ? scoreLabel(score) : null
+            const score = item.score
+            const color = score !== null ? scoreColor(score) : 'var(--text-muted)'
+            const label = item.label
 
             return (
               <div key={item.id} className="ns-card" style={S.collegeCard}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={S.collegeName}>{item.name}</div>
-                  {college && (
-                    <div style={S.collegeMeta}>Avg GPA {college.avgGPA} · Avg SAT {college.avgSAT}</div>
+                  {(item.city || item.state) && (
+                    <div style={S.collegeMeta}>{[item.city, item.state].filter(Boolean).join(', ')}</div>
                   )}
                   {score !== null && (
                     <div style={{ marginTop: 10 }}>

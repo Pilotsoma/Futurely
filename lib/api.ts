@@ -659,10 +659,13 @@ export const api = {
   collegeList: () =>
     request<CollegeListItem[]>('/api/colleges'),
 
-  collegeAdd: (name: string) =>
+  collegeSearch: (q: string) =>
+    request<CollegeSearchResult[]>(`/api/colleges/search?q=${encodeURIComponent(q)}`),
+
+  collegeAdd: (name: string, scorecardUnitId?: string) =>
     request<CollegeListItem>('/api/colleges', {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, ...(scorecardUnitId ? { scorecardUnitId } : {}) }),
     }),
 
   collegeRemove: (id: number) =>
@@ -1645,9 +1648,29 @@ export type HacGrade = NormalizedCourse
 
 export interface CollegeListItem {
   id: number
-  userId: number
   name: string
+  scorecardUnitId: string | null
   createdAt: string
+  unitId: string | null
+  city: string | null
+  state: string | null
+  admissionRate: number | null
+  sat25th: number | null
+  sat75th: number | null
+  score: number | null
+  label: string | null
+}
+
+export interface CollegeSearchResult {
+  unitId: string
+  name: string
+  city: string | null
+  state: string | null
+  admissionRate: number | null
+  sat25th: number | null
+  sat75th: number | null
+  score: number | null
+  label: string | null
 }
 
 export interface AppNotification {

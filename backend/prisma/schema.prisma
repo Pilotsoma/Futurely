@@ -11,105 +11,105 @@ generator client {
 }
 
 model User {
-  id                       Int                      @id @default(autoincrement())
-  email                    String                   @unique
-  passwordHash             String?
-  name                     String?                  @unique
-  hacName                  String?
-  tag                      String                   @default("Student")
-  tagColor                 String?                  @default("grey")
-  allTags                  Json                     @default("[]")
-  coins                    Int                      @default(0)
-  lastCoinClaim            DateTime?
-  lastFreeSpin             DateTime?
-  nameColor                String?
-  avatarEffect             String?
-  badge                    String?
-  avatarUrl                String?
-  ownedNameColors          Json                     @default("[]")
-  ownedAvatarEffects       Json                     @default("[]")
-  role                     String                   @default("STUDENT")
-  chatBanned               Boolean                  @default(false)
-  chatMutedUntil           DateTime?
-  failedLoginAttempts      Int                      @default(0)
-  lockedUntil              DateTime?
-  deletedAt                DateTime?
-  emailVerified            Boolean                  @default(false)
-  emailVerificationToken   String?                  @unique
-  emailVerificationExpiry  DateTime?
-  lastSeenAt               DateTime?
-  loginStreak              Int                      @default(0)
-  marketplaceAccess        Boolean                  @default(false)
-  marketplaceBanned        Boolean                  @default(false)
-  createdAt                DateTime                 @default(now())
-  updatedAt                DateTime                 @updatedAt
-  assignments              Assignment[]
-  comments                 Comment[]
-  courses                  Course[]
-  following                Follow[]                 @relation("Follower")
-  followers                Follow[]                 @relation("Following")
-  Grade                    Grade[]
-  likes                    Like[]
-  commentLikes             CommentLike[]
-  giveawayEntries          GiveawayEntry[]
-  parentLinks              ParentStudentLink[]      @relation("ParentLinks")
-  studentLinks             ParentStudentLink[]      @relation("StudentLinks")
-  posts                    Post[]
-  giveawayWins             Post[]                   @relation("GiveawayWinner")
-  schoolConnection         SchoolConnection?
-  StudentProfile           StudentProfile?
-  profile                  Profile?
-  notificationsReceived    Notification[]           @relation("NotifRecipient")
-  notificationsSent        Notification[]           @relation("NotifSender")
-  collegeList              CollegeListItem[]
-  parentPortalConnections  ParentPortalConnection[]
-  tradesSent               TradeOffer[]             @relation("TradesSent")
-  tradesReceived           TradeOffer[]             @relation("TradesReceived")
-  marketplaceListings      MarketplaceListing[]     @relation("ListingsSold")
-  listingsPurchased        MarketplaceListing[]     @relation("ListingsBought")
-  canvasConnections        CanvasConnection[]
-  refreshTokens            RefreshToken[]
-  passwordResetTokens      PasswordResetToken[]
-  oauthAccounts            OAuthAccount[]
-  educatorRoleRequest       EducatorRoleRequest?        @relation("EducatorRoleRequestUser")
-  educatorRoleRequestReview EducatorRoleRequest[]       @relation("EducatorRoleRequestReviewer")
-  classroomsAsEducator      Classroom[]                 @relation("ClassroomEducator")
-  classroomMemberships      ClassroomMembership[]       @relation("StudentMemberships")
-  educatorAssignmentsCreated EducatorAssignment[]       @relation("EducatorAssignmentCreator")
-  coinGrantsGiven           EducatorCoinGrant[]         @relation("CoinGrantEducator")
-  coinGrantsReceived        EducatorCoinGrant[]         @relation("CoinGrantStudent")
-  counselorLinks            CounselorStudentLink[]      @relation("CounselorLinks")
-  counseledBy               CounselorStudentLink[]      @relation("CounseledStudents")
-  counselorRecommendations  CounselorCourseRecommendation[] @relation("CounselorRecommendations")
-  recommendationsReceived   CounselorCourseRecommendation[] @relation("StudentRecommendations")
-  counselorNotes            CounselorNote[]             @relation("CounselorNotes")
-  notesReceived             CounselorNote[]             @relation("StudentNotes")
-  counselorActionItems      CounselorActionItem[]       @relation("CounselorActionItems")
-  actionItemsReceived       CounselorActionItem[]       @relation("StudentActionItems")
-  counselorCourseComments   CounselorCourseComment[]    @relation("CounselorCourseComments")
-  courseCommentsReceived    CounselorCourseComment[]    @relation("StudentCourseComments")
-  counselorChatsSent        CounselorChatMessage[]      @relation("CounselorChatCounselor")
-  counselorChatsReceived    CounselorChatMessage[]      @relation("CounselorChatStudent")
-  counselorChatMessagesSent CounselorChatMessage[]      @relation("CounselorChatSender")
-  classroomPostsAuthored    ClassroomPost[]             @relation("ClassroomPostAuthor")
-  questionSetsCreated       QuestionSet[]               @relation("QuestionSetCreator")
-  gameSessionsHosted        GameSession[]               @relation("GameSessionHost")
-  gameParticipations        GameParticipant[]           @relation("GameParticipants")
-  traderSellCount           Int                         @default(0)
-  traderSellDate            String                      @default("")
-  traderBuyCount            Int                         @default(0)
-  traderBuyDate             String                      @default("")
-  traderTradeCount          Int                         @default(0)
-  traderTradeDate           String                      @default("")
-  spinCoinsSpent            Int                         @default(0)
-  spinTotalSpins            Int                         @default(0)
-  spinCommon                Int                         @default(0)
-  spinUncommon              Int                         @default(0)
-  spinRare                  Int                         @default(0)
-  spinEpic                  Int                         @default(0)
-  spinLegendary             Int                         @default(0)
-  spinMythic                Int                         @default(0)
-  spinCurse                 Int                         @default(0)
+  id                         Int                             @id @default(autoincrement())
+  email                      String                          @unique
+  passwordHash               String?
+  name                       String?                         @unique
+  hacName                    String?
+  tag                        String                          @default("Student")
+  tagColor                   String?                         @default("grey")
+  allTags                    Json                            @default("[]")
+  coins                      Int                             @default(0)
+  lastCoinClaim              DateTime?
+  lastFreeSpin               DateTime?
+  nameColor                  String?
+  avatarEffect               String?
+  badge                      String?
+  avatarUrl                  String?
+  ownedNameColors            Json                            @default("[]")
+  ownedAvatarEffects         Json                            @default("[]")
+  role                       String                          @default("STUDENT")
+  chatBanned                 Boolean                         @default(false)
+  chatMutedUntil             DateTime?
+  failedLoginAttempts        Int                             @default(0)
+  lockedUntil                DateTime?
+  deletedAt                  DateTime?
+  emailVerified              Boolean                         @default(false)
+  emailVerificationToken     String?                         @unique
+  emailVerificationExpiry    DateTime?
+  lastSeenAt                 DateTime?
+  loginStreak                Int                             @default(0)
+  marketplaceAccess          Boolean                         @default(false)
+  marketplaceBanned          Boolean                         @default(false)
+  createdAt                  DateTime                        @default(now())
+  updatedAt                  DateTime                        @updatedAt
+  assignments                Assignment[]
+  comments                   Comment[]
+  courses                    Course[]
+  following                  Follow[]                        @relation("Follower")
+  followers                  Follow[]                        @relation("Following")
+  Grade                      Grade[]
+  likes                      Like[]
+  commentLikes               CommentLike[]
+  giveawayEntries            GiveawayEntry[]
+  parentLinks                ParentStudentLink[]             @relation("ParentLinks")
+  studentLinks               ParentStudentLink[]             @relation("StudentLinks")
+  posts                      Post[]
+  giveawayWins               Post[]                          @relation("GiveawayWinner")
+  schoolConnection           SchoolConnection?
+  StudentProfile             StudentProfile?
+  profile                    Profile?
+  notificationsReceived      Notification[]                  @relation("NotifRecipient")
+  notificationsSent          Notification[]                  @relation("NotifSender")
+  collegeList                CollegeListItem[]
+  parentPortalConnections    ParentPortalConnection[]
+  tradesSent                 TradeOffer[]                    @relation("TradesSent")
+  tradesReceived             TradeOffer[]                    @relation("TradesReceived")
+  marketplaceListings        MarketplaceListing[]            @relation("ListingsSold")
+  listingsPurchased          MarketplaceListing[]            @relation("ListingsBought")
+  canvasConnections          CanvasConnection[]
+  refreshTokens              RefreshToken[]
+  passwordResetTokens        PasswordResetToken[]
+  oauthAccounts              OAuthAccount[]
+  educatorRoleRequest        EducatorRoleRequest?            @relation("EducatorRoleRequestUser")
+  educatorRoleRequestReview  EducatorRoleRequest[]           @relation("EducatorRoleRequestReviewer")
+  classroomsAsEducator       Classroom[]                     @relation("ClassroomEducator")
+  classroomMemberships       ClassroomMembership[]           @relation("StudentMemberships")
+  educatorAssignmentsCreated EducatorAssignment[]            @relation("EducatorAssignmentCreator")
+  coinGrantsGiven            EducatorCoinGrant[]             @relation("CoinGrantEducator")
+  coinGrantsReceived         EducatorCoinGrant[]             @relation("CoinGrantStudent")
+  counselorLinks             CounselorStudentLink[]          @relation("CounselorLinks")
+  counseledBy                CounselorStudentLink[]          @relation("CounseledStudents")
+  counselorRecommendations   CounselorCourseRecommendation[] @relation("CounselorRecommendations")
+  recommendationsReceived    CounselorCourseRecommendation[] @relation("StudentRecommendations")
+  counselorNotes             CounselorNote[]                 @relation("CounselorNotes")
+  notesReceived              CounselorNote[]                 @relation("StudentNotes")
+  counselorActionItems       CounselorActionItem[]           @relation("CounselorActionItems")
+  actionItemsReceived        CounselorActionItem[]           @relation("StudentActionItems")
+  counselorCourseComments    CounselorCourseComment[]        @relation("CounselorCourseComments")
+  courseCommentsReceived     CounselorCourseComment[]        @relation("StudentCourseComments")
+  counselorChatsSent         CounselorChatMessage[]          @relation("CounselorChatCounselor")
+  counselorChatsReceived     CounselorChatMessage[]          @relation("CounselorChatStudent")
+  counselorChatMessagesSent  CounselorChatMessage[]          @relation("CounselorChatSender")
+  classroomPostsAuthored     ClassroomPost[]                 @relation("ClassroomPostAuthor")
+  questionSetsCreated        QuestionSet[]                   @relation("QuestionSetCreator")
+  gameSessionsHosted         GameSession[]                   @relation("GameSessionHost")
+  gameParticipations         GameParticipant[]               @relation("GameParticipants")
+  traderSellCount            Int                             @default(0)
+  traderSellDate             String                          @default("")
+  traderBuyCount             Int                             @default(0)
+  traderBuyDate              String                          @default("")
+  traderTradeCount           Int                             @default(0)
+  traderTradeDate            String                          @default("")
+  spinCoinsSpent             Int                             @default(0)
+  spinTotalSpins             Int                             @default(0)
+  spinCommon                 Int                             @default(0)
+  spinUncommon               Int                             @default(0)
+  spinRare                   Int                             @default(0)
+  spinEpic                   Int                             @default(0)
+  spinLegendary              Int                             @default(0)
+  spinMythic                 Int                             @default(0)
+  spinCurse                  Int                             @default(0)
 }
 
 model OAuthAccount {
@@ -134,17 +134,17 @@ model EmailOTP {
 }
 
 model Profile {
-  id             Int      @id @default(autoincrement())
-  userId         Int      @unique
-  gradeLevel     Int      @default(9)
+  id             Int     @id @default(autoincrement())
+  userId         Int     @unique
+  gradeLevel     Int     @default(9)
   graduationYear Int?
-  weightedGpa    Float    @default(0)
-  unweightedGpa  Float    @default(0)
+  weightedGpa    Float   @default(0)
+  unweightedGpa  Float   @default(0)
   futureDecision String?
   satScore       Int?
   actScore       Int?
   counselorName  String?
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
@@ -161,18 +161,18 @@ model Notification {
 }
 
 model Course {
-  id               Int                      @id @default(autoincrement())
-  userId           Int
-  name             String
-  teacher          String
-  period           Int
-  semester         String
-  courseType       String                   @default("STANDARD")
-  creditHours      Float                    @default(1.0)
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
-  user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  grades           Grade[]
+  id                Int                      @id @default(autoincrement())
+  userId            Int
+  name              String
+  teacher           String
+  period            Int
+  semester          String
+  courseType        String                   @default("STANDARD")
+  creditHours       Float                    @default(1.0)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  user              User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grades            Grade[]
   counselorComments CounselorCourseComment[]
 }
 
@@ -211,9 +211,9 @@ model Assignment {
 }
 
 model Post {
-  id               Int             @id @default(autoincrement())
-  userId           Int
-  body             String
+  id                 Int             @id @default(autoincrement())
+  userId             Int
+  body               String
   type               String          @default("NORMAL")
   giveawayTag        String?
   giveawayTagColor   String?
@@ -223,23 +223,23 @@ model Post {
   giveawayItemType   String?
   giveawayItemId     String?
   giveawayItemRarity String?
-  unboxItemType     String?
-  unboxItemId       String?
-  unboxItemName     String?
-  unboxItemValue    String?
-  unboxItemRarity   String?
-  unboxItemEstValue Int?
-  unboxItemTagColor String?
-  network          String          @default("global")
-  isdCode          String?
-  pinnedUntil      DateTime?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  comments         Comment[]
-  likes            Like[]
-  giveawayEntries  GiveawayEntry[]
-  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  giveawayWinner   User?           @relation("GiveawayWinner", fields: [giveawayWinnerId], references: [id])
+  unboxItemType      String?
+  unboxItemId        String?
+  unboxItemName      String?
+  unboxItemValue     String?
+  unboxItemRarity    String?
+  unboxItemEstValue  Int?
+  unboxItemTagColor  String?
+  network            String          @default("global")
+  isdCode            String?
+  pinnedUntil        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  comments           Comment[]
+  likes              Like[]
+  giveawayEntries    GiveawayEntry[]
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  giveawayWinner     User?           @relation("GiveawayWinner", fields: [giveawayWinnerId], references: [id])
 }
 
 model Comment {
@@ -406,12 +406,30 @@ model MarketplaceListing {
   buyer          User?    @relation("ListingsBought", fields: [buyerId], references: [id])
 }
 
+model CollegeScorecardCache {
+  id               Int               @id @default(autoincrement())
+  unitId           String            @unique
+  name             String
+  city             String?
+  state            String?
+  admissionRate    Float?
+  sat25th          Int?
+  sat75th          Int?
+  enrollment       Int?
+  fetchedAt        DateTime          @default(now())
+  collegeListItems CollegeListItem[]
+
+  @@index([name])
+}
+
 model CollegeListItem {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  name      String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              Int                    @id @default(autoincrement())
+  userId          Int
+  name            String
+  scorecardUnitId String?
+  createdAt       DateTime               @default(now())
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scorecardData   CollegeScorecardCache? @relation(fields: [scorecardUnitId], references: [unitId])
 
   @@unique([userId, name])
   @@index([userId])
@@ -640,15 +658,15 @@ model CounselorChatMessage {
 // ── Review Game ──────────────────────────────────────────────────────────────
 
 model QuestionSet {
-  id          Int       @id @default(autoincrement())
+  id          Int           @id @default(autoincrement())
   creatorId   Int
   title       String
   description String?
   subject     String?
-  visibility  String    @default("PRIVATE")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  creator     User      @relation("QuestionSetCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  visibility  String        @default("PRIVATE")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  creator     User          @relation("QuestionSetCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   questions   Question[]
   sessions    GameSession[]
 
@@ -657,15 +675,15 @@ model QuestionSet {
 }
 
 model Question {
-  id            Int         @id @default(autoincrement())
+  id            Int          @id @default(autoincrement())
   setId         Int
-  orderIndex    Int         @default(0)
+  orderIndex    Int          @default(0)
   questionText  String
-  questionType  String      @default("MULTIPLE_CHOICE")
+  questionType  String       @default("MULTIPLE_CHOICE")
   options       Json
   correctAnswer String
-  timeLimit     Int         @default(20)
-  set           QuestionSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  timeLimit     Int          @default(20)
+  set           QuestionSet  @relation(fields: [setId], references: [id], onDelete: Cascade)
   answers       GameAnswer[]
 
   @@index([setId, orderIndex])
@@ -690,13 +708,13 @@ model GameSession {
 }
 
 model GameParticipant {
-  id        Int         @id @default(autoincrement())
+  id        Int          @id @default(autoincrement())
   sessionId Int
   userId    Int
-  score     Int         @default(0)
-  joinedAt  DateTime    @default(now())
-  session   GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user      User        @relation("GameParticipants", fields: [userId], references: [id], onDelete: Cascade)
+  score     Int          @default(0)
+  joinedAt  DateTime     @default(now())
+  session   GameSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User         @relation("GameParticipants", fields: [userId], references: [id], onDelete: Cascade)
   answers   GameAnswer[]
 
   @@unique([sessionId, userId])
