@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { api } from '../../../lib/api'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
@@ -71,6 +72,17 @@ function AIChatInner() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const prefersReducedMotion = useReducedMotion()
+
+  // Read and immediately clear the morph-enter flag written by AiBar on submit.
+  // Lazy initializer runs once on first client render — safe for SSR because
+  // useState lazy initializers only run on the client in Next.js app router.
+  const [morphEnter] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    const flag = sessionStorage.getItem('ai_morph_enter') === '1'
+    if (flag) sessionStorage.removeItem('ai_morph_enter')
+    return flag
+  })
 
   useEffect(() => {
     const loaded = loadSessions()
@@ -250,10 +262,22 @@ function AIChatInner() {
         <div className="aic-messages" role="log" aria-live="polite" aria-label="Conversation">
           {isEmpty && (
             <div className="aic-empty">
-              <div className="aic-orb-wrap" aria-hidden="true">
+              <motion.div
+                aria-hidden="true"
+                className="aic-orb-wrap"
+                initial={morphEnter && !prefersReducedMotion
+                  ? { scale: 0.55, opacity: 0 }
+                  : false
+                }
+                animate={morphEnter && !prefersReducedMotion
+                  ? { scale: 1, opacity: 1 }
+                  : undefined
+                }
+                transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1], delay: 0.05 }}
+              >
                 <div className="aic-orb-glow" />
                 <div className="aic-orb"><AiSparkIcon size={26} /></div>
-              </div>
+              </motion.div>
               <h1 className="aic-empty-title">How can I help you today?</h1>
               <p className="aic-empty-sub">Ask about your grades, upcoming assignments, or college planning.</p>
 
@@ -288,7 +312,24 @@ function AIChatInner() {
           <div ref={bottomRef} />
         </div>
 
-        <div className="aic-input-bar">
+        <motion.div
+          className="aic-input-bar"
+          initial={morphEnter && !prefersReducedMotion
+            ? {
+                scale: 1.05,
+                boxShadow: '0 0 0 10px rgba(41,121,255,0.22), 0 0 0 20px rgba(41,121,255,0.08)',
+              }
+            : false
+          }
+          animate={morphEnter && !prefersReducedMotion
+            ? {
+                scale: 1,
+                boxShadow: '0 0 0 0px rgba(41,121,255,0), 0 0 0 0px rgba(41,121,255,0)',
+              }
+            : undefined
+          }
+          transition={{ duration: 0.55, ease: [0.19, 1, 0.22, 1] }}
+        >
           <textarea
             ref={textareaRef}
             className="aic-textarea"
@@ -311,12 +352,12 @@ function AIChatInner() {
             disabled={sending || !input.trim()}
             aria-label="Send message"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="22" y1="2" x2="11" y2="13"/>
               <polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
           </button>
-        </div>
+        </motion.div>
       </section>
 
       <style jsx>{`
@@ -527,6 +568,14 @@ function AIChatInner() {
           animation: none !important;
           opacity: 1 !important;
           transform: none !important;
+        }
+
+        /* ── Morph-enter: cursor focus on input bar after expand ── */
+        /* The framer-motion inline style handles the scale/glow fade;  */
+        /* this class is used only to ensure the textarea is focusable  */
+        /* as soon as the animation settles.                            */
+        .aic-input-bar-morph-focus:focus-within {
+          border-color: var(--primary);
         }
 
         /* ── Mobile ── */
