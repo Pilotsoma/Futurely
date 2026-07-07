@@ -120,13 +120,13 @@ export default function CounselorLayout({ children }: { children: React.ReactNod
 }
 
 const S: Record<string, React.CSSProperties> = {
-  sidebar:    { width: 220, flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '20px 12px', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50 },
+  sidebar:    { width: 220, flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', boxShadow: 'var(--neo-sidebar)', display: 'flex', flexDirection: 'column', padding: '20px 12px', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50 },
   logoRow:    { paddingLeft: 8, marginBottom: 16 },
-  logoMark:   { width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, flexShrink: 0 },
+  logoMark:   { width: 28, height: 28, borderRadius: 10, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, flexShrink: 0 },
   logoText:   { fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.3px' },
-  roleBadge:  { margin: '0 4px 20px', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: 'var(--primary)', textAlign: 'center' as const },
+  roleBadge:  { margin: '0 4px 20px', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: 'var(--primary)', textAlign: 'center' as const },
   nav:        { flex: 1, display: 'flex', flexDirection: 'column', gap: 2 },
-  navActive:  { borderLeft: '2px solid var(--primary)', paddingLeft: 12, marginLeft: 2 },
+  navActive:  { background: 'var(--primary-dim)', borderLeft: '2px solid var(--primary)', borderRadius: '0 12px 12px 0', paddingLeft: 12, marginLeft: 2 },
   bottom:     { borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 8 },
   userRow:    { display: 'flex', alignItems: 'center', gap: 9, paddingLeft: 4 },
   userAvatar: { width: 26, height: 26, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid var(--primary)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 },

@@ -1,5 +1,6 @@
 import React from 'react'
-import { TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native'
+import { StyleSheet, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native'
+import { shadows } from '../../constants/shadows'
 
 interface CardProps {
   children: React.ReactNode
@@ -14,19 +15,30 @@ export default function Card({
   testID,
   style,
 }: CardProps): React.JSX.Element {
-  const cardClassName = 'bg-[#0D1627] border border-[#1A2744] rounded-[12px] p-4'
+  // DS-aligned: surface #162235, border #273D5E, 20px radius (hybrid neo spec)
+  const cardClassName = 'bg-[#162235] border border-[#273D5E] rounded-[20px] p-4'
 
   if (onPress !== undefined) {
     return (
-      <TouchableOpacity className={`${cardClassName}`} onPress={onPress} activeOpacity={0.75} testID={testID} style={style}>
+      <TouchableOpacity
+        className={cardClassName}
+        style={[styles.raised, style]}
+        onPress={onPress}
+        activeOpacity={0.75}
+        testID={testID}
+      >
         {children}
       </TouchableOpacity>
     )
   }
 
   return (
-    <View className={cardClassName} testID={testID} style={style}>
+    <View className={cardClassName} style={[styles.raised, style]} testID={testID}>
       {children}
     </View>
   )
 }
+
+const styles = StyleSheet.create({
+  raised: shadows.raised,
+})

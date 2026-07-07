@@ -39,6 +39,13 @@ export default function TabNavigator(): React.JSX.Element {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
+          // Neomorphic raised panel: shadow casts upward (negative Y) since
+          // the tab bar sits at the screen bottom.
+          shadowColor:   '#000000',
+          shadowOffset:  { width: 0, height: -4 },
+          shadowOpacity: 0.48,
+          shadowRadius:  10,
+          elevation:     12,
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,

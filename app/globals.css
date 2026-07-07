@@ -81,6 +81,13 @@ html[data-grade-colors="off"] {
   --shadow-md:  0 4px 16px rgba(5,11,24,0.08), 0 2px 6px rgba(5,11,24,0.05);
   --shadow-lg:  0 8px 32px rgba(5,11,24,0.10), 0 3px 10px rgba(5,11,24,0.06);
   --shadow-xl:  0 20px 60px rgba(5,11,24,0.12), 0 6px 20px rgba(5,11,24,0.07);
+
+  /* ── Neomorphic surface tokens (light theme) ── */
+  /* Light-source: top-left. Surface: #FFFFFF. Base bg: #F0F4FF (blue-gray tint). */
+  /* Depth shadow derived from bg: rgba(174,190,214) is #AEB EDe at full opacity. */
+  --neo-raised:   -4px -4px 10px rgba(255,255,255,0.90), 5px 5px 14px rgba(174,190,214,0.60);
+  --neo-inset:    inset 3px 3px 8px rgba(174,190,214,0.50), inset -3px -3px 6px rgba(255,255,255,0.90);
+  --neo-sidebar:  4px 0 16px rgba(174,190,214,0.40), -2px 0 4px rgba(255,255,255,0.80);
 }
 
 html[data-theme="dark"] {
@@ -88,6 +95,14 @@ html[data-theme="dark"] {
   --shadow-md:  0 4px 16px rgba(0,0,0,0.34), 0 2px 6px rgba(0,0,0,0.20);
   --shadow-lg:  0 8px 32px rgba(0,0,0,0.42), 0 3px 10px rgba(0,0,0,0.24);
   --shadow-xl:  0 20px 60px rgba(0,0,0,0.55), 0 6px 20px rgba(0,0,0,0.28);
+
+  /* ── Neomorphic surface tokens (dark theme) ── */
+  /* Surface: #162235. Base bg: #0D1829 (darker). */
+  /* Highlight: barely-visible 5% white toward top-left. */
+  /* Depth shadow: strong black bottom-right for convex lift. */
+  --neo-raised:  -3px -3px 8px rgba(255,255,255,0.05), 4px 4px 14px rgba(0,0,0,0.52);
+  --neo-inset:   inset 2px 2px 7px rgba(0,0,0,0.50), inset -2px -2px 5px rgba(255,255,255,0.04);
+  --neo-sidebar: 4px 0 20px rgba(0,0,0,0.48), -2px 0 6px rgba(255,255,255,0.04);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -121,12 +136,15 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   align-items: center;
   gap: 12px;
   padding: 11px 16px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 15px;
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: color var(--dur-fast) var(--ease-out-quart), background var(--dur-fast) var(--ease-out-quart);
+  transition:
+    color       var(--dur-fast) var(--ease-out-quart),
+    background  var(--dur-fast) var(--ease-out-quart),
+    box-shadow  var(--dur-fast) var(--ease-out-quart);
   text-decoration: none;
   border: none;
   background: transparent;
@@ -144,8 +162,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .ns-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow-sm);
+  border-radius: 18px;
+  box-shadow: var(--neo-raised);
   transition:
     border-color var(--dur-base) var(--ease-out-quart),
     box-shadow   var(--dur-base) var(--ease-out-quart),
@@ -154,7 +172,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 }
 .ns-card:hover {
   border-color: var(--border-hover);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--neo-raised), var(--shadow-md);
   transform: translateY(-2px);
 }
 
@@ -162,7 +180,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .ns-input {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 12px;
   padding: 10px 14px;
   color: var(--text);
   font-size: 14px;
@@ -173,10 +191,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     box-shadow   var(--dur-fast) var(--ease-out-quart);
   height: 42px;
   box-sizing: border-box;
+  box-shadow: var(--neo-inset);
 }
 .ns-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-dim);
+  box-shadow: var(--neo-inset), 0 0 0 3px var(--primary-dim);
 }
 .ns-input::placeholder { color: var(--text-muted); }
 
@@ -185,12 +204,13 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   background: var(--primary);
   color: #FFFFFF;
   border: none;
-  border-radius: 9px;
+  border-radius: 12px;
   padding: 10px 20px;
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.1px;
   cursor: pointer;
+  box-shadow: var(--neo-raised);
   transition:
     background  var(--dur-fast) var(--ease-out-quart),
     box-shadow  var(--dur-base) var(--ease-out-quart),
@@ -199,29 +219,31 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 }
 .ns-btn-primary:hover {
   background: var(--primary-dark);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--neo-raised), var(--shadow-md);
   transform: translateY(-1px);
 }
 .ns-btn-primary:active {
   transform: scale(0.97) translateY(0px);
-  box-shadow: none;
+  box-shadow: var(--neo-inset);
   transition-duration: var(--dur-fast);
 }
 .ns-btn-primary:disabled { opacity: 0.45; box-shadow: none; cursor: not-allowed; transform: none; }
 
 .ns-btn-ghost {
-  background: transparent;
+  background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-secondary);
-  border-radius: 9px;
+  border-radius: 12px;
   padding: 9px 18px;
   font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
+  box-shadow: var(--neo-raised);
   transition:
     border-color var(--dur-fast) var(--ease-out-quart),
     color        var(--dur-fast) var(--ease-out-quart),
     background   var(--dur-fast) var(--ease-out-quart),
+    box-shadow   var(--dur-fast) var(--ease-out-quart),
     transform    var(--dur-fast) var(--ease-spring);
   will-change: transform;
 }
@@ -229,10 +251,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   border-color: var(--border-hover);
   color: var(--text);
   background: var(--surface-2);
+  box-shadow: var(--neo-raised), var(--shadow-sm);
   transform: translateY(-1px);
 }
 .ns-btn-ghost:active {
   transform: scale(0.97);
+  box-shadow: var(--neo-inset);
   transition-duration: var(--dur-fast);
 }
 
@@ -242,16 +266,18 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   width: 100%;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 12px;
   padding: 9px 12px;
   font-size: 12.5px;
   color: var(--text-secondary);
   text-align: left;
   cursor: pointer;
+  box-shadow: var(--neo-raised);
   transition:
     border-color var(--dur-fast) var(--ease-out-quart),
     color        var(--dur-fast) var(--ease-out-quart),
     background   var(--dur-fast) var(--ease-out-quart),
+    box-shadow   var(--dur-fast) var(--ease-out-quart),
     transform    var(--dur-fast) var(--ease-spring);
   will-change: transform;
 }
@@ -261,7 +287,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   background: var(--primary-dim);
   transform: translateY(-1px);
 }
-.ns-chip:active { transform: scale(0.97); }
+.ns-chip:active {
+  transform: scale(0.97);
+  box-shadow: var(--neo-inset);
+}
 
 /* ── Gradient text ─────────────────────────────────────────────────────── */
 .gradient-text {

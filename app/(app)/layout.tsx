@@ -210,8 +210,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         style={{
           ...S.sidebar,
           boxShadow: isExpanded && !pinnedExpanded
-            ? '4px 0 36px rgba(0,0,0,0.30)'
-            : '2px 0 20px rgba(26,21,14,0.05)',
+            ? '6px 0 40px rgba(0,0,0,0.42), -2px 0 8px rgba(255,255,255,0.04)'
+            : 'var(--neo-sidebar)',
         }}
       >
         {/* Pin toggle */}
@@ -491,11 +491,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
 const S: Record<string, React.CSSProperties> = {
   sidebar:    { flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '20px 12px 24px', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50, overflow: 'hidden' },
-  toggleBtn:  { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 7, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: 'auto', marginBottom: 22, flexShrink: 0 },
+  toggleBtn:  { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: 'auto', marginBottom: 22, flexShrink: 0, boxShadow: 'var(--neo-raised)' },
   logoRow:    { paddingLeft: 0, marginBottom: 28, display: 'flex' },
   logoText:   { fontSize: 18, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.4px', whiteSpace: 'nowrap' },
   nav:        { flex: 1, display: 'flex', flexDirection: 'column', gap: 3, overflow: 'hidden', position: 'relative' },
-  navPill:    { position: 'absolute', left: 0, right: 0, borderRadius: 10, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', pointerEvents: 'none', zIndex: 0 },
+  navPill:    { position: 'absolute', left: 0, right: 0, borderRadius: 12, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', pointerEvents: 'none', zIndex: 0 },
   bottom:     { borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 8 },
   userRow:    { display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 4, overflow: 'hidden' },
   userAvatar: { width: 32, height: 32, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 },

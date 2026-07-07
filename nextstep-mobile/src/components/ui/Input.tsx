@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { KeyboardTypeOptions, ReturnKeyTypeOptions, TextInput, View } from 'react-native'
+import { KeyboardTypeOptions, ReturnKeyTypeOptions, StyleSheet, TextInput, View } from 'react-native'
 import Text from './Text'
+import { shadows } from '../../constants/shadows'
 
 interface InputProps {
   label: string
@@ -36,21 +37,28 @@ export default function Input({
   testID,
 }: InputProps): React.JSX.Element {
   const [isFocused, setIsFocused] = useState(false)
+
+  // Border class: error > focused (brand blue) > default DS border (#273D5E)
   const borderClass = error
     ? 'border-[#EF4444]'
     : isFocused
       ? 'border-[#2979FF]'
-      : 'border-[#1A2744]'
+      : 'border-[#273D5E]'
+
+  // Inset style: lighter top/left edges simulate the rim-light on a concave well.
+  // Only apply when not overridden by error or focus border (those use className).
+  const insetStyle = error == null && !isFocused ? styles.inset : undefined
 
   return (
     <View className="mb-4">
       <Text className="text-[12px] font-semibold tracking-[0.5px] text-[#E8EEFF] mb-1.5">{label}</Text>
       <TextInput
-        className={`bg-[#050B18] border rounded-2xl min-h-[48px] px-3 py-3 text-[#E8EEFF] text-[16px] ${borderClass}`}
+        className={`bg-[#0D1829] border rounded-2xl min-h-[48px] px-3 py-3 text-[#E8EEFF] text-[16px] ${borderClass}`}
+        style={insetStyle}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#7B8DB0"
+        placeholderTextColor="#52698A"
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
@@ -67,3 +75,7 @@ export default function Input({
     </View>
   )
 }
+
+const styles = StyleSheet.create({
+  inset: shadows.insetBorderStyle,
+})
