@@ -120,39 +120,44 @@ const PATCHES: string[] = [
     ADD COLUMN IF NOT EXISTS "coppaConsentTimestamp" TIMESTAMP(3) DEFAULT NULL,
     ADD COLUMN IF NOT EXISTS "coppaParentEmail"      TEXT        DEFAULT NULL`,
 
-  // ── College catalog / saved list / path cache tables ──────────────────
-  // schema.prisma added these models (College, CollegeListItem, CollegePathCache)
-  // but no migration.sql was ever committed for them — see DIAGNOSTIC_REPORT.md.
-  // These patches are the stopgap until a real migration is authored.
-  `CREATE TABLE IF NOT EXISTS "College" (
-    "id"             SERIAL PRIMARY KEY,
-    "name"           TEXT NOT NULL UNIQUE,
-    "avgSat"         INTEGER NOT NULL,
-    "avgAct"         DOUBLE PRECISION NOT NULL,
-    "avgGpa"         DOUBLE PRECISION NOT NULL,
-    "acceptanceRate" DOUBLE PRECISION NOT NULL,
-    "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  // ── College Scorecard cache + insights tables ─────────────────────────
+  // These have proper migrations (20260706000000_add_college_scorecard_cache,
+  // 20260706120000_add_college_insights_cache), but `prisma migrate deploy`
+  // cannot run on this database — its migration history has only one entry
+  // (the very first migration) and it is marked failed, blocking all further
+  // deploys (P3009). Until that history is reconciled, this self-heal patch
+  // is what actually keeps the live schema in sync, same as every other
+  // table in this list.
+  `CREATE TABLE IF NOT EXISTS "CollegeScorecardCache" (
+    "id"            SERIAL PRIMARY KEY,
+    "unitId"        TEXT NOT NULL UNIQUE,
+    "name"          TEXT NOT NULL,
+    "city"          TEXT,
+    "state"         TEXT,
+    "admissionRate" DOUBLE PRECISION,
+    "sat25th"       INTEGER,
+    "sat75th"       INTEGER,
+    "enrollment"    INTEGER,
+    "fetchedAt"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
-  `CREATE TABLE IF NOT EXISTS "CollegeListItem" (
-    "id"        SERIAL PRIMARY KEY,
-    "userId"    INTEGER NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
-    "name"      TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "CollegeListItem_userId_name_key" UNIQUE ("userId", "name")
+  `CREATE INDEX IF NOT EXISTS "CollegeScorecardCache_name_idx" ON "CollegeScorecardCache"("name")`,
+  `ALTER TABLE "CollegeListItem" ADD COLUMN IF NOT EXISTS "scorecardUnitId" TEXT`,
+  `ALTER TABLE "CollegeListItem"
+    ADD CONSTRAINT "CollegeListItem_scorecardUnitId_fkey"
+    FOREIGN KEY ("scorecardUnitId")
+    REFERENCES "CollegeScorecardCache"("unitId")
+    ON DELETE SET NULL
+    ON UPDATE CASCADE`,
+  `CREATE TABLE IF NOT EXISTS "CollegeInsightsCache" (
+    "id"                SERIAL PRIMARY KEY,
+    "collegeListItemId" INTEGER NOT NULL UNIQUE REFERENCES "CollegeListItem"("id") ON DELETE CASCADE,
+    "userId"            INTEGER NOT NULL,
+    "inputHash"         CHAR(64) NOT NULL,
+    "narrativeSummary"  TEXT NOT NULL,
+    "actionableSteps"   JSONB NOT NULL,
+    "generatedAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
-  `CREATE INDEX IF NOT EXISTS "CollegeListItem_userId_idx" ON "CollegeListItem"("userId")`,
-  `CREATE TABLE IF NOT EXISTS "CollegePathCache" (
-    "id"               SERIAL PRIMARY KEY,
-    "userId"           INTEGER NOT NULL,
-    "collegeId"        INTEGER NOT NULL,
-    "steps"            JSONB NOT NULL,
-    "studentStatsHash" TEXT NOT NULL,
-    "generatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "expiresAt"        TIMESTAMP(3) NOT NULL,
-    CONSTRAINT "CollegePathCache_userId_collegeId_key" UNIQUE ("userId", "collegeId")
-  )`,
-  `CREATE INDEX IF NOT EXISTS "CollegePathCache_userId_idx" ON "CollegePathCache"("userId")`,
+  `CREATE INDEX IF NOT EXISTS "CollegeInsightsCache_userId_idx" ON "CollegeInsightsCache"("userId")`,
 ]
 
 // Data-level repairs that are always idempotent and safe to re-run on every cold start.
@@ -199,9 +204,9 @@ export function ensureSchema(): Promise<void> {
     try {
       await prisma.$queryRawUnsafe(`SELECT "coppaConsentStatus" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
-      await prisma.$queryRawUnsafe(`SELECT 1 FROM "College" LIMIT 0`)
-      await prisma.$queryRawUnsafe(`SELECT 1 FROM "CollegeListItem" LIMIT 0`)
-      await prisma.$queryRawUnsafe(`SELECT 1 FROM "CollegePathCache" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT 1 FROM "CollegeScorecardCache" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT 1 FROM "CollegeInsightsCache" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT "scorecardUnitId" FROM "CollegeListItem" LIMIT 0`)
     } catch {
       // Schema is incomplete — run patches below.
       for (const sql of PATCHES) {

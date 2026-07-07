@@ -410,51 +410,54 @@ model MarketplaceListing {
   buyer          User?    @relation("ListingsBought", fields: [buyerId], references: [id])
 }
 
+// Local cache of U.S. Dept of Education College Scorecard API results, keyed by
+// the Scorecard-assigned unitId. Populated on demand by GET /colleges/search
+// (cache-first, falling back to the live API when the cache is sparse).
+model CollegeScorecardCache {
+  id               Int               @id @default(autoincrement())
+  unitId           String            @unique
+  name             String
+  city             String?
+  state            String?
+  admissionRate    Float?
+  sat25th          Int?
+  sat75th          Int?
+  enrollment       Int?
+  fetchedAt        DateTime          @default(now())
+  collegeListItems CollegeListItem[]
+
+  @@index([name])
+}
+
 model CollegeListItem {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  name      String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              Int                    @id @default(autoincrement())
+  userId          Int
+  name            String
+  scorecardUnitId String?
+  createdAt       DateTime               @default(now())
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scorecardData   CollegeScorecardCache? @relation(fields: [scorecardUnitId], references: [unitId])
+  insightsCache   CollegeInsightsCache?
 
   @@unique([userId, name])
   @@index([userId])
 }
 
-// Reference catalog of college admission stats, seeded from data/colleges.csv
-// (see prisma/seedColleges.ts). Not linked to CollegeListItem — that model is a
-// free-text per-user saved list; this is shared reference data with no FERPA
-// implications (no student records). acceptanceRate is a 0-1 decimal (0.06 = 6%),
-// matching the CSV convention.
-model College {
-  id             Int      @id @default(autoincrement())
-  name           String   @unique
-  avgSat         Int
-  avgAct         Float
-  avgGpa         Float
-  acceptanceRate Float
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
+// AI-generated admission insights (narrative summary + actionable steps),
+// cached per CollegeListItem since LLM calls are slower/costlier than the
+// scoring formula. inputHash lets a cache entry be invalidated when the
+// student's stats or the college's admissions data change.
+model CollegeInsightsCache {
+  id                Int      @id @default(autoincrement())
+  collegeListItemId Int      @unique
+  userId            Int
+  inputHash         String   @db.Char(64)
+  narrativeSummary  String   @db.Text
+  actionableSteps   Json
+  generatedAt       DateTime @default(now())
 
-// AI-generated "path to admission" qualitative steps, cached per (userId,
-// collegeId) since Anthropic calls are slower/costlier than the numeric
-// model server. No FK to College — same soft-reference convention as
-// CollegeListItem. expiresAt is precomputed at write time (generatedAt + 14
-// days) so freshness is a plain index-friendly comparison, not date math on
-// every read. studentStatsHash is SHA-256 of "sat:act:gpa" — a mismatch means
-// the student's stats changed since the cache was generated, which also
-// invalidates it regardless of expiresAt.
-model CollegePathCache {
-  id               Int      @id @default(autoincrement())
-  userId           Int
-  collegeId        Int
-  steps            Json
-  studentStatsHash String
-  generatedAt      DateTime @default(now())
-  expiresAt        DateTime
+  collegeListItem CollegeListItem @relation(fields: [collegeListItemId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, collegeId])
   @@index([userId])
 }
 

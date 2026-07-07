@@ -11,10 +11,12 @@ export function clearApiToken(): void { _apiToken = null }
 export class ApiError extends Error {
   code?: string
   secondsRemaining?: number
-  constructor(message: string, code?: string, secondsRemaining?: number) {
+  httpStatus?: number
+  constructor(message: string, code?: string, secondsRemaining?: number, httpStatus?: number) {
     super(message)
     this.code = code
     this.secondsRemaining = secondsRemaining
+    this.httpStatus = httpStatus
   }
 }
 
@@ -92,7 +94,7 @@ async function request<T>(path: string, options?: RequestInit & { scrape?: boole
     const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }
     const msg  = typeof body?.error === 'string' ? body.error : body?.error?.message
     const code = typeof body?.error === 'object' ? body?.error?.code : undefined
-    throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining)
+    throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining, res.status)
   }
   const { data } = await res.json() as { data: T }
   return data
@@ -673,49 +675,20 @@ export const api = {
   collegeList: () =>
     request<CollegeListItem[]>('/api/colleges'),
 
-  collegeAdd: (name: string) =>
+  collegeSearch: (q: string) =>
+    request<CollegeSearchResult[]>(`/api/colleges/search?q=${encodeURIComponent(q)}`),
+
+  collegeAdd: (name: string, scorecardUnitId?: string) =>
     request<CollegeListItem>('/api/colleges', {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, ...(scorecardUnitId ? { scorecardUnitId } : {}) }),
     }),
 
   collegeRemove: (id: number) =>
     request<{ deleted: boolean }>(`/api/colleges/${id}`, { method: 'DELETE' }),
 
-  collegeCatalog: (q: string, limit?: number) => {
-    const params = new URLSearchParams({ q })
-    if (limit !== undefined) params.set('limit', String(limit))
-    return request<CatalogCollege[]>(`/api/colleges/catalog?${params.toString()}`)
-  },
-
-  collegePredict: (payload: {
-    collegeId: number
-    studentSat: number
-    studentAct?: number | null
-    studentGpa: number
-  }) =>
-    request<{ collegeName: string; probability: number; tier: 'Reach' | 'Target' | 'Safety' }>(
-      '/api/colleges/predict',
-      { method: 'POST', body: JSON.stringify(payload) },
-    ),
-
-  collegePath: (payload: {
-    collegeId: number
-    studentSat: number
-    studentAct?: number | null
-    studentGpa: number
-  }) =>
-    request<{
-      collegeName: string
-      baselineProbability: number
-      steps: Array<{
-        type: 'quantitative' | 'qualitative'
-        title: string
-        description: string
-        percentBoost: number
-        source: 'model' | 'ai_estimate'
-      }>
-    }>('/api/colleges/path', { method: 'POST', body: JSON.stringify(payload) }),
+  collegeInsights: (id: number) =>
+    request<CollegeInsights>(`/api/colleges/${id}/insights`),
 
   deleteAccount: (password?: string) =>
     request<{ deleted: boolean }>('/api/auth/account', {
@@ -1696,19 +1669,46 @@ export type HacGrade = NormalizedCourse
 
 export interface CollegeListItem {
   id: number
-  userId: number
   name: string
+  scorecardUnitId: string | null
   createdAt: string
+  unitId: string | null
+  city: string | null
+  state: string | null
+  admissionRate: number | null
+  sat25th: number | null
+  sat75th: number | null
+  score: number | null
+  label: string | null
 }
 
-export interface CatalogCollege {
-  id: number
+export interface CollegeSearchResult {
+  unitId: string
   name: string
-  avgSat: number
-  avgAct: number
-  avgGpa: number
-  /** 0-1 decimal — multiply by 100 for display */
-  acceptanceRate: number
+  city: string | null
+  state: string | null
+  admissionRate: number | null
+  sat25th: number | null
+  sat75th: number | null
+  score: number | null
+  label: string | null
+}
+
+export interface CollegeInsightsStep {
+  step: string
+  category: 'test' | 'gpa' | 'essay' | 'extracurricular' | 'strategy'
+  priority: 'high' | 'medium' | 'low'
+}
+
+export interface CollegeInsights {
+  collegeListItemId: number
+  collegeName: string
+  score: number | null
+  label: 'Likely' | 'Possible' | 'Reach' | 'Far Reach' | null
+  narrativeSummary: string
+  actionableSteps: CollegeInsightsStep[]
+  generatedAt: string
+  cached: boolean
 }
 
 export interface AppNotification {
