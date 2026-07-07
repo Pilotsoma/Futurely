@@ -11,10 +11,12 @@ export function clearApiToken(): void { _apiToken = null }
 export class ApiError extends Error {
   code?: string
   secondsRemaining?: number
-  constructor(message: string, code?: string, secondsRemaining?: number) {
+  httpStatus?: number
+  constructor(message: string, code?: string, secondsRemaining?: number, httpStatus?: number) {
     super(message)
     this.code = code
     this.secondsRemaining = secondsRemaining
+    this.httpStatus = httpStatus
   }
 }
 
@@ -76,7 +78,7 @@ async function request<T>(path: string, options?: RequestInit, _retried = false)
     const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }
     const msg  = typeof body?.error === 'string' ? body.error : body?.error?.message
     const code = typeof body?.error === 'object' ? body?.error?.code : undefined
-    throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining)
+    throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining, res.status)
   }
   const { data } = await res.json() as { data: T }
   return data
@@ -670,6 +672,9 @@ export const api = {
 
   collegeRemove: (id: number) =>
     request<{ deleted: boolean }>(`/api/colleges/${id}`, { method: 'DELETE' }),
+
+  collegeInsights: (id: number) =>
+    request<CollegeInsights>(`/api/colleges/${id}/insights`),
 
   deleteAccount: (password?: string) =>
     request<{ deleted: boolean }>('/api/auth/account', {
@@ -1659,6 +1664,23 @@ export interface CollegeListItem {
   sat75th: number | null
   score: number | null
   label: string | null
+}
+
+export interface CollegeInsightsStep {
+  step: string
+  category: 'test' | 'gpa' | 'essay' | 'extracurricular' | 'strategy'
+  priority: 'high' | 'medium' | 'low'
+}
+
+export interface CollegeInsights {
+  collegeListItemId: number
+  collegeName: string
+  score: number | null
+  label: 'Likely' | 'Possible' | 'Reach' | 'Far Reach' | null
+  narrativeSummary: string
+  actionableSteps: CollegeInsightsStep[]
+  generatedAt: string
+  cached: boolean
 }
 
 export interface CollegeSearchResult {

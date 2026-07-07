@@ -7,6 +7,7 @@ import { writeAuditLog } from '../lib/auditLog'
 import { searchByName, ScorecardSchool } from '../integrations/scorecard/scorecardClient'
 import { computeLikelihoodScore } from '../services/collegeScoring'
 import { rankSearchResults } from '../services/collegeSearchRanking'
+import { getOrGenerateInsights } from '../services/collegeInsights'
 
 const router = Router()
 
@@ -344,6 +345,109 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
     })
   } catch {
     res.status(409).json({ data: null, error: { message: 'College already in your list' } })
+  }
+})
+
+// ── GET /:id/insights — college admission insights ────────────────────────────
+
+/**
+ * Return AI-generated admission insights for a single saved college.
+ * Insights are cached server-side; the cache TTL is controlled by the
+ * COLLEGE_INSIGHTS_MAX_CACHE_AGE_DAYS environment variable (default: 90 days).
+ *
+ * 400  — id is not a valid integer
+ * 404  — item not found or admissions data unavailable
+ * 503  — AI generation failed and no cached result exists
+ */
+router.get('/:id/insights', async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = parseInt(req.params.id, 10)
+  if (isNaN(id)) {
+    res.status(400).json({ data: null, error: { message: 'Invalid id' } })
+    return
+  }
+
+  const userId = req.userId!
+
+  try {
+    const item = await prisma.collegeListItem.findFirst({
+      where: { id, userId },
+      include: { scorecardData: true },
+    })
+
+    if (item === null) {
+      await writeAuditLog({
+        userId,
+        resourceType: 'CollegeInsights',
+        resourceId: String(id),
+        action: 'READ',
+        ipAddress: getIpAddress(req),
+      })
+      res.status(404).json({ data: null, error: { message: 'College not found' } })
+      return
+    }
+
+    if (item.scorecardData === null || item.scorecardData.admissionRate === null) {
+      await writeAuditLog({
+        userId,
+        resourceType: 'CollegeInsights',
+        resourceId: String(item.id),
+        action: 'READ',
+        ipAddress: getIpAddress(req),
+      })
+      res.status(404).json({
+        data: null,
+        error: { message: 'Insights unavailable — admissions data not found for this college.' },
+      })
+      return
+    }
+
+    const { studentSAT, studentGPA } = await fetchStudentStats(userId)
+
+    const scoringInput = {
+      studentSAT,
+      studentGPA,
+      college: {
+        admissionRate: item.scorecardData.admissionRate,
+        sat25th: item.scorecardData.sat25th,
+        sat75th: item.scorecardData.sat75th,
+      },
+    }
+
+    const result = await getOrGenerateInsights({
+      collegeListItemId: item.id,
+      userId,
+      collegeName: item.name,
+      scoringInput,
+      admissionRate: item.scorecardData.admissionRate,
+      ipAddress: getIpAddress(req),
+    })
+
+    if (result === null) {
+      res.status(503).json({ data: null, error: { message: 'Insights temporarily unavailable' } })
+      return
+    }
+
+    const { score, label } = computeLikelihoodScore(scoringInput)
+
+    res.json({
+      data: {
+        collegeListItemId: item.id,
+        collegeName: item.name,
+        score,
+        label,
+        narrativeSummary: result.narrativeSummary,
+        actionableSteps: result.actionableSteps,
+        generatedAt: result.generatedAt.toISOString(),
+        cached: result.cached,
+      },
+    })
+  } catch (err) {
+    logger.error('College insights request failed', {
+      collegeListItemId: id,
+      userId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    res.status(500).json({ data: null, error: { message: 'Internal server error' } })
   }
 })
 

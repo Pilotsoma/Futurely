@@ -4,12 +4,19 @@ import CollegeHelpScreen from '../screens/CollegeHelpScreen'
 import GpaSimulatorScreen from '../screens/GpaSimulatorScreen'
 import RoadmapScreen from '../screens/RoadmapScreen'
 import CollegesScreen from '../screens/CollegesScreen'
+import CollegeInsightsScreen from '../screens/CollegeInsightsScreen'
 
 export type CollegeHelpParamList = {
   CollegeHelpHome: undefined
   WhatIfCalculator: undefined
   Roadmap: undefined
   Colleges: undefined
+  CollegeInsights: {
+    id: number
+    name: string
+    score: number | null
+    label: 'Likely' | 'Possible' | 'Reach' | 'Far Reach' | null
+  }
 }
 
 const Stack = createNativeStackNavigator<CollegeHelpParamList>()
@@ -21,6 +28,7 @@ export default function CollegeHelpNavigator(): React.JSX.Element {
       <Stack.Screen name="WhatIfCalculator" component={GpaSimulatorScreen} />
       <Stack.Screen name="Roadmap" component={RoadmapScreen} />
       <Stack.Screen name="Colleges" component={CollegesScreen} />
+      <Stack.Screen name="CollegeInsights" component={CollegeInsightsScreen} />
     </Stack.Navigator>
   )
 }

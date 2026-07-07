@@ -430,8 +430,23 @@ model CollegeListItem {
   createdAt       DateTime               @default(now())
   user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   scorecardData   CollegeScorecardCache? @relation(fields: [scorecardUnitId], references: [unitId])
+  insightsCache   CollegeInsightsCache?
 
   @@unique([userId, name])
+  @@index([userId])
+}
+
+model CollegeInsightsCache {
+  id                Int      @id @default(autoincrement())
+  collegeListItemId Int      @unique
+  userId            Int
+  inputHash         String   @db.Char(64)
+  narrativeSummary  String   @db.Text
+  actionableSteps   Json
+  generatedAt       DateTime @default(now())
+
+  collegeListItem CollegeListItem @relation(fields: [collegeListItemId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 

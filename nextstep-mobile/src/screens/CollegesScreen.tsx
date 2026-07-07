@@ -13,20 +13,36 @@ import { colors } from '../constants/colors'
 import { fetchStudentData, type StudentData } from '../api/studentApi'
 
 interface SampleCollege {
+  id: number
   name: string
   location: string
   acceptance: string
 }
 
 const SAMPLE_COLLEGES: SampleCollege[] = [
-  { name: 'University of Texas at Austin', location: 'Austin, TX', acceptance: '31%' },
-  { name: 'Texas A&M University', location: 'College Station, TX', acceptance: '57%' },
-  { name: 'University of Houston', location: 'Houston, TX', acceptance: '62%' },
+  { id: 1, name: 'University of Texas at Austin', location: 'Austin, TX', acceptance: '31%' },
+  { id: 2, name: 'Texas A&M University', location: 'College Station, TX', acceptance: '57%' },
+  { id: 3, name: 'University of Houston', location: 'Houston, TX', acceptance: '62%' },
 ]
 
-function CollegeCard({ college }: { college: SampleCollege }): React.JSX.Element {
+interface CollegeCardProps {
+  college: SampleCollege
+}
+
+/**
+ * These cards render sample data, not the student's real saved college list
+ * (that list — and its CollegeListItem ids — lives on the web app only for now).
+ * Navigation to CollegeInsightsScreen is intentionally disabled here since a
+ * sample college's id does not correspond to a real CollegeListItem the
+ * authenticated user owns, which would otherwise 404 against the live API.
+ */
+function CollegeCard({ college }: CollegeCardProps): React.JSX.Element {
   return (
-    <View style={styles.collegeCard}>
+    <View
+      style={styles.collegeCard}
+      accessibilityRole="text"
+      accessibilityLabel={`${college.name} — available in Phase 2`}
+    >
       <View style={styles.collegeLocked}>
         <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
         <Text variant="caption" style={{ marginLeft: 6, marginTop: 2 }}>Phase 2 feature</Text>
@@ -79,7 +95,7 @@ export default function CollegesScreen(): React.JSX.Element {
           ) : (
             <>
               <Text variant="body">GPA: <Text style={{ color: colors.primary, fontWeight: '700' }}>{uGpa}</Text></Text>
-              {futureDecision && (
+              {futureDecision !== null && (
                 <Text variant="caption" style={{ marginTop: 4 }}>Goal: {futureDecision}</Text>
               )}
             </>
@@ -89,7 +105,9 @@ export default function CollegesScreen(): React.JSX.Element {
         {/* College cards */}
         <View style={[styles.card, { marginTop: 12 }]}>
           <Text variant="h3" style={{ marginBottom: 12 }}>College Matches</Text>
-          {SAMPLE_COLLEGES.map(c => <CollegeCard key={c.name} college={c} />)}
+          {SAMPLE_COLLEGES.map(c => (
+            <CollegeCard key={c.id} college={c} />
+          ))}
         </View>
 
         {/* Encourage message */}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { api, type CollegeListItem, type CollegeSearchResult, type StudentData } from '../../../lib/api'
+import { api, ApiError, type CollegeInsights, type CollegeInsightsStep, type CollegeListItem, type CollegeSearchResult, type StudentData } from '../../../lib/api'
 
 // ── Display helpers ────────────────────────────────────────────────────────────
 
@@ -11,6 +11,146 @@ function scoreColor(s: number): string {
   if (s >= 25) return '#F97316'
   return '#EF4444'
 }
+
+const CATEGORY_COLORS: Record<CollegeInsightsStep['category'], string> = {
+  test:            '#2979FF',
+  gpa:             '#10B981',
+  essay:           '#7C3AED',
+  extracurricular: '#F97316',
+  strategy:        '#00BCD4',
+}
+
+const PRIORITY_COLORS: Record<CollegeInsightsStep['priority'], string> = {
+  high:   '#EF4444',
+  medium: '#F59E0B',
+  low:    '#52698A',
+}
+
+const PRIORITY_LABELS: Record<CollegeInsightsStep['priority'], string> = {
+  high:   'High',
+  medium: 'Med',
+  low:    'Low',
+}
+
+// ── Insight state types ────────────────────────────────────────────────────────
+
+type InsightState =
+  | { status: 'loading' }
+  | { status: 'error-404' }
+  | { status: 'error-503'; retry: () => void }
+  | { status: 'success'; data: CollegeInsights }
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function InsightsSkeleton(): React.JSX.Element {
+  return (
+    <>
+      <style>{`
+        @keyframes nsInsightPulse {
+          0%, 100% { opacity: 0.35; }
+          50%       { opacity: 0.7;  }
+        }
+        .ns-skeleton-bar {
+          background: var(--surface-2);
+          border-radius: 5px;
+          animation: nsInsightPulse 1.4s ease-in-out infinite;
+        }
+      `}</style>
+      <div style={{ padding: '0 20px 20px' }}>
+        <div className="ns-skeleton-bar" style={{ height: 13, width: '100%', marginBottom: 8 }} />
+        <div className="ns-skeleton-bar" style={{ height: 13, width: '88%', marginBottom: 8 }} />
+        <div className="ns-skeleton-bar" style={{ height: 13, width: '72%', marginBottom: 20 }} />
+        {([80, 90, 65] as number[]).map((w, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div className="ns-skeleton-bar" style={{ width: 52, height: 20, borderRadius: 4, flexShrink: 0 }} />
+            <div className="ns-skeleton-bar" style={{ height: 13, width: `${w}%` }} />
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function InsightsError({ message, onRetry }: { message: string; onRetry?: () => void }): React.JSX.Element {
+  return (
+    <div style={{ padding: '12px 20px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
+          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{message}</span>
+      </div>
+      {onRetry !== undefined && (
+        <button onClick={onRetry} style={SI.retryBtn}>Try again</button>
+      )}
+    </div>
+  )
+}
+
+function CategoryBadge({ category }: { category: CollegeInsightsStep['category'] }): React.JSX.Element {
+  const color = CATEGORY_COLORS[category]
+  return (
+    <span style={{
+      ...SI.badge,
+      background: `${color}22`,
+      border: `1px solid ${color}55`,
+      color,
+    }}>
+      {category}
+    </span>
+  )
+}
+
+function PriorityDot({ priority }: { priority: CollegeInsightsStep['priority'] }): React.JSX.Element {
+  const color = PRIORITY_COLORS[priority]
+  return (
+    <span style={{ ...SI.priorityChip, color, border: `1px solid ${color}55`, background: `${color}18` }}>
+      {PRIORITY_LABELS[priority]}
+    </span>
+  )
+}
+
+function InsightsContent({ data }: { data: CollegeInsights }): React.JSX.Element {
+  const generatedDate = new Date(data.generatedAt)
+  const now = new Date()
+  const diffMs = now.getTime() - generatedDate.getTime()
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const timeLabel = diffHours < 1
+    ? 'just now'
+    : diffHours < 24
+      ? `${diffHours}h ago`
+      : `${Math.floor(diffHours / 24)}d ago`
+
+  return (
+    <div style={{ padding: '0 20px 20px' }}>
+      <p style={SI.narrative}>{data.narrativeSummary}</p>
+
+      {data.actionableSteps.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <span style={SI.sectionLabel}>Action Steps</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+            {data.actionableSteps.map((step, i) => (
+              <div key={i} style={SI.stepRow}>
+                <CategoryBadge category={step.category} />
+                <span style={SI.stepText}>{step.step}</span>
+                <PriorityDot priority={step.priority} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={SI.metaText}>Generated {timeLabel}</span>
+        {data.cached && (
+          <span style={SI.cachedBadge}>cached</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CollegesPage() {
   const [list, setList]           = useState<CollegeListItem[]>([])
@@ -23,6 +163,8 @@ export default function CollegesPage() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [adding, setAdding]       = useState<string | null>(null)
   const [removing, setRemoving]   = useState<number | null>(null)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [insightsCache, setInsightsCache] = useState<Record<number, InsightState>>({})
   const [showDropdown, setShowDropdown] = useState(false)
   const inputRef      = useRef<HTMLInputElement>(null)
   const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -89,12 +231,45 @@ export default function CollegesPage() {
     try {
       await api.collegeRemove(id)
       setList(prev => prev.filter(i => i.id !== id))
+      if (expandedId === id) setExpandedId(null)
+      setInsightsCache(prev => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
     } catch { /* ignore */ }
-    finally { setRemoving(false as unknown as null) }
+    finally { setRemoving(null) }
   }
 
-  // Wait for both APIs to settle before computing stats — prevents a flash
-  // where the stored profile GPA (higher) shows briefly before the live portal GPA loads
+  async function fetchInsights(id: number): Promise<void> {
+    setInsightsCache(prev => ({ ...prev, [id]: { status: 'loading' } }))
+    try {
+      const data = await api.collegeInsights(id)
+      setInsightsCache(prev => ({ ...prev, [id]: { status: 'success', data } }))
+    } catch (err) {
+      const httpStatus = err instanceof ApiError ? err.httpStatus : undefined
+      if (httpStatus === 503) {
+        setInsightsCache(prev => ({
+          ...prev,
+          [id]: { status: 'error-503', retry: () => { void fetchInsights(id) } },
+        }))
+      } else {
+        setInsightsCache(prev => ({ ...prev, [id]: { status: 'error-404' } }))
+      }
+    }
+  }
+
+  function handleToggleInsights(id: number): void {
+    if (expandedId === id) {
+      setExpandedId(null)
+      return
+    }
+    setExpandedId(id)
+    if (insightsCache[id] !== undefined) return
+    void fetchInsights(id)
+  }
+
+  // Wait for both APIs to settle before computing stats
   const unweightedGpa = statsReady ? ((portalGpa?.unweightedGpa ?? 0) > 0 ? portalGpa!.unweightedGpa : (profile?.unweightedGpa ?? null)) : null
   const weightedGpa   = statsReady ? ((portalGpa?.weightedGpa ?? 0) > 0   ? portalGpa!.weightedGpa   : (profile?.weightedGpa   ?? null)) : null
   const studentSAT    = statsReady ? (profile?.satScore ?? null) : null
@@ -204,49 +379,108 @@ export default function CollegesPage() {
             const score = item.score
             const color = score !== null ? scoreColor(score) : 'var(--text-muted)'
             const label = item.label
+            const isExpanded = expandedId === item.id
+            const insight = insightsCache[item.id]
 
             return (
-              <div key={item.id} className="ns-card" style={S.collegeCard}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={S.collegeName}>{item.name}</div>
-                  {(item.city || item.state) && (
-                    <div style={S.collegeMeta}>{[item.city, item.state].filter(Boolean).join(', ')}</div>
-                  )}
-                  {score !== null && (
-                    <div style={{ marginTop: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Likelihood</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color }}>{label}</span>
-                      </div>
-                      <div style={S.barTrack}>
-                        <div style={{ ...S.barFill, width: `${score}%`, background: color }} />
-                      </div>
-                    </div>
-                  )}
-                  {score === null && !hasStats && (
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Add GPA & SAT in Settings to see score</div>
-                  )}
-                </div>
-
-                <div style={S.scoreBox}>
-                  {score !== null ? (
-                    <>
-                      <div style={{ ...S.scoreNum, color }}>{score}</div>
-                      <div style={S.scoreOut}>/100</div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' as const }}>No<br/>data</div>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => handleRemove(item.id)}
-                  disabled={removing === item.id}
-                  style={S.removeBtn}
-                  title="Remove"
+              <div key={item.id} className="ns-card" style={{ overflow: 'hidden', padding: 0 }}>
+                {/* Clickable card row */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isExpanded}
+                  aria-label={`View admission insights for ${item.name}`}
+                  style={{ ...S.collegeCardRow, cursor: 'pointer' }}
+                  onClick={() => handleToggleInsights(item.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleToggleInsights(item.id)
+                    }
+                  }}
                 >
-                  {removing === item.id ? '…' : '×'}
-                </button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={S.collegeName}>{item.name}</div>
+                    {(item.city || item.state) && (
+                      <div style={S.collegeMeta}>{[item.city, item.state].filter(Boolean).join(', ')}</div>
+                    )}
+                    {score !== null && (
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>Likelihood</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color }}>{label}</span>
+                        </div>
+                        <div style={S.barTrack}>
+                          <div style={{ ...S.barFill, width: `${score}%`, background: color }} />
+                        </div>
+                      </div>
+                    )}
+                    {score === null && !hasStats && (
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Add GPA & SAT in Settings to see score</div>
+                    )}
+                  </div>
+
+                  <div style={S.scoreBox}>
+                    {score !== null ? (
+                      <>
+                        <div style={{ ...S.scoreNum, color }}>{score}</div>
+                        <div style={S.scoreOut}>/100</div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' as const }}>No<br/>data</div>
+                    )}
+                  </div>
+
+                  {/* Expand/collapse chevron */}
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--text-muted)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    style={{
+                      flexShrink: 0,
+                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+
+                  <button
+                    onClick={(e) => { e.stopPropagation(); void handleRemove(item.id) }}
+                    disabled={removing === item.id}
+                    style={S.removeBtn}
+                    title="Remove"
+                    aria-label={`Remove ${item.name}`}
+                  >
+                    {removing === item.id ? '…' : '×'}
+                  </button>
+                </div>
+
+                {/* Insights panel */}
+                {isExpanded && (
+                  <div style={S.insightsDivider}>
+                    <div style={{ height: 1, background: 'var(--border)' }} />
+                    <div style={{ paddingTop: 16 }}>
+                      {(insight === undefined || insight.status === 'loading') && <InsightsSkeleton />}
+                      {insight?.status === 'error-404' && (
+                        <InsightsError message="We don't have enough admissions data for this college yet." />
+                      )}
+                      {insight?.status === 'error-503' && (
+                        <InsightsError
+                          message="Insights are temporarily unavailable — try again in a bit."
+                          onRetry={insight.retry}
+                        />
+                      )}
+                      {insight?.status === 'success' && (
+                        <InsightsContent data={insight.data} />
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -255,6 +489,8 @@ export default function CollegesPage() {
     </div>
   )
 }
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 const S: Record<string, React.CSSProperties> = {
   header:       { marginBottom: 24 },
@@ -277,7 +513,7 @@ const S: Record<string, React.CSSProperties> = {
   addedBadge:   { fontSize: 11, color: 'var(--text-muted)', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: 20, whiteSpace: 'nowrap' as const },
   addBtn:       { fontSize: 18, fontWeight: 300, color: 'var(--primary)', lineHeight: 1, padding: '0 4px' },
   empty:        { padding: 48, textAlign: 'center' as const, display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  collegeCard:  { display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px' },
+  collegeCardRow: { display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px' },
   collegeName:  { fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 2 },
   collegeMeta:  { fontSize: 12, color: 'var(--text-muted)' },
   barTrack:     { height: 6, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' },
@@ -286,4 +522,77 @@ const S: Record<string, React.CSSProperties> = {
   scoreNum:     { fontSize: 28, fontWeight: 800, letterSpacing: '-1px', lineHeight: 1 },
   scoreOut:     { fontSize: 11, color: 'var(--text-muted)', marginTop: 2 },
   removeBtn:    { background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 16, cursor: 'pointer', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 },
+  insightsDivider: { padding: '0 0 0 0' },
+}
+
+const SI: Record<string, React.CSSProperties> = {
+  retryBtn: {
+    alignSelf: 'flex-start',
+    background: 'none',
+    border: '1px solid var(--border)',
+    borderRadius: 6,
+    color: 'var(--text-secondary)',
+    fontSize: 12,
+    cursor: 'pointer',
+    padding: '5px 12px',
+    fontWeight: 500,
+  },
+  narrative: {
+    fontSize: 13.5,
+    color: 'var(--text-secondary)',
+    lineHeight: 1.65,
+    margin: 0,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.8px',
+    color: 'var(--text-muted)',
+  },
+  stepRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: '9px 12px',
+    background: 'var(--surface-2)',
+    borderRadius: 8,
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 13,
+    color: 'var(--text)',
+    lineHeight: 1.5,
+  },
+  badge: {
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.4px',
+    padding: '3px 7px',
+    borderRadius: 4,
+    whiteSpace: 'nowrap' as const,
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  priorityChip: {
+    fontSize: 10,
+    fontWeight: 600,
+    padding: '3px 6px',
+    borderRadius: 4,
+    whiteSpace: 'nowrap' as const,
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  metaText: {
+    fontSize: 11,
+    color: 'var(--text-muted)',
+  },
+  cachedBadge: {
+    fontSize: 10,
+    color: 'var(--text-muted)',
+    padding: '2px 6px',
+    border: '1px solid var(--border)',
+    borderRadius: 4,
+  },
 }
