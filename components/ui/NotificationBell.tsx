@@ -196,21 +196,23 @@ export default function NotificationBell({ showToasts = false, collapsed = false
               ? <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No notifications yet</div>
               : notifs.map(n => {
                 const name = senderFirst(n)
-                const icon: React.ReactNode =
-                  n.type === 'FOLLOW' ? <UserIcon size={15}/> :
-                  n.type === 'LIKE' ? <HeartFilledIcon size={15}/> :
-                  n.type === 'GIVEAWAY_WIN' ? <PartyPopperIcon size={15}/> :
-                  n.type === 'LISTING_SOLD' ? <TagIcon size={15}/> :
-                  n.type.startsWith('TRADE') ? <TradeArrowsIcon size={15}/> :
-                  n.type === 'ASSIGNMENT_CREATED' ? <BooksIcon size={15}/> :
-                  n.type === 'TEACHER_ASSIGNMENT' ? <ClipboardIcon size={15}/> :
-                  n.type === 'CLASSROOM_JOINED' ? <SchoolBuildingIcon size={15}/> :
-                  n.type === 'COUNSELOR_LINKED' ? <HandshakeIcon size={15}/> :
-                  n.type === 'COUNSELOR_NOTE_ADDED' ? <PencilIcon size={15}/> :
-                  n.type === 'COUNSELOR_RECOMMENDATION_ADDED' ? <SparklesIcon size={15}/> :
-                  n.type === 'ACTION_ITEM_CREATED' ? <CheckCircleIcon size={15}/> :
-                  n.type === 'COIN_RECEIVED' ? <CoinIcon size={15}/> :
-                  <ChatBubbleIcon size={15}/>
+                const { icon, iconColor }: { icon: React.ReactNode; iconColor: string } =
+                  n.type === 'FOLLOW' ? { icon: <UserIcon size={15}/>, iconColor: '#2D6A4F' } :
+                  n.type === 'LIKE' ? { icon: <HeartFilledIcon size={15}/>, iconColor: '#EF4444' } :
+                  n.type === 'GIVEAWAY_WIN' ? { icon: <PartyPopperIcon size={15}/>, iconColor: '#EAB308' } :
+                  n.type === 'LISTING_SOLD' ? { icon: <TagIcon size={15}/>, iconColor: '#EAB308' } :
+                  n.type === 'TRADE_ACCEPTED' ? { icon: <TradeArrowsIcon size={15}/>, iconColor: '#22C55E' } :
+                  n.type === 'TRADE_DECLINED' ? { icon: <TradeArrowsIcon size={15}/>, iconColor: '#EF4444' } :
+                  n.type.startsWith('TRADE') ? { icon: <TradeArrowsIcon size={15}/>, iconColor: '#8B5CF6' } :
+                  n.type === 'ASSIGNMENT_CREATED' ? { icon: <BooksIcon size={15}/>, iconColor: '#6366F1' } :
+                  n.type === 'TEACHER_ASSIGNMENT' ? { icon: <ClipboardIcon size={15}/>, iconColor: '#6366F1' } :
+                  n.type === 'CLASSROOM_JOINED' ? { icon: <SchoolBuildingIcon size={15}/>, iconColor: '#10B981' } :
+                  n.type === 'COUNSELOR_LINKED' ? { icon: <HandshakeIcon size={15}/>, iconColor: '#3B82F6' } :
+                  n.type === 'COUNSELOR_NOTE_ADDED' ? { icon: <PencilIcon size={15}/>, iconColor: '#8B5CF6' } :
+                  n.type === 'COUNSELOR_RECOMMENDATION_ADDED' ? { icon: <SparklesIcon size={15}/>, iconColor: '#EAB308' } :
+                  n.type === 'ACTION_ITEM_CREATED' ? { icon: <CheckCircleIcon size={15}/>, iconColor: '#22C55E' } :
+                  n.type === 'COIN_RECEIVED' ? { icon: <CoinIcon size={15}/>, iconColor: '#EAB308' } :
+                  { icon: <ChatBubbleIcon size={15}/>, iconColor: '#3B82F6' }
 
                 // Row-level navigation: where clicking the notification takes you
                 function handleRowClick() {
@@ -260,7 +262,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 else body = n.preview ?? 'New notification'
                 return (
                   <div key={n.id} onClick={handleRowClick} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)', cursor: 'pointer' }}>
-                    <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{icon}</span>
+                    <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', color: iconColor }}>{icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.4 }}>{body}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{timeAgo(n.createdAt)}</div>
@@ -301,7 +303,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
             })()
             return (
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `4px solid ${accent}`, borderRadius: 12, padding: '13px 14px', boxShadow: '0 6px 24px rgba(0,0,0,0.4)', pointerEvents: 'auto', animation: 'fadeUp 0.2s ease' }}>
-                <span style={{ flexShrink: 0, lineHeight: 1, display: 'flex', alignItems: 'center' }}>{toastIcon}</span>
+                <span style={{ flexShrink: 0, lineHeight: 1, display: 'flex', alignItems: 'center', color: accent }}>{toastIcon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{text}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{timeAgo(t.notif.createdAt)}</div>
