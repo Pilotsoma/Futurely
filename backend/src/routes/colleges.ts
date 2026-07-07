@@ -309,8 +309,39 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
         name: parse.data.name,
         scorecardUnitId: parse.data.scorecardUnitId ?? null,
       },
+      include: { scorecardData: true },
     })
-    res.json({ data: item })
+
+    const { studentSAT, studentGPA } = await fetchStudentStats(userId)
+
+    const scoring = item.scorecardData !== null
+      ? computeLikelihoodScore({
+          studentSAT,
+          studentGPA,
+          college: {
+            admissionRate: item.scorecardData.admissionRate,
+            sat25th: item.scorecardData.sat25th,
+            sat75th: item.scorecardData.sat75th,
+          },
+        })
+      : { score: null, label: null }
+
+    res.json({
+      data: {
+        id: item.id,
+        name: item.name,
+        scorecardUnitId: item.scorecardUnitId,
+        createdAt: item.createdAt,
+        unitId: item.scorecardData?.unitId ?? null,
+        city: item.scorecardData?.city ?? null,
+        state: item.scorecardData?.state ?? null,
+        admissionRate: item.scorecardData?.admissionRate ?? null,
+        sat25th: item.scorecardData?.sat25th ?? null,
+        sat75th: item.scorecardData?.sat75th ?? null,
+        score: scoring.score,
+        label: scoring.label,
+      },
+    })
   } catch {
     res.status(409).json({ data: null, error: { message: 'College already in your list' } })
   }
