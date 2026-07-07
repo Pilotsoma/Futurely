@@ -14,7 +14,7 @@ import {
   BarChartIcon, DocumentIcon, CalendarIcon, ClipboardIcon,
   CheckCircleIcon, LightningBoltIcon, MedalIcon, DiamondIcon, CrownIcon,
   FlameIcon, LockIcon, GraduationCapIcon, LinkIcon, RefreshIcon,
-  CheckIcon, SparkleStarIcon, RocketIcon, BooksIcon, PartyPopperIcon,
+  CheckIcon, RocketIcon, BooksIcon, PartyPopperIcon,
 } from '@/components/icons'
 
 const QUICK_ACCESS_LINKS: Array<{ href: string; label: string; icon: React.ReactNode; color: string; bg: string }> = [
@@ -85,10 +85,6 @@ const STREAK_MILESTONES: Array<{ days: number; icon: React.ReactNode; tag?: stri
 
 function streakCoinBonus(streak: number) {
   return Math.min(400, 50 + Math.max(0, streak - 1) * 7)
-}
-
-function getNextMilestone(streak: number) {
-  return STREAK_MILESTONES.find(m => m.days > streak) ?? null
 }
 
 function normalCdf(z: number): number {
@@ -438,13 +434,7 @@ export default function DashboardPage() {
         </motion.div>
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)} {...staggerItem(4)}>
           <div style={S.statNum}>{animStreak}</div>
-          <div style={{ ...S.statLabel, display: 'flex', alignItems: 'center', gap: 3 }}>Day Streak <FlameIcon size={13}/></div>
-          <div style={{ ...S.statSub, color: '#EAB308', display: 'flex', alignItems: 'center', gap: 2 }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{totalDailyCoins} today{gpaBonusPct > 0 ? <SparkleStarIcon size={10}/> : null}</div>
-          {(() => {
-            const next = getNextMilestone(dayStreak)
-            if (!next) return <div style={{ ...S.statSub, display: 'flex', alignItems: 'center', gap: 3 }} title="All streak rewards earned"><CrownIcon size={13}/> GOAT</div>
-            return <div style={S.statSub}>Next: {next.days}d → {next.tag}</div>
-          })()}
+          <div style={{ ...S.statLabel, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>Day Streak <FlameIcon size={13} color="#F97316"/></div>
         </motion.div>
       </div>
 
