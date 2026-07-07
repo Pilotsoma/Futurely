@@ -5,6 +5,12 @@ import http from 'http'
 import jwt from 'jsonwebtoken'
 import { clients, userClients, playerSessions, sessionPlayers, sessionAlive, sessionHealth, sessionAmmo, sessionStartTime, registerBattlePlayers, sendToUser, sendToSessionExcept, sendToAllInSession, BATTLE_START_HP, BATTLE_START_AMMO, BATTLE_MAX_AMMO, BATTLE_AMMO_REWARD } from './lib/websocket'
 import { prisma } from './lib/prisma'
+import { ensureSchema } from './lib/startup'
+
+// Local dev (ts-node-dev) never runs `prisma migrate deploy` — only `npm start` does.
+// Run the same self-healing patcher the Vercel entrypoint uses so local dev doesn't
+// silently run against a schema missing tables/columns from an unapplied migration.
+ensureSchema().catch(err => logger.error('startup_schema_patch_failed', { error: err instanceof Error ? err.message : String(err) }))
 
 const PORT = Number(process.env.PORT ?? '3001')
 // app.ts already exits in production when JWT_SECRET is missing or default.

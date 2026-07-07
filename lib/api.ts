@@ -48,22 +48,38 @@ async function silentRefresh(): Promise<boolean> {
   return _refreshPromise
 }
 
-async function request<T>(path: string, options?: RequestInit, _retried = false): Promise<T> {
+// 45s for endpoints that proxy live school-portal scraping (HAC/PowerSchool) — these
+// can genuinely take longer than typical CRUD calls. 30s for everything else.
+const SCRAPE_TIMEOUT_MS = 45000
+const DEFAULT_TIMEOUT_MS = 30000
+
+async function request<T>(path: string, options?: RequestInit & { scrape?: boolean }, _retried = false): Promise<T> {
   const token = _apiToken
+  const { scrape, ...init } = options ?? {}
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 30000)
+  const timeout = setTimeout(() => controller.abort(), scrape ? SCRAPE_TIMEOUT_MS : DEFAULT_TIMEOUT_MS)
   let res: Response
   try {
     res = await fetch(`${BASE}${path}`, {
-      ...options,
+      ...init,
       signal: controller.signal,
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options?.headers,
+        ...init.headers,
       },
     })
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new ApiError(
+        scrape
+          ? 'The school portal did not respond in time. Please try again.'
+          : 'Request timed out. Please check your connection.',
+        'TIMEOUT',
+      )
+    }
+    throw new ApiError('Could not reach the server. Please check your connection.', 'NETWORK_ERROR')
   } finally {
     clearTimeout(timeout)
   }
@@ -237,6 +253,7 @@ export const api = {
     }>('/api/integrations/grades/hac/login', {
       method: 'POST',
       body: JSON.stringify({ baseUrl, username, password }),
+      scrape: true,
     }),
 
   portalLoginPS: (baseUrl: string, username: string, password: string) =>
@@ -248,6 +265,7 @@ export const api = {
     }>('/api/integrations/grades/powerschool/login', {
       method: 'POST',
       body: JSON.stringify({ baseUrl, username, password }),
+      scrape: true,
     }),
 
   portalDisconnect: () =>
@@ -282,13 +300,14 @@ export const api = {
       }
     }>('/api/integrations/grades/sync-profile', {
       method: 'POST',
+      scrape: true,
     }),
 
   portalGrades: () =>
     request<{
       systemType: string
       grades: NormalizedCourse[]
-    }>('/api/integrations/grades/current'),
+    }>('/api/integrations/grades/current', { scrape: true }),
 
   portalTranscript: () =>
     request<{
@@ -305,17 +324,17 @@ export const api = {
         classRank: string | null
         quartile: string | null
       }
-    }>('/api/integrations/grades/transcript'),
+    }>('/api/integrations/grades/transcript', { scrape: true }),
 
   portalSchedule: () =>
-    request<{ schedule: Record<string, string>[] }>('/api/integrations/grades/schedule'),
+    request<{ schedule: Record<string, string>[] }>('/api/integrations/grades/schedule', { scrape: true }),
 
   portalClasswork: (period?: string) =>
     request<{
       classes: Array<{ name: string; period: string; teacher: string; room: string; average: string | null; scores: Array<{ name: string; category: string; score: number | null; totalPoints: number | null; percentage: string; dateDue: string }> }>
       availablePeriods: string[]
       currentPeriod: string
-    }>(`/api/integrations/grades/classwork${period ? `?period=${encodeURIComponent(period)}` : ''}`),
+    }>(`/api/integrations/grades/classwork${period ? `?period=${encodeURIComponent(period)}` : ''}`, { scrape: true }),
 
   portalReportCard: (period?: string) =>
     request<{
@@ -325,7 +344,7 @@ export const api = {
         sem1: Array<{ name: string; period: string; numericGrade: string; letterGrade: string; credits: string; teacher: string }>
         sem2: Array<{ name: string; period: string; numericGrade: string; letterGrade: string; credits: string; teacher: string }>
       }
-    }>(`/api/integrations/grades/report-card${period ? `?period=${encodeURIComponent(period)}` : ''}`),
+    }>(`/api/integrations/grades/report-card${period ? `?period=${encodeURIComponent(period)}` : ''}`, { scrape: true }),
 
   portalGpa: () =>
     request<{
@@ -334,19 +353,19 @@ export const api = {
       weightedGpa: number | null
       courseCount: number
       systemType: string
-    }>('/api/integrations/grades/gpa'),
+    }>('/api/integrations/grades/gpa', { scrape: true }),
 
   portalProgressReport: (date?: string) =>
     request<{
       availableDates: string[]
       currentDate: string
       courses: Array<{ name: string; period: string; average: string; letterGrade: string; teacher: string }>
-    }>(`/api/integrations/grades/progress-report${date ? `?date=${encodeURIComponent(date)}` : ''}`),
+    }>(`/api/integrations/grades/progress-report${date ? `?date=${encodeURIComponent(date)}` : ''}`, { scrape: true }),
 
   portalContactTeachers: () =>
     request<{
       teachers: Array<{ name: string; courseName: string; period: string; email: null; emailNote: string; emailHint: string }>
-    }>('/api/integrations/grades/contact-teachers'),
+    }>('/api/integrations/grades/contact-teachers', { scrape: true }),
 
   portalAttendance: (monthOffset = 0) =>
     request<{
@@ -355,7 +374,7 @@ export const api = {
       monthIndex: number
       days: Array<{ date: string; dayOfWeek: string; status: string; code: string; description: string }>
       summary: { absences: number; tardies: number; excused: number }
-    }>(`/api/integrations/grades/attendance?monthOffset=${monthOffset}`),
+    }>(`/api/integrations/grades/attendance?monthOffset=${monthOffset}`, { scrape: true }),
 
   // ── Study Feed ──────────────────────────────────────────────────────────────
 

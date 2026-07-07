@@ -29,9 +29,9 @@ async function main() {
       password,
       999,
     )
-    console.log('✅ Login successful. Token:', token)
+    console.log('✅ Login successful. Session token acquired.')
   } else {
-    console.log('🔑 Using provided token:', token)
+    console.log('🔑 Using provided token (redacted).')
   }
 
   console.log('\n📥 Fetching grades...')

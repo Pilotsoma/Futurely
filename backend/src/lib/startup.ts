@@ -119,6 +119,40 @@ const PATCHES: string[] = [
     ADD COLUMN IF NOT EXISTS "coppaConsentStatus"    TEXT        NOT NULL DEFAULT 'not_required',
     ADD COLUMN IF NOT EXISTS "coppaConsentTimestamp" TIMESTAMP(3) DEFAULT NULL,
     ADD COLUMN IF NOT EXISTS "coppaParentEmail"      TEXT        DEFAULT NULL`,
+
+  // ── College catalog / saved list / path cache tables ──────────────────
+  // schema.prisma added these models (College, CollegeListItem, CollegePathCache)
+  // but no migration.sql was ever committed for them — see DIAGNOSTIC_REPORT.md.
+  // These patches are the stopgap until a real migration is authored.
+  `CREATE TABLE IF NOT EXISTS "College" (
+    "id"             SERIAL PRIMARY KEY,
+    "name"           TEXT NOT NULL UNIQUE,
+    "avgSat"         INTEGER NOT NULL,
+    "avgAct"         DOUBLE PRECISION NOT NULL,
+    "avgGpa"         DOUBLE PRECISION NOT NULL,
+    "acceptanceRate" DOUBLE PRECISION NOT NULL,
+    "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS "CollegeListItem" (
+    "id"        SERIAL PRIMARY KEY,
+    "userId"    INTEGER NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+    "name"      TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "CollegeListItem_userId_name_key" UNIQUE ("userId", "name")
+  )`,
+  `CREATE INDEX IF NOT EXISTS "CollegeListItem_userId_idx" ON "CollegeListItem"("userId")`,
+  `CREATE TABLE IF NOT EXISTS "CollegePathCache" (
+    "id"               SERIAL PRIMARY KEY,
+    "userId"           INTEGER NOT NULL,
+    "collegeId"        INTEGER NOT NULL,
+    "steps"            JSONB NOT NULL,
+    "studentStatsHash" TEXT NOT NULL,
+    "generatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt"        TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "CollegePathCache_userId_collegeId_key" UNIQUE ("userId", "collegeId")
+  )`,
+  `CREATE INDEX IF NOT EXISTS "CollegePathCache_userId_idx" ON "CollegePathCache"("userId")`,
 ]
 
 // Data-level repairs that are always idempotent and safe to re-run on every cold start.
@@ -160,11 +194,14 @@ let patchPromise: Promise<void> | null = null
 export function ensureSchema(): Promise<void> {
   if (patchPromise) return patchPromise
   patchPromise = (async () => {
-    // Probe checks the two newest schema additions. If both exist, schema patches are skipped.
+    // Probe checks the newest schema additions. If all exist, schema patches are skipped.
     // IMPORTANT: update this probe whenever a new column/table is added to PATCHES above.
     try {
       await prisma.$queryRawUnsafe(`SELECT "coppaConsentStatus" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT 1 FROM "College" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT 1 FROM "CollegeListItem" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT 1 FROM "CollegePathCache" LIMIT 0`)
     } catch {
       // Schema is incomplete — run patches below.
       for (const sql of PATCHES) {

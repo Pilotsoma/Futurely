@@ -231,11 +231,19 @@ router.post('/path', async (req: AuthRequest, res: Response): Promise<void> => {
 
 router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId!
-  const items = await prisma.collegeListItem.findMany({
-    where: { userId },
-    orderBy: { createdAt: 'asc' },
-  })
-  res.json({ data: items })
+  try {
+    const items = await prisma.collegeListItem.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+    })
+    res.json({ data: items })
+  } catch (err: unknown) {
+    logger.error('college_list_unexpected_error', {
+      error: err instanceof Error ? err.message : String(err),
+      userId,
+    })
+    res.status(500).json({ data: null, error: { message: 'An unexpected error occurred.' } })
+  }
 })
 
 router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
@@ -262,8 +270,16 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
     res.status(400).json({ data: null, error: { message: 'Invalid id' } })
     return
   }
-  await prisma.collegeListItem.deleteMany({ where: { id, userId } })
-  res.json({ data: { deleted: true } })
+  try {
+    await prisma.collegeListItem.deleteMany({ where: { id, userId } })
+    res.json({ data: { deleted: true } })
+  } catch (err: unknown) {
+    logger.error('college_delete_unexpected_error', {
+      error: err instanceof Error ? err.message : String(err),
+      userId,
+    })
+    res.status(500).json({ data: null, error: { message: 'An unexpected error occurred.' } })
+  }
 })
 
 export default router

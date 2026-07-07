@@ -12,13 +12,13 @@ async function main() {
   }
 
   try {
-    const token = await loginHAC(
+    await loginHAC(
       'https://homeaccess.katyisd.org',
       username,
       password,
       999,
     )
-    console.log('✅ Login successful. Session token:', token)
+    console.log('✅ Login successful. Session token acquired (redacted).')
   } catch (err) {
     console.error('❌ Login failed:', err)
     process.exit(1)
