@@ -14,6 +14,7 @@ import Button from '../components/ui/Button'
 import { colors } from '../constants/colors'
 import { fetchStudentData, type StudentData, type Assignment } from '../api/studentApi'
 import { getSyncStatus, type SyncStatus } from '../api/portalApi'
+import { ArrowRightIcon, FlameIcon } from '../components/icons'
 import type { AppParamList } from '../navigation/AppNavigator'
 
 type NavProp = NativeStackNavigationProp<AppParamList>
@@ -257,7 +258,10 @@ export default function DashboardScreen(): React.JSX.Element {
           onPress={() => navigation.navigate('Planning')}
           activeOpacity={0.7}
         >
-          <Text style={styles.viewAllText}>View all →</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Text style={styles.viewAllText}>View all</Text>
+            <ArrowRightIcon size={12} color={colors.primary}/>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -265,7 +269,7 @@ export default function DashboardScreen(): React.JSX.Element {
       <View style={styles.statsRow}>
         <StatCard value={stats.totalCourses.toString()} label="Courses" />
         <StatCard value={stats.assignmentsDueThisWeek.toString()} label="Due Soon" />
-        <StatCard value="3" label="Day Streak 🔥" />
+        <StatCard value="3" label="Day Streak" labelNode={<><Text variant="caption">Day Streak</Text><FlameIcon size={12} color={colors.warning}/></>} />
       </View>
 
       {/* Recent Grades */}
@@ -273,7 +277,10 @@ export default function DashboardScreen(): React.JSX.Element {
         <View style={styles.cardHeaderRow}>
           <Text variant="h3">Recent Grades</Text>
           <TouchableOpacity onPress={() => navigation.navigate('GradePortal')} activeOpacity={0.7}>
-            <Text style={styles.viewAllText}>See all →</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Text style={styles.viewAllText}>See all</Text>
+              <ArrowRightIcon size={12} color={colors.primary}/>
+            </View>
           </TouchableOpacity>
         </View>
         {courses.slice(0, 3).map((c) => (
@@ -318,11 +325,14 @@ function DueTodayRow({ assignment }: { assignment: Assignment }): React.JSX.Elem
   )
 }
 
-function StatCard({ value, label }: { value: string; label: string }): React.JSX.Element {
+function StatCard({ value, label, labelNode }: { value: string; label: string; labelNode?: React.ReactNode }): React.JSX.Element {
   return (
     <View style={styles.statCard}>
       <Text style={styles.statValue}>{value}</Text>
-      <Text variant="caption" style={{ textAlign: 'center' }}>{label}</Text>
+      {labelNode
+        ? <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 }}>{labelNode}</View>
+        : <Text variant="caption" style={{ textAlign: 'center' }}>{label}</Text>
+      }
     </View>
   )
 }

@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
+import { WarningIcon } from '@/components/icons'
 import {
   api,
   getApiToken,
@@ -212,7 +214,7 @@ function ActionItemRow({ item, onToggle }: { item: StudentActionItem; onToggle: 
         )}
         {item.dueDate && (
           <p style={{ fontSize: 11, fontWeight: 600, margin: '6px 0 0', color: overdue ? '#EF4444' : 'var(--text-muted)' }}>
-            {overdue ? '⚠ Overdue · ' : ''}Due {new Date(item.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {overdue ? <><WarningIcon size={11}/> Overdue · </> : ''}Due {new Date(item.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         )}
       </div>

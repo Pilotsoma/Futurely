@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeftIcon, ArcheryBowIcon } from '@/components/icons'
 import { api, QuestionSetWithQuestions, Question, QuestionInput } from '../../../../lib/api'
 
 const SUBJECTS = ['Math', 'Science', 'English', 'History', 'Spanish', 'French', 'Biology', 'Chemistry', 'Physics', 'Computer Science', 'Economics', 'Psychology', 'Other']
@@ -159,7 +161,7 @@ export default function SetDetailPage() {
   }
 
   if (loading) return <div style={S.page}>{[1,2,3].map(i => <div key={i} className="shimmer" style={{ height: 72, borderRadius: 12, marginBottom: 10 }} />)}</div>
-  if (error || !set) return <div style={S.page}><p style={{ color: 'var(--error)' }}>{error ?? 'Set not found'}</p><Link href="/sets" style={{ color: 'var(--primary)', fontSize: 13 }}>← Back</Link></div>
+  if (error || !set) return <div style={S.page}><p style={{ color: 'var(--error)' }}>{error ?? 'Set not found'}</p><Link href="/sets" style={{ color: 'var(--primary)', fontSize: 13 }}><ArrowLeftIcon size={13}/> Back</Link></div>
 
   return (
     <div style={S.page}>
@@ -184,7 +186,7 @@ export default function SetDetailPage() {
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
               <button onClick={() => void handleHostBattle()} disabled={hosting || set.questions.length === 0} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 20, background: set.questions.length > 0 ? '#7c3aed' : 'var(--surface-2)', color: set.questions.length > 0 ? '#fff' : 'var(--text-muted)', border: 'none', fontSize: 13, fontWeight: 700, cursor: set.questions.length > 0 ? 'pointer' : 'not-allowed' }}>
-                🏹 {hosting ? 'Starting…' : 'Host Battle'}
+                <><ArcheryBowIcon size={14}/> {hosting ? 'Starting…' : 'Host Battle'}</>
               </button>
               <button onClick={() => void handleHost()} disabled={hosting || set.questions.length === 0} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 20, background: set.questions.length > 0 ? 'var(--primary)' : 'var(--surface-2)', color: set.questions.length > 0 ? '#fff' : 'var(--text-muted)', border: 'none', fontSize: 13, fontWeight: 700, cursor: set.questions.length > 0 ? 'pointer' : 'not-allowed' }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>

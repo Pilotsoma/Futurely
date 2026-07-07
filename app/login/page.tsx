@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
+import { InboxIcon, ArrowLeftIcon, WarningIcon, XMarkIcon, MailboxIcon } from '@/components/icons'
 import { api, ApiError } from '../../lib/api'
 import { setWebLogin } from '../../lib/authState'
 import { SORTED_ISD_LIST, type ISDEntry } from '../../lib/isds'
@@ -325,7 +327,7 @@ function LoginPageInner() {
         {registerStep === 'otp' && (
           <form onSubmit={e => void handleVerifyOtp(e)} style={{ ...styles.form, marginBottom: 8 }}>
             <div style={{ textAlign: 'center', marginBottom: 4 }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>📨</div>
+              <div style={{ marginBottom: 8 }}><InboxIcon size={36}/></div>
               <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>Check your email</p>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
                 We sent a 6-digit code to <strong>{email}</strong>
@@ -343,7 +345,7 @@ function LoginPageInner() {
             <button type="submit" style={styles.btn}>Verify code</button>
             <button type="button" onClick={() => setRegisterStep('form')}
               style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, textAlign: 'center' as const }}>
-              ← Back / change email
+              <ArrowLeftIcon size={13}/> Back / change email
             </button>
           </form>
         )}
@@ -451,7 +453,7 @@ function LoginPageInner() {
                     placeholder={isClasslinkDistrict ? 'Your ClassLink password' : 'Your HAC password'} autoComplete="current-password" style={styles.input} />
                 </div>
                 <p style={styles.hint}>Your school credentials are never stored — used only to fetch grades.</p>
-                {hacError && <p style={styles.hacError}>⚠ {hacError} — you can reconnect later in Settings.</p>}
+                {hacError && <p style={{...styles.hacError, display: 'flex', alignItems: 'center', gap: 4}}><WarningIcon size={13}/> {hacError} — you can reconnect later in Settings.</p>}
               </div>
             </>
           )}
@@ -570,12 +572,12 @@ function LoginPageInner() {
           <div style={{ ...styles.modalCard, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <span style={{ fontWeight: 700, fontSize: 16 }}>Reset your password</span>
-              <button type="button" onClick={() => setShowForgot(false)} style={styles.modalClose}>✕</button>
+              <button type="button" onClick={() => setShowForgot(false)} style={styles.modalClose}><XMarkIcon size={16}/></button>
             </div>
             <div style={{ padding: '28px 28px 32px' }}>
               {forgotSent ? (
                 <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-                  <div style={{ fontSize: 44 }}>📬</div>
+                  <div><MailboxIcon size={44}/></div>
                   <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Check your email</p>
                   <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, maxWidth: 300 }}>
                     A password reset link has been sent to <strong>{forgotEmail}</strong>. Check your spam folder if you don&apos;t see it.
@@ -618,7 +620,7 @@ function LoginPageInner() {
           <div style={styles.modalCard} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <span style={{ fontWeight: 700, fontSize: 16 }}>Terms of Service &amp; Privacy Policy</span>
-              <button type="button" onClick={() => setShowPrivacyModal(false)} style={styles.modalClose}>✕</button>
+              <button type="button" onClick={() => setShowPrivacyModal(false)} style={styles.modalClose}><XMarkIcon size={16}/></button>
             </div>
 
             <div style={styles.modalBody}>

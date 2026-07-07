@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
+import { LinkIcon, CheckCircleIcon, CheckIcon } from '@/components/icons'
 import { api, ApiError } from '../../lib/api'
 
 function ResetPasswordForm() {
@@ -34,7 +36,7 @@ function ResetPasswordForm() {
   if (!token) {
     return (
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-        <div style={{ fontSize: 44 }}>🔗</div>
+        <div><LinkIcon size={44}/></div>
         <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Invalid reset link</p>
         <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
           This link is missing a reset token. Please request a new one from the login page.
@@ -49,7 +51,7 @@ function ResetPasswordForm() {
   if (success) {
     return (
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-        <div style={{ fontSize: 44 }}>✅</div>
+        <div><CheckCircleIcon size={44}/></div>
         <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Password updated!</p>
         <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
           Your password has been reset. Redirecting you to login…
@@ -106,7 +108,7 @@ function ResetPasswordForm() {
           {requirements.map(r => (
             <li key={r.label} style={{ fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 7,
               color: r.met ? 'var(--success)' : 'var(--text-muted)' }}>
-              <span style={{ fontSize: 14 }}>{r.met ? '✓' : '○'}</span>
+              <span style={{ display: 'flex', alignItems: 'center' }}>{r.met ? <CheckIcon size={14}/> : <span style={{ fontSize: 14 }}>○</span>}</span>
               {r.label}
             </li>
           ))}

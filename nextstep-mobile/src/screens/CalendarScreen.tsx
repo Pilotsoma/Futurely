@@ -11,6 +11,7 @@ import ScreenHeader from '../components/ui/ScreenHeader'
 import Skeleton from '../components/ui/Skeleton'
 import { colors } from '../constants/colors'
 import { fetchStudentData, type Assignment } from '../api/studentApi'
+import { CheckIcon } from '../components/icons'
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTH_NAMES = [
@@ -166,7 +167,7 @@ export default function CalendarScreen(): React.JSX.Element {
             ) : (
               selectedAssignments.map(a => (
                 <View key={a.id} style={styles.assignmentRow}>
-                  {a.completed && <Text style={styles.checkmark}>✓ </Text>}
+                  {a.completed && <CheckIcon size={14} color={colors.success}/>}
                   <View style={{ flex: 1 }}>
                     <Text
                       variant="body"
@@ -237,6 +238,5 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  checkmark: { color: colors.success, fontWeight: '700' as const, marginRight: 4 },
   strikethrough: { textDecorationLine: 'line-through' as const, color: colors.textMuted },
 })

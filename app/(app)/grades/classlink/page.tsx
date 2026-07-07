@@ -1,7 +1,9 @@
 'use client'
 
+import React from 'react'
 import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
+import { CheckIcon } from '@/components/icons'
 
 type Step = 'pick-district' | 'credentials' | 'connecting' | 'success' | 'error'
 
@@ -204,7 +206,7 @@ export default function ClasslinkConnectPage() {
       {/* ── Success ── */}
       {step === 'success' && result && (
         <div style={S.successCard}>
-          <div style={S.successIcon}>✓</div>
+          <div style={S.successIcon}><CheckIcon size={28}/></div>
           <div style={S.successTitle}>Connected to {result.districtName}</div>
           <div style={S.successBody}>
             Your ClassLink session is active. Available data sources:

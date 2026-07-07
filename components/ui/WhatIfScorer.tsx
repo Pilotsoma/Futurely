@@ -1,6 +1,8 @@
 'use client'
 
+import React from 'react'
 import { useState } from 'react'
+import { XMarkIcon, ChevronRightIcon } from '@/components/icons'
 
 const ASSIGNMENT_TYPES = ['Daily', 'Minor', 'Major'] as const
 type AssignmentType = (typeof ASSIGNMENT_TYPES)[number]
@@ -116,7 +118,7 @@ export default function WhatIfScorer({
     <div style={S.wrap}>
       <div style={S.header}>
         <span style={S.label}>What-If Scorer</span>
-        <button onClick={onClose} style={S.closeBtn}>✕ Close</button>
+        <button onClick={onClose} style={{...S.closeBtn, display: 'flex', alignItems: 'center', gap: 4}}><XMarkIcon size={13}/> Close</button>
       </div>
 
       <div style={S.scoreRow}>
@@ -124,7 +126,7 @@ export default function WhatIfScorer({
           <div style={S.scoreTag}>Current</div>
           <div style={S.scoreNum}>{currentAverage.toFixed(2)}%</div>
         </div>
-        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>→</span>
+        <ChevronRightIcon size={14}/>
         <div>
           <div style={S.scoreTag}>Simulated</div>
           <div style={{ ...S.scoreNum, color: hyps.length > 0 ? 'var(--primary)' : 'var(--text-muted)' }}>
@@ -178,8 +180,8 @@ export default function WhatIfScorer({
               <span style={{ fontSize: 11, color: 'var(--text-muted)', marginRight: 8 }}>{h.type}</span>
               <span style={{ fontWeight: 500 }}>{h.grade}%</span>
               <button onClick={() => setHyps(p => p.filter((_, j) => j !== i))}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 8, fontSize: 12, padding: '0 2px' }}>
-                ✕
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 8, padding: '0 2px', display: 'flex', alignItems: 'center' }}>
+                <XMarkIcon size={12}/>
               </button>
             </div>
           ))}

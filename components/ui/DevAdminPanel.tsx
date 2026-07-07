@@ -1,8 +1,11 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState } from 'react'
 import { api, FeedUserProfile } from '@/lib/api'
 import VerifiedBadge from './VerifiedBadge'
+import CoinIcon from './CoinIcon'
+import { TrashIcon, LockOpenIcon, CheckIcon } from '@/components/icons'
 
 export function DevAdminPanel({
   profile, userId, currentUserId, onUpdateTag, onUpdateBan, onUpdateMute, onUpdateRole, onDeleted,
@@ -179,12 +182,12 @@ export function DevAdminPanel({
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 12 }}>
           <div style={{ flex: 1, minWidth: 120, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 6, padding: '8px 12px' }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>TOTAL COINS IN CIRCULATION</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)' }}>{devStats.totalCoins.toLocaleString()} 🪙</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 4 }}>{devStats.totalCoins.toLocaleString()} <CoinIcon size={16}/></div>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{devStats.userCount} active users</div>
           </div>
           <div style={{ flex: 1, minWidth: 120, background: 'rgba(43,74,142,0.08)', border: '1px solid rgba(43,74,142,0.2)', borderRadius: 6, padding: '8px 12px' }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>TOTAL INVENTORY VALUE</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-blue)' }}>{devStats.totalInventoryValue.toLocaleString()} 🪙</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 4 }}>{devStats.totalInventoryValue.toLocaleString()} <CoinIcon size={16}/></div>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>combined across all users</div>
           </div>
         </div>
@@ -317,13 +320,13 @@ export function DevAdminPanel({
             style={{ width: '100%', border: '1px solid #7f1d1d', borderRadius: 6, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: deleting ? 'default' : 'pointer', background: '#450a0a', color: '#fca5a5', opacity: deleting ? 0.6 : 1 }}
             onClick={() => void handleDeleteAccount()}
             disabled={deleting}
-          >{deleting ? 'Deleting…' : '🗑 Delete Account Permanently'}</button>
+          ><>{deleting ? 'Deleting…' : <><TrashIcon size={13}/> Delete Account Permanently</>}</></button>
         </div>
       )}
 
       <div style={{ marginTop: 12, borderTop: '1px solid rgba(255,200,50,0.15)', paddingTop: 12 }}>
         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>
-          COINS — current balance: <span style={{ color: '#ffc832', fontWeight: 800 }}>{targetCoins ?? '…'} 🪙</span>
+          COINS — current balance: <span style={{ color: '#ffc832', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 3 }}>{targetCoins ?? '…'} <CoinIcon size={13}/></span>
         </p>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' as const }}>
           <input
@@ -354,8 +357,8 @@ export function DevAdminPanel({
             finally { setMarketGranting(false) }
           }}
           disabled={marketGranting}
-        >{marketGranting ? '…' : '🔓 Grant Market Access'}</button>
-        {marketGrantMsg && <span style={{ fontSize: 11, color: marketGrantMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginLeft: 8 }}>{marketGrantMsg}</span>}
+        >{marketGranting ? '…' : <><LockOpenIcon size={13}/> Grant Market Access</>}</button>
+        {marketGrantMsg && <span style={{ fontSize: 11, color: marketGrantMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 3 }}>{marketGrantMsg.startsWith('✓') && <CheckIcon size={11} color='#22C55E'/>}{marketGrantMsg.startsWith('✓') ? marketGrantMsg.slice(2) : marketGrantMsg}</span>}
       </div>
 
       </>)}

@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, type StudentData, type CanvasStatus } from '../../../lib/api'
+import { CheckIcon, MoonIcon, SunIcon } from '@/components/icons'
 import { clearWebAuth } from '../../../lib/authState'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import { CHANGELOG } from '../../../lib/changelog'
@@ -749,7 +751,7 @@ export default function SettingsPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#22C55E', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    ✓ Canvas connected
+                    <CheckIcon size={13} color='#22C55E'/> Canvas connected
                   </span>
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                     <button
@@ -839,7 +841,7 @@ export default function SettingsPage() {
                 padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)',
                 background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}>
-                {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+                {theme === 'dark' ? <><MoonIcon size={14}/> Dark</> : <><SunIcon size={14}/> Light</>}
               </button>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>

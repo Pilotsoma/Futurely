@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeftIcon, GoldMedalIcon, SilverMedalIcon, BronzeMedalIcon, CheckIcon, XMarkIcon, ChevronRightIcon, TrophyIcon } from '@/components/icons'
 import { api, GameSession, GameParticipant } from '../../../../lib/api'
 import { getApiToken } from '../../../../lib/api'
 
@@ -65,7 +67,7 @@ function LbRow({ entry, myId }: { entry: { rank: number; userId: number; name: s
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: isMe ? 'var(--primary-dim)' : 'transparent', borderRadius: 10, border: isMe ? '1px solid var(--primary-glow)' : '1px solid transparent' }}>
       <span style={{ width: 28, fontWeight: 800, fontSize: 16, color: entry.rank <= 3 ? ['#fbbf24','#94a3b8','#cd7f32'][entry.rank-1] : 'var(--text-muted)', textAlign: 'center', flexShrink: 0 }}>
-        {entry.rank <= 3 ? ['🥇','🥈','🥉'][entry.rank-1] : `#${entry.rank}`}
+        {entry.rank === 1 ? <GoldMedalIcon size={18}/> : entry.rank === 2 ? <SilverMedalIcon size={18}/> : entry.rank === 3 ? <BronzeMedalIcon size={18}/> : `#${entry.rank}`}
       </span>
       <span style={{ flex: 1, fontSize: 14, fontWeight: isMe ? 700 : 500, color: entry.nameColor ?? 'var(--text)' }}>{entry.name ?? 'Player'}{isMe ? ' (you)' : ''}</span>
       <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>{entry.score.toLocaleString()}</span>
@@ -304,7 +306,7 @@ export default function GameRoomPage() {
   if (error || !session) return (
     <div style={{ padding: '40px 28px', textAlign: 'center' }}>
       <p style={{ color: 'var(--error)', fontSize: 14, marginBottom: 12 }}>{error ?? 'Game not found'}</p>
-      <Link href="/play" style={{ color: 'var(--primary)', fontSize: 13 }}>← Back to Play</Link>
+      <Link href="/play" style={{ color: 'var(--primary)', fontSize: 13 }}><ArrowLeftIcon size={13}/> Back to Play</Link>
     </div>
   )
 
@@ -394,7 +396,7 @@ export default function GameRoomPage() {
         {/* After answering */}
         {selectedAnswer !== null && answerResult && (
           <div style={{ marginTop: 16, padding: '14px 18px', borderRadius: 12, background: answerResult.isCorrect ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)', border: `1px solid ${answerResult.isCorrect ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`, textAlign: 'center' }}>
-            <p style={{ fontSize: 15, fontWeight: 800, color: answerResult.isCorrect ? '#22c55e' : '#ef4444', margin: '0 0 2px' }}>{answerResult.isCorrect ? '✓ Correct!' : '✗ Wrong'}</p>
+            <p style={{ fontSize: 15, fontWeight: 800, color: answerResult.isCorrect ? '#22c55e' : '#ef4444', margin: '0 0 2px' }}>{answerResult.isCorrect ? <><CheckIcon size={15}/> Correct!</> : <><XMarkIcon size={15}/> Wrong</>}</p>
             {answerResult.isCorrect && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>+{answerResult.pointsEarned.toLocaleString()} pts</p>}
             <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 0' }}>Waiting for host to reveal results…</p>
           </div>
@@ -455,7 +457,7 @@ export default function GameRoomPage() {
 
         {isHost && (
           <button onClick={() => void handleNext()} disabled={advancing} style={{ width: '100%', padding: '13px', borderRadius: 14, background: advancing ? 'var(--surface-2)' : 'var(--primary)', color: advancing ? 'var(--text-muted)' : '#fff', border: 'none', fontSize: 15, fontWeight: 800, cursor: advancing ? 'not-allowed' : 'pointer' }}>
-            {advancing ? '…' : questionIndex + 1 >= totalQuestions ? 'End Game' : 'Next Question →'}
+            {advancing ? '…' : questionIndex + 1 >= totalQuestions ? 'End Game' : <>Next Question <ChevronRightIcon size={14}/></>}
           </button>
         )}
 
@@ -474,7 +476,7 @@ export default function GameRoomPage() {
     const myEntry = board.find(e => e.userId === myId)
     return (
       <div style={{ padding: '32px 28px', maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 8 }}>🏆</div>
+        <div style={{ marginBottom: 8 }}><TrophyIcon size={48}/></div>
         <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)', margin: '0 0 4px' }}>Game Over!</h1>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 24px' }}>{session.set.title}</p>
 

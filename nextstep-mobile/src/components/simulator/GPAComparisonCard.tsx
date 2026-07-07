@@ -3,6 +3,7 @@ import { AccessibilityInfo, Animated, View } from 'react-native'
 import Card from '../ui/Card'
 import Text from '../ui/Text'
 import { colors } from '../../constants/colors'
+import { TrendUpIcon, TrendDownIcon, TrendNeutralIcon } from '../icons'
 
 export interface GPAComparisonCardProps {
   currentGpa:   number | null
@@ -20,15 +21,15 @@ function gpaColor(value: number): string {
 }
 
 interface DeltaCfg {
-  color:  string
-  symbol: string
-  sign:   string
+  color: string
+  icon:  React.ReactNode
+  sign:  string
 }
 
 function deltaConfig(delta: number): DeltaCfg {
-  if (delta > 0.005)  return { color: colors.success,  symbol: '↑', sign: '+' }
-  if (delta < -0.005) return { color: colors.error,    symbol: '↓', sign: '' }
-  return                     { color: colors.textMuted, symbol: '→', sign: '+' }
+  if (delta > 0.005)  return { color: colors.success,   icon: <TrendUpIcon size={13} color={colors.success}/>,        sign: '+' }
+  if (delta < -0.005) return { color: colors.error,     icon: <TrendDownIcon size={13} color={colors.error}/>,        sign: '' }
+  return                     { color: colors.textMuted, icon: <TrendNeutralIcon size={13} color={colors.textMuted}/>, sign: '+' }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -109,9 +110,12 @@ export default function GPAComparisonCard({
                   style={{ backgroundColor: `${dcfg.color}1A` }}
                   accessibilityLabel={`GPA change: ${dcfg.sign}${delta.toFixed(2)}`}
                 >
-                  <Text className="text-[13px] font-semibold" style={{ color: dcfg.color }}>
-                    {dcfg.sign}{delta.toFixed(2)} {dcfg.symbol}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                    <Text className="text-[13px] font-semibold" style={{ color: dcfg.color }}>
+                      {dcfg.sign}{delta.toFixed(2)}
+                    </Text>
+                    {dcfg.icon}
+                  </View>
                 </View>
               )}
             </>

@@ -1,11 +1,14 @@
 'use client'
 
+import React from 'react'
+
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion, AnimatePresence, type Transition } from 'framer-motion'
 import { api, getApiToken } from '../../lib/api'
+import { BanIcon } from '@/components/icons'
 import { initWebAuth, clearWebAuth } from '../../lib/authState'
 import { startStudentPrefetch } from '../../lib/prefetch'
 import NotificationBell from '../../components/ui/NotificationBell'
@@ -188,7 +191,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isDeleted) return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--surface)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, zIndex: 9999 }}>
-      <div style={{ fontSize: 52 }}>🚫</div>
+      <div><BanIcon size={52}/></div>
       <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', margin: 0 }}>Your account has been deleted</h1>
       <p style={{ fontSize: 15, color: 'var(--text-muted)', textAlign: 'center' as const, maxWidth: 360, margin: 0, lineHeight: 1.6 }}>
         Your Futurely account has been permanently removed by an administrator.

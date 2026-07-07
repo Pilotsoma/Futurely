@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowRightIcon } from '@/components/icons'
 import { api } from '../../../lib/api'
 
 export default function PlayPage() {
@@ -70,7 +72,7 @@ export default function PlayPage() {
         </h2>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 14px' }}>Pick a study set from your library or browse public sets to host a live review game.</p>
         <Link href="/sets" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 20px', borderRadius: 20, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', textDecoration: 'none', fontSize: 13, fontWeight: 700 }}>
-          Browse Study Sets →
+          Browse Study Sets <ArrowRightIcon size={13}/>
         </Link>
       </div>
     </div>

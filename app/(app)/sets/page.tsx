@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArcheryBowIcon } from '@/components/icons'
 import { api, QuestionSet, QuestionSetWithQuestions, QuestionInput } from '../../../lib/api'
 
 const SUBJECTS = ['Math', 'Science', 'English', 'History', 'Spanish', 'French', 'Biology', 'Chemistry', 'Physics', 'Computer Science', 'Economics', 'Psychology', 'Other']
@@ -106,7 +108,7 @@ function SetCard({ set, isOwner, onDelete, onHost, onHostBattle }: { set: Questi
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
           {onHostBattle && (
             <button onClick={onHostBattle} style={{ ...S.iconBtn, background: '#7c3aed', color: '#fff', border: 'none', gap: 4, padding: '7px 10px', fontSize: 11, fontWeight: 700 }} title="Host battle royale">
-              🏹
+              <ArcheryBowIcon size={16}/>
             </button>
           )}
           {onHost && (

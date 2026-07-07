@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeftIcon } from '@/components/icons'
 import { api, ClassroomDetail, ClassroomPost } from '../../../../lib/api'
 
 function isOverdue(dueDate: string) {
@@ -87,7 +89,7 @@ export default function ClassroomDetailPage() {
     return (
       <div style={S.page}>
         <p style={{ color: 'var(--error)', fontSize: 14 }}>{error ?? 'Classroom not found.'}</p>
-        <Link href="/classroom" style={{ color: 'var(--primary)', fontSize: 13, marginTop: 8, display: 'inline-block' }}>← Back</Link>
+        <Link href="/classroom" style={{ color: 'var(--primary)', fontSize: 13, marginTop: 8, display: 'inline-block' }}><ArrowLeftIcon size={13}/> Back</Link>
       </div>
     )
   }

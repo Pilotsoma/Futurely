@@ -1,5 +1,8 @@
 'use client'
 
+import React from 'react'
+import { ArrowLeftIcon, ChevronLeftIcon, ChevronRightIcon } from '@/components/icons'
+
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import PageLoader from '../../../../components/ui/PageLoader'
@@ -145,7 +148,7 @@ export default function AttendancePage() {
 
   return (
     <div className="fade-up">
-      <button onClick={() => router.push('/grades')} style={S.back}>← Grade Portal</button>
+      <button onClick={() => router.push('/grades')} style={S.back}><ArrowLeftIcon size={14}/> Grade Portal</button>
       <h1 style={S.title}>Attendance</h1>
 
       {error && (
@@ -176,14 +179,14 @@ export default function AttendancePage() {
 
       {/* Month navigation */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <button onClick={() => navigate(-1)} style={S.navBtn}>← Prev</button>
+        <button onClick={() => navigate(-1)} style={S.navBtn}><ChevronLeftIcon size={13}/> Prev</button>
         <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{data?.month ?? '—'}</span>
         <button
           onClick={() => navigate(1)}
           disabled={monthOffset >= 0}
           style={{ ...S.navBtn, opacity: monthOffset >= 0 ? 0.3 : 1, cursor: monthOffset >= 0 ? 'default' : 'pointer' }}
         >
-          Next →
+          Next <ChevronRightIcon size={13}/>
         </button>
       </div>
 

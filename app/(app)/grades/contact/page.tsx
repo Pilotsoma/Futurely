@@ -1,5 +1,8 @@
 'use client'
 
+import React from 'react'
+import { ArrowLeftIcon } from '@/components/icons'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PageLoader from '../../../../components/ui/PageLoader'
@@ -56,7 +59,7 @@ export default function ContactTeachersPage() {
 
   return (
     <div className="fade-up">
-      <button onClick={() => router.push('/grades')} style={S.back}>← Grade Portal</button>
+      <button onClick={() => router.push('/grades')} style={S.back}><ArrowLeftIcon size={14}/> Grade Portal</button>
       <h1 style={S.title}>Contact Teachers</h1>
 
       {error && (

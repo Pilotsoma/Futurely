@@ -1,9 +1,11 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { api, type PlannerItem, type CanvasStatus } from '../../../lib/api'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import PageLoader from '../../../components/ui/PageLoader'
+import { CheckIcon, SparklesIcon, XMarkIcon } from '@/components/icons'
 
 type StudyPlan = {
   overview: string
@@ -437,7 +439,7 @@ export default function PlannerPage() {
         <div className="ns-card" style={{ padding: '14px 16px', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: canvasConnections.length > 1 ? 10 : 0 }}>
             <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: '#22C55E', fontWeight: 700 }}>✓</span>
+              <CheckIcon size={13} color='#22C55E'/>
               Canvas connected
             </span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -555,7 +557,7 @@ export default function PlannerPage() {
               opacity: studyPlanLoading ? 0.7 : 1,
             }}
           >
-            <span style={{ fontSize: 15 }}>✨</span>
+            <SparklesIcon size={15}/>
             {studyPlanLoading ? 'Generating plan…' : showStudyPlan ? 'Hide Study Plan' : 'AI Study Plan'}
           </button>
           {showStudyPlan && studyPlan && !studyPlanLoading && (
@@ -632,7 +634,7 @@ export default function PlannerPage() {
       {toggleError && (
         <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <span style={{ fontSize: 13, color: '#EF4444' }}>{toggleError}</span>
-          <button onClick={() => setToggleError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 16, padding: 0, lineHeight: 1 }}>✕</button>
+          <button onClick={() => setToggleError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: 0, display: 'flex', alignItems: 'center' }}><XMarkIcon size={16}/></button>
         </div>
       )}
 
@@ -698,7 +700,7 @@ export default function PlannerPage() {
           <>
             {activeGroups.length === 0 && !completedGroup && (
               <div style={S.empty}>
-                <div style={S.emptyIcon}>✓</div>
+                <div style={S.emptyIcon}><CheckIcon size={24}/></div>
                 <p style={{ fontSize: 17, fontWeight: 700, marginBottom: 5 }}>No tasks yet</p>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Click &quot;+ New Task&quot; to add your first assignment.</p>
               </div>
@@ -706,7 +708,7 @@ export default function PlannerPage() {
 
             {activeGroups.length === 0 && completedGroup && (
               <div style={{ textAlign: 'center', padding: '40px 20px 24px' }}>
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, margin: '0 auto 12px' }}>✓</div>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}><CheckIcon size={22}/></div>
                 <p style={{ fontSize: 17, fontWeight: 700, marginBottom: 5 }}>All caught up!</p>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Every assignment is completed.</p>
               </div>

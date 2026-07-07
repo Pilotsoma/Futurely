@@ -1,12 +1,17 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification, getApiToken } from '@/lib/api'
 import CoinIcon from '@/components/ui/CoinIcon'
 import VerifiedBadge from '@/components/ui/VerifiedBadge'
 import { DevAdminPanel, ModPanel } from '@/components/ui/DevAdminPanel'
+import {
+  UserIcon, HeartFilledIcon, HeartOutlineIcon, PartyPopperIcon, TagIcon, TradeArrowsIcon, BooksIcon,
+  ChatBubbleIcon, CheckIcon, GiftIcon, CrownIcon, StarIcon, TrophyIcon, BanIcon, MuteIcon,
+  GlobeIcon, SchoolBuildingIcon, ArrowRightIcon, SparklesIcon, PaintPaletteIcon, ImageIcon,
+} from '@/components/icons'
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -182,19 +187,19 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
   else if (n.type === 'ASSIGNMENT_CREATED') content = <>{n.preview ?? 'New assignment added'}</>
   else content = null
 
-  const icon = n.type === 'FOLLOW' ? '👤'
-    : n.type === 'LIKE' ? '❤️'
-    : n.type === 'GIVEAWAY_WIN' ? '🎉'
-    : n.type === 'LISTING_SOLD' ? '🏷️'
-    : n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED' ? '🔄'
-    : n.type === 'ASSIGNMENT_CREATED' ? '📚'
-    : '💬'
+  const icon: React.ReactNode = n.type === 'FOLLOW' ? <UserIcon size={15}/>
+    : n.type === 'LIKE' ? <HeartFilledIcon size={15}/>
+    : n.type === 'GIVEAWAY_WIN' ? <PartyPopperIcon size={15}/>
+    : n.type === 'LISTING_SOLD' ? <TagIcon size={15}/>
+    : n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED' ? <TradeArrowsIcon size={15}/>
+    : n.type === 'ASSIGNMENT_CREATED' ? <BooksIcon size={15}/>
+    : <ChatBubbleIcon size={15}/>
 
   if (!content) return null
 
   return (
     <div style={{ ...N.item, background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)' }}>
-      <span style={{ fontSize: 15, flexShrink: 0 }}>
+      <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
         {icon}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -322,7 +327,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
               const tax = (!isNaN(amt) && amt > 0) ? Math.ceil(amt * 0.05) : 0
               return (
                 <div style={{ marginBottom: 20, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}><CoinIcon size={12}/> Send Coins</div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <input
                       className="ns-input"
@@ -355,7 +360,7 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
                       5% tax — you pay <strong style={{ color: '#EAB308' }}>{amt + tax}</strong> total ({amt} + {tax} tax)
                     </div>
                   )}
-                  {sendCoinMsg && <div style={{ fontSize: 11, color: sendCoinMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{sendCoinMsg}</div>}
+                  {sendCoinMsg && <div style={{ fontSize: 11, color: sendCoinMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6, display: 'flex', alignItems: 'center', gap: 3 }}>{sendCoinMsg.startsWith('✓') && <CheckIcon size={11} color='#22C55E'/>}{sendCoinMsg.startsWith('✓') ? sendCoinMsg.slice(2) : sendCoinMsg}</div>}
                 </div>
               )
             })()}
@@ -392,11 +397,11 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
                   <div style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--text)', whiteSpace: 'pre-wrap' as const }}>{post.body}</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, fontSize: 12 }}>
                     <span style={{ color: 'var(--text-muted)' }}>{timeAgo(post.createdAt)}</span>
-                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: post.likedByMe ? '#EF4444' : 'var(--text-secondary)', padding: 0 }} onClick={e => { e.stopPropagation(); void handleLike(post.id) }}>
-                      {post.likedByMe ? '♥' : '♡'} {post._count.likes}
+                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: post.likedByMe ? '#EF4444' : 'var(--text-secondary)', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }} onClick={e => { e.stopPropagation(); void handleLike(post.id) }}>
+                      {post.likedByMe ? <HeartFilledIcon size={12}/> : <HeartOutlineIcon size={12}/>}{' '}{post._count.likes}
                     </button>
                   </div>
-                  <div style={{ marginTop: 5, fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>View full post & comments →</div>
+                  <div style={{ marginTop: 5, fontSize: 11, color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>View full post & comments <ArrowRightIcon size={11}/></div>
                 </div>
               ))}
             </div>
@@ -505,7 +510,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{timeAgo(post.createdAt)}</span>
-            {post.network === 'isd' && <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 4, padding: '1px 5px' }}>🏫 ISD</span>}
+            {post.network === 'isd' && <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 4, padding: '1px 5px', display: 'inline-flex', alignItems: 'center', gap: 3 }}><SchoolBuildingIcon size={10}/> ISD</span>}
           </div>
         </div>
         {canDelete && (
@@ -525,7 +530,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           return (
         <div style={{ border: `1px solid ${unboxAccent}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${unboxAccent}0d` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <span style={{ fontSize: 20 }}>{post.unboxItemRarity === 'Mythic' ? '👑' : '🌟'}</span>
+            <span style={{ display: 'flex', alignItems: 'center' }}>{post.unboxItemRarity === 'Mythic' ? <CrownIcon size={20}/> : <StarIcon size={20}/>}</span>
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, color: unboxAccent, letterSpacing: '0.5px' }}>
                 {post.unboxItemType === 'tag' ? 'TAG SPIN' : post.unboxItemType === 'name-color' ? 'NAME COLOR SPIN' : 'AVATAR SPIN'}
@@ -573,7 +578,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           {/* Estimated value */}
           {post.unboxItemEstValue != null && post.unboxItemEstValue > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-              <span style={{ fontSize: 13 }}>💰</span>
+              <CoinIcon size={13}/>
               <span>Est. value: <strong style={{ color: unboxAccent }}><CoinIcon size={13} style={{ marginRight: 2 }} />{post.unboxItemEstValue?.toLocaleString()}</strong></span>
             </div>
           )}
@@ -587,7 +592,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
         <div style={{ border: `1px solid ${giveawayAccent}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${giveawayAccent}0d` }}>
           {/* Header: icon + label + prize bubble inline */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const }}>
-            <span style={{ fontSize: 16 }}>🎁</span>
+            <GiftIcon size={16}/>
             <span style={{ fontSize: 12, fontWeight: 800, color: giveawayAccent, letterSpacing: '0.5px' }}>
               {isCoinGiveaway ? 'COIN GIVEAWAY' : isNameColorGiveaway ? 'NAME COLOR GIVEAWAY' : isPfpGiveaway ? 'AVATAR GIVEAWAY' : 'TAG GIVEAWAY'}
             </span>
@@ -626,7 +631,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                   <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>[Student]</span>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                  Preview of the {isNameColorGiveaway ? 'name color' : 'Avatar effect'} ✨
+                  Preview of the {isNameColorGiveaway ? 'name color' : 'Avatar effect'} <SparklesIcon size={12}/>
                 </div>
               </div>
               {post.giveawayItemRarity && (
@@ -640,7 +645,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           {post.giveawayWinnerId ? (
             /* Winner announced */
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 6 }}>
-              <span style={{ fontSize: 18 }}>🏆</span>
+              <TrophyIcon size={18}/>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#22C55E' }}>Winner!</div>
                 <div style={{ fontSize: 13, color: 'var(--text)' }}>
@@ -679,7 +684,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                 </span>
                 <div style={{ marginLeft: 'auto' }}>
                   {post.enteredByMe ? (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', padding: '6px 14px', border: '1px solid #22C55E', borderRadius: 6, display: 'inline-block' }}>✓ Entered</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', padding: '6px 14px', border: '1px solid #22C55E', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckIcon size={11} color='#22C55E'/> Entered</span>
                   ) : (
                     <button
                       style={{ background: giveawayAccent, color: '#000', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
@@ -694,12 +699,12 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
                 </div>
               </div>
               {!post.enteredByMe && (
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>♥ You must like this post to enter</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}><HeartFilledIcon size={11}/> You must like this post to enter</div>
               )}
               {showLikeRequired && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowLikeRequired(false)}>
                   <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                    <div style={{ fontSize: 36, marginBottom: 12 }}>🚫</div>
+                    <div style={{ marginBottom: 12 }}><BanIcon size={36}/></div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--error)', marginBottom: 8 }}>Entry Denied</div>
                     <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
                       You must like this post before you can enter the giveaway.
@@ -838,9 +843,9 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
                 </div>
                 <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text)', whiteSpace: 'pre-wrap' as const, marginBottom: 10 }}>{post.body}</div>
                 <button
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: post.likedByMe ? '#EF4444' : 'var(--text-secondary)', padding: 0, fontWeight: 600 }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: post.likedByMe ? '#EF4444' : 'var(--text-secondary)', padding: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}
                   onClick={handleLikePost}
-                >{post.likedByMe ? '♥' : '♡'} {post._count.likes}</button>
+                >{post.likedByMe ? <HeartFilledIcon size={14}/> : <HeartOutlineIcon size={14}/>}{' '}{post._count.likes}</button>
               </div>
             </div>
 
@@ -867,9 +872,9 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
                   <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text)', marginBottom: 4 }}>{c.body}</div>
                   <button
                     disabled={likingId !== null}
-                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: c.likedByMe ? '#EF4444' : 'var(--text-muted)', fontWeight: 600 }}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: c.likedByMe ? '#EF4444' : 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}
                     onClick={() => void handleLikeComment(c.id)}
-                  >{c.likedByMe ? '♥' : '♡'} {c._count.likes}</button>
+                  >{c.likedByMe ? <HeartFilledIcon size={12}/> : <HeartOutlineIcon size={12}/>}{' '}{c._count.likes}</button>
                 </div>
               ))}
 
@@ -1018,7 +1023,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                   style={{ background: 'none', border: 'none', padding: 0, cursor: likingId !== null ? 'default' : 'pointer', fontSize: 12, color: c.likedByMe ? '#EF4444' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, opacity: likingId === c.id ? 0.5 : 1 }}
                   onClick={() => void handleCommentLike(c.id)}
                 >
-                  {c.likedByMe ? '♥' : '♡'} {c._count?.likes ?? 0}
+                  {c.likedByMe ? <HeartFilledIcon size={12}/> : <HeartOutlineIcon size={12}/>}{' '}{c._count?.likes ?? 0}
                 </button>
               </div>
             )
@@ -1026,7 +1031,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
         </div>
         {isMuted ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8 }}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>🔇</span>
+            <MuteIcon size={18}/>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#f97316' }}>You are muted</div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
@@ -1038,7 +1043,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
           <>
             {commentError && (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', marginBottom: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8 }}>
-                <span style={{ fontSize: 16, flexShrink: 0 }}>🚫</span>
+                <BanIcon size={16}/>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#EF4444', marginBottom: 1 }}>Comment blocked</div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{commentError}</div>
@@ -1428,7 +1433,7 @@ export default function StudyFeedPage() {
   if (statusLoaded && isBanned) {
     return (
       <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: '0 var(--page-px)', textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
+        <div style={{ marginBottom: 16 }}><BanIcon size={48}/></div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EF444422', border: '1px solid #EF4444', borderRadius: 6, padding: '4px 10px', marginBottom: 20 }}>
           <span style={{ fontSize: 12, fontWeight: 800, color: '#EF4444', letterSpacing: '0.5px' }}>BANNED</span>
         </div>
@@ -1490,7 +1495,7 @@ export default function StudyFeedPage() {
                     transition: 'all 0.15s',
                   }}
                 >
-                  {net === 'global' ? '🌐 Global' : '🏫 ISD'}
+                  {net === 'global' ? <><GlobeIcon size={13}/> Global</> : <><SchoolBuildingIcon size={13}/> ISD</>}
                 </button>
               ))}
             </div>
@@ -1499,7 +1504,7 @@ export default function StudyFeedPage() {
           {/* New post composer / muted notice */}
           {isMuted ? (
             <div className="ns-card" style={{ padding: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 22, flexShrink: 0 }}>🔇</span>
+              <MuteIcon size={22}/>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#f97316', marginBottom: 2 }}>You are muted</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -1519,7 +1524,7 @@ export default function StudyFeedPage() {
                   />
                   {postError && (
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', marginTop: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8 }}>
-                      <span style={{ fontSize: 18, flexShrink: 0 }}>🚫</span>
+                      <BanIcon size={18}/>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#EF4444', marginBottom: 2 }}>Post blocked</div>
                         <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{postError}</div>
@@ -1533,10 +1538,10 @@ export default function StudyFeedPage() {
                       {isDevUser && (
                         <button
                           className="ns-btn-ghost"
-                          style={{ height: 38, padding: '0 14px', fontSize: 13 }}
+                          style={{ height: 38, padding: '0 14px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 5 }}
                           onClick={() => setShowGiveawayForm(true)}
                         >
-                          🎁 Giveaway
+                          <GiftIcon size={14}/> Giveaway
                         </button>
                       )}
                       <button className="ns-btn-primary" style={{ height: 38, padding: '0 20px', opacity: newPostBody.trim() && !posting ? 1 : 0.5 }}
@@ -1550,12 +1555,17 @@ export default function StudyFeedPage() {
                 /* Giveaway creator */
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'gold' }}>🎁 Create Giveaway</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'gold', display: 'flex', alignItems: 'center', gap: 4 }}><GiftIcon size={14}/> Create Giveaway</span>
                     <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1 }} onClick={() => setShowGiveawayForm(false)}>×</button>
                   </div>
                   {/* Type toggle */}
                   <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const }}>
-                    {([['tag', '🏷️ Tag'], ['coin', null], ['name-color', '🎨 Name Color'], ['avatar', '🖼️ Avatar Effect']] as const).map(([t, label]) => (
+                    {([
+                      ['tag', <><TagIcon size={12}/> Tag</>],
+                      ['coin', null],
+                      ['name-color', <><PaintPaletteIcon size={12}/> Name Color</>],
+                      ['avatar', <><ImageIcon size={12}/> Avatar Effect</>],
+                    ] as Array<[('tag'|'coin'|'name-color'|'avatar'), React.ReactNode | null]>).map(([t, label]) => (
                       <button key={t} onClick={() => { setGwType(t); setGwItemId('') }} style={{ flex: 1, minWidth: 80, height: 34, borderRadius: 8, border: `1px solid ${gwType === t ? 'gold' : 'var(--border)'}`, background: gwType === t ? 'rgba(255,215,0,0.12)' : 'transparent', color: gwType === t ? 'gold' : 'var(--text-secondary)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                         {t === 'coin' ? <><CoinIcon size={13} /> Coins</> : label}
                       </button>
@@ -1670,7 +1680,7 @@ export default function StudyFeedPage() {
               </div>
             ) : network === 'isd' && !isdCode ? (
               <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                <div style={{ fontSize: 40, marginBottom: 16 }}>🏫</div>
+                <div style={{ marginBottom: 16 }}><SchoolBuildingIcon size={40}/></div>
                 <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Link your school to see ISD posts</p>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>Connect your school portal in Settings to view and post in your district feed.</p>
                 <a href="/settings" style={{ display: 'inline-block', padding: '9px 22px', borderRadius: 20, background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>Go to Settings</a>

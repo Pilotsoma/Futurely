@@ -1,6 +1,8 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { XMarkIcon } from '@/components/icons'
 
 const POLL_INTERVAL = 7_000  // 7s
 const LOADED_SHA = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? 'dev'
@@ -52,7 +54,7 @@ export default function UpdateBanner() {
         onClick={() => setShow(false)}
         style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14, padding: '0 2px' }}
       >
-        ✕
+        <XMarkIcon size={14}/>
       </button>
     </div>
   )

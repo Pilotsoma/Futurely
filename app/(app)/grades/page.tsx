@@ -1,63 +1,68 @@
 'use client'
 
+import React from 'react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+  BarChartIcon, ClipboardIcon, ClockIcon, CalculatorIcon, EnvelopeIcon,
+  TrendingUpIcon, DocumentIcon, CalendarIcon,
+} from '@/components/icons'
 
-const CARDS = [
+const CARDS: Array<{ href: string; title: string; desc: string; icon: React.ReactNode; iconBg: string }> = [
   {
     href: '/grades/classwork',
     title: 'Grades',
     desc: 'Assignments & current averages',
-    icon: '📊',
+    icon: <BarChartIcon size={22}/>,
     iconBg: 'rgba(16,185,129,0.1)',
   },
   {
     href: '/grades/report-card',
     title: 'Report Card',
     desc: 'Official grades by reporting period',
-    icon: '📋',
+    icon: <ClipboardIcon size={22}/>,
     iconBg: 'rgba(59,130,246,0.12)',
   },
   {
     href: '/grades/schedule',
     title: 'Class Schedule',
     desc: 'Your class periods',
-    icon: '🕐',
+    icon: <ClockIcon size={22}/>,
     iconBg: 'rgba(245,158,11,0.1)',
   },
   {
     href: '/grades/what-if',
     title: 'What-If Calculator',
     desc: 'Simulate GPA changes',
-    icon: '🧮',
+    icon: <CalculatorIcon size={22}/>,
     iconBg: 'var(--primary-dim)',
   },
   {
     href: '/grades/contact',
     title: 'Contact Teachers',
     desc: 'Email your teachers',
-    icon: '✉️',
+    icon: <EnvelopeIcon size={22}/>,
     iconBg: 'rgba(249,115,22,0.1)',
   },
   {
     href: '/grades/progress',
     title: 'Progress Report',
     desc: 'Interim grades by date',
-    icon: '📈',
+    icon: <TrendingUpIcon size={22}/>,
     iconBg: 'rgba(167,139,250,0.1)',
   },
   {
     href: '/grades/transcript',
     title: 'Transcript',
     desc: 'Credits & GPA history',
-    icon: '📄',
+    icon: <DocumentIcon size={22}/>,
     iconBg: 'rgba(99,102,241,0.1)',
   },
   {
     href: '/grades/attendance',
     title: 'Attendance',
     desc: 'Absences & tardies calendar',
-    icon: '📅',
+    icon: <CalendarIcon size={22}/>,
     iconBg: 'rgba(239,68,68,0.1)',
   },
 ]
@@ -78,7 +83,7 @@ export default function GradesHubPage() {
             style={{ ...S.card, ...(hovered === card.href ? { transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', borderColor: 'var(--border-hover)' } : {}) }}
           >
             <div style={{ ...S.iconBox, background: card.iconBg }}>
-              <span style={{ fontSize: 22 }}>{card.icon}</span>
+              <span style={{ display: 'flex', alignItems: 'center' }}>{card.icon}</span>
             </div>
             <div style={{ flex: 1, textAlign: 'left' as const }}>
               <div style={S.cardTitle}>{card.title}</div>

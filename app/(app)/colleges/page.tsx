@@ -1,7 +1,9 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { api, ApiError, type CollegeInsights, type CollegeInsightsStep, type CollegeListItem, type CollegeSearchResult, type StudentData } from '../../../lib/api'
+import { GraduationCapIcon } from '@/components/icons'
 
 // ── Display helpers ────────────────────────────────────────────────────────────
 
@@ -369,7 +371,7 @@ export default function CollegesPage() {
       {/* College list */}
       {list.length === 0 ? (
         <div className="ns-card" style={S.empty}>
-          <div style={{ fontSize: 32, marginBottom: 10 }}>🎓</div>
+          <div style={{ marginBottom: 10 }}><GraduationCapIcon size={32}/></div>
           <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>No colleges yet</p>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Search above to add colleges you're interested in.</p>
         </div>

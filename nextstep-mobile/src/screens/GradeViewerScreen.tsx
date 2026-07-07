@@ -21,6 +21,7 @@ import { fetchGrades, type CourseWithGrade, type GpaData } from '../api/gradesAp
 import { coursesCache } from './CourseDetailScreen'
 import { getPortalStatus, getCurrentPortalGrades, type PortalStatus } from '../api/portalApi'
 import type { GradePortalParamList } from '../navigation/GradePortalNavigator'
+import { StatusDotGreenIcon, StatusDotYellowIcon } from '../components/icons'
 
 type GradeViewerNavProp = NativeStackNavigationProp<GradePortalParamList>
 
@@ -434,11 +435,15 @@ export default function GradeViewerScreen(): React.JSX.Element {
         ListHeaderComponent={
           <>
             {__DEV__ && dataSource !== 'unknown' && (
-              <Text
-                style={{ textAlign: 'center', fontSize: 11, color: colors.textMuted, marginTop: 8, marginBottom: 2 }}
-              >
-                {dataSource === 'portal' ? '🟢 Live portal data' : '🟡 Demo/seeded data'}
-              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 8, marginBottom: 2 }}>
+                {dataSource === 'portal'
+                  ? <StatusDotGreenIcon size={11}/>
+                  : <StatusDotYellowIcon size={11}/>
+                }
+                <Text style={{ fontSize: 11, color: colors.textMuted }}>
+                  {dataSource === 'portal' ? 'Live portal data' : 'Demo/seeded data'}
+                </Text>
+              </View>
             )}
             <GpaCard gpa={gpa} mode={gpaMode} onToggle={setGpaMode} />
             <View style={styles.sectionRow}>

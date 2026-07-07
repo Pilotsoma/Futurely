@@ -1,6 +1,8 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState } from 'react'
+import { LinkIcon } from '@/components/icons'
 
 export default function ExternalLinkGuard() {
   const [pending, setPending] = useState<{ href: string } | null>(null)
@@ -40,7 +42,7 @@ export default function ExternalLinkGuard() {
         style={{ background: 'var(--surface)', borderRadius: 16, padding: '28px 28px 24px', maxWidth: 440, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ fontSize: 30, textAlign: 'center', marginBottom: 14 }}>🔗</div>
+        <div style={{ textAlign: 'center', marginBottom: 14 }}><LinkIcon size={30}/></div>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 8, textAlign: 'center' }}>
           Do you want to visit this site?
         </div>

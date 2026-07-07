@@ -17,6 +17,7 @@ import Text from '../components/ui/Text'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { connectHac, connectPowerSchool, getPortalStatus, disconnectPortal, type PortalStatus } from '../api/portalApi'
+import { ArrowRightIcon, CheckIcon } from '../components/icons'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -355,7 +356,10 @@ export default function PortalConnectScreen(): React.JSX.Element {
           </View>
 
           {/* ── 3. Quick-fill chips ── */}
-          <Text variant="caption" style={styles.chipsLabel}>Common districts →</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+            <Text variant="caption" style={{ color: colors.textSecondary }}>Common districts</Text>
+            <ArrowRightIcon size={11} color={colors.textSecondary}/>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -489,10 +493,10 @@ export default function PortalConnectScreen(): React.JSX.Element {
               <ActivityIndicator color="#000" size="small" />
             ) : (
               <>
-                <Ionicons name="link-outline" size={20} color="#000" />
-                <Text style={styles.connectButtonText}>
-                  {connectionState.status === 'success' ? '✓ Connected' : 'Connect Portal'}
-                </Text>
+                {connectionState.status === 'success'
+                  ? <><CheckIcon size={18} color="#000"/><Text style={styles.connectButtonText}>Connected</Text></>
+                  : <><Ionicons name="link-outline" size={20} color="#000" /><Text style={styles.connectButtonText}>Connect Portal</Text></>
+                }
               </>
             )}
           </TouchableOpacity>

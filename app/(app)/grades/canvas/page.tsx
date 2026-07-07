@@ -1,7 +1,13 @@
 'use client'
 
+import React from 'react'
 import DOMPurify from 'dompurify'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  DocumentIcon, ImageIcon, VideoIcon, AudioIcon, ArchiveIcon, PencilIcon, BarChartIcon,
+  FolderIcon, QuestionMarkIcon, ChatBubbleIcon, LinkIcon, WrenchIcon, ReplyIcon,
+  WarningIcon, CheckCircleIcon, CheckIcon, XMarkIcon, LockIcon, PaperclipIcon, GraduationCapIcon,
+} from '@/components/icons'
 import { useRouter } from 'next/navigation'
 import {
   api,
@@ -66,29 +72,29 @@ function instanceLabel(url: string): string {
   return `${sub.charAt(0).toUpperCase()}${sub.slice(1)} Canvas`
 }
 
-function fileIcon(contentType: string): string {
-  if (contentType.includes('pdf')) return '📄'
-  if (contentType.includes('image')) return '🖼️'
-  if (contentType.includes('video')) return '🎬'
-  if (contentType.includes('audio')) return '🎵'
-  if (contentType.includes('zip') || contentType.includes('compressed')) return '🗜️'
-  if (contentType.includes('word') || contentType.includes('document')) return '📝'
-  if (contentType.includes('sheet') || contentType.includes('excel')) return '📊'
-  if (contentType.includes('presentation') || contentType.includes('powerpoint')) return '📊'
-  return '📁'
+function fileIcon(contentType: string, size = 20): React.ReactNode {
+  if (contentType.includes('pdf')) return <DocumentIcon size={size}/>
+  if (contentType.includes('image')) return <ImageIcon size={size}/>
+  if (contentType.includes('video')) return <VideoIcon size={size}/>
+  if (contentType.includes('audio')) return <AudioIcon size={size}/>
+  if (contentType.includes('zip') || contentType.includes('compressed')) return <ArchiveIcon size={size}/>
+  if (contentType.includes('word') || contentType.includes('document')) return <PencilIcon size={size}/>
+  if (contentType.includes('sheet') || contentType.includes('excel')) return <BarChartIcon size={size}/>
+  if (contentType.includes('presentation') || contentType.includes('powerpoint')) return <BarChartIcon size={size}/>
+  return <FolderIcon size={size}/>
 }
 
-function moduleItemIcon(type: string): string {
+function moduleItemIcon(type: string, size = 16): React.ReactNode {
   switch (type) {
-    case 'Assignment': return '✏️'
-    case 'Quiz': return '❓'
-    case 'Discussion': return '💬'
-    case 'File': return '📄'
-    case 'Page': return '📃'
-    case 'ExternalUrl': return '🔗'
-    case 'ExternalTool': return '🔧'
-    case 'SubHeader': return ''
-    default: return '•'
+    case 'Assignment': return <PencilIcon size={size}/>
+    case 'Quiz': return <QuestionMarkIcon size={size}/>
+    case 'Discussion': return <ChatBubbleIcon size={size}/>
+    case 'File': return <DocumentIcon size={size}/>
+    case 'Page': return <DocumentIcon size={size}/>
+    case 'ExternalUrl': return <LinkIcon size={size}/>
+    case 'ExternalTool': return <WrenchIcon size={size}/>
+    case 'SubHeader': return null
+    default: return null
   }
 }
 
@@ -275,7 +281,7 @@ function DiscussionEntryRow({
             onClick={() => setShowReply(r => !r)}
             style={{ marginTop: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--primary)', fontWeight: 600, padding: 0 }}
           >
-            {showReply ? 'Cancel' : '↩ Reply'}
+            {showReply ? 'Cancel' : <><ReplyIcon size={12}/> Reply</>}
           </button>
           {showReply && (
             <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
@@ -396,7 +402,7 @@ function DiscussionPanel({
             disabled={posting || !newPost.trim()}
             style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: posting || !newPost.trim() ? 0.6 : 1 }}
           >
-            {posting ? 'Posting…' : '✏️ Post Reply'}
+            {posting ? 'Posting…' : <><PencilIcon size={14}/> Post Reply</>}
           </button>
           {canvasUrl && (
             <a href={canvasUrl} target="_blank" rel="noopener noreferrer" data-no-intercept="true"
@@ -702,7 +708,7 @@ function QuizTakerPanel({
           {/* Confirm stage */}
           {stage === 'confirm' && (
             <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16 }}>
-              <div style={{ fontSize: 36 }}>📝</div>
+              <PencilIcon size={36}/>
               <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>Ready to start?</div>
               <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 380 }}>
                 This will start a new quiz attempt. Once started, {quizDetail.time_limit ? `you'll have ${quizDetail.time_limit} minutes.` : 'you can take your time.'}
@@ -726,7 +732,7 @@ function QuizTakerPanel({
           {/* Error */}
           {stage === 'error' && (
             <div style={{ padding: '40px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
-              <div style={{ fontSize: 32 }}>⚠️</div>
+              <WarningIcon size={32}/>
               <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Could not start quiz</div>
               <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 360 }}>{errorMsg}</div>
               <button onClick={onClose} style={{ padding: '10px 24px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Close</button>
@@ -736,7 +742,7 @@ function QuizTakerPanel({
           {/* Done */}
           {stage === 'done' && (
             <div style={{ padding: '48px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
-              <div style={{ fontSize: 40 }}>✅</div>
+              <CheckCircleIcon size={40}/>
               <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>Quiz Submitted!</div>
               <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>Your answers have been submitted. Check back in the quiz panel to see your score once it&apos;s graded.</div>
               <button onClick={onClose} style={{ padding: '11px 28px', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Done</button>
@@ -802,7 +808,7 @@ function QuizQuestionRow({ question, submissionData, showCorrect }: {
             <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
               background: isCorrect ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
               color: isCorrect ? '#22C55E' : '#EF4444' }}>
-              {isCorrect ? `✓ +${submissionData.points}` : '✗ 0'}
+              {isCorrect ? <><CheckIcon size={10}/> +{submissionData.points}</> : <><XMarkIcon size={10}/> 0</>}
             </span>
           )}
         </div>
@@ -888,7 +894,7 @@ function QuizPanel({
         {loading && <ContentSkeleton />}
         {err && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginTop: 40, padding: '0 8px', textAlign: 'center' }}>
-            <div style={{ fontSize: 32 }}>🔒</div>
+            <LockIcon size={32}/>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Quiz data not available</div>
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 340 }}>
               This appears to be a <strong>New Quiz (LTI)</strong> — your school&apos;s quiz engine doesn&apos;t expose results or questions through the Canvas API. You&apos;ll need to open it in Canvas to take it or see your results.
@@ -1189,7 +1195,10 @@ function AssignmentPanel({
         return (
           <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {submitMsg && (
-              <div style={{ fontSize: 12, fontWeight: 600, color: submitMsg.ok ? '#22C55E' : '#EF4444', textAlign: 'center' }}>{submitMsg.text}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: submitMsg.ok ? '#22C55E' : '#EF4444', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                {submitMsg.ok && <CheckIcon size={12} color='#22C55E'/>}
+                {submitMsg.ok ? submitMsg.text.replace(/^✓\s*/, '') : submitMsg.text}
+              </div>
             )}
 
             {submitMode && canSubmitText && (
@@ -1237,13 +1246,13 @@ function AssignmentPanel({
                     onClick={() => setSubmitMode(true)}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}
                   >
-                    ✏️ Submit Assignment
+                    <PencilIcon size={14}/> Submit Assignment
                   </button>
                 )}
                 {canSubmitFile && !alreadySubmitted && (
                   <a href={canvasUrl} target="_blank" rel="noopener noreferrer" data-no-intercept="true"
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px 0', borderRadius: 9, background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>
-                    📎 Upload File in Canvas
+                    <PaperclipIcon size={14}/> Upload File in Canvas
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </a>
                 )}
@@ -1406,7 +1415,7 @@ function ModulesTab({
           onClick={() => setPending(null)}>
           <div style={{ background: 'var(--surface)', borderRadius: 16, padding: '28px 28px 24px', maxWidth: 400, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 28, marginBottom: 12, textAlign: 'center' }}>{moduleItemIcon(pending.type)}</div>
+            <div style={{ marginBottom: 12, textAlign: 'center', display: 'flex', justifyContent: 'center' }}>{moduleItemIcon(pending.type, 28)}</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 10, textAlign: 'center' }}>{pending.title}</div>
             <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, textAlign: 'center', marginBottom: 24 }}>
               {canvasRedirectMessage(pending.type, pending.href)}
@@ -1442,7 +1451,7 @@ function ModuleItemRow({ item, isLast, onSelectAssignment, onSelectPage, onSelec
 
   const inner = (
     <>
-      <span style={{ fontSize: 14, flexShrink: 0, width: 20, textAlign: 'center' }}>{moduleItemIcon(item.type)}</span>
+      <span style={{ flexShrink: 0, width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{moduleItemIcon(item.type, 14)}</span>
       <span style={{ flex: 1, fontSize: 13.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         {item.type !== 'SubHeader' && item.completion_requirement && (
@@ -1591,7 +1600,7 @@ function FilesTab({ courseId, canvasInstanceUrl }: { courseId: number; canvasIns
           onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.background = 'var(--surface-2)'}
           onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.background = 'var(--surface)'}
         >
-          <span style={{ fontSize: 20, flexShrink: 0 }}>{f.locked ? '🔒' : fileIcon(f['content-type'])}</span>
+          <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{f.locked ? <LockIcon size={20}/> : fileIcon(f['content-type'], 20)}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13.5, fontWeight: 600, color: f.locked ? 'var(--text-muted)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.display_name}</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{fmtSize(f.size)} · Updated {fmtDate(f.updated_at)}</div>
@@ -1744,8 +1753,8 @@ function DashboardView({
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--primary)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface)' }}
             >
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, var(--primary), var(--accent-blue))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                🎓
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, var(--primary), var(--accent-blue))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <GraduationCapIcon size={18}/>
               </div>
               <div>
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.35, marginBottom: 6 }}>{course.name}</div>
@@ -1904,7 +1913,7 @@ export default function CanvasPage() {
   if (!initialLoading && notConnected) {
     return (
       <div className="fade-up" style={{ maxWidth: 520, margin: '80px auto 0', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 0 }}>
-        <div style={{ width: 68, height: 68, borderRadius: 20, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, marginBottom: 20 }}>🎓</div>
+        <div style={{ width: 68, height: 68, borderRadius: 20, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}><GraduationCapIcon size={30}/></div>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', margin: '0 0 10px' }}>Canvas not connected</h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.65, margin: '0 0 28px', maxWidth: 380 }}>
           Link your Canvas account in Settings to browse your courses, modules, assignments, and files here.

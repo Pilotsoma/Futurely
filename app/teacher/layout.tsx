@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { CheckIcon } from '@/components/icons'
 import { api } from '../../lib/api'
 import { initWebAuth, clearWebAuth } from '../../lib/authState'
 
@@ -80,7 +82,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>What you get after approval</p>
             {['Create classrooms with invite codes', 'See all your students in one place', 'Assign homework & tasks', 'Reward up to 300 coins per student per day'].map(item => (
               <p key={item} style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                <span style={{ color: 'var(--primary)', fontWeight: 700, flexShrink: 0 }}>✓</span>{item}
+                <CheckIcon size={14}/>{item}
               </p>
             ))}
           </div>

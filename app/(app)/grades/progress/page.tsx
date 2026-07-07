@@ -1,5 +1,8 @@
 'use client'
 
+import React from 'react'
+import { ArrowLeftIcon } from '@/components/icons'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '../../../../lib/api'
@@ -63,7 +66,7 @@ export default function ProgressReportPage() {
 
   return (
     <div className="fade-up">
-      <button onClick={() => router.push('/grades')} style={S.back}>← Grade Portal</button>
+      <button onClick={() => router.push('/grades')} style={S.back}><ArrowLeftIcon size={14}/> Grade Portal</button>
       <h1 style={S.title}>Progress Report</h1>
       <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>Interim grades posted throughout the semester</p>
 

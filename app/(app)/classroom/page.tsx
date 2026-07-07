@@ -1,7 +1,9 @@
 'use client'
 
+import React from 'react'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { CheckIcon, XMarkIcon } from '@/components/icons'
 import { useRouter } from 'next/navigation'
 import { api, CounselorLink, StudentClassroom, StudentActionItem } from '../../../lib/api'
 
@@ -77,7 +79,7 @@ export default function ClassroomPage() {
           </form>
           {joinMsg && (
             <p style={{ marginTop: 10, fontSize: 13, color: joinMsg.ok ? '#22C55E' : '#EF4444', margin: '10px 0 0' }}>
-              {joinMsg.ok ? '✓ ' : '✗ '}{joinMsg.text}
+              {joinMsg.ok ? <><CheckIcon size={13} color='#22C55E'/> </> : <><XMarkIcon size={13} color='#EF4444'/> </>}{joinMsg.text}
             </p>
           )}
         </div>

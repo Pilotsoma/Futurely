@@ -12,6 +12,17 @@ import {
   FeedPost, SpinStats,
 } from '../../../lib/api'
 
+import {
+  SkullIcon, GiftIcon, TagIcon, PackageIcon, XMarkIcon, TrendingUpIcon, UsersIcon,
+  GoldMedalIcon, SilverMedalIcon, BronzeMedalIcon, SparkleStarIcon, ChevronLeftIcon, ChevronRightIcon,
+  SlotMachineIcon, CheckIcon, CrownIcon, StarIcon, PartyPopperIcon, FlameIcon, LockIcon, BanIcon,
+  CheckCircleIcon, BarChartIcon, ShopIcon, TradeArrowsIcon, WizardIcon, BackpackIcon,
+  TrophyIcon, BookOpenIcon, ClipboardIcon, RefreshIcon, IncomingArrowIcon, OutgoingArrowIcon,
+  SwitchArrowsIcon, ChatBubbleIcon, WarningIcon, MedalIcon, PaintPaletteIcon, ImageIcon,
+  TrendUpIcon, LockOpenIcon, WrenchIcon, MagnifyingGlassIcon, HeartOutlineIcon, SparklesIcon,
+  TentIcon,
+} from '@/components/icons'
+
 // ── Tag helpers ───────────────────────────────────────────────────────────────
 function tagCssClass(tag?: string | null, tagColor?: string | null): string {
   if (tag === 'DEV') return 'tag-rainbow'
@@ -118,7 +129,7 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
     return () => clearInterval(t)
   }, [items])
 
-  if (!items) return <div style={{ fontSize: 38 }}>💀</div>
+  if (!items) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 60, height: 52 }}><SkullIcon size={38}/></div>
 
   const item = items[idx]
   const rarityColor = RARITY_COLOR[item.rarity] === 'rainbow' ? '#FFD700' : (RARITY_COLOR[item.rarity] ?? '#22C55E')
@@ -186,9 +197,9 @@ function BoxCardPreview({ boxType }: { boxType: BoxType }) {
   )
 }
 
-const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost: number; drops: DropGroup[] }[] = [
+const BOX_DEFS: { type: BoxType; icon: React.ReactNode; label: string; desc: string; cost: number; drops: DropGroup[] }[] = [
   {
-    type: 'cosmetics', icon: '🎁', label: 'Cosmetics Spin', desc: 'Any cosmetic — tags, name colors & Avatar effects', cost: 25,
+    type: 'cosmetics', icon: <GiftIcon size={20} />, label: 'Cosmetics Spin', desc: 'Any cosmetic — tags, name colors & Avatar effects', cost: 25,
     drops: [
       { rarity: 'Common',    pct: '60%',    items: ['Tags · Name Colors · Avatar Borders'] },
       { rarity: 'Uncommon',  pct: '25%',    items: ['Tags · Name Colors · Avatar Borders'] },
@@ -199,7 +210,7 @@ const BOX_DEFS: { type: BoxType; icon: string; label: string; desc: string; cost
     ],
   },
   {
-    type: 'dev-curse', icon: '💀', label: "The Curse", desc: '1 coin · mostly Common · 0.001% chance at The Curse', cost: 1,
+    type: 'dev-curse', icon: <SkullIcon size={20} />, label: "The Curse", desc: '1 coin · mostly Common · 0.001% chance at The Curse', cost: 1,
     drops: [
       { rarity: 'Common', pct: '99.997%', items: ['Learner', 'C Student', 'Bottom 100'] },
       { rarity: 'Curse',  pct: '0.001%',  items: ['The Curse'] },
@@ -620,7 +631,7 @@ function ItemBox({ children, rarity, itemId, style, onClick }: { children: React
 function ItemIcon({ item }: { item: { type: string; itemValue?: string; value?: string; itemType?: string; itemId?: string } }) {
   const type = item.type ?? item.itemType
   const value = item.itemValue ?? item.value ?? ''
-  if (type === 'tag') return <span style={{ fontSize: 18 }}>🏷️</span>
+  if (type === 'tag') return <TagIcon size={18}/>
   if (type === 'name-color') {
     return (
       <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'inline-block', flexShrink: 0, border: '1px solid var(--border)', background: value === 'rainbow' ? 'linear-gradient(135deg,#ff6b6b,#ffd43b,#69db7c,#4dabf7)' : value }} />
@@ -631,7 +642,7 @@ function ItemIcon({ item }: { item: { type: string; itemValue?: string; value?: 
       <span className={avatarClass(value)} style={{ width: 22, height: 22, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', ...avatarStyle(value) }} />
     )
   }
-  return <span style={{ fontSize: 18 }}>📦</span>
+  return <PackageIcon size={18}/>
 }
 
 // ── Item Preview Modal ────────────────────────────────────────────────────────
@@ -742,14 +753,14 @@ function ItemPreviewModal({ item, estValue, onClose, onViewProfile }: { item: Pr
               )}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: 4, lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, lineHeight: 1, display: 'flex', alignItems: 'center' }}><XMarkIcon size={18}/></button>
         </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
           {(['history', 'owners'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: '10px 0', border: 'none', background: 'transparent', color: tab === t ? 'var(--primary)' : 'var(--text-muted)', fontWeight: tab === t ? 700 : 500, fontSize: 13, cursor: 'pointer', borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent' }}>
-              {t === 'history' ? '📈 Price History' : `👥 Owners${circulation !== null ? ` (${(owners ?? []).length})` : ''}`}
+              {t === 'history' ? <><TrendingUpIcon size={14}/> Price History</> : <><UsersIcon size={14}/> Owners{circulation !== null ? ` (${(owners ?? []).length})` : ''}</>}
             </button>
           ))}
         </div>
@@ -774,7 +785,7 @@ function ItemPreviewModal({ item, estValue, onClose, onViewProfile }: { item: Pr
               ) : (owners ?? []).map(owner => (
                 <div key={owner.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                   <span style={{ width: 28, fontSize: 11, fontWeight: 700, color: owner.rank === 1 ? '#EAB308' : 'var(--text-muted)', textAlign: 'right', flexShrink: 0 }}>
-                    {owner.rank === 1 ? '🥇' : `#${owner.rank}`}
+                    {owner.rank === 1 ? <GoldMedalIcon size={18}/> : `#${owner.rank}`}
                   </span>
                   <div className={avatarClass(owner.avatarEffect)} style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...avatarStyle(owner.avatarEffect) }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -863,8 +874,8 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
         <>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', flexShrink: 0 }}>
             {carouselCards.length > 1
-              ? `✨ ${safeIdx + 1} of ${carouselCards.length} highlights  ·  ${result.coins.toLocaleString()} coins left`
-              : `✨ Best result  ·  ${result.coins.toLocaleString()} coins left`}
+              ? <><SparklesIcon size={14}/> {safeIdx + 1} of {carouselCards.length} highlights  ·  {result.coins.toLocaleString()} coins left</>
+              : <><SparklesIcon size={14}/> Best result  ·  {result.coins.toLocaleString()} coins left</>}
           </div>
           <div
             className="ns-card"
@@ -881,7 +892,7 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
                   : <span className={tagCssClass(current.tag, current.tagColor)} style={{ color: isAnimatedTag(current.tag) || current.tagColor === 'curse' ? undefined : current.tagColor ?? carouselColor }}>{current.tag}</span>
                 : current.type === 'name-color'
                   ? <span className={current.value === 'rainbow' ? 'name-rainbow' : current.value === 'curse' ? 'name-curse' : ''} style={{ color: (current.value === 'rainbow' || current.value === 'curse') ? undefined : current.value ?? carouselColor }}>{userName ?? 'Username'}</span>
-                  : <div className={avatarClass(current.value)} style={{ width: 74, height: 74, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 28, ...avatarStyle(current.value) }}>✦</div>
+                  : <div className={avatarClass(current.value)} style={{ width: 74, height: 74, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...avatarStyle(current.value) }}><SparkleStarIcon size={28}/></div>
               }
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -891,12 +902,12 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
           {carouselCards.length > 1 && (
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
               <button disabled={safeIdx === 0} onClick={() => setCardIdx(i => Math.max(0, i - 1))}
-                style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', cursor: safeIdx === 0 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: safeIdx === 0 ? 0.35 : 1 }}
-              >← Prev</button>
+                style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', cursor: safeIdx === 0 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: safeIdx === 0 ? 0.35 : 1, display: 'flex', alignItems: 'center', gap: 4 }}
+              ><ChevronLeftIcon size={16}/> Prev</button>
               <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 56, textAlign: 'center' }}>{safeIdx + 1} / {carouselCards.length}</span>
               <button disabled={safeIdx === carouselCards.length - 1} onClick={() => setCardIdx(i => Math.min(carouselCards.length - 1, i + 1))}
-                style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', cursor: safeIdx === carouselCards.length - 1 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: safeIdx === carouselCards.length - 1 ? 0.35 : 1 }}
-              >Next →</button>
+                style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', cursor: safeIdx === carouselCards.length - 1 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: safeIdx === carouselCards.length - 1 ? 0.35 : 1, display: 'flex', alignItems: 'center', gap: 4 }}
+              >Next <ChevronRightIcon size={16}/></button>
             </div>
           )}
         </>
@@ -909,14 +920,14 @@ function MultiSpinResultOverlay({ result, onClose, userName }: { result: MultiBo
         onClick={e => e.stopPropagation()}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>🎰 {qty} Spins — Summary</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}><SlotMachineIcon size={18}/>{qty} Spins — Summary</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-muted)' }}>
             <CoinIcon size={13} />{result.coins.toLocaleString()} left
           </div>
         </div>
         {highlight && (
           <div style={{ background: `${getRarityColor(highlight.won.rarity, highlight.won.id)}22`, border: `1px solid ${getRarityColor(highlight.won.rarity, highlight.won.id)}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 20 }}>✨</span>
+            <SparklesIcon size={20}/>
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, color: getRarityColor(highlight.won.rarity, highlight.won.id) }}>{highlight.won.rarity}!</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1020,7 +1031,7 @@ function FreeSpinModal({ onClose, onDone }: { onClose: () => void; onDone: (rewa
       onClick={phase === 'ready' ? onClose : undefined}>
       <div className="ns-card" style={{ padding: 32, maxWidth: 380, width: '92%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}
         onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>🎰 Free Spin</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}><SlotMachineIcon size={22}/> Free Spin</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Win coins — available every 6 hours</div>
 
         <div style={{ width: 300, height: 300 }}>
@@ -1228,8 +1239,8 @@ function SpinWheelModal({
                   </span>
                 : <div
                     className={avatarClass(r.won.value)}
-                    style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: '#fff', flexShrink: 0, ...avatarStyle(r.won.value) }}>
-                    ✦
+                    style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...avatarStyle(r.won.value) }}>
+                    <SparkleStarIcon size={28}/>
                   </div>
             return (
               <div style={{
@@ -1290,13 +1301,13 @@ function SpinWheelModal({
           const r = wonResult
           const isMythic = r.won.rarity === 'Mythic'
           const isLegend = r.won.rarity === 'Legendary'
-          const emoji    = isMythic ? '👑' : isLegend ? '🌟' : '🎉'
+          const EmojiIcon = isMythic ? <CrownIcon size={36}/> : isLegend ? <StarIcon size={36}/> : <PartyPopperIcon size={36}/>
           const rarityColor = getRarityColor(r.won.rarity, r.won.id)
           const wonPrice = prices[`${r.won.type}:${r.won.id}`]
           const itemLabel = r.won.type === 'tag' ? r.won.tag : r.won.name
           return (
             <div style={{ width: '100%', textAlign: 'center' }}>
-              <div style={{ fontSize: 36, marginBottom: 4 }}>{emoji}</div>
+              <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'center' }}>{EmojiIcon}</div>
               {!r.alreadyHad && (
                 <div style={{ display: 'inline-block', background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: '1px', borderRadius: 6, padding: '2px 8px', marginBottom: 6 }}>NEW</div>
               )}
@@ -2223,7 +2234,7 @@ export default function MarketplacePage() {
 
   async function handleSendTrade() {
     if (!tradeTarget || (selectedOffer.length === 0 && selectedRequest.length === 0) || sendingTrade) return
-    if (!inv || inv.coins < 5) { setTradeMsg('Need 🪙 5 to send a trade'); return }
+    if (!inv || inv.coins < 5) { setTradeMsg('Need 5 coins to send a trade'); return }
     setSendingTrade(true); setTradeMsg('')
     try {
       await api.marketplaceCreateTrade({
@@ -2429,8 +2440,8 @@ export default function MarketplacePage() {
               {listingBusy ? '…' : 'Confirm'}
             </button>
             <button onClick={() => setListingItem(null)}
-              style={{ padding: '4px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>
-              ✕
+              style={{ padding: '4px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <XMarkIcon size={11}/>
             </button>
           </div>
         )}
@@ -2451,7 +2462,7 @@ export default function MarketplacePage() {
               <div style={{ position: 'relative', display: 'inline-flex' }}>
               <ItemBox rarity={item.rarity} itemId={item.id} onClick={() => setPreviewItem({ type: item.type, id: item.id, name: item.name ?? item.tag ?? item.id, rarity: item.rarity, value: item.value, tagColor: item.tagColor })} style={{ cursor: 'pointer' }}>
                 <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: 'var(--text-muted)', flexShrink: 0 }}>
-                  {item.type === 'tag' ? '🏷️' : item.type === 'name-color' ? '🎨' : '🖼️'}
+                  {item.type === 'tag' ? <TagIcon size={9}/> : item.type === 'name-color' ? <PaintPaletteIcon size={9}/> : <ImageIcon size={9}/>}
                 </span>
                 {item.type === 'tag' ? (
                   <span className={tagCssClass(item.tag, item.tagColor)} style={{ fontSize: 12, fontWeight: 800, color: isAnimatedTag(item.tag) || item.tagColor === 'curse' ? undefined : item.tagColor ?? '#6B7280' }}>[{item.tag}]</span>
@@ -2490,7 +2501,7 @@ export default function MarketplacePage() {
           <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>Marketplace</h1>
         </div>
         <div className="ns-card" style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <div style={{ fontSize: 52 }}>🚫</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BanIcon size={52}/></div>
           <div style={{ fontSize: 20, fontWeight: 800, color: '#EF4444', letterSpacing: '-0.3px' }}>Marketplace Access Revoked</div>
           <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 360 }}>
             Your access to the Marketplace has been revoked by a moderator.
@@ -2510,14 +2521,14 @@ export default function MarketplacePage() {
           <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)' }}>Marketplace</h1>
         </div>
         <div className="ns-card" style={{ padding: 40, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <div style={{ fontSize: 52 }}>🔒</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LockIcon size={52}/></div>
           <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px' }}>Marketplace Locked</div>
           <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 320 }}>
             You need a <strong style={{ color: '#EAB308' }}>3-day login streak</strong> to access the Marketplace.
             Keep logging in every day to unlock it!
           </div>
           <div style={{ marginTop: 8, padding: '10px 20px', borderRadius: 99, background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', fontSize: 13, fontWeight: 700, color: '#EAB308' }}>
-            🔥 Current streak: {streak} / 3 day{streak === 1 ? '' : 's'}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FlameIcon size={14}/> Current streak: {streak} / 3 day{streak === 1 ? '' : 's'}</span>
           </div>
         </div>
       </div>
@@ -2551,7 +2562,7 @@ export default function MarketplacePage() {
           </button>
         ) : (
           <div style={{ textAlign: 'right' as const }}>
-            <div style={{ fontSize: 20 }}>✓</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckIcon size={20}/></div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginTop: 2 }}>Claimed today</div>
           </div>
         )}
@@ -2584,7 +2595,7 @@ export default function MarketplacePage() {
                 disabled={onCooldown}
                 style={{ padding: '12px 20px', borderRadius: 10, border: 'none', background: onCooldown ? 'var(--surface-2)' : '#EAB308', color: onCooldown ? 'var(--text-muted)' : '#000', fontWeight: 700, fontSize: 14, cursor: onCooldown ? 'not-allowed' : 'pointer', opacity: onCooldown ? 0.6 : 1 }}
               >
-                {onCooldown ? 'On Cooldown' : '🎰 Free Spin'}
+                {onCooldown ? 'On Cooldown' : <><SlotMachineIcon size={16}/> Free Spin</>}
               </button>
               <button
                 onClick={() => {
@@ -2596,7 +2607,7 @@ export default function MarketplacePage() {
                 }}
                 style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
               >
-                📊 Spin Stats
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><BarChartIcon size={14}/> Spin Stats</span>
               </button>
             </div>
           </div>
@@ -2614,17 +2625,17 @@ export default function MarketplacePage() {
             borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent',
             position: 'relative' as const,
           }}>
-            {t === 'boxes' && '🎰 Spins'}
-            {t === 'shop' && '🏪 Shop'}
+            {t === 'boxes' && <><SlotMachineIcon size={14}/> Spins</>}
+            {t === 'shop' && <><ShopIcon size={14}/> Shop</>}
             {t === 'trade' && (
-              <>🔄 Trade{pendingIncoming > 0 && tab !== 'trade' && (
+              <><TradeArrowsIcon size={14}/> Trade{pendingIncoming > 0 && tab !== 'trade' && (
                 <span style={{ marginLeft: 4, background: '#EF4444', color: '#fff', borderRadius: 99, fontSize: 10, fontWeight: 700, padding: '1px 5px' }}>{pendingIncoming}</span>
               )}</>
             )}
-            {t === 'trader' && '🧙 Trader'}
-            {t === 'inventory' && '🎒 Inventory'}
-            {t === 'leaderboard' && '🏆 Leaderboard'}
-            {t === 'catalog' && '📖 Catalog'}
+            {t === 'trader' && <><WizardIcon size={14}/> Trader</>}
+            {t === 'inventory' && <><BackpackIcon size={14}/> Inventory</>}
+            {t === 'leaderboard' && <><TrophyIcon size={14}/> Leaderboard</>}
+            {t === 'catalog' && <><BookOpenIcon size={14}/> Catalog</>}
           </button>
         ))}
       </div>
@@ -2637,7 +2648,7 @@ export default function MarketplacePage() {
             const isMythic   = result.won.rarity === 'Mythic'
             const isLegend   = result.won.rarity === 'Legendary'
             const cardClass  = `ns-card box-pop${isMythic ? ' box-rainbow box-mythic' : isLegend ? ' box-legendary' : ''}`
-            const emoji      = isMythic ? '👑' : isLegend ? '🌟' : '🎉'
+            const EmojiIcon  = isMythic ? <CrownIcon size={48}/> : isLegend ? <StarIcon size={48}/> : <PartyPopperIcon size={48}/>
             const borderColor = getRarityColor(result.won.rarity, result.won.id)
 
             const itemPreview = result.won.type === 'tag' ? (
@@ -2654,8 +2665,8 @@ export default function MarketplacePage() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                 <div
                   className={avatarClass(result.won.value)}
-                  style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: '#FFFFFF', ...avatarStyle(result.won.value) }}
-                >✦</div>
+                  style={{ width: 60, height: 60, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...avatarStyle(result.won.value) }}
+                ><SparkleStarIcon size={22}/></div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{result.won.name}</div>
               </div>
             )
@@ -2705,7 +2716,7 @@ export default function MarketplacePage() {
                         : <span style={{ fontSize: 12, fontWeight: 700, color: inv.tagColor ?? '#6B7280' }}>[{inv.tag}]</span>
                     ) : null}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Here&apos;s a preview of your new item ✨</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}><span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>Here&apos;s a preview of your new item <SparklesIcon size={13}/></span></div>
                 </div>
               </div>
             )
@@ -2714,7 +2725,7 @@ export default function MarketplacePage() {
             return (
             <PriceTooltip price={wonPrice}>
             <div ref={resultCardRef} className={cardClass} onClick={() => { if (dismissCountdown === 0) setResult(r => r ? { ...r, dismissed: true } : r) }} style={{ padding: 24, marginBottom: 20, textAlign: 'center', border: `1px solid ${borderColor}55`, background: `${borderColor}08`, cursor: dismissCountdown > 0 ? 'default' : 'pointer' }}>
-              <div style={{ fontSize: 48, marginBottom: 10 }}>{emoji}</div>
+              <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}>{EmojiIcon}</div>
               {!result.alreadyHad && (
                 <div style={{ display: 'inline-block', background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: '1px', borderRadius: 6, padding: '2px 8px', marginBottom: 6 }}>NEW</div>
               )}
@@ -2800,7 +2811,7 @@ export default function MarketplacePage() {
                 onClick={() => setShopSubTab(st)}
                 style={{ padding: '8px 18px', borderRadius: '8px 8px 0 0', border: 'none', borderBottom: shopSubTab === st ? '2px solid var(--primary)' : '2px solid transparent', background: 'transparent', color: shopSubTab === st ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginBottom: -1 }}
               >
-                {st === 'browse' ? '🏪 Browse' : `📋 My Listings${myActiveListings.length > 0 ? ` (${myActiveListings.length})` : ''}`}
+                {st === 'browse' ? <><ShopIcon size={14}/> Browse</> : <><ClipboardIcon size={14}/> My Listings{myActiveListings.length > 0 ? ` (${myActiveListings.length})` : ''}</>}
               </button>
             ))}
           </div>
@@ -2812,8 +2823,8 @@ export default function MarketplacePage() {
                   User Listings — sorted by value
                 </p>
                 <button onClick={fetchListings} disabled={listingsLoading}
-                  style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-                  {listingsLoading ? 'Refreshing…' : '↻ Refresh'}
+                  style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {listingsLoading ? 'Refreshing…' : <><RefreshIcon size={14}/> Refresh</>}
                 </button>
               </div>
 
@@ -2857,7 +2868,7 @@ export default function MarketplacePage() {
                             <CoinIcon size={13} />{listing.price.toLocaleString()}
                           </div>
                           {msg ? (
-                            <div style={{ fontSize: 10, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 700 }}>{msg}</div>
+                            <div style={{ fontSize: 10, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>{msg.startsWith('✓') && <CheckIcon size={10} color='#22C55E'/>}{msg.startsWith('✓') ? msg.slice(2) : msg}</div>
                           ) : isMine ? (
                             <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic' }}>Your listing</span>
                           ) : (
@@ -2884,8 +2895,8 @@ export default function MarketplacePage() {
                 <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)' }}>
                   Your active listings
                 </p>
-                <button onClick={() => { fetchMyActiveListings(); fetchListings() }} style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-                  ↻ Refresh
+                <button onClick={() => { fetchMyActiveListings(); fetchListings() }} style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <RefreshIcon size={12}/> Refresh
                 </button>
               </div>
 
@@ -2936,9 +2947,9 @@ export default function MarketplacePage() {
               <button key={st} onClick={() => { setTradeSubTab(st); if (st !== 'new') fetchTrades() }}
                 style={{ padding: '7px 16px', borderRadius: 8, border: `1px solid ${tradeSubTab === st ? 'var(--primary)' : 'var(--border)'}`, background: tradeSubTab === st ? 'var(--primary)18' : 'transparent', color: tradeSubTab === st ? 'var(--primary)' : 'var(--text-muted)', fontWeight: tradeSubTab === st ? 700 : 500, fontSize: 13, cursor: 'pointer' }}>
                 {st === 'new' && '+ New Trade'}
-                {st === 'incoming' && `📥 Incoming${pendingIncoming > 0 ? ` (${pendingIncoming})` : ''}`}
-                {st === 'sent' && '📤 Sent'}
-                {st === 'history' && '📋 History'}
+                {st === 'incoming' && <><IncomingArrowIcon size={14}/> Incoming{pendingIncoming > 0 ? ` (${pendingIncoming})` : ''}</>}
+                {st === 'sent' && <><OutgoingArrowIcon size={14}/> Sent</>}
+                {st === 'history' && <><ClipboardIcon size={14}/> History</>}
               </button>
             ))}
           </div>
@@ -3059,7 +3070,7 @@ export default function MarketplacePage() {
                                       style={{ position: 'absolute' as const, top: 2, left: 2, fontSize: 9, fontWeight: 800, color: accentColor, background: `${accentColor}22`, border: `1px solid ${accentColor}66`, borderRadius: 99, padding: '1px 4px', lineHeight: 1.4, cursor: 'pointer' }}
                                       onClick={e => { e.stopPropagation(); onRemove(item) }}
                                       title="Remove one"
-                                    >{selCount}✕</button>
+                                    >{selCount}<XMarkIcon size={9}/></button>
                                   )}
                                   {/* Visual */}
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 28, width: '100%' }}>
@@ -3127,11 +3138,11 @@ export default function MarketplacePage() {
                             <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>{tradeInvQ ? 'No matching items' : 'No tradeable items'}</div>
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                              {theirTagsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🏷️ Tags</div>}
+                              {theirTagsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}><TagIcon size={10}/> Tags</div>}
                               <TradeGrid items={theirTagsDedup} accentColor="var(--primary)" selectedList={selectedRequest} onAdd={(item, max) => addRequest(item, max)} onRemove={item => removeRequest(item)} />
-                              {theirColorsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🎨 Colors</div>}
+                              {theirColorsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}><PaintPaletteIcon size={10}/> Colors</div>}
                               <TradeGrid items={theirColorsDedup} accentColor="var(--primary)" selectedList={selectedRequest} onAdd={(item, max) => addRequest(item, max)} onRemove={item => removeRequest(item)} />
-                              {theirPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🖼️ Avatar</div>}
+                              {theirPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}><ImageIcon size={10}/> Avatar</div>}
                               <TradeGrid items={theirPfpDedup} accentColor="var(--primary)" selectedList={selectedRequest} onAdd={(item, max) => addRequest(item, max)} onRemove={item => removeRequest(item)} />
                               {selectedRequest.length > 0 && selectedRequestTotal > 0 && (
                                 <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, paddingTop: 6, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -3158,11 +3169,11 @@ export default function MarketplacePage() {
                             <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: 12 }}>No items to offer</div>
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                              {myTagsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🏷️ Tags</div>}
+                              {myTagsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}><TagIcon size={10}/> Tags</div>}
                               <TradeGrid items={myTagsDedup} accentColor="#22C55E" selectedList={selectedOffer} onAdd={(item, max) => addOffer(item, max)} onRemove={item => removeOffer(item)} />
-                              {myColorsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🎨 Colors</div>}
+                              {myColorsDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}><PaintPaletteIcon size={10}/> Colors</div>}
                               <TradeGrid items={myColorsDedup} accentColor="#22C55E" selectedList={selectedOffer} onAdd={(item, max) => addOffer(item, max)} onRemove={item => removeOffer(item)} />
-                              {myPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' }}>🖼️ Avatar</div>}
+                              {myPfpDedup.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}><ImageIcon size={10}/> Avatar</div>}
                               <TradeGrid items={myPfpDedup} accentColor="#22C55E" selectedList={selectedOffer} onAdd={(item, max) => addOffer(item, max)} onRemove={item => removeOffer(item)} />
                               {selectedOffer.length > 0 && selectedOfferTotal > 0 && (
                                 <div style={{ fontSize: 11, color: '#EAB308', fontWeight: 700, paddingTop: 6, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -3184,7 +3195,7 @@ export default function MarketplacePage() {
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>You offer</div>
                         {renderTradeItems(selectedOffer, removeOffer)}
                       </div>
-                      <div style={{ alignSelf: 'center', fontSize: 18 }}>⇄</div>
+                      <div style={{ alignSelf: 'center' }}><SwitchArrowsIcon size={18}/></div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>You receive</div>
                         {renderTradeItems(selectedRequest, removeRequest)}
@@ -3205,15 +3216,15 @@ export default function MarketplacePage() {
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right' as const, marginTop: 2 }}>{tradeNote.length}/200</div>
                     )}
                   </div>
-                  {tradeMsg && <div style={{ fontSize: 12, color: tradeMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 10 }}>{tradeMsg}</div>}
+                  {tradeMsg && <div style={{ fontSize: 12, color: tradeMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 3 }}>{tradeMsg.startsWith('✓') && <CheckIcon size={12} color='#22C55E'/>}{tradeMsg.startsWith('✓') ? tradeMsg.slice(2) : tradeMsg}</div>}
                   {selectedOffer.length === 0 && selectedRequest.length > 0 && (
                     <div style={{ fontSize: 12, color: '#F97316', fontWeight: 600, marginBottom: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)' }}>
-                      ⚠️ You're offering nothing — this is a gift request
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><WarningIcon size={14}/> You're offering nothing — this is a gift request</span>
                     </div>
                   )}
                   {selectedOffer.length > 0 && selectedRequest.length === 0 && (
                     <div style={{ fontSize: 12, color: '#F97316', fontWeight: 600, marginBottom: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)' }}>
-                      ⚠️ You're asking for nothing — this is a free gift
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><WarningIcon size={14}/> You're asking for nothing — this is a free gift</span>
                     </div>
                   )}
                   <button onClick={() => void handleSendTrade()}
@@ -3253,7 +3264,7 @@ export default function MarketplacePage() {
                             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>They offer</div>
                             {renderTradeItems(parseTradeItemsClient(trade.senderItems))}
                           </div>
-                          <div style={{ fontSize: 16 }}>⇄</div>
+                          <div><SwitchArrowsIcon size={16}/></div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>They want</div>
                             {renderTradeItems(parseTradeItemsClient(trade.receiverItems))}
@@ -3261,21 +3272,21 @@ export default function MarketplacePage() {
                         </div>
                         {trade.note && trade.note !== 'WANDERING_TRADER' && (
                           <div style={{ fontSize: 12, color: 'var(--text)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', marginBottom: 10, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                            <span style={{ flexShrink: 0, opacity: 0.6 }}>💬</span>
+                            <span style={{ flexShrink: 0, opacity: 0.6 }}><ChatBubbleIcon size={14}/></span>
                             <span style={{ wordBreak: 'break-word' as const }}>{trade.note}</span>
                           </div>
                         )}
                         {msg ? (
-                          <div style={{ fontSize: 12, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 8 }}>{msg}</div>
+                          <div style={{ fontSize: 12, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 3 }}>{msg.startsWith('✓') && <CheckIcon size={12} color='#22C55E'/>}{msg.startsWith('✓') ? msg.slice(2) : msg}</div>
                         ) : (
                           <div style={{ display: 'flex', gap: 8 }}>
                             <button onClick={() => void handleAcceptTrade(trade.id)} disabled={tradeBusy === trade.id}
                               style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', background: '#22C55E', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                              {tradeBusy === trade.id ? '…' : '✓ Accept'}
+                              {tradeBusy === trade.id ? '…' : <><CheckIcon size={13}/> Accept</>}
                             </button>
                             <button onClick={() => void handleDeclineTrade(trade.id)} disabled={tradeBusy === trade.id}
                               style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid #EF4444', background: 'transparent', color: '#EF4444', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                              ✕ Decline
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><XMarkIcon size={13}/> Decline</span>
                             </button>
                           </div>
                         )}
@@ -3316,7 +3327,7 @@ export default function MarketplacePage() {
                             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>You offered</div>
                             {renderTradeItems(parseTradeItemsClient(trade.senderItems))}
                           </div>
-                          <div style={{ fontSize: 16 }}>⇄</div>
+                          <div><SwitchArrowsIcon size={16}/></div>
                           <div>
                             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>You wanted</div>
                             {renderTradeItems(parseTradeItemsClient(trade.receiverItems))}
@@ -3324,12 +3335,12 @@ export default function MarketplacePage() {
                         </div>
                         {trade.note && trade.note !== 'WANDERING_TRADER' && (
                           <div style={{ fontSize: 12, color: 'var(--text)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 11px', marginBottom: 10, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                            <span style={{ flexShrink: 0, opacity: 0.6 }}>💬</span>
+                            <span style={{ flexShrink: 0, opacity: 0.6 }}><ChatBubbleIcon size={14}/></span>
                             <span style={{ wordBreak: 'break-word' as const }}>{trade.note}</span>
                           </div>
                         )}
                         {msg ? (
-                          <div style={{ fontSize: 12, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600 }}>{msg}</div>
+                          <div style={{ fontSize: 12, color: msg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>{msg.startsWith('✓') && <CheckIcon size={12} color='#22C55E'/>}{msg.startsWith('✓') ? msg.slice(2) : msg}</div>
                         ) : (
                           <button onClick={() => void handleCancelTrade(trade.id)} disabled={tradeBusy === trade.id}
                             style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
@@ -3362,10 +3373,10 @@ export default function MarketplacePage() {
                     return (
                     <div key={trade.id} className="ns-card" style={{ padding: 16, borderLeft: `3px solid ${isTraderTrade ? '#A855F7' : '#22C55E'}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                        <span style={{ fontSize: 16 }}>{isTraderTrade ? '🏕️' : '✅'}</span>
+                        <span>{isTraderTrade ? <TentIcon size={16}/> : <CheckCircleIcon size={16}/>}</span>
                         <span style={{ flex: 1, fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
                           You
-                          <span style={{ margin: '0 6px' }}>⇄</span>
+                          <span style={{ margin: '0 6px' }}><SwitchArrowsIcon size={16}/></span>
                           {otherLabel}
                         </span>
                         <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
@@ -3377,15 +3388,15 @@ export default function MarketplacePage() {
                           <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>You gave</div>
                           {renderTradeItems(myItems)}
                         </div>
-                        <div style={{ fontSize: 16 }}>⇄</div>
-                        <div>
+                        <div><SwitchArrowsIcon size={16}/></div>
+<div>
                           <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase' }}>{otherLabel} gave</div>
                           {renderTradeItems(theirItems)}
                         </div>
                       </div>
                       {!isTraderTrade && trade.note && (
                         <div style={{ fontSize: 12, color: 'var(--text)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 11px', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                          <span style={{ flexShrink: 0, opacity: 0.6 }}>💬</span>
+                          <span style={{ flexShrink: 0, opacity: 0.6 }}><ChatBubbleIcon size={14}/></span>
                           <span style={{ wordBreak: 'break-word' as const }}>{trade.note}</span>
                         </div>
                       )}
@@ -3403,7 +3414,7 @@ export default function MarketplacePage() {
       {tab === 'inventory' && (
         <>
           {listingMsg && (
-            <div style={{ fontSize: 12, color: listingMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 12 }}>{listingMsg}</div>
+            <div style={{ fontSize: 12, color: listingMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 3 }}>{listingMsg.startsWith('✓') && <CheckIcon size={12} color='#22C55E'/>}{listingMsg.startsWith('✓') ? listingMsg.slice(2) : listingMsg}</div>
           )}
 
           {(inv?.ownedTags ?? []).length === 0 && (inv?.ownedNameColors ?? []).length === 0 && (inv?.ownedAvatarEffects ?? []).length === 0 && myActiveListings.length === 0 ? (
@@ -3423,7 +3434,7 @@ export default function MarketplacePage() {
                       <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 4 }}>Est. Inventory Worth</div>
                       <div style={{ fontSize: 24, fontWeight: 800, color: '#EAB308', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: 8 }}><CoinIcon size={20} />{worth.toLocaleString()}</div>
                     </div>
-                    <div style={{ fontSize: 28 }}>💰</div>
+                    <CoinIcon size={28}/>
                   </div>
                 )
               })()}
@@ -3450,7 +3461,7 @@ export default function MarketplacePage() {
                 if (badgeTags.length === 0 && badgeListings.length === 0) return null
                 return (
                   <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🏅 Badges</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><MedalIcon size={14}/> Badges</div>
                     {groupById(byRarity(badgeTags)).map(t =>
                       renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag', false, t.count)
                     )}
@@ -3468,7 +3479,7 @@ export default function MarketplacePage() {
                 if (regularTags.length === 0 && regularTagListings.length === 0) return null
                 return (
                   <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🏷️ Tags</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><TagIcon size={14}/> Tags</div>
                     {groupById(byRarity(regularTags)).map(t =>
                       renderInventoryItem({ id: t.id, tag: t.tag, tagColor: t.tagColor, rarity: t.rarity }, 'tag', inv?.tag === t.tag, t.count)
                     )}
@@ -3482,7 +3493,7 @@ export default function MarketplacePage() {
 
               {((inv?.ownedNameColors ?? []).length > 0 || myActiveListings.some(l => l.itemType === 'name-color')) && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🎨 Name Colors</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><PaintPaletteIcon size={14}/> Name Colors</div>
                   {groupById(byRarity(inv!.ownedNameColors)).map(item =>
                     renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'name-color', inv!.nameColor === item.value, item.count)
                   )}
@@ -3496,7 +3507,7 @@ export default function MarketplacePage() {
 
               {((inv?.ownedAvatarEffects ?? []).length > 0 || myActiveListings.some(l => l.itemType === 'avatar')) && (
                 <div className="ns-card" style={{ padding: 18, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}>🖼️ Avatar Effects</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><ImageIcon size={14}/> Avatar Effects</div>
                   {groupById(byRarity(inv!.ownedAvatarEffects)).map(item =>
                     renderInventoryItem({ id: item.id, name: item.name, value: item.value, rarity: item.rarity }, 'avatar', inv!.avatarEffect === item.value, item.count)
                   )}
@@ -3518,7 +3529,7 @@ export default function MarketplacePage() {
           {/* NPC header */}
           <div className="ns-card" style={{ padding: '20px 22px', marginBottom: 18, background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(234,179,8,0.06) 100%)', border: '1px solid rgba(139,92,246,0.3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ fontSize: 48, lineHeight: 1 }}>🧙</div>
+              <div><WizardIcon size={48}/></div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>The Wandering Trader</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 10 }}>
@@ -3547,14 +3558,14 @@ export default function MarketplacePage() {
             {(['sell', 'buy', 'trade'] as TraderSubTab[]).map(st => (
               <button key={st} onClick={() => { setTraderSubTab(st); setTraderMsg(''); setTradeOfferItems([]); setTradeWantItems([]) }}
                 style={{ flex: 1, padding: '9px 0', borderRadius: 9, border: `1px solid ${traderSubTab === st ? 'var(--primary)' : 'var(--border)'}`, background: traderSubTab === st ? 'var(--primary)18' : 'transparent', color: traderSubTab === st ? 'var(--primary)' : 'var(--text-muted)', fontWeight: traderSubTab === st ? 700 : 500, fontSize: 13, cursor: 'pointer' }}>
-                {st === 'sell' ? '💰 Sell' : st === 'buy' ? '🛒 Buy' : '🔄 Trade'}
+                {st === 'sell' ? <><CoinIcon size={14}/> Sell</> : st === 'buy' ? <><ShopIcon size={14}/> Buy</> : <><TradeArrowsIcon size={14}/> Trade</>}
               </button>
             ))}
           </div>
 
           {traderMsg && (
-            <div style={{ fontSize: 13, fontWeight: 600, color: traderMsg.startsWith('✓') ? '#22C55E' : '#EF4444', marginBottom: 14, padding: '10px 14px', borderRadius: 9, background: traderMsg.startsWith('✓') ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${traderMsg.startsWith('✓') ? '#22C55E44' : '#EF444444'}` }}>
-              {traderMsg}
+            <div style={{ fontSize: 13, fontWeight: 600, color: traderMsg.startsWith('✓') ? '#22C55E' : '#EF4444', marginBottom: 14, padding: '10px 14px', borderRadius: 9, background: traderMsg.startsWith('✓') ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${traderMsg.startsWith('✓') ? '#22C55E44' : '#EF444444'}`, display: 'flex', alignItems: 'center', gap: 4 }}>
+              {traderMsg.startsWith('✓') && <CheckIcon size={13} color='#22C55E'/>}{traderMsg.startsWith('✓') ? traderMsg.slice(2) : traderMsg}
             </div>
           )}
 
@@ -3636,7 +3647,7 @@ export default function MarketplacePage() {
                               style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${color}66`, background: `${color}18`, cursor: 'pointer', fontSize: 11, fontWeight: 700, color, display: 'flex', alignItems: 'center', gap: 5 }}>
                               {item.type === 'tag' ? `[${item.name}]` : item.name}
                               {item.count > 1 && <span style={{ fontSize: 10, opacity: 0.9 }}>×{item.count}</span>}
-                              <span style={{ fontSize: 10, opacity: 0.7 }}>✕</span>
+                              <XMarkIcon size={10}/>
                             </div>
                           )
                         })}
@@ -3679,7 +3690,7 @@ export default function MarketplacePage() {
                           <div key={`${item.type}:${item.id}`} onClick={() => setTradeWantItems(prev => prev.filter(x => !(x.type === item.type && x.id === item.id)))}
                             style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${color}66`, background: `${color}18`, cursor: 'pointer', fontSize: 11, fontWeight: 700, color, display: 'flex', alignItems: 'center', gap: 5 }}>
                             {item.type === 'tag' ? `[${item.name}]` : item.name}
-                            <span style={{ fontSize: 10, opacity: 0.7 }}>✕</span>
+                            <XMarkIcon size={10}/>
                           </div>
                         )
                       })}
@@ -3715,7 +3726,7 @@ export default function MarketplacePage() {
                       Offer est: <strong style={{ color: '#EAB308' }}>{offerEstTotal.toLocaleString()}</strong>
                     </div>
                     <div style={{ color: canTrade ? '#22C55E' : '#EF4444', fontWeight: 700, fontSize: 13 }}>
-                      {canTrade ? '✓ Deal accepted' : offerEstTotal < wantPriceTotal ? `↑ Need ${(wantPriceTotal - offerEstTotal).toLocaleString()} more` : 'Select items'}
+                      {canTrade ? <><CheckIcon size={13}/> Deal accepted</> : offerEstTotal < wantPriceTotal ? <><TrendUpIcon size={13}/> Need {(wantPriceTotal - offerEstTotal).toLocaleString()} more</> : 'Select items'}
                     </div>
                     <div style={{ color: 'var(--text-muted)' }}>
                       Trader asks: <strong style={{ color: '#8B5CF6' }}>{wantPriceTotal.toLocaleString()}</strong>
@@ -3746,7 +3757,7 @@ export default function MarketplacePage() {
                     }
                   }}
                   style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: canTrade && !traderBusy ? 'linear-gradient(135deg,#8B5CF6,#6D28D9)' : 'var(--surface-2)', color: canTrade && !traderBusy ? '#fff' : 'var(--text-muted)', fontWeight: 700, fontSize: 14, cursor: canTrade && !traderBusy ? 'pointer' : 'not-allowed', opacity: traderBusy ? 0.6 : 1 }}>
-                  {traderBusy ? 'Trading…' : '🔄 Confirm Trade'}
+                  {traderBusy ? 'Trading…' : <><TradeArrowsIcon size={16}/> Confirm Trade</>}
                 </button>
               </>
             )
@@ -3760,7 +3771,7 @@ export default function MarketplacePage() {
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
             {(['coins', 'streak', 'inventory'] as const).map(sub => (
               <button key={sub} onClick={() => setLeaderboardSub(sub)} style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid var(--border)', background: leaderboardSub === sub ? 'var(--primary)' : 'var(--surface-2)', color: leaderboardSub === sub ? '#060D10' : 'var(--text-muted)', fontWeight: leaderboardSub === sub ? 700 : 500, fontSize: 12, cursor: 'pointer' }}>
-                {sub === 'coins' ? '💰 Richest' : sub === 'streak' ? '🔥 Streak' : '💼 Inventory'}
+                {sub === 'coins' ? <><CoinIcon size={13}/> Richest</> : sub === 'streak' ? <><FlameIcon size={13}/> Streak</> : <><BackpackIcon size={13}/> Inventory</>}
               </button>
             ))}
           </div>
@@ -3780,7 +3791,7 @@ export default function MarketplacePage() {
                   return (
                   <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none', background: isMe ? 'rgba(59,130,246,0.08)' : i === 0 ? '#EAB30808' : 'transparent' }}>
                     <span style={{ width: 32, textAlign: 'center', fontSize: i < 3 ? 18 : 12, fontWeight: 700, color: i === 0 ? '#EAB308' : i === 1 ? '#94A3B8' : i === 2 ? '#CD7F32' : 'var(--text-muted)', flexShrink: 0 }}>
-                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${entry.rank}`}
+                      {i === 0 ? <GoldMedalIcon size={18}/> : i === 1 ? <SilverMedalIcon size={18}/> : i === 2 ? <BronzeMedalIcon size={18}/> : `#${entry.rank}`}
                     </span>
                     <div className={avatarClass(entry.avatarEffect)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', flexShrink: 0, ...avatarStyle(entry.avatarEffect) }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -3806,7 +3817,7 @@ export default function MarketplacePage() {
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       {leaderboardSub === 'coins' && <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#EAB308', fontWeight: 700, fontSize: 14 }}><CoinIcon size={14} />{entry.value.toLocaleString()}</div>}
-                      {leaderboardSub === 'streak' && <div style={{ color: '#F97316', fontWeight: 700, fontSize: 14 }}>🔥 {entry.value.toLocaleString()}</div>}
+                      {leaderboardSub === 'streak' && <div style={{ color: '#F97316', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 4 }}><FlameIcon size={14} color='#F97316'/> {entry.value.toLocaleString()}</div>}
                       {leaderboardSub === 'inventory' && <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#A855F7', fontWeight: 700, fontSize: 14 }}><CoinIcon size={14} />{entry.value.toLocaleString()}</div>}
                     </div>
                   </div>
@@ -3821,11 +3832,11 @@ export default function MarketplacePage() {
       {/* ── CATALOG TAB ── */}
       {tab === 'catalog' && (() => {
         const isBadge = (i: CatalogItem) => i.type === 'tag' && (i.tagColor === 'verified-yellow' || i.tagColor === 'verified-blue')
-        const sections: Array<{ label: string; id: string; filter: (i: CatalogItem) => boolean }> = [
-          { label: '🏅 Badges',                  id: 'badge',      filter: i => isBadge(i) },
-          { label: '🏷️ Tags',                    id: 'tag',        filter: i => i.type === 'tag' && !isBadge(i) },
-          { label: '🎨 Name Colors',             id: 'name-color', filter: i => i.type === 'name-color' },
-          { label: '🖼️ Avatar Effects', id: 'avatar',        filter: i => i.type === 'avatar' },
+        const sections: Array<{ label: React.ReactNode; id: string; filter: (i: CatalogItem) => boolean }> = [
+          { label: <><MedalIcon size={13}/> Badges</> as React.ReactNode,         id: 'badge',      filter: i => isBadge(i) },
+          { label: <><TagIcon size={13}/> Tags</> as React.ReactNode,                 id: 'tag',        filter: i => i.type === 'tag' && !isBadge(i) },
+          { label: <><PaintPaletteIcon size={13}/> Name Colors</> as React.ReactNode, id: 'name-color', filter: i => i.type === 'name-color' },
+          { label: <><ImageIcon size={13}/> Avatar Effects</> as React.ReactNode,     id: 'avatar',     filter: i => i.type === 'avatar' },
         ]
         const rarityOrder: Record<string, number> = { Mythic: 0, Legendary: 1, Epic: 2, Rare: 3, Uncommon: 4, Common: 5 }
         return (
@@ -3879,7 +3890,7 @@ export default function MarketplacePage() {
                           {(item.id === 'GOAT' || item.name === 'GOAT') && (
                             <span style={{ fontSize: 9, fontWeight: 700, color: '#EAB308', background: '#EAB30818', border: '1px solid #EAB30844', borderRadius: 99, padding: '2px 6px', flexShrink: 0 }}>Streak</span>
                           )}
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>→</span>
+                          <ChevronRightIcon size={11}/>
                         </button>
                       )
                     })}
@@ -4013,7 +4024,7 @@ export default function MarketplacePage() {
                   const tax = (!isNaN(amt) && amt > 0) ? Math.ceil(amt * 0.05) : 0
                   return (
                     <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8 }}>🪙 Send Coins</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}><CoinIcon size={14}/> Send Coins</div>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <input
                           className="ns-input"
@@ -4046,7 +4057,7 @@ export default function MarketplacePage() {
                           5% tax — you pay <strong style={{ color: '#EAB308' }}>{amt + tax}</strong> total ({amt} + {tax} tax)
                         </div>
                       )}
-                      {profileSendMsg && <div style={{ fontSize: 11, color: profileSendMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{profileSendMsg}</div>}
+                      {profileSendMsg && <div style={{ fontSize: 11, color: profileSendMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6, display: 'flex', alignItems: 'center', gap: 3 }}>{profileSendMsg.startsWith('✓') && <CheckIcon size={11} color='#22C55E'/>}{profileSendMsg.startsWith('✓') ? profileSendMsg.slice(2) : profileSendMsg}</div>}
                     </div>
                   )
                 })()}
@@ -4091,7 +4102,7 @@ export default function MarketplacePage() {
                               : `${Math.floor((Date.now() - new Date(post.createdAt).getTime()) / 3600000)}h ago`
                             : `${Math.floor((Date.now() - new Date(post.createdAt).getTime()) / 86400000)}d ago`}
                         </span>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>♡ {post._count.likes}</span>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}><HeartOutlineIcon size={11}/> {post._count.likes}</span>
                       </div>
                     </div>
                   ))}
@@ -4106,12 +4117,12 @@ export default function MarketplacePage() {
       {/* ── DEV Panel ── */}
       {isDevUser && (
         <div className="ns-card" style={{ marginTop: 28, padding: 20, border: '1px solid rgba(255,107,107,0.4)', background: 'rgba(255,107,107,0.04)' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#ff6b6b', marginBottom: 16 }}>🔧 DEV Panel — Grant to Self</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#ff6b6b', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}><WrenchIcon size={14}/> DEV Panel — Grant to Self</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {/* User lookup by Futurely ID */}
             <div style={{ borderBottom: '1px solid rgba(255,107,107,0.2)', paddingBottom: 14, marginBottom: 2 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🔍 Look Up User by ID</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 4 }}><MagnifyingGlassIcon size={13}/> Look Up User by ID</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <input
                   value={devLookupId}
@@ -4168,7 +4179,7 @@ export default function MarketplacePage() {
                     {rows.map(([label, val]) => (
                       <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                         <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{label}</span>
-                        <span style={{ color: val.startsWith('🚫') ? '#EF4444' : val.startsWith('✓') ? '#22C55E' : 'var(--text)', fontWeight: 500, textAlign: 'right', maxWidth: '60%', wordBreak: 'break-all' }}>{val}</span>
+                        <span style={{ color: val.startsWith('🚫') ? '#EF4444' : val.startsWith('✓') ? '#22C55E' : 'var(--text)', fontWeight: 500, textAlign: 'right', maxWidth: '60%', wordBreak: 'break-all', display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'flex-end' }}>{val.startsWith('🚫') && <BanIcon size={11} color='#EF4444'/>}{val.startsWith('✓') && <CheckIcon size={11} color='#22C55E'/>}{val.startsWith('🚫') ? val.slice(3) : val.startsWith('✓') ? val.slice(2) : val}</span>
                       </div>
                     ))}
                   </div>
@@ -4217,11 +4228,11 @@ export default function MarketplacePage() {
                 Grant Item
               </button>
             </div>
-            {devMsg && <div style={{ fontSize: 12, color: devMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600 }}>{devMsg}</div>}
+            {devMsg && <div style={{ fontSize: 12, color: devMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>{devMsg.startsWith('✓') && <CheckIcon size={12} color='#22C55E'/>}{devMsg.startsWith('✓') ? devMsg.slice(2) : devMsg}</div>}
 
             {/* Grant Market Access to any user */}
             <div style={{ borderTop: '1px solid rgba(255,107,107,0.2)', paddingTop: 14, marginTop: 2 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🔓 Grant Market Access</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 4 }}><LockOpenIcon size={13}/> Grant Market Access</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <input
                   value={devMarketUserId}
@@ -4247,12 +4258,12 @@ export default function MarketplacePage() {
                   {devMarketGranting ? '…' : 'Grant'}
                 </button>
               </div>
-              {devMarketMsg && <div style={{ fontSize: 12, color: devMarketMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{devMarketMsg}</div>}
+              {devMarketMsg && <div style={{ fontSize: 12, color: devMarketMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6, display: 'flex', alignItems: 'center', gap: 3 }}>{devMarketMsg.startsWith('✓') && <CheckIcon size={12} color='#22C55E'/>}{devMarketMsg.startsWith('✓') ? devMarketMsg.slice(2) : devMarketMsg}</div>}
             </div>
 
             {/* Revoke / Restore Market Access */}
             <div style={{ borderTop: '1px solid rgba(255,107,107,0.2)', paddingTop: 14, marginTop: 2 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🚫 Revoke / Restore Market Access</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 4 }}><BanIcon size={13}/> Revoke / Restore Market Access</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <input
                   value={devBanMarketUserId}
@@ -4294,12 +4305,12 @@ export default function MarketplacePage() {
                   {devBanMarketBusy ? '…' : 'Restore'}
                 </button>
               </div>
-              {devBanMarketMsg && <div style={{ fontSize: 12, color: devBanMarketMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6 }}>{devBanMarketMsg}</div>}
+              {devBanMarketMsg && <div style={{ fontSize: 12, color: devBanMarketMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6, display: 'flex', alignItems: 'center', gap: 3 }}>{devBanMarketMsg.startsWith('✓') && <CheckIcon size={12} color='#22C55E'/>}{devBanMarketMsg.startsWith('✓') ? devBanMarketMsg.slice(2) : devBanMarketMsg}</div>}
             </div>
 
             {/* Simulate unlock */}
             <div style={{ borderTop: '1px solid rgba(255,107,107,0.2)', paddingTop: 14, marginTop: 2 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10 }}>🎰 Simulate Unlock</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 4 }}><SlotMachineIcon size={13}/> Simulate Unlock</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
                 <select value={simBoxType} onChange={e => { setSimBoxType(e.target.value as 'tag' | 'name-color' | 'avatar'); setSimItemId('') }}
                   style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}>
@@ -4342,7 +4353,7 @@ export default function MarketplacePage() {
           onClick={() => setTraderSellConfirm(null)}>
           <div style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 36, marginBottom: 10 }}>🧙</div>
+            <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}><WizardIcon size={36}/></div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>Sell to Trader?</div>
             <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>{traderSellConfirm.type === 'tag' ? `[${traderSellConfirm.name}]` : traderSellConfirm.name}</div>
             <div style={{ fontSize: 12, color: getRarityColor(traderSellConfirm.rarity, traderSellConfirm.id), fontWeight: 700, marginBottom: 16 }}>{traderSellConfirm.rarity}</div>
@@ -4385,7 +4396,7 @@ export default function MarketplacePage() {
           onClick={() => setTraderBuyConfirm(null)}>
           <div style={{ background: 'var(--surface)', border: '1px solid rgba(139,92,246,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 36, marginBottom: 10 }}>🧙</div>
+            <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}><WizardIcon size={36}/></div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>Buy from Trader?</div>
             <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>{traderBuyConfirm.type === 'tag' ? `[${traderBuyConfirm.name}]` : traderBuyConfirm.name}</div>
             <div style={{ fontSize: 12, color: getRarityColor(traderBuyConfirm.rarity, traderBuyConfirm.id), fontWeight: 700, marginBottom: 16 }}>{traderBuyConfirm.rarity}</div>
@@ -4464,7 +4475,7 @@ export default function MarketplacePage() {
             style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+            <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><WarningIcon size={36}/></div>
             <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>Are you sure?</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
               {quicksellConfirm.isLastCopy && (
@@ -4519,7 +4530,7 @@ export default function MarketplacePage() {
 
             {sellDupsConfirm.hasRare && (
               <div style={{ fontSize: 12, color: RARITY_COLOR['Legendary'], fontWeight: 600, background: `${RARITY_COLOR['Legendary']}12`, borderRadius: 8, padding: '8px 12px', marginBottom: 14 }}>
-                ⚠️ Some duplicates are Legendary or Mythic — consider opting out below!
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><WarningIcon size={13}/> Some duplicates are Legendary or Mythic — consider opting out below!</span>
               </div>
             )}
 
@@ -4529,7 +4540,7 @@ export default function MarketplacePage() {
                 const kept = dupExcluded.has(key)
                 return (
                   <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: kept ? 'var(--surface)' : 'var(--surface-2)', border: `1px solid ${kept ? 'var(--border)' : 'var(--border)'}`, opacity: kept ? 0.5 : 1, transition: 'opacity 0.15s' }}>
-                    <span style={{ fontSize: 11 }}>{d.type === 'tag' ? '🏷️' : d.type === 'name-color' ? '🎨' : '🖼️'}</span>
+                    <span>{d.type === 'tag' ? <TagIcon size={11}/> : d.type === 'name-color' ? <PaintPaletteIcon size={11}/> : <ImageIcon size={11}/>}</span>
                     <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--text)', textDecoration: kept ? 'line-through' : 'none' }}>{d.name}</span>
                     <span style={{ fontSize: 10, fontWeight: 700, color: getRarityColor(d.rarity, d.id), background: `${getRarityColor(d.rarity, d.id)}18`, padding: '2px 6px', borderRadius: 99 }}>{d.rarity}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>×{d.count}</span>
@@ -4597,7 +4608,7 @@ export default function MarketplacePage() {
         >
           <div className="ns-card" style={{ width: '100%', maxWidth: 400, padding: 28, position: 'relative' }}>
             <button onClick={() => setSpinStatsOpen(false)} style={{ position: 'absolute', top: 14, right: 14, background: 'transparent', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1 }}>×</button>
-            <p style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>📊 Spin Stats</p>
+            <p style={{ fontSize: 16, fontWeight: 800, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}><BarChartIcon size={18}/> Spin Stats</p>
 
             {spinStatsLoading && <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>Loading…</p>}
 

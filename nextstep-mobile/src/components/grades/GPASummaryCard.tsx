@@ -3,19 +3,20 @@ import { TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-na
 import Card from '../ui/Card'
 import Text from '../ui/Text'
 import { colors } from '../../constants/colors'
+import { TrendUpIcon, TrendDownIcon, TrendNeutralIcon } from '../icons'
 
 export type GpaMode = 'weighted' | 'unweighted'
 export type GpaTrend = 'up' | 'down' | 'stable'
 
 interface TrendConfig {
-  symbol: string
+  icon: React.ReactNode
   color: string
 }
 
 const TREND_CONFIG: Record<GpaTrend, TrendConfig> = {
-  up:     { symbol: '↑', color: colors.success },
-  down:   { symbol: '↓', color: colors.error },
-  stable: { symbol: '→', color: colors.textMuted },
+  up:     { icon: <TrendUpIcon size={18} color={colors.success}/>,        color: colors.success },
+  down:   { icon: <TrendDownIcon size={18} color={colors.error}/>,        color: colors.error },
+  stable: { icon: <TrendNeutralIcon size={18} color={colors.textMuted}/>, color: colors.textMuted },
 }
 
 function gpaColor(value: number): string {
@@ -84,9 +85,7 @@ export default function GPASummaryCard({
         </Text>
         {trendCfg !== null && (
           <View className="flex-row items-center gap-1" accessibilityLabel={`GPA trend: ${trend ?? ''}`}>
-            <Text className="text-[18px] font-semibold leading-6" style={{ color: trendCfg.color }}>
-              {trendCfg.symbol}
-            </Text>
+            {trendCfg.icon}
             {trendDelta != null && (
               <Text className="text-[13px] font-semibold" style={{ color: trendCfg.color }}>
 

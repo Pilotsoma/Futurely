@@ -1,6 +1,12 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
+import {
+  ArrowRightIcon, LightningBoltIcon, LockIcon, RobotIcon, GraduationCapIcon,
+  FlameIcon, GiftIcon, TrophyIcon, CoinIcon, HandshakeIcon, PartyPopperIcon,
+  SparklesIcon, TagIcon, StarIcon, CheckIcon,
+} from '@/components/icons'
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView, useScroll, useTransform } from 'framer-motion'
 import Particles from './Particles'
@@ -197,7 +203,7 @@ export default function LandingPage() {
               color: 'var(--primary)', borderRadius: 8, padding: '8px 18px',
               fontWeight: 600, fontSize: 13.5, textDecoration: 'none', letterSpacing: '-0.1px',
             }}>
-              Open app <span style={{ opacity: 0.6 }}>→</span>
+              Open app <span style={{ opacity: 0.6 }}><ArrowRightIcon size={13}/></span>
             </Link>
           </motion.div>
         </div>
@@ -308,10 +314,10 @@ export default function LandingPage() {
             style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}
           >
             {[
-              { icon: '⚡', label: 'Live grade sync', sub: 'HAC & PowerSchool' },
-              { icon: '🔒', label: 'Credentials encrypted', sub: 'AES-256, always' },
-              { icon: '🤖', label: 'AI knows your data', sub: 'Not a generic chatbot' },
-              { icon: '🎓', label: 'Free for students', sub: 'No trial. No paywall.' },
+              { icon: <LightningBoltIcon size={16}/>, label: 'Live grade sync', sub: 'HAC & PowerSchool' },
+              { icon: <LockIcon size={16}/>, label: 'Credentials encrypted', sub: 'AES-256, always' },
+              { icon: <RobotIcon size={16}/>, label: 'AI knows your data', sub: 'Not a generic chatbot' },
+              { icon: <GraduationCapIcon size={16}/>, label: 'Free for students', sub: 'No trial. No paywall.' },
             ].map((b, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
@@ -319,7 +325,7 @@ export default function LandingPage() {
                 border: '1px solid var(--border)',
                 borderRadius: 12, padding: '10px 16px',
               }}>
-                <span style={{ fontSize: 16 }}>{b.icon}</span>
+                <span style={{ display: 'flex', alignItems: 'center' }}>{b.icon}</span>
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>{b.label}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.2 }}>{b.sub}</div>
@@ -660,8 +666,14 @@ export default function LandingPage() {
                     Every day you open Futurely, your streak grows. Miss one day and it resets. Keep it alive and earn bonus coins, exclusive drop chances, and eventually a Marketplace key.
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {['🔥 Streak bonus coins', '🎁 Random item drops', '🏆 Streak milestones'].map(t => (
-                      <span key={t} style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px' }}>{t}</span>
+                    {([
+                      { Icon: FlameIcon,      text: 'Streak bonus coins' },
+                      { Icon: GiftIcon,       text: 'Random item drops' },
+                      { Icon: TrophyIcon,     text: 'Streak milestones' },
+                    ] as const).map(({ Icon, text }) => (
+                      <span key={text} style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Icon size={11}/>{text}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -681,8 +693,14 @@ export default function LandingPage() {
                     Earn coins by logging in, maintaining streaks, participating in giveaways, and winning trades. Coins are the currency of Futurely — and they&apos;re earned, not bought.
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {['💰 Daily login coins', '🤝 Trade rewards', '🎉 Giveaway winnings'].map(t => (
-                      <span key={t} style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px' }}>{t}</span>
+                    {([
+                      { Icon: CoinIcon,        text: 'Daily login coins' },
+                      { Icon: HandshakeIcon,   text: 'Trade rewards' },
+                      { Icon: PartyPopperIcon, text: 'Giveaway winnings' },
+                    ] as const).map(({ Icon, text }) => (
+                      <span key={text} style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Icon size={11}/>{text}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -702,8 +720,14 @@ export default function LandingPage() {
                     Unlock at a 3-day streak. Buy, sell, and trade avatar effects, animated profile frames, rare name colors, and exclusive tags. The rarest items go to the most consistent students.
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {['✨ Avatar effects', '🏷️ Rare name colors', '🎴 Exclusive tags'].map(t => (
-                      <span key={t} style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px' }}>{t}</span>
+                    {([
+                      { Icon: SparklesIcon, text: 'Avatar effects' },
+                      { Icon: TagIcon,      text: 'Rare name colors' },
+                      { Icon: StarIcon,     text: 'Exclusive tags' },
+                    ] as const).map(({ Icon, text }) => (
+                      <span key={text} style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Icon size={11}/>{text}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -816,12 +840,14 @@ export default function LandingPage() {
             {/* Social proof chips */}
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 32 }}>
               {[
-                '✓ No setup required',
-                '✓ Works with HAC & PowerSchool',
-                '✓ AI advisor included',
-                '✓ Cancel anytime',
+                'No setup required',
+                'Works with HAC & PowerSchool',
+                'AI advisor included',
+                'Cancel anytime',
               ].map(t => (
-                <span key={t} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px' }}>{t}</span>
+                <span key={t} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <CheckIcon size={11}/>{t}
+                </span>
               ))}
             </div>
           </div>

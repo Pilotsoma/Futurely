@@ -11,6 +11,7 @@ import Skeleton from '../components/ui/Skeleton'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { fetchRoadmap, type RoadmapData, type RoadmapMilestone } from '../api/roadmapApi'
+import { CheckIcon } from '../components/icons'
 
 function LoadingSkeleton(): React.JSX.Element {
   return (
@@ -50,7 +51,7 @@ function MilestoneRow({ milestone, isLast }: { milestone: RoadmapMilestone; isLa
               : { backgroundColor: colors.border },
         ]}>
           {milestone.done && (
-            <Text style={{ fontSize: 14, color: colors.background }}>✓</Text>
+            <CheckIcon size={14} color={colors.background}/>
           )}
           {!milestone.done && (
             <Text style={{ fontSize: 12, fontWeight: '700', color: isCurrent ? colors.primary : colors.textMuted }}>

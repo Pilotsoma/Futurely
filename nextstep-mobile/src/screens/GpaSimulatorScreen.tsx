@@ -13,6 +13,7 @@ import ScreenHeader from '../components/ui/ScreenHeader'
 import DeltaCard from '../components/simulator/DeltaCard'
 import GradeAdjustRow from '../components/simulator/GradeAdjustRow'
 import { colors } from '../constants/colors'
+import { ResetIcon } from '../components/icons'
 import { fetchGrades, type CourseWithGrade, type GradeData } from '../api/gradesApi'
 import {
   calculateGpa,
@@ -219,9 +220,10 @@ export default function GpaSimulatorScreen(): React.JSX.Element {
             accessibilityLabel="Reset all grades to original"
             accessibilityState={{ disabled: !hasChanges }}
           >
-            <Text style={[styles.resetText, !hasChanges && styles.resetTextDisabled]}>
-              ↺ Reset
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <ResetIcon size={14} color={!hasChanges ? colors.textSecondary : colors.primary}/>
+              <Text style={[styles.resetText, !hasChanges && styles.resetTextDisabled]}>Reset</Text>
+            </View>
           </TouchableOpacity>
         </View>
 

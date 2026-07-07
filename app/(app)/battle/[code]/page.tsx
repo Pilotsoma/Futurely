@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api, GameSession, GameParticipant, getApiToken } from '../../../../lib/api'
+import { SkullIcon, TrophyIcon, GamepadIcon, LightningBoltIcon, CheckIcon, XMarkIcon, TargetIcon } from '@/components/icons'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const WORLD_SIZE    = 2400
@@ -295,7 +297,7 @@ export default function BattlePage() {
   if (phase === 'dead') return (
     <div style={overlay}>
       <div style={card}>
-        <div style={{ fontSize: 56, marginBottom: 8 }}>💀</div>
+        <div style={{ marginBottom: 8 }}><SkullIcon size={56}/></div>
         <div style={{ fontSize: 28, fontWeight: 800, color: '#ef4444', marginBottom: 8 }}>Eliminated</div>
         <div style={{ color: '#9ca3af', marginBottom: 24 }}>Better luck next time</div>
         <button onClick={() => router.push('/sets')} style={btn}>Back to Sets</button>
@@ -306,7 +308,7 @@ export default function BattlePage() {
   if (phase === 'won') return (
     <div style={overlay}>
       <div style={card}>
-        <div style={{ fontSize: 56, marginBottom: 8 }}>🏆</div>
+        <div style={{ marginBottom: 8 }}><TrophyIcon size={56}/></div>
         <div style={{ fontSize: 28, fontWeight: 800, color: '#fbbf24', marginBottom: 8 }}>Victory Royale!</div>
         <div style={{ color: '#9ca3af', marginBottom: 24 }}>You are the last one standing</div>
         <button onClick={() => router.push('/sets')} style={btn}>Back to Sets</button>
@@ -317,7 +319,7 @@ export default function BattlePage() {
   if (phase === 'ended') return (
     <div style={overlay}>
       <div style={card}>
-        <div style={{ fontSize: 40, marginBottom: 8 }}>🎮</div>
+        <div style={{ marginBottom: 8 }}><GamepadIcon size={40}/></div>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Game Over</div>
         <div style={{ color: '#fbbf24', marginBottom: 24 }}>{winnerName} won the match</div>
         <button onClick={() => router.push('/sets')} style={btn}>Back to Sets</button>
@@ -401,11 +403,11 @@ export default function BattlePage() {
       {/* Question panel */}
       {question && (
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(10,10,20,0.95)', backdropFilter: 'blur(16px)', borderRadius: 16, padding: 28, border: '1px solid rgba(99,102,241,0.4)', width: 360, maxWidth: '90vw', zIndex: 100 }}>
-          <div style={{ fontSize: 11, color: '#6366f1', fontWeight: 700, marginBottom: 8 }}>⚡ ANSWER FOR +5 AMMO &nbsp;·&nbsp; press A / B / C / D</div>
+          <div style={{ fontSize: 11, color: '#6366f1', fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}><LightningBoltIcon size={11}/> ANSWER FOR +5 AMMO &nbsp;·&nbsp; press A / B / C / D</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16, lineHeight: 1.4 }}>{question.questionText}</div>
           {qFeedback && (
             <div style={{ textAlign: 'center', fontSize: 16, fontWeight: 800, color: qFeedback === 'correct' ? '#22c55e' : '#ef4444', marginBottom: 12 }}>
-              {qFeedback === 'correct' ? '✓ Correct! +5 ammo' : '✗ Wrong!'}
+              {qFeedback === 'correct' ? <><CheckIcon size={16}/> Correct! +5 ammo</> : <><XMarkIcon size={16}/> Wrong!</>}
             </div>
           )}
           {!qFeedback && (
@@ -433,7 +435,7 @@ function LobbyScreen({ session, onStart, myId }: { session: GameSession | null; 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a0f' }}>
       <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 32, width: 360, textAlign: 'center' }}>
-        <div style={{ fontSize: 32, marginBottom: 8 }}>🎯</div>
+        <div style={{ marginBottom: 8 }}><TargetIcon size={32}/></div>
         <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginBottom: 4 }}>{session?.set?.title ?? 'Battle Royale'}</div>
         <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>Code: <span style={{ color: '#6366f1', fontWeight: 700 }}>{session?.joinCode}</span></div>
         <div style={{ marginBottom: 20 }}>

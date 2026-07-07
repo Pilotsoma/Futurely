@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -10,12 +10,18 @@ import AiBar from '../../../components/ui/AiBar'
 import PageLoader from '../../../components/ui/PageLoader'
 import CoinIcon from '../../../components/ui/CoinIcon'
 import NotificationBell from '../../../components/ui/NotificationBell'
+import {
+  BarChartIcon, DocumentIcon, CalendarIcon, ClipboardIcon,
+  CheckCircleIcon, LightningBoltIcon, MedalIcon, DiamondIcon, CrownIcon,
+  FlameIcon, LockIcon, GraduationCapIcon, LinkIcon, RefreshIcon,
+  CheckIcon, SparkleStarIcon, RocketIcon, BooksIcon, PartyPopperIcon,
+} from '@/components/icons'
 
-const QUICK_ACCESS_LINKS = [
-  { href: '/grades/classwork',  label: 'Grades',       icon: '📊' },
-  { href: '/grades/transcript', label: 'Transcript',   icon: '📄' },
-  { href: '/grades/attendance', label: 'Attendance',   icon: '📅' },
-  { href: '/grades/report-card',label: 'Report Card',  icon: '📋' },
+const QUICK_ACCESS_LINKS: Array<{ href: string; label: string; icon: React.ReactNode }> = [
+  { href: '/grades/classwork',  label: 'Grades',       icon: <BarChartIcon size={20}/> },
+  { href: '/grades/transcript', label: 'Transcript',   icon: <DocumentIcon size={20}/> },
+  { href: '/grades/attendance', label: 'Attendance',   icon: <CalendarIcon size={20}/> },
+  { href: '/grades/report-card',label: 'Report Card',  icon: <ClipboardIcon size={20}/> },
 ]
 
 function tagCssClass(tag?: string | null, tagColor?: string | null): string {
@@ -68,13 +74,13 @@ function useCountUpFloat(target: number | null, duration = 900): string {
   return val.toFixed(3)
 }
 
-const STREAK_MILESTONES: Array<{ days: number; emoji: string; tag?: string; tagColor?: string; perk?: string; perkColor?: string }> = [
-  { days: 3,   tag: 'Early Bird', tagColor: '#F97316', emoji: '⭐' },
-  { days: 7,   tag: 'Novice',  tagColor: '#22C55E', emoji: '✅' },
-  { days: 14,  tag: 'Pro',     tagColor: '#3B82F6', emoji: '⚡' },
-  { days: 30,  tag: 'Veteran', tagColor: '#F97316', emoji: '🏅' },
-  { days: 50,  tag: 'Legend',  tagColor: '#EC4899', emoji: '💎' },
-  { days: 100, tag: 'GOAT',    tagColor: '#EAB308', emoji: '👑' },
+const STREAK_MILESTONES: Array<{ days: number; icon: React.ReactNode; tag?: string; tagColor?: string; perk?: string; perkColor?: string }> = [
+  { days: 3,   tag: 'Early Bird', tagColor: '#F97316', icon: '⭐' },
+  { days: 7,   tag: 'Novice',  tagColor: '#22C55E', icon: <CheckCircleIcon size={16}/> },
+  { days: 14,  tag: 'Pro',     tagColor: '#3B82F6', icon: <LightningBoltIcon size={16}/> },
+  { days: 30,  tag: 'Veteran', tagColor: '#F97316', icon: <MedalIcon size={16}/> },
+  { days: 50,  tag: 'Legend',  tagColor: '#EC4899', icon: <DiamondIcon size={16}/> },
+  { days: 100, tag: 'GOAT',    tagColor: '#EAB308', icon: <CrownIcon size={16}/> },
 ]
 
 function streakCoinBonus(streak: number) {
@@ -400,7 +406,7 @@ export default function DashboardPage() {
             {dueToday.length > 0 && <span style={S.countPill}>{dueToday.length}</span>}
           </div>
           {dueToday.length === 0 ? (
-            <p style={S.emptyMsg}>All clear for today ✓</p>
+            <p style={{ ...S.emptyMsg, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>All clear for today <CheckIcon size={12}/></p>
           ) : (
             dueToday.slice(0, 3).map(a => (
               <div key={a.id} style={S.dueRow}>
@@ -432,11 +438,11 @@ export default function DashboardPage() {
         </motion.div>
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)} {...staggerItem(4)}>
           <div style={S.statNum}>{animStreak}</div>
-          <div style={S.statLabel}>Day Streak 🔥</div>
-          <div style={{ ...S.statSub, color: '#EAB308' }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{totalDailyCoins} today{gpaBonusPct > 0 ? ' ✦' : ''}</div>
+          <div style={{ ...S.statLabel, display: 'flex', alignItems: 'center', gap: 3 }}>Day Streak <FlameIcon size={13}/></div>
+          <div style={{ ...S.statSub, color: '#EAB308', display: 'flex', alignItems: 'center', gap: 2 }}><CoinIcon size={11} style={{ marginRight: 2 }} /> +{totalDailyCoins} today{gpaBonusPct > 0 ? <SparkleStarIcon size={10}/> : null}</div>
           {(() => {
             const next = getNextMilestone(dayStreak)
-            if (!next) return <div style={S.statSub} title="All streak rewards earned">👑 GOAT</div>
+            if (!next) return <div style={{ ...S.statSub, display: 'flex', alignItems: 'center', gap: 3 }} title="All streak rewards earned"><CrownIcon size={13}/> GOAT</div>
             return <div style={S.statSub}>Next: {next.days}d → {next.tag}</div>
           })()}
         </motion.div>
@@ -453,7 +459,7 @@ export default function DashboardPage() {
             onClick={() => router.push(link.href)}
             {...staggerItem(6 + i)}
           >
-            <span style={{ fontSize: 20 }}>{link.icon}</span>
+            <span style={{ display: 'flex', alignItems: 'center' }}>{link.icon}</span>
             <span style={S.quickAccessLabel}>{link.label}</span>
           </motion.button>
         ))}
@@ -466,7 +472,7 @@ export default function DashboardPage() {
         <div style={S.popupOverlay} onClick={() => setStreakMilestone(null)}>
           <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setStreakMilestone(null)} style={S.popupClose}>×</button>
-            <div style={{ fontSize: 52, marginBottom: 14 }}>{streakMilestone.emoji}</div>
+            <div style={{ marginBottom: 14 }}>{streakMilestone.icon}</div>
             <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6, color: 'var(--text)', letterSpacing: '-0.5px' }}>
               {streakMilestone.days}-Day Streak!
             </h3>
@@ -497,8 +503,8 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
-            <button onClick={() => setStreakMilestone(null)} style={S.popupButton}>
-              Let&apos;s go! 🚀
+            <button onClick={() => setStreakMilestone(null)} style={{ ...S.popupButton, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              Let&apos;s go! <RocketIcon size={16}/>
             </button>
           </div>
         </div>,
@@ -510,7 +516,7 @@ export default function DashboardPage() {
         <div style={S.popupOverlay} onClick={() => setShowStreakPopup(false)}>
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowStreakPopup(false)} style={S.popupClose}>×</button>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🔥</div>
+            <div style={{ marginBottom: 12 }}><FlameIcon size={40}/></div>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>
               {dayStreak} Day Streak!
             </h3>
@@ -530,8 +536,8 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : (effectiveUGpa !== null || effectiveWGpa !== null) ? (
-              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '9px 14px', marginBottom: 10, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' as const }}>
-                📚 Raise your GPA to unlock daily bonus coins
+              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '9px 14px', marginBottom: 10, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                <BooksIcon size={13}/> Raise your GPA to unlock daily bonus coins
               </div>
             ) : null}
 
@@ -540,8 +546,8 @@ export default function DashboardPage() {
             </p>
 
             {newlyAwardedTags.length > 0 && (
-              <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#22C55E', fontWeight: 600 }}>
-                🎉 You just earned: {newlyAwardedTags.map(t => t.tag).join(', ')}!
+              <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#22C55E', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <PartyPopperIcon size={13}/> You just earned: {newlyAwardedTags.map(t => t.tag).join(', ')}!
               </div>
             )}
 
@@ -558,7 +564,7 @@ export default function DashboardPage() {
                     border: `1px solid ${earned ? accentColor + '44' : 'var(--border)'}`,
                     opacity: earned ? 1 : 0.6,
                   }}>
-                    <span style={{ fontSize: 16, flexShrink: 0 }}>{earned ? m.emoji : '🔒'}</span>
+                    <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{earned ? m.icon : <LockIcon size={16}/>}</span>
                     <div style={{ flex: 1 }}>
                       {m.tag ? (
                         <span className={tagCssClass(m.tag, m.tagColor)} style={{
@@ -600,7 +606,7 @@ export default function DashboardPage() {
         <div style={S.popupOverlay} onClick={() => setShowGpaWelcome(false)}>
           <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowGpaWelcome(false)} style={S.popupClose}>×</button>
-            <div style={{ fontSize: 48, marginBottom: 14 }}>🎓</div>
+            <div style={{ marginBottom: 14 }}><GraduationCapIcon size={48}/></div>
             <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6, color: 'var(--text)', letterSpacing: '-0.5px' }}>
               Your GPA Rank
             </h3>
@@ -636,8 +642,8 @@ export default function DashboardPage() {
                 </div>
               </>
             )}
-            <button onClick={() => setShowGpaWelcome(false)} style={S.popupButton}>
-              Got it! 🚀
+            <button onClick={() => setShowGpaWelcome(false)} style={{ ...S.popupButton, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              Got it! <RocketIcon size={16}/>
             </button>
           </div>
         </div>,
@@ -649,7 +655,7 @@ export default function DashboardPage() {
         <div style={S.popupOverlay} onClick={() => setShowResyncPopup(false)}>
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowResyncPopup(false)} style={S.popupClose}>×</button>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>{needsReconnect ? '🔗' : '🔄'}</div>
+            <div style={{ marginBottom: 12 }}>{needsReconnect ? <LinkIcon size={36}/> : <RefreshIcon size={36}/>}</div>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
               {needsReconnect ? 'Reconnect your school account' : 'Some school data didn\'t load'}
             </h3>
@@ -692,7 +698,7 @@ export default function DashboardPage() {
         <div style={S.popupOverlay} onClick={() => setShowConnectModal(false)}>
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowConnectModal(false)} style={S.popupClose}>×</button>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🎓</div>
+            <div style={{ marginBottom: 12 }}><GraduationCapIcon size={40}/></div>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
               Connect your school account
             </h3>

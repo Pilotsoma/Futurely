@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, type CounselorStudentSummary } from '../../../lib/api'
+import { CheckIcon } from '@/components/icons'
 
 interface StudentResult { id: number; name: string | null; email: string; hacUsername: string | null }
 
@@ -221,8 +223,8 @@ export default function CounselorDashboardPage() {
                 )}
               </div>
               {selected && (
-                <p style={{ fontSize: 11, color: '#22C55E', marginTop: 5, fontWeight: 600 }}>
-                  ✓ {selected.name ?? selected.email} — HAC: {selected.hacUsername}
+                <p style={{ fontSize: 11, color: '#22C55E', marginTop: 5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <CheckIcon size={11} color='#22C55E'/> {selected.name ?? selected.email} — HAC: {selected.hacUsername}
                 </p>
               )}
             </div>

@@ -1,6 +1,7 @@
 import React from 'react'
 import { TouchableOpacity } from 'react-native'
 import Text from './Text'
+import { ResetIcon } from '../icons'
 
 export interface ResetButtonProps {
   onPress: () => void
@@ -26,7 +27,7 @@ export default function ResetButton({
       accessibilityState={{ disabled }}
       testID={testID}
     >
-      <Text className={`text-[18px] leading-[22px] ${disabled ? 'text-[#8B8FB5]' : 'text-[#EDEEFF]'}`}>↺</Text>
+      <ResetIcon size={18} color={disabled ? '#8B8FB5' : '#EDEEFF'}/>
       <Text className={`text-[15px] font-semibold ${disabled ? 'text-[#8B8FB5]' : 'text-[#EDEEFF]'}`}>{label}</Text>
     </TouchableOpacity>
   )

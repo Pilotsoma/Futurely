@@ -153,3 +153,14 @@ F: #EF4444  (red)
 - All screens must have empty states and error states designed
 - Loading states required on every async action
 - Do NOT install `react-native-svg` or `expo-linear-gradient` without updating this doc
+
+## Icon System Dependencies
+
+### react-native-svg (APPROVED — installed)
+- **Package:** `react-native-svg@15.12.1` (resolved by `expo install` for SDK 54)
+- **Purpose:** SVG stroke icon system for the React Native mobile app. Provides `Svg`, `Path`, `Circle`, `Line`, `Polyline`, `Rect`, `Polygon`, `Defs`, `LinearGradient`, and `Stop` primitives used in `nextstep-mobile/src/components/icons/index.tsx`.
+- Also enables `<LinearGradient>` defs for gradient-stroke accent icons (cyan→blue→purple: `#00E5FF → #2979FF → #7C3AED`). The `gradient` prop on any icon is reserved for primary/emphasis contexts (active nav state, primary CTA icons) — never applied wholesale.
+- **Note:** Gradient stroke on small foreground icons does NOT conflict with the "no gradient backgrounds" rule. It is a foreground stroke effect only.
+
+### expo-linear-gradient (NOT APPROVED)
+- `expo-linear-gradient` remains unapproved. Do not install. Use flat color fallbacks per the Buttons section above.

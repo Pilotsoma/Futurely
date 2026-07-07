@@ -1,8 +1,10 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, FeedPost, FeedUserProfile } from '@/lib/api'
+import { HeartFilledIcon, HeartOutlineIcon, ArrowRightIcon } from '@/components/icons'
 import Portal from './Portal'
 
 function timeAgo(dateStr: string): string {
@@ -226,13 +228,13 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, fontSize: 12 }}>
                     <span style={{ color: 'var(--text-muted)' }}>{timeAgo(post.createdAt)}</span>
                     <button
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: post.likedByMe ? '#EF4444' : 'var(--text-secondary)', padding: 0 }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: post.likedByMe ? '#EF4444' : 'var(--text-secondary)', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}
                       onClick={e => { e.stopPropagation(); void handleLike(post.id) }}
                     >
-                      {post.likedByMe ? '♥' : '♡'} {post._count.likes}
+                      {post.likedByMe ? <HeartFilledIcon size={12}/> : <HeartOutlineIcon size={12}/>}{' '}{post._count.likes}
                     </button>
                   </div>
-                  <div style={{ marginTop: 5, fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>View full post & comments →</div>
+                  <div style={{ marginTop: 5, fontSize: 11, color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>View full post & comments <ArrowRightIcon size={11}/></div>
                 </div>
               ))}
             </div>

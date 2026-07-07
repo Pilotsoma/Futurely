@@ -1,9 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, AppNotification, getApiToken } from '../../lib/api'
 import UserProfileModal from './UserProfileModal'
+import {
+  UserIcon, HeartFilledIcon, PartyPopperIcon, TagIcon, TradeArrowsIcon, BooksIcon,
+  ClipboardIcon, SchoolBuildingIcon, HandshakeIcon, PencilIcon, SparklesIcon,
+  CheckCircleIcon, ChatBubbleIcon, BellIcon, ErrorCircleIcon,
+  CoinIcon,
+} from '@/components/icons'
 
 // Module-level dedup set — shared across all instances so toasts fire only once
 const _seen = new Set<number>()
@@ -190,7 +196,21 @@ export default function NotificationBell({ showToasts = false, collapsed = false
               ? <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No notifications yet</div>
               : notifs.map(n => {
                 const name = senderFirst(n)
-                const icon = n.type === 'FOLLOW' ? '👤' : n.type === 'LIKE' ? '❤️' : n.type === 'GIVEAWAY_WIN' ? '🎉' : n.type === 'LISTING_SOLD' ? '🏷️' : n.type.startsWith('TRADE') ? '🔄' : n.type === 'ASSIGNMENT_CREATED' ? '📚' : n.type === 'TEACHER_ASSIGNMENT' ? '📋' : n.type === 'CLASSROOM_JOINED' ? '🏫' : n.type === 'COUNSELOR_LINKED' ? '🤝' : n.type === 'COUNSELOR_NOTE_ADDED' ? '📝' : n.type === 'COUNSELOR_RECOMMENDATION_ADDED' ? '✨' : n.type === 'ACTION_ITEM_CREATED' ? '✅' : n.type === 'COIN_RECEIVED' ? '🪙' : '💬'
+                const icon: React.ReactNode =
+                  n.type === 'FOLLOW' ? <UserIcon size={15}/> :
+                  n.type === 'LIKE' ? <HeartFilledIcon size={15}/> :
+                  n.type === 'GIVEAWAY_WIN' ? <PartyPopperIcon size={15}/> :
+                  n.type === 'LISTING_SOLD' ? <TagIcon size={15}/> :
+                  n.type.startsWith('TRADE') ? <TradeArrowsIcon size={15}/> :
+                  n.type === 'ASSIGNMENT_CREATED' ? <BooksIcon size={15}/> :
+                  n.type === 'TEACHER_ASSIGNMENT' ? <ClipboardIcon size={15}/> :
+                  n.type === 'CLASSROOM_JOINED' ? <SchoolBuildingIcon size={15}/> :
+                  n.type === 'COUNSELOR_LINKED' ? <HandshakeIcon size={15}/> :
+                  n.type === 'COUNSELOR_NOTE_ADDED' ? <PencilIcon size={15}/> :
+                  n.type === 'COUNSELOR_RECOMMENDATION_ADDED' ? <SparklesIcon size={15}/> :
+                  n.type === 'ACTION_ITEM_CREATED' ? <CheckCircleIcon size={15}/> :
+                  n.type === 'COIN_RECEIVED' ? <CoinIcon size={15}/> :
+                  <ChatBubbleIcon size={15}/>
 
                 // Row-level navigation: where clicking the notification takes you
                 function handleRowClick() {
@@ -240,7 +260,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 else body = n.preview ?? 'New notification'
                 return (
                   <div key={n.id} onClick={handleRowClick} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)', cursor: 'pointer' }}>
-                    <span style={{ fontSize: 15, flexShrink: 0 }}>{icon}</span>
+                    <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.4 }}>{body}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{timeAgo(n.createdAt)}</div>
@@ -258,30 +278,30 @@ export default function NotificationBell({ showToasts = false, collapsed = false
         <div style={{ position: 'fixed', bottom: 24, right: 16, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, pointerEvents: 'none', maxWidth: 360, width: 'calc(100vw - 32px)' }}>
           {toasts.map(t => {
             const name = senderFirst(t.notif)
-            const { emoji, accent, text } = (() => {
+            const { icon: toastIcon, accent, text } = ((): { icon: React.ReactNode; accent: string; text: string } => {
               switch (t.notif.type) {
-                case 'LIKE':             return { emoji: '❤️', accent: '#EF4444', text: `${name} liked your post` }
-                case 'COMMENT':          return { emoji: '💬', accent: '#3B82F6', text: `${name} commented on your post` }
-                case 'FOLLOW':           return { emoji: '👤', accent: '#2D6A4F', text: `${name} started following you` }
-                case 'GIVEAWAY_WIN':     return { emoji: '🎉', accent: '#EAB308', text: t.notif.preview ?? 'You won a giveaway!' }
-                case 'TRADE_OFFER':      return { emoji: '🔄', accent: '#8B5CF6', text: `${name} sent you a trade offer` }
-                case 'TRADE_ACCEPTED':   return { emoji: '✅', accent: '#22C55E', text: `${name} accepted your trade` }
-                case 'TRADE_DECLINED':   return { emoji: '❌', accent: '#EF4444', text: `${name} declined your trade` }
-                case 'LISTING_SOLD':        return { emoji: '💰', accent: '#EAB308', text: `Your listing sold — ${t.notif.preview ?? ''}` }
-                case 'COIN_RECEIVED':       return { emoji: '🪙', accent: '#EAB308', text: `${name} sent you ${t.notif.preview ?? 'coins'}!` }
-                case 'ASSIGNMENT_CREATED':              return { emoji: '📚', accent: '#6366F1', text: t.notif.preview ?? 'New assignment added' }
-                case 'TEACHER_ASSIGNMENT':              return { emoji: '📋', accent: '#6366F1', text: `${name} posted: ${t.notif.preview ?? 'New assignment'}` }
-                case 'CLASSROOM_JOINED':                return { emoji: '🏫', accent: '#10B981', text: `You joined ${t.notif.preview ?? 'a classroom'}` }
-                case 'COUNSELOR_LINKED':                return { emoji: '🤝', accent: '#3B82F6', text: `${name} is now your counselor` }
-                case 'COUNSELOR_NOTE_ADDED':            return { emoji: '📝', accent: '#8B5CF6', text: `${name} added a note for you` }
-                case 'COUNSELOR_RECOMMENDATION_ADDED':  return { emoji: '✨', accent: '#EAB308', text: `${name} recommended ${t.notif.preview ?? 'a course'}` }
-                case 'ACTION_ITEM_CREATED':             return { emoji: '✅', accent: '#22C55E', text: `${name} assigned you: ${t.notif.preview ?? 'a task'}` }
-                default:                                return { emoji: '🔔', accent: 'var(--primary)', text: t.notif.preview ?? 'New notification' }
+                case 'LIKE':             return { icon: <HeartFilledIcon size={20}/>, accent: '#EF4444', text: `${name} liked your post` }
+                case 'COMMENT':          return { icon: <ChatBubbleIcon size={20}/>, accent: '#3B82F6', text: `${name} commented on your post` }
+                case 'FOLLOW':           return { icon: <UserIcon size={20}/>, accent: '#2D6A4F', text: `${name} started following you` }
+                case 'GIVEAWAY_WIN':     return { icon: <PartyPopperIcon size={20}/>, accent: '#EAB308', text: t.notif.preview ?? 'You won a giveaway!' }
+                case 'TRADE_OFFER':      return { icon: <TradeArrowsIcon size={20}/>, accent: '#8B5CF6', text: `${name} sent you a trade offer` }
+                case 'TRADE_ACCEPTED':   return { icon: <CheckCircleIcon size={20}/>, accent: '#22C55E', text: `${name} accepted your trade` }
+                case 'TRADE_DECLINED':   return { icon: <ErrorCircleIcon size={20}/>, accent: '#EF4444', text: `${name} declined your trade` }
+                case 'LISTING_SOLD':        return { icon: <CoinIcon size={20}/>, accent: '#EAB308', text: `Your listing sold — ${t.notif.preview ?? ''}` }
+                case 'COIN_RECEIVED':       return { icon: <CoinIcon size={20}/>, accent: '#EAB308', text: `${name} sent you ${t.notif.preview ?? 'coins'}!` }
+                case 'ASSIGNMENT_CREATED':              return { icon: <BooksIcon size={20}/>, accent: '#6366F1', text: t.notif.preview ?? 'New assignment added' }
+                case 'TEACHER_ASSIGNMENT':              return { icon: <ClipboardIcon size={20}/>, accent: '#6366F1', text: `${name} posted: ${t.notif.preview ?? 'New assignment'}` }
+                case 'CLASSROOM_JOINED':                return { icon: <SchoolBuildingIcon size={20}/>, accent: '#10B981', text: `You joined ${t.notif.preview ?? 'a classroom'}` }
+                case 'COUNSELOR_LINKED':                return { icon: <HandshakeIcon size={20}/>, accent: '#3B82F6', text: `${name} is now your counselor` }
+                case 'COUNSELOR_NOTE_ADDED':            return { icon: <PencilIcon size={20}/>, accent: '#8B5CF6', text: `${name} added a note for you` }
+                case 'COUNSELOR_RECOMMENDATION_ADDED':  return { icon: <SparklesIcon size={20}/>, accent: '#EAB308', text: `${name} recommended ${t.notif.preview ?? 'a course'}` }
+                case 'ACTION_ITEM_CREATED':             return { icon: <CheckCircleIcon size={20}/>, accent: '#22C55E', text: `${name} assigned you: ${t.notif.preview ?? 'a task'}` }
+                default:                                return { icon: <BellIcon size={20}/>, accent: 'var(--primary)', text: t.notif.preview ?? 'New notification' }
               }
             })()
             return (
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `4px solid ${accent}`, borderRadius: 12, padding: '13px 14px', boxShadow: '0 6px 24px rgba(0,0,0,0.4)', pointerEvents: 'auto', animation: 'fadeUp 0.2s ease' }}>
-                <span style={{ fontSize: 20, flexShrink: 0, lineHeight: 1 }}>{emoji}</span>
+                <span style={{ flexShrink: 0, lineHeight: 1, display: 'flex', alignItems: 'center' }}>{toastIcon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{text}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{timeAgo(t.notif.createdAt)}</div>

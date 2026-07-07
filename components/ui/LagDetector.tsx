@@ -1,7 +1,9 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { LightningBoltIcon } from '@/components/icons'
 
 // Trigger if more than half of frames in a 1-second window take > 33ms (< 30fps effective)
 // and that condition holds for 2 consecutive windows.
@@ -70,8 +72,8 @@ export default function LagDetector() {
       display: 'flex', flexDirection: 'column', gap: 12,
     }}>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 5 }}>
-          ⚡ Experiencing lag?
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 5 }}>
+          <LightningBoltIcon size={13}/> Experiencing lag?
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
           Looks like animations are slowing things down. You can turn them off in Settings → Appearance.
