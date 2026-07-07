@@ -20,7 +20,11 @@ const SCORECARD_FIELDS = [
 
 const REQUEST_TIMEOUT_MS = 30_000
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000] as const
-const MAX_SEARCH_RESULTS = 20
+// 100 is the College Scorecard API's maximum per_page. A wide pool is needed
+// so that relevance ranking (see collegeSearchRanking.ts) has a real chance of
+// finding the intended school — Scorecard's own substring match has no
+// relevance ordering, so a well-known school can be buried past position 20.
+const MAX_SEARCH_RESULTS = 100
 
 // Errors that are safe to retry (network-layer failures and service unavailability).
 // 429 (rate limit) is intentionally excluded — we return gracefully rather than

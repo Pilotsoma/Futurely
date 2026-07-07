@@ -6,6 +6,7 @@ import { logger } from '../common/logger'
 import { writeAuditLog } from '../lib/auditLog'
 import { searchByName, ScorecardSchool } from '../integrations/scorecard/scorecardClient'
 import { computeLikelihoodScore } from '../services/collegeScoring'
+import { rankSearchResults } from '../services/collegeSearchRanking'
 
 const router = Router()
 
@@ -15,6 +16,20 @@ const addSchema = z.object({
   name: z.string().min(1).max(200),
   scorecardUnitId: z.string().optional(),
 })
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+/** Common shape shared by cached rows and freshly-fetched Scorecard results. */
+interface SearchCandidate {
+  unitId: string
+  name: string
+  city: string | null
+  state: string | null
+  admissionRate: number | null
+  sat25th: number | null
+  sat75th: number | null
+  enrollment: number | null
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -102,13 +117,24 @@ router.get('/search', async (req: AuthRequest, res: Response): Promise<void> => 
   }
 
   try {
-    // 1. Cache-first lookup
-    let cacheResults = await prisma.collegeScorecardCache.findMany({
+    // 1. Cache-first lookup. A wide pool (100) is fetched so relevance ranking
+    // below has a real chance of surfacing the intended school — Scorecard's
+    // substring match has no relevance ordering of its own.
+    const cacheResults = await prisma.collegeScorecardCache.findMany({
       where: { name: { contains: q, mode: 'insensitive' } },
-      take: 20,
+      take: 100,
     })
 
-    // 2. Refresh from the live API if the cache is sparse
+    // Candidates are keyed by unitId so live API results (added below) can
+    // overwrite/merge with cache rows without duplicates.
+    const candidates = new Map<string, SearchCandidate>(cacheResults.map(c => [c.unitId, c]))
+
+    // 2. Refresh from the live API if the cache is sparse. Scorecard's own name
+    // filter can match schools that don't literally contain the query as a
+    // substring (e.g. tokenized/fuzzy matching), so API results are merged in
+    // directly rather than re-querying the cache with our own literal filter
+    // — re-filtering would silently drop exactly the matches Scorecard found
+    // that our own `contains` check doesn't recognise.
     if (cacheResults.length < 5) {
       logger.info('College search cache miss — fetching from Scorecard API', {
         userId,
@@ -118,10 +144,9 @@ router.get('/search', async (req: AuthRequest, res: Response): Promise<void> => 
       const apiResults = await searchByName(q)
       if (apiResults.length > 0) {
         await upsertScorecardBatch(apiResults)
-        cacheResults = await prisma.collegeScorecardCache.findMany({
-          where: { name: { contains: q, mode: 'insensitive' } },
-          take: 20,
-        })
+        for (const school of apiResults) {
+          candidates.set(school.unitId, school)
+        }
       }
     }
 
@@ -135,7 +160,9 @@ router.get('/search', async (req: AuthRequest, res: Response): Promise<void> => 
       ipAddress: getIpAddress(req),
     })
 
-    const data = cacheResults.map(c => ({
+    const ranked = rankSearchResults(Array.from(candidates.values()), q).slice(0, 20)
+
+    const data = ranked.map(c => ({
       unitId: c.unitId,
       name: c.name,
       city: c.city,
