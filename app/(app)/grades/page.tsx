@@ -8,27 +8,30 @@ import {
   TrendingUpIcon, DocumentIcon, CalendarIcon,
 } from '@/components/icons'
 
-const CARDS: Array<{ href: string; title: string; desc: string; icon: React.ReactNode; iconBg: string }> = [
+const CARDS: Array<{ href: string; title: string; desc: string; icon: React.ReactNode; iconBg: string; iconColor: string }> = [
   {
     href: '/grades/classwork',
     title: 'Grades',
     desc: 'Assignments & current averages',
     icon: <BarChartIcon size={22}/>,
-    iconBg: 'rgba(16,185,129,0.1)',
+    iconBg: 'rgba(16,185,129,0.14)',
+    iconColor: '#10B981',
   },
   {
     href: '/grades/report-card',
     title: 'Report Card',
     desc: 'Official grades by reporting period',
     icon: <ClipboardIcon size={22}/>,
-    iconBg: 'rgba(59,130,246,0.12)',
+    iconBg: 'rgba(59,130,246,0.16)',
+    iconColor: '#3B82F6',
   },
   {
     href: '/grades/schedule',
     title: 'Class Schedule',
     desc: 'Your class periods',
     icon: <ClockIcon size={22}/>,
-    iconBg: 'rgba(245,158,11,0.1)',
+    iconBg: 'rgba(245,158,11,0.14)',
+    iconColor: '#F59E0B',
   },
   {
     href: '/grades/what-if',
@@ -36,34 +39,39 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     desc: 'Simulate GPA changes',
     icon: <CalculatorIcon size={22}/>,
     iconBg: 'var(--primary-dim)',
+    iconColor: 'var(--primary)',
   },
   {
     href: '/grades/contact',
     title: 'Contact Teachers',
     desc: 'Email your teachers',
     icon: <EnvelopeIcon size={22}/>,
-    iconBg: 'rgba(249,115,22,0.1)',
+    iconBg: 'rgba(249,115,22,0.14)',
+    iconColor: '#F97316',
   },
   {
     href: '/grades/progress',
     title: 'Progress Report',
     desc: 'Interim grades by date',
     icon: <TrendingUpIcon size={22}/>,
-    iconBg: 'rgba(167,139,250,0.1)',
+    iconBg: 'rgba(167,139,250,0.16)',
+    iconColor: '#A78BFA',
   },
   {
     href: '/grades/transcript',
     title: 'Transcript',
     desc: 'Credits & GPA history',
     icon: <DocumentIcon size={22}/>,
-    iconBg: 'rgba(99,102,241,0.1)',
+    iconBg: 'rgba(99,102,241,0.16)',
+    iconColor: '#6366F1',
   },
   {
     href: '/grades/attendance',
     title: 'Attendance',
     desc: 'Absences & tardies calendar',
     icon: <CalendarIcon size={22}/>,
-    iconBg: 'rgba(239,68,68,0.1)',
+    iconBg: 'rgba(239,68,68,0.14)',
+    iconColor: '#EF4444',
   },
 ]
 
@@ -83,7 +91,7 @@ export default function GradesHubPage() {
             style={{ ...S.card, ...(hovered === card.href ? { transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', borderColor: 'var(--border-hover)' } : {}) }}
           >
             <div style={{ ...S.iconBox, background: card.iconBg }}>
-              <span style={{ display: 'flex', alignItems: 'center' }}>{card.icon}</span>
+              <span style={{ display: 'flex', alignItems: 'center', color: card.iconColor }}>{card.icon}</span>
             </div>
             <div style={{ flex: 1, textAlign: 'left' as const }}>
               <div style={S.cardTitle}>{card.title}</div>

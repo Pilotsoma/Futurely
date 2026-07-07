@@ -17,11 +17,11 @@ import {
   CheckIcon, SparkleStarIcon, RocketIcon, BooksIcon, PartyPopperIcon,
 } from '@/components/icons'
 
-const QUICK_ACCESS_LINKS: Array<{ href: string; label: string; icon: React.ReactNode }> = [
-  { href: '/grades/classwork',  label: 'Grades',       icon: <BarChartIcon size={20}/> },
-  { href: '/grades/transcript', label: 'Transcript',   icon: <DocumentIcon size={20}/> },
-  { href: '/grades/attendance', label: 'Attendance',   icon: <CalendarIcon size={20}/> },
-  { href: '/grades/report-card',label: 'Report Card',  icon: <ClipboardIcon size={20}/> },
+const QUICK_ACCESS_LINKS: Array<{ href: string; label: string; icon: React.ReactNode; color: string; bg: string }> = [
+  { href: '/grades/classwork',  label: 'Grades',       icon: <BarChartIcon size={20}/>, color: '#10B981', bg: 'rgba(16,185,129,0.14)' },
+  { href: '/grades/transcript', label: 'Transcript',   icon: <DocumentIcon size={20}/>, color: '#6366F1', bg: 'rgba(99,102,241,0.14)' },
+  { href: '/grades/attendance', label: 'Attendance',   icon: <CalendarIcon size={20}/>, color: '#EF4444', bg: 'rgba(239,68,68,0.14)' },
+  { href: '/grades/report-card',label: 'Report Card',  icon: <ClipboardIcon size={20}/>, color: '#3B82F6', bg: 'rgba(59,130,246,0.14)' },
 ]
 
 function tagCssClass(tag?: string | null, tagColor?: string | null): string {
@@ -459,7 +459,7 @@ export default function DashboardPage() {
             onClick={() => router.push(link.href)}
             {...staggerItem(6 + i)}
           >
-            <span style={{ display: 'flex', alignItems: 'center' }}>{link.icon}</span>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 10, background: link.bg, color: link.color, flexShrink: 0 }}>{link.icon}</span>
             <span style={S.quickAccessLabel}>{link.label}</span>
           </motion.button>
         ))}
