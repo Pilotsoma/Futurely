@@ -348,7 +348,7 @@ export default function GameRoomPage() {
           {advancing ? 'Starting…' : session.participants.length === 0 ? 'Waiting for players…' : `Start Game (${session.participants.length} player${session.participants.length !== 1 ? 's' : ''})`}
         </button>
       ) : (
-        <div style={{ textAlign: 'center', padding: '16px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+        <div style={{ textAlign: 'center', padding: '16px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)' }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>Waiting for host to start the game…</p>
         </div>
       )}
@@ -403,7 +403,7 @@ export default function GameRoomPage() {
         )}
 
         {selectedAnswer !== null && !answerResult && (
-          <div style={{ marginTop: 16, padding: '12px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', textAlign: 'center' }}>
+          <div style={{ marginTop: 16, padding: '12px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', textAlign: 'center', boxShadow: 'var(--neo-raised)' }}>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Answer submitted — waiting for results…</p>
           </div>
         )}
@@ -411,7 +411,7 @@ export default function GameRoomPage() {
         {/* Host controls */}
         {isHost && (
           <div style={{ marginTop: 20, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, padding: '12px 16px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-secondary)' }}>
+            <div style={{ flex: 1, padding: '12px 16px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-secondary)', boxShadow: 'var(--neo-raised)' }}>
               {answerCount} / {session.participants.length} answered
             </div>
             <button onClick={() => void handleReveal()} disabled={revealing} style={{ padding: '11px 20px', borderRadius: 12, background: 'var(--primary)', color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: revealing ? 'not-allowed' : 'pointer' }}>
@@ -462,7 +462,7 @@ export default function GameRoomPage() {
         )}
 
         {!isHost && (
-          <div style={{ textAlign: 'center', padding: '14px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+          <div style={{ textAlign: 'center', padding: '14px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)' }}>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Waiting for host to advance…</p>
           </div>
         )}

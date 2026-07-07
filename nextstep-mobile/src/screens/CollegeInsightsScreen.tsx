@@ -20,6 +20,7 @@ import {
   type InsightsFetchResult,
 } from '../api/collegeInsightsApi'
 import type { CollegeHelpParamList } from '../navigation/CollegeHelpNavigator'
+import { shadows } from '../constants/shadows'
 
 // ── Constants matching the web implementation ──────────────────────────────────
 
@@ -381,6 +382,7 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,

@@ -13,6 +13,7 @@ import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { useAuth } from '../context/AuthContext'
 import { fetchStudentData, type StudentData } from '../api/studentApi'
+import { shadows } from '../constants/shadows'
 
 function initials(name: string | null): string {
   if (!name) return 'S'
@@ -196,6 +197,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.background },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   profileCard: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
@@ -227,6 +229,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { marginBottom: 8 },
   settingsGroup: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,

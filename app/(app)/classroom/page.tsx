@@ -68,7 +68,7 @@ export default function ClassroomPage() {
               onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
               placeholder="Enter 6-character code"
               maxLength={6}
-              style={{ flex: 1, minWidth: 180, padding: '9px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'monospace', letterSpacing: 3, textTransform: 'uppercase' }}
+              style={{ flex: 1, minWidth: 180, padding: '9px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'monospace', letterSpacing: 3, textTransform: 'uppercase', boxShadow: 'var(--neo-inset)' }}
             />
             <button
               type="submit"

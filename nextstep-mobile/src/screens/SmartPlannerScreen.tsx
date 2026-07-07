@@ -422,6 +422,7 @@ function AiPlanView({
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp as NSNP } from '@react-navigation/native-stack'
+import { shadows } from '../constants/shadows'
 
 function PlannerHeader({ onCalendar, date, navigation }: { onCalendar: () => void; date: string; navigation: NSNP<PlanningParamList> }): React.JSX.Element {
   const insets = useSafeAreaInsets()
@@ -539,6 +540,7 @@ const aiStyles = StyleSheet.create({
     marginBottom: 8,
   },
   sessionCard: {
+    ...shadows.raised,
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: colors.surface,

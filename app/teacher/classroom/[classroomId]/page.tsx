@@ -335,7 +335,7 @@ function AssignmentRow({ assignment }: { assignment: EducatorAssignment }) {
   const due = new Date(assignment.dueDate)
   const overdue = due < new Date()
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)' }}>
       <div>
         <div style={{ fontWeight: 600, fontSize: 14 }}>{assignment.title}</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{assignment.subject}{assignment.description ? ` · ${assignment.description}` : ''}</div>
@@ -350,15 +350,15 @@ function AssignmentRow({ assignment }: { assignment: EducatorAssignment }) {
 const S: Record<string, React.CSSProperties> = {
   sectionTitle: { fontSize: 16, fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 },
   countBadge:  { background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', borderRadius: 20, padding: '1px 8px', fontSize: 11, fontWeight: 700 },
-  studentRow:  { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', flexWrap: 'wrap' },
+  studentRow:  { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', flexWrap: 'wrap', boxShadow: 'var(--neo-raised)' },
   coinInput:   { width: 80, height: 36, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '0 10px', fontSize: 14, color: 'var(--text)', textAlign: 'center' as const },
   inviteChip:  { display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 8, padding: '6px 12px' },
   inviteLabel: { fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: 'var(--primary)' },
   inviteCode:  { fontFamily: 'monospace', fontSize: 15, fontWeight: 800, letterSpacing: '3px', color: 'var(--primary)' },
   copyBtn:     { background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 4, color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 24, minHeight: 24 },
-  assignForm:  { background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 18, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 },
+  assignForm:  { background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 18, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: 'var(--neo-raised)' },
   formRow:     { display: 'flex', gap: 12, flexWrap: 'wrap' },
   fieldLabel:  { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 },
-  input:       { width: '100%', height: 40, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 14, color: 'var(--text)', boxSizing: 'border-box' as const },
+  input:       { width: '100%', height: 40, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 14, color: 'var(--text)', boxSizing: 'border-box' as const, boxShadow: 'var(--neo-inset)' },
   errorBox:    { background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, padding: '12px 16px', color: '#DC2626', fontSize: 13 },
 }

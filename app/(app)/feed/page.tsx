@@ -542,7 +542,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
           </div>
 
           {/* Item preview card - profile-like preview of the won item */}
-          <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)' }}>
             {/* Avatar: avatar type uses won effect, others use default */}
             {post.unboxItemType === 'avatar' ? (
               <div className={avatarClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...avatarStyle(post.unboxItemValue) }}>U</div>
@@ -617,7 +617,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
           {/* Item preview for name-color / avatar giveaways */}
           {isItemGiveaway && post.giveawayTag && (
-            <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
+            <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)' }}>
               {isPfpGiveaway ? (
                 <div className={avatarClass(post.giveawayTagColor)} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, ...avatarStyle(post.giveawayTagColor) }}>U</div>
               ) : (
@@ -703,7 +703,7 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
               )}
               {showLikeRequired && createPortal(
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowLikeRequired(false)}>
-                  <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                  <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center', boxShadow: 'var(--neo-raised), var(--shadow-xl)' }} onClick={e => e.stopPropagation()}>
                     <div style={{ marginBottom: 12 }}><BanIcon size={36}/></div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--error)', marginBottom: 8 }}>Entry Denied</div>
                     <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
@@ -1637,7 +1637,7 @@ export default function StudyFeedPage() {
                     if (!item) return null
                     const isRainbow = item.value === 'rainbow'
                     return (
-                      <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)' }}>
+                      <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)' }}>
                         {gwType === 'avatar' ? (
                           <div className={avatarClass(item.value)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, ...avatarStyle(item.value) }}>D</div>
                         ) : (
@@ -1832,7 +1832,7 @@ const N: Record<string, React.CSSProperties> = {
 
 const O: Record<string, React.CSSProperties> = {
   overlay:    { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  panel:      { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, width: '90%', maxWidth: 480, maxHeight: '85vh', overflow: 'auto', padding: 24, display: 'flex', flexDirection: 'column' as const },
+  panel:      { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, width: '90%', maxWidth: 480, maxHeight: '85vh', overflow: 'auto', padding: 24, display: 'flex', flexDirection: 'column' as const, boxShadow: 'var(--neo-raised), var(--shadow-xl)' },
   header:     { display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid var(--border)' },
   avatar:     { width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0 },
   name:       { fontSize: 19, fontWeight: 800, color: 'var(--text)', marginBottom: 3 },
@@ -1843,5 +1843,5 @@ const O: Record<string, React.CSSProperties> = {
   closeBtn:   { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: 6, display: 'flex', alignItems: 'center', flexShrink: 0 },
   stats:      { display: 'flex', justifyContent: 'space-around', padding: '14px 0', borderBottom: '1px solid var(--border)', marginBottom: 16 },
   postsTitle: { fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 },
-  postCard:   { padding: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 8 },
+  postCard:   { padding: 12, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 8, boxShadow: 'var(--neo-raised)' },
 }

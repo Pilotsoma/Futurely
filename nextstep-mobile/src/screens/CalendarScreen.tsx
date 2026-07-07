@@ -12,6 +12,7 @@ import Skeleton from '../components/ui/Skeleton'
 import { colors } from '../constants/colors'
 import { fetchStudentData, type Assignment } from '../api/studentApi'
 import { CheckIcon } from '../components/icons'
+import { shadows } from '../constants/shadows'
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTH_NAMES = [
@@ -224,6 +225,7 @@ const styles = StyleSheet.create({
   dotRow: { flexDirection: 'row', gap: 3, marginTop: 2 },
   dot: { width: 5, height: 5, borderRadius: 2.5 },
   selectedPanel: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,

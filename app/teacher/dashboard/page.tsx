@@ -260,7 +260,7 @@ const S: Record<string, React.CSSProperties> = {
   modal:       { width: '100%', maxWidth: 440, padding: 28 },
   closeBtn:    { background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center' },
   fieldLabel:  { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 },
-  input:       { width: '100%', height: 42, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 14, color: 'var(--text)', boxSizing: 'border-box' as const },
+  input:       { width: '100%', height: 42, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 14, color: 'var(--text)', boxSizing: 'border-box' as const, boxShadow: 'var(--neo-inset)' },
   inviteChip:  { display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 8, padding: '6px 12px' },
   inviteLabel: { fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: 'var(--primary)' },
   inviteCode:  { fontFamily: 'monospace', fontSize: 15, fontWeight: 800, letterSpacing: '3px', color: 'var(--primary)' },

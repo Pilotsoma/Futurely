@@ -33,7 +33,7 @@ function DeleteAccountModal({ onClose, hasPassword }: { onClose: () => void; has
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 400 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 400, boxShadow: 'var(--neo-raised), var(--shadow-xl)' }}>
         <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--error)', marginBottom: 8 }}>Delete Account</h2>
         <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
           This permanently deletes your account, posts, grades, and all data. There is no undo — the only way to get access back is to create a new account.
@@ -577,7 +577,7 @@ export default function SettingsPage() {
                           <input autoFocus type="text" value={portalIsdSearch}
                             onChange={e => setPortalIsdSearch(e.target.value)}
                             placeholder="Type to search…"
-                            style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' as const }}
+                            style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' as const, boxShadow: 'var(--neo-inset)' }}
                             onClick={e => e.stopPropagation()} />
                         </div>
                         <div style={{ maxHeight: 220, overflowY: 'auto' as const }}>
@@ -668,7 +668,7 @@ export default function SettingsPage() {
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
                   Get your token: Canvas → Profile → Settings → Approved Integrations → New Access Token
                 </p>
-                <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, padding: '6px 10px', background: 'var(--surface-2)', borderRadius: 6, border: '1px solid var(--border)' }}>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, padding: '6px 10px', background: 'var(--surface-2)', borderRadius: 6, border: '1px solid var(--border)', boxShadow: 'var(--neo-inset)' }}>
                   When creating the token, set the expiry to <strong>120 days</strong> (the maximum recommended). Futurely will alert you when your token expires so you can renew it.
                 </p>
                 <div ref={districtRef} style={{ position: 'relative' }}>
@@ -686,7 +686,7 @@ export default function SettingsPage() {
                       position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
                       background: 'var(--surface)', border: '1px solid var(--border)',
                       borderRadius: 8, marginTop: 4, maxHeight: 200, overflowY: 'auto',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      boxShadow: 'var(--neo-raised), var(--shadow-md)',
                     }}>
                       {filteredDistricts.length === 0 ? (
                         <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -839,7 +839,7 @@ export default function SettingsPage() {
               <button onClick={toggleTheme} style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)',
-                background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: 'var(--neo-raised)',
               }}>
                 {theme === 'dark' ? <><MoonIcon size={14}/> Dark</> : <><SunIcon size={14}/> Light</>}
               </button>
@@ -953,7 +953,7 @@ export default function SettingsPage() {
                     { label: 'Active Users', value: devStats.activeUsers.toLocaleString(), desc: 'Active in the last 3 days' },
                     { label: 'Live Users', value: devStats.liveUsers.toLocaleString(), desc: 'Active in the last 10 minutes' },
                   ] as { label: string; value: string; desc: string }[]).map(row => (
-                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                    <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)' }}>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{row.label}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{row.desc}</div>
@@ -1118,10 +1118,10 @@ const S: Record<string, React.CSSProperties> = {
   sysBadge:     { fontSize: 11, color: 'var(--text-secondary)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 4, padding: '1px 7px' },
   distUrl:      { fontSize: 12, color: 'var(--text-muted)', marginTop: 6 },
   disconnectBtn:{ color: 'var(--error)', borderColor: 'rgba(239,68,68,0.3)', fontSize: 13 },
-  sysToggle:    { display: 'flex', background: 'var(--surface-2)', borderRadius: 8, padding: 3, border: '1px solid var(--border)' },
+  sysToggle:    { display: 'flex', background: 'var(--surface-2)', borderRadius: 8, padding: 3, border: '1px solid var(--border)', boxShadow: 'var(--neo-inset)' },
   sysBtn:       { flex: 1, borderRadius: 6, padding: '7px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', transition: 'background 0.15s, color 0.15s' },
-  districtBtn:  { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 13px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' },
-  isdPanel:     { position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', overflow: 'hidden' },
+  districtBtn:  { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 13px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: 'var(--neo-raised)' },
+  isdPanel:     { position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: 'var(--neo-raised), var(--shadow-md)', overflow: 'hidden' },
   fieldLabel:   { display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 },
   logoutBtn:    { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', background: 'transparent', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '10px 0', color: 'var(--error)', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 4 },
 }

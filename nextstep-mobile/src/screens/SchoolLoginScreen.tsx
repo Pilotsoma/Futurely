@@ -19,6 +19,7 @@ import { colors } from '../constants/colors'
 import { useSchoolSession } from '../context/SchoolSessionContext'
 import { connectHac, connectPowerSchool } from '../api/portalApi'
 import FuturelyLogo from '../components/ui/FuturelyLogo'
+import { shadows } from '../constants/shadows'
 
 // ── Navigation type ───────────────────────────────────────────────────────────
 
@@ -505,11 +506,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   inputRow: {
+    ...shadows.insetBorderStyle,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: 10,
     height: 48,
     paddingHorizontal: 12,
@@ -536,11 +536,10 @@ const styles = StyleSheet.create({
 
   // District dropdown trigger button
   dropdownBtn: {
+    ...shadows.insetBorderStyle,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: 10,
     height: 48,
     paddingHorizontal: 12,
@@ -613,6 +612,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
   dropdownSheet: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -628,12 +628,11 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   dropdownSearch: {
+    ...shadows.insetBorderStyle,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
     margin: 12,
     paddingHorizontal: 12,
     height: 44,

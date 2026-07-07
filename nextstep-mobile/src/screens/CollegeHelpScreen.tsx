@@ -14,6 +14,7 @@ import Skeleton from '../components/ui/Skeleton'
 import { colors } from '../constants/colors'
 import type { CollegeHelpParamList } from '../navigation/CollegeHelpNavigator'
 import { fetchStudentData, type StudentData } from '../api/studentApi'
+import { shadows } from '../constants/shadows'
 
 type NavProp = NativeStackNavigationProp<CollegeHelpParamList>
 
@@ -147,6 +148,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40, gap: 14 },
   title: { marginBottom: 4 },
   gpaCard: {
+    ...shadows.raised,
     backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1,
     borderColor: colors.border, flexDirection: 'row', padding: 20,
   },
@@ -154,6 +156,7 @@ const styles = StyleSheet.create({
   gpaDivider: { width: 1, backgroundColor: colors.border, marginHorizontal: 12 },
   gpaLabel: { marginBottom: 8, textAlign: 'center' },
   actionGroup: {
+    ...shadows.raised,
     backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1,
     borderColor: colors.border, overflow: 'hidden',
   },
@@ -162,6 +165,7 @@ const styles = StyleSheet.create({
   actionText: { flex: 1, gap: 2 },
   actionDivider: { height: 1, backgroundColor: colors.border, marginLeft: 66 },
   expandRow: {
+    ...shadows.raised,
     backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border,
     flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12,
   },

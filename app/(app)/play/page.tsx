@@ -51,7 +51,7 @@ export default function PlayPage() {
             onKeyDown={e => e.key === 'Enter' && void handleJoin()}
             placeholder="XXXXXX"
             maxLength={6}
-            style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: '2px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 22, fontWeight: 800, letterSpacing: '0.3em', textAlign: 'center', outline: 'none', textTransform: 'uppercase' }}
+            style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: '2px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 22, fontWeight: 800, letterSpacing: '0.3em', textAlign: 'center', outline: 'none', textTransform: 'uppercase', boxShadow: 'var(--neo-inset)' }}
           />
           <button
             onClick={() => void handleJoin()}

@@ -11,6 +11,7 @@ import Skeleton from '../components/ui/Skeleton'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { fetchStudentData, type CourseWithGrade, type StudentData } from '../api/studentApi'
+import { shadows } from '../constants/shadows'
 
 const GRADE_COLORS: Record<string, string> = {
   A: '#34D399', B: '#38BDF8', C: '#FBBF24', D: '#FB923C', F: '#F87171',
@@ -157,6 +158,7 @@ const styles = StyleSheet.create({
   letterGrade: { fontSize: 14, fontWeight: '700', marginRight: 12 },
   credits: { minWidth: 44, textAlign: 'right' },
   footer: {
+    ...shadows.raised,
     margin: 20,
     backgroundColor: colors.surface,
     borderRadius: 12,

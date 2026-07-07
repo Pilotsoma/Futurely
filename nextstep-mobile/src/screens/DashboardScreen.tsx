@@ -16,6 +16,7 @@ import { fetchStudentData, type StudentData, type Assignment } from '../api/stud
 import { getSyncStatus, type SyncStatus } from '../api/portalApi'
 import { ArrowRightIcon, FlameIcon } from '../components/icons'
 import type { AppParamList } from '../navigation/AppNavigator'
+import { shadows } from '../constants/shadows'
 
 type NavProp = NativeStackNavigationProp<AppParamList>
 
@@ -367,6 +368,7 @@ const styles = StyleSheet.create({
   gradeBadgeText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
   // Cards
   card: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
@@ -397,6 +399,7 @@ const styles = StyleSheet.create({
   // Stats
   statsRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   statCard: {
+    ...shadows.raised,
     flex: 1,
     backgroundColor: colors.surface,
     borderRadius: 12,

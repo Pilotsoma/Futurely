@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext'
 import { sendChatMessage } from '../api/aiApi'
 import { fetchStudentData, type StudentData } from '../api/studentApi'
 import type { AppParamList } from '../navigation/AppNavigator'
+import { shadows } from '../constants/shadows'
 
 type DrawerParamList = { MainAIHome: undefined }
 
@@ -303,12 +304,14 @@ const styles = StyleSheet.create({
   hello: { marginBottom: 6, textAlign: 'center' as const },
   tagline: { textAlign: 'center' as const, fontWeight: '400' },
   optionCard: {
+    ...shadows.raised,
     flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
     borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 14, marginBottom: 12,
   },
   optionIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   optionText: { flex: 1, gap: 2 },
   aiSection: {
+    ...shadows.raised,
     backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1,
     borderColor: colors.border, padding: 16, marginTop: 8,
   },
@@ -324,8 +327,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10, paddingBottom: 28, gap: 12,
   },
   input: {
-    flex: 1, backgroundColor: colors.background, borderRadius: 24, borderWidth: 1,
-    borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 10,
+    ...shadows.insetBorderStyle,
+    flex: 1, backgroundColor: colors.background, borderRadius: 24,
+    paddingHorizontal: 16, paddingVertical: 10,
     fontSize: 15, color: colors.textPrimary, minHeight: 44,
   },
   sendBtn: {
@@ -345,6 +349,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   bubbleAi: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderRadius: 18,
     borderBottomLeftRadius: 4,

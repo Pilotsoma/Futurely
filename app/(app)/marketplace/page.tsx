@@ -3937,7 +3937,7 @@ export default function MarketplacePage() {
           onClick={() => setProfilePanel(null)}
         >
           <div
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, width: '90%', maxWidth: 420, padding: 24, position: 'relative' }}
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, width: '90%', maxWidth: 420, padding: 24, position: 'relative', boxShadow: 'var(--neo-raised), var(--shadow-xl)' }}
             onClick={e => e.stopPropagation()}
           >
             <button
@@ -4351,7 +4351,7 @@ export default function MarketplacePage() {
       {traderSellConfirm && createPortal(
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={() => setTraderSellConfirm(null)}>
-          <div style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
+          <div style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center', boxShadow: 'var(--neo-raised), var(--shadow-xl)' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}><WizardIcon size={36}/></div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>Sell to Trader?</div>
@@ -4394,7 +4394,7 @@ export default function MarketplacePage() {
       {traderBuyConfirm && createPortal(
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={() => setTraderBuyConfirm(null)}>
-          <div style={{ background: 'var(--surface)', border: '1px solid rgba(139,92,246,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
+          <div style={{ background: 'var(--surface)', border: '1px solid rgba(139,92,246,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center', boxShadow: 'var(--neo-raised), var(--shadow-xl)' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}><WizardIcon size={36}/></div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>Buy from Trader?</div>
@@ -4443,7 +4443,7 @@ export default function MarketplacePage() {
           onClick={() => setCooldownPopup(null)}
         >
           <div
-            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
+            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center', boxShadow: 'var(--neo-raised), var(--shadow-xl)' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ fontSize: 36, marginBottom: 12 }}>⏳</div>
@@ -4472,7 +4472,7 @@ export default function MarketplacePage() {
           onClick={() => setQuicksellConfirm(null)}
         >
           <div
-            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center' }}
+            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center', boxShadow: 'var(--neo-raised), var(--shadow-xl)' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><WarningIcon size={36}/></div>
@@ -4522,7 +4522,7 @@ export default function MarketplacePage() {
           onClick={() => !sellingDups && setSellDupsConfirm(null)}
         >
           <div
-            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 16, padding: 24, width: '90%', maxWidth: 440 }}
+            style={{ background: 'var(--surface)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 16, padding: 24, width: '90%', maxWidth: 440, boxShadow: 'var(--neo-raised), var(--shadow-xl)' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>Sell All Duplicates</div>

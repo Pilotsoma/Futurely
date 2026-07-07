@@ -354,7 +354,7 @@ export default function PlannerPage() {
                     position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
                     background: 'var(--surface)', border: '1px solid var(--border)',
                     borderRadius: 8, marginTop: 4, maxHeight: 200, overflowY: 'auto',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                    boxShadow: 'var(--neo-raised), var(--shadow-md)',
                   }}>
                     {filteredDistricts.length === 0 ? (
                       <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -425,7 +425,7 @@ export default function PlannerPage() {
               </button>
               <button type="button" onClick={closeCanvasForm} style={{
                 padding: '10px 16px', borderRadius: 8, border: '1px solid var(--border)',
-                background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: 'var(--neo-raised)',
               }}>
                 Cancel
               </button>
@@ -490,7 +490,7 @@ export default function PlannerPage() {
                 <button onClick={() => void handleCanvasDisconnect(conn.canvasInstanceUrl)} disabled={canvasLoading} style={{
                   background: 'none', border: '1px solid var(--border)', borderRadius: 6,
                   padding: '4px 10px', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)',
-                  cursor: canvasLoading ? 'not-allowed' : 'pointer', opacity: canvasLoading ? 0.6 : 1, flexShrink: 0,
+                  cursor: canvasLoading ? 'not-allowed' : 'pointer', opacity: canvasLoading ? 0.6 : 1, flexShrink: 0, boxShadow: 'var(--neo-raised)',
                 }}>
                   Disconnect
                 </button>
@@ -508,7 +508,7 @@ export default function PlannerPage() {
         <div style={{ marginBottom: 16 }}>
           <button onClick={() => setShowCanvasForm(true)} style={{
             background: 'none', border: '1px solid var(--border)', borderRadius: 8,
-            padding: '7px 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer',
+            padding: '7px 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer', boxShadow: 'var(--neo-raised)',
           }}>
             Link Canvas
           </button>
@@ -596,7 +596,7 @@ export default function PlannerPage() {
                     {day.sessions.map((session, i) => (
                       <div key={i} style={{
                         display: 'flex', gap: 12, padding: '10px 12px', marginBottom: 6,
-                        background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)',
+                        background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)',
                       }}>
                         <div style={{
                           flexShrink: 0, width: 42, height: 42, borderRadius: 8,
@@ -759,10 +759,10 @@ export default function PlannerPage() {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  form: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 28 },
+  form: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 28, boxShadow: 'var(--neo-raised)' },
   formRow: { display: 'flex', gap: 10, marginBottom: 10 },
-  input: { padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, outline: 'none' },
-  button: { padding: '10px 20px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+  input: { padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, outline: 'none', boxShadow: 'var(--neo-inset)' },
+  button: { padding: '10px 20px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: 'var(--neo-raised)' },
   empty: { textAlign: 'center' as const, padding: '60px 20px' },
   emptyIcon: { width: 48, height: 48, borderRadius: '50%', background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, margin: '0 auto 14px' },
 }

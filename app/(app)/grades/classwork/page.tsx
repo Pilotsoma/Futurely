@@ -144,7 +144,7 @@ export default function ClassworkPage() {
             style={{
               background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)',
               borderRadius: 8, padding: '9px 14px', fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
-              minWidth: 200, appearance: 'auto', outline: 'none',
+              minWidth: 200, appearance: 'auto', outline: 'none', boxShadow: 'var(--neo-inset)',
             }}
           >
             {availablePeriods.map(p => (

@@ -404,10 +404,10 @@ const S: Record<string, React.CSSProperties> = {
   sub:         { fontSize: 12.5, color: 'var(--text-secondary)', marginBottom: 16 },
   errorBanner: { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', color: 'var(--error)', fontSize: 13, marginBottom: 16 },
   sectionLabel:{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' },
-  toggleBtn:   { height: 34, padding: '0 20px', borderRadius: 8, border: '1px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  semBtn:      { height: 34, padding: '0 14px', borderRadius: 8, border: '1px solid', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' },
+  toggleBtn:   { height: 34, padding: '0 20px', borderRadius: 8, border: '1px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: 'var(--neo-raised)' },
+  semBtn:      { height: 34, padding: '0 14px', borderRadius: 8, border: '1px solid', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', boxShadow: 'var(--neo-raised)' },
   gpaLabel:    { fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.6px', color: 'var(--text-muted)' },
   gpaNum:      { fontSize: 36, fontWeight: 800, letterSpacing: '-1px', color: 'var(--text)', lineHeight: 1 },
   gpaNote:     { fontSize: 11, color: 'var(--text-muted)', marginTop: 6 },
-  clearBtn:    { background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: '6px 14px' },
+  clearBtn:    { background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: '6px 14px', boxShadow: 'var(--neo-raised)' },
 }

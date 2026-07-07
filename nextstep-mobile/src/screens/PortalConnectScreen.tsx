@@ -18,6 +18,7 @@ import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { connectHac, connectPowerSchool, getPortalStatus, disconnectPortal, type PortalStatus } from '../api/portalApi'
 import { ArrowRightIcon, CheckIcon } from '../components/icons'
+import { shadows } from '../constants/shadows'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -533,6 +534,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   portalCard: {
+    ...shadows.raised,
     flex: 1,
     backgroundColor: colors.surface,
     borderRadius: 12,
@@ -566,11 +568,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputRow: {
+    ...shadows.insetBorderStyle,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: 8,
     height: 48,
     paddingHorizontal: 12,
@@ -672,6 +673,7 @@ const styles = StyleSheet.create({
 
   // ── Security disclaimer ──────────────────────────────────────────────────────
   disclaimer: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderRadius: 10,
     borderWidth: 1,
@@ -697,6 +699,7 @@ const styles = StyleSheet.create({
 
   // ── Connected status card ────────────────────────────────────────────────────
   statusCard: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,

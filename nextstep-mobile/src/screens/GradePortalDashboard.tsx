@@ -19,6 +19,7 @@ import {
   disconnectPortal,
   type PortalStatus,
 } from '../api/portalApi'
+import { shadows } from '../constants/shadows'
 
 type NavProp = NativeStackNavigationProp<GradePortalParamList>
 
@@ -268,6 +269,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tile: {
+    ...shadows.raised,
     width: '48%',
     backgroundColor: colors.surface,
     borderRadius: 12,
@@ -286,6 +288,7 @@ const styles = StyleSheet.create({
   tileDesc: { marginTop: 4 },
   // Portal connection card
   statusCard: {
+    ...shadows.raised,
     borderRadius: 12,
     borderWidth: 1,
     padding: 16,
@@ -310,6 +313,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   statusActionButton: {
+    ...shadows.raised,
     flex: 1,
     paddingVertical: 10,
     borderRadius: 8,
@@ -321,6 +325,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   connectBanner: {
+    ...shadows.raised,
     borderRadius: 12,
     borderWidth: 1,
     padding: 16,

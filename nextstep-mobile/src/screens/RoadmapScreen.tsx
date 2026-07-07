@@ -12,6 +12,7 @@ import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { fetchRoadmap, type RoadmapData, type RoadmapMilestone } from '../api/roadmapApi'
 import { CheckIcon } from '../components/icons'
+import { shadows } from '../constants/shadows'
 
 function LoadingSkeleton(): React.JSX.Element {
   return (
@@ -173,6 +174,7 @@ const styles = StyleSheet.create({
   stateText: { textAlign: 'center', marginBottom: 8 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   card: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,

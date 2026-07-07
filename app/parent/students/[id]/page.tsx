@@ -199,7 +199,7 @@ export default function ParentStudentDetailPage() {
             ) : (
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
                 {['A', 'B', 'C', 'D', 'F'].map(letter => (
-                  <div key={letter} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', minWidth: 52 }}>
+                  <div key={letter} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', minWidth: 52, boxShadow: 'var(--neo-raised)' }}>
                     <span style={{ fontSize: 22, fontWeight: 800, color: gradeColor(letter) }}>{gradeDist[letter] ?? 0}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{letter}s</span>
                   </div>
@@ -279,7 +279,7 @@ export default function ParentStudentDetailPage() {
                   value={selectedPeriod}
                   onChange={e => loadPeriod(e.target.value)}
                   disabled={periodLoading}
-                  style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', fontSize: 13.5, fontWeight: 500, cursor: 'pointer', minWidth: 200, appearance: 'auto', outline: 'none' }}
+                  style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', fontSize: 13.5, fontWeight: 500, cursor: 'pointer', minWidth: 200, appearance: 'auto', outline: 'none', boxShadow: 'var(--neo-inset)' }}
                 >
                   {availablePeriods.map(p => <option key={p} value={p}>{periodLabel(p)}</option>)}
                 </select>
@@ -464,7 +464,7 @@ const S: Record<string, React.CSSProperties> = {
   studentName:  { fontSize: 24, fontWeight: 800, letterSpacing: '-0.3px', marginBottom: 2 },
   studentSub:   { fontSize: 13, color: 'var(--text-secondary)' },
   gpaChips:     { marginLeft: 'auto', display: 'flex', gap: 10 },
-  gpaChip:      { background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', textAlign: 'center' as const, minWidth: 72 },
+  gpaChip:      { background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', textAlign: 'center' as const, minWidth: 72, boxShadow: 'var(--neo-raised)' },
   gpaNum:       { display: 'block', fontSize: 20, fontWeight: 800, letterSpacing: '-0.3px', lineHeight: 1 },
   gpaLbl:       { fontSize: 10.5, color: 'var(--text-muted)', display: 'block', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.4px' },
   tabBar:       { display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 24 },
@@ -478,6 +478,6 @@ const S: Record<string, React.CSSProperties> = {
   chatBanner:   { display: 'flex', alignItems: 'center', gap: 8, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 8, padding: '8px 14px', fontSize: 12, color: 'var(--primary)', marginBottom: 14 },
   messages:     { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 },
   bubbleUser:   { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 14, lineHeight: 1.55, background: 'var(--primary)', color: '#FFFFFF', alignSelf: 'flex-end', fontWeight: 500 },
-  bubbleAi:     { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 16px 4px', fontSize: 14, lineHeight: 1.55, background: 'var(--surface-2)', border: '1px solid var(--border)', alignSelf: 'flex-start', whiteSpace: 'pre-wrap' as const },
+  bubbleAi:     { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 16px 4px', fontSize: 14, lineHeight: 1.55, background: 'var(--surface-2)', border: '1px solid var(--border)', alignSelf: 'flex-start', whiteSpace: 'pre-wrap' as const, boxShadow: 'var(--neo-raised)' },
   chatLogo:     { width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' },
 }

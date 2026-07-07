@@ -221,6 +221,6 @@ const S: Record<string, React.CSSProperties> = {
   errorBanner:  { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', color: 'var(--error)', fontSize: 13, marginBottom: 16 },
   th:           { textAlign: 'left' as const, padding: '12px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.5px' },
   td:           { padding: '11px 14px', fontSize: 13.5, color: 'var(--text)' },
-  semBtn:       { padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' },
+  semBtn:       { padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', boxShadow: 'var(--neo-raised)' },
   semBtnActive: { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' },
 }

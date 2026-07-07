@@ -11,6 +11,7 @@ import Skeleton from '../components/ui/Skeleton'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { fetchStudentData, type StudentData } from '../api/studentApi'
+import { shadows } from '../constants/shadows'
 
 interface SampleCollege {
   id: number
@@ -126,6 +127,7 @@ export default function CollegesScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   card: {
+    ...shadows.raised,
     backgroundColor: colors.surface,
     borderRadius: 12,
     borderWidth: 1,
@@ -133,6 +135,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   collegeCard: {
+    ...shadows.raised,
     backgroundColor: colors.background,
     borderRadius: 8,
     borderWidth: 1,

@@ -88,7 +88,7 @@ export default function GradesHubPage() {
             onClick={() => router.push(card.href)}
             onMouseEnter={() => setHovered(card.href)}
             onMouseLeave={() => setHovered(null)}
-            style={{ ...S.card, ...(hovered === card.href ? { transform: 'translateY(-2px)', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', borderColor: 'var(--border-hover)' } : {}) }}
+            style={{ ...S.card, ...(hovered === card.href ? { transform: 'translateY(-2px)', boxShadow: 'var(--neo-raised), var(--shadow-md)', borderColor: 'var(--border-hover)' } : {}) }}
           >
             <div style={{ ...S.iconBox, background: card.iconBg }}>
               <span style={{ display: 'flex', alignItems: 'center', color: card.iconColor }}>{card.icon}</span>
@@ -110,7 +110,7 @@ export default function GradesHubPage() {
 const S: Record<string, React.CSSProperties> = {
   title:    { fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 28 },
   grid:     { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 },
-  card:     { display: 'flex', alignItems: 'center', gap: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s' },
+  card:     { display: 'flex', alignItems: 'center', gap: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s', boxShadow: 'var(--neo-raised)' },
   iconBox:  { width: 52, height: 52, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   cardTitle:{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 4 },
   cardDesc: { fontSize: 13, color: 'var(--text-secondary)' },

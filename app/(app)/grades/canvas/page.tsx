@@ -798,7 +798,7 @@ function QuizQuestionRow({ question, submissionData, showCorrect }: {
   const selectedText = submissionData?.text ?? submissionData?.answer_for_text_entry
 
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 12, background: 'var(--surface)' }}>
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 12, background: 'var(--surface)', boxShadow: 'var(--neo-raised)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
         <div className="canvas-html" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', lineHeight: 1.5, flex: 1 }}
           dangerouslySetInnerHTML={{ __html: prepareCanvasHtml(question.question_text) }} />
@@ -1336,7 +1336,7 @@ function ModulesTab({
         {modules.map(mod => {
           const isOpen = !collapsed.has(mod.id)
           return (
-            <div key={mod.id} id={`futurely-module-${mod.id}`} style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', background: 'var(--surface)' }}>
+            <div key={mod.id} id={`futurely-module-${mod.id}`} style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', background: 'var(--surface)', boxShadow: 'var(--neo-raised)' }}>
               <button
                 onClick={() => toggle(mod.id)}
                 style={{ width: '100%', padding: '13px 18px', background: 'var(--surface-2)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, textAlign: 'left' }}
@@ -1542,7 +1542,7 @@ function AnnouncementsTab({ courseId, canvasInstanceUrl }: { courseId: number; c
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {items.map(a => (
-        <div key={a.id} style={{ border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface)', overflow: 'hidden' }}>
+        <div key={a.id} style={{ border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface)', overflow: 'hidden', boxShadow: 'var(--neo-raised)' }}>
           <div style={{ padding: '14px 18px', borderBottom: a.message ? '1px solid var(--border)' : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', flex: 1 }}>{a.title}</span>
@@ -1666,7 +1666,7 @@ function GradesTab({ courseGrades, onSelectAssignment }: { courseGrades: CanvasG
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Grade summary card */}
-      <div style={{ padding: 24, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+      <div style={{ padding: 24, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap', boxShadow: 'var(--neo-raised)' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 48, fontWeight: 900, color: scoreColor(score), lineHeight: 1 }}>
             {score !== null ? `${score.toFixed(1)}%` : '—'}
@@ -1726,7 +1726,7 @@ function DashboardView({
           <div style={S.sectionTitle}>To Do</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {upcoming.map((t, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', boxShadow: 'var(--neo-raised)' }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.assignment.name}</div>
@@ -1749,7 +1749,7 @@ function DashboardView({
             <button
               key={course.id}
               onClick={() => onSelectCourse(course.id)}
-              style={{ padding: 20, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s', display: 'flex', flexDirection: 'column', gap: 10 }}
+              style={{ padding: 20, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--surface)', textAlign: 'left', cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s, box-shadow 0.15s', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: 'var(--neo-raised)' }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--primary)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface)' }}
             >

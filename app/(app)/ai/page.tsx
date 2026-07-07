@@ -299,7 +299,7 @@ const S: Record<string, React.CSSProperties> = {
 
   // History panel
   historyPanel:     { width: 200, flexShrink: 0, display: 'flex', flexDirection: 'column', paddingTop: 4, borderRight: '1px solid var(--border)', paddingRight: 14, gap: 0 },
-  newChatBtn:       { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 12, textAlign: 'left' as const, transition: 'background 0.15s' },
+  newChatBtn:       { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 12, textAlign: 'left' as const, transition: 'background 0.15s', boxShadow: 'var(--neo-raised)' },
   historyNotice:    { fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.55, marginBottom: 12, fontStyle: 'italic' },
   historyLabel:     { fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 6 },
   historyList:      { flex: 1, overflowY: 'auto' as const, display: 'flex', flexDirection: 'column' as const, gap: 2 },
@@ -325,6 +325,6 @@ const S: Record<string, React.CSSProperties> = {
   emptyTitle:       { fontSize: 17, fontWeight: 700, marginBottom: 8 },
   emptySub:         { fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 },
   bubbleUser:       { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 14, lineHeight: 1.55, background: 'var(--primary)', color: '#FFFFFF', alignSelf: 'flex-end', fontWeight: 500 },
-  bubbleAi:         { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 16px 4px', fontSize: 14, lineHeight: 1.55, background: 'var(--surface-2)', border: '1px solid var(--border)', alignSelf: 'flex-start', color: 'var(--text)', whiteSpace: 'pre-wrap' as const },
+  bubbleAi:         { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 16px 4px', fontSize: 14, lineHeight: 1.55, background: 'var(--surface-2)', border: '1px solid var(--border)', alignSelf: 'flex-start', color: 'var(--text)', whiteSpace: 'pre-wrap' as const, boxShadow: 'var(--neo-raised)' },
   inputBar:         { display: 'flex', gap: 10 },
 }
