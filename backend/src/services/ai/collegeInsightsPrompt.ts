@@ -6,7 +6,7 @@
 // may appear in the prompt. Only derived/positional fields are used.
 // See COMPLIANCE.md for the full data-handling policy.
 
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { z } from 'zod'
 import { logger } from '../../common/logger'
 import type {
@@ -15,6 +15,15 @@ import type {
   GpaPosition,
   SatPosition,
 } from '../../types/collegeInsights'
+
+const MODEL = process.env.COLLEGE_INSIGHTS_MODEL ?? 'openrouter/free'
+
+// Strip markdown code fences and extract raw JSON — mirrors the pattern used
+// by the other AI routes in this codebase (see routes/ai.ts extractJson).
+function extractJson(raw: string): string {
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
+  return fenced ? fenced[1].trim() : raw.trim()
+}
 
 // ── Typed error class ─────────────────────────────────────────────────────────
 
@@ -105,7 +114,14 @@ function buildSystemPrompt(): string {
 
 Your tone is warm, supportive, and realistic — never discouraging, but never falsely optimistic. You use plain English; no jargon, no percentages in the narrative, no raw test scores. You help students feel capable and motivated.
 
-You must produce a JSON response using the provided tool. Follow the tool schema exactly.`
+Respond with ONLY a JSON object in exactly this shape (no markdown, no extra text):
+{
+  "narrativeSummary": "<150-250 word string>",
+  "actionableSteps": [
+    { "step": "<string>", "category": "test" | "gpa" | "essay" | "extracurricular" | "strategy", "priority": "high" | "medium" | "low" }
+  ]
+}
+actionableSteps must contain between 3 and 5 items.`
 }
 
 function buildUserPrompt(input: CollegeInsightsPromptInput): string {
@@ -173,72 +189,21 @@ function buildStepGuidance(input: CollegeInsightsPromptInput): string {
   return parts.length > 0 ? parts.join(' ') : 'Balance across essay, strategy, and any relevant academic areas.'
 }
 
-// ── Tool schema for forced tool_use ──────────────────────────────────────────
-
-const TOOL_NAME = 'provide_college_insights' as const
-
-const INSIGHTS_TOOL: Anthropic.Tool = {
-  name: TOOL_NAME,
-  description:
-    'Provide a narrative summary and actionable steps for a student\'s college admission profile.',
-  input_schema: {
-    type: 'object' as const,
-    properties: {
-      narrativeSummary: {
-        type: 'string',
-        description:
-          'An encouraging 150–250 word narrative explaining the student\'s fit score and label in plain language. No raw numbers or percentages.',
-      },
-      actionableSteps: {
-        type: 'array',
-        description: 'Between 3 and 5 specific, actionable steps the student can take.',
-        minItems: 3,
-        maxItems: 5,
-        items: {
-          type: 'object',
-          properties: {
-            step: {
-              type: 'string',
-              description: 'A concise, specific action the student should take.',
-            },
-            category: {
-              type: 'string',
-              enum: ['test', 'gpa', 'essay', 'extracurricular', 'strategy'],
-              description: 'The category this step falls under.',
-            },
-            priority: {
-              type: 'string',
-              enum: ['high', 'medium', 'low'],
-              description: 'The priority level of this step.',
-            },
-          },
-          required: ['step', 'category', 'priority'],
-        },
-      },
-    },
-    required: ['narrativeSummary', 'actionableSteps'],
-  },
-}
-
 // ── Lazy singleton SDK client ─────────────────────────────────────────────────
 
-let _client: Anthropic | null = null
+let _client: OpenAI | null = null
 
-function getClient(): Anthropic {
+function getClient(): OpenAI {
   if (_client === null) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
+    const apiKey = process.env.OPENROUTER_API_KEY
     if (!apiKey) {
       throw new CollegeInsightsGenerationError(
-        'ANTHROPIC_API_KEY is not set — cannot call the LLM'
+        'OPENROUTER_API_KEY is not set — cannot call the LLM'
       )
     }
-    _client = new Anthropic({ apiKey })
+    _client = new OpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1' })
   }
   return _client
-}
-
-function resolveModelId(): string {
-  return process.env.ANTHROPIC_MODEL_ID ?? 'claude-sonnet-4-5'
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -247,16 +212,18 @@ function resolveModelId(): string {
  * Generate a narrative summary and actionable steps for a student's college
  * admission profile relative to a specific institution.
  *
- * Uses Claude via the Anthropic SDK with forced tool_use to guarantee a
- * structured JSON response that is then validated with Zod before returning.
+ * Uses the same OpenRouter-backed model as the rest of NextStep's AI features
+ * (see routes/ai.ts), prompted to return a strict JSON shape which is then
+ * validated with Zod before returning.
  *
  * Throws {@link CollegeInsightsGenerationError} on any LLM failure (network,
- * timeout, SDK error, or schema validation mismatch).  The caller in
- * collegeInsights.ts catches this class and falls back to stale-cache data.
+ * timeout, SDK error, malformed JSON, or schema validation mismatch). The
+ * caller in collegeInsights.ts catches this class and falls back to
+ * stale-cache data.
  *
  * PII policy: the prompt is built entirely from derived/positional fields in
- * {@link CollegeInsightsPromptInput}.  No student name, email, ID, raw SAT
- * score, or raw GPA value enters the prompt.  Logs contain only non-PII
+ * {@link CollegeInsightsPromptInput}. No student name, email, ID, raw SAT
+ * score, or raw GPA value enters the prompt. Logs contain only non-PII
  * metadata (label, category counts, latency).
  */
 export async function generateCollegeInsights(
@@ -264,19 +231,20 @@ export async function generateCollegeInsights(
 ): Promise<CollegeInsightsPayload> {
   const startMs = Date.now()
 
-  let response: Anthropic.Message
+  let raw: string
   try {
     const client = getClient()
-    const model = resolveModelId()
 
-    response = await client.messages.create({
-      model,
+    const response = await client.chat.completions.create({
+      model: MODEL,
       max_tokens: 600,
-      system: buildSystemPrompt(),
-      tools: [INSIGHTS_TOOL],
-      tool_choice: { type: 'tool', name: TOOL_NAME },
-      messages: [{ role: 'user', content: buildUserPrompt(input) }],
+      messages: [
+        { role: 'system', content: buildSystemPrompt() },
+        { role: 'user', content: buildUserPrompt(input) },
+      ],
     })
+
+    raw = response.choices[0]?.message?.content ?? ''
   } catch (sdkError) {
     // Never log prompt contents — it contains student context
     logger.warn('College insights LLM call failed', {
@@ -290,26 +258,20 @@ export async function generateCollegeInsights(
     )
   }
 
-  // ── Extract tool_use block from response ──────────────────────────────────
+  // ── Parse and validate the JSON response ──────────────────────────────────
 
-  const toolUseBlock = response.content.find(
-    (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
-  )
-
-  if (toolUseBlock === undefined) {
-    logger.warn('College insights LLM returned no tool_use block', {
+  let parsedJson: unknown
+  try {
+    parsedJson = JSON.parse(extractJson(raw))
+  } catch (parseError) {
+    logger.warn('College insights LLM returned invalid JSON', {
       feature: 'collegeInsights',
-      stopReason: response.stop_reason,
       latencyMs: Date.now() - startMs,
     })
-    throw new CollegeInsightsGenerationError(
-      `LLM did not return a tool_use block (stop_reason: ${response.stop_reason})`
-    )
+    throw new CollegeInsightsGenerationError('LLM returned invalid JSON', parseError)
   }
 
-  // ── Validate the tool input against the Zod schema ────────────────────────
-
-  const parseResult = CollegeInsightsPayloadSchema.safeParse(toolUseBlock.input)
+  const parseResult = CollegeInsightsPayloadSchema.safeParse(parsedJson)
 
   if (!parseResult.success) {
     logger.warn('College insights LLM output failed schema validation', {
