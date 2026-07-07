@@ -10,12 +10,12 @@ const SCORECARD_FIELDS = [
   'school.name',
   'school.city',
   'school.state',
-  'admissions.admission_rate.overall',
-  'admissions.sat_scores.25th_percentile.critical_reading',
-  'admissions.sat_scores.25th_percentile.math',
-  'admissions.sat_scores.75th_percentile.critical_reading',
-  'admissions.sat_scores.75th_percentile.math',
-  'student.size',
+  'latest.admissions.admission_rate.overall',
+  'latest.admissions.sat_scores.25th_percentile.critical_reading',
+  'latest.admissions.sat_scores.25th_percentile.math',
+  'latest.admissions.sat_scores.75th_percentile.critical_reading',
+  'latest.admissions.sat_scores.75th_percentile.math',
+  'latest.student.size',
 ].join(',')
 
 const REQUEST_TIMEOUT_MS = 30_000
@@ -55,18 +55,20 @@ export interface ScorecardSchool {
 
 // The College Scorecard API returns fields as flat dot-notation keys matching
 // the requested `fields` query param verbatim — it does NOT nest them into
-// objects. e.g. `{"school.name": "MIT", "admissions.admission_rate.overall": 0.04}`.
+// objects. e.g. `{"school.name": "MIT", "latest.admissions.admission_rate.overall": 0.04}`.
+// Cohort-scoped fields (admissions, SAT, enrollment) require the `latest.` prefix
+// or the API silently returns null for them; institution-level fields (school.*) don't.
 interface RawSchoolResult {
   id: number
   'school.name': string
   'school.city': string | null
   'school.state': string | null
-  'admissions.admission_rate.overall': number | null
-  'admissions.sat_scores.25th_percentile.critical_reading': number | null
-  'admissions.sat_scores.25th_percentile.math': number | null
-  'admissions.sat_scores.75th_percentile.critical_reading': number | null
-  'admissions.sat_scores.75th_percentile.math': number | null
-  'student.size': number | null
+  'latest.admissions.admission_rate.overall': number | null
+  'latest.admissions.sat_scores.25th_percentile.critical_reading': number | null
+  'latest.admissions.sat_scores.25th_percentile.math': number | null
+  'latest.admissions.sat_scores.75th_percentile.critical_reading': number | null
+  'latest.admissions.sat_scores.75th_percentile.math': number | null
+  'latest.student.size': number | null
 }
 
 interface ScorecardApiResponse {
@@ -101,16 +103,16 @@ function normalizeResult(raw: RawSchoolResult): ScorecardSchool {
     name: raw['school.name'],
     city: raw['school.city'] ?? null,
     state: raw['school.state'] ?? null,
-    admissionRate: raw['admissions.admission_rate.overall'] ?? null,
+    admissionRate: raw['latest.admissions.admission_rate.overall'] ?? null,
     sat25th: compositeScore(
-      raw['admissions.sat_scores.25th_percentile.critical_reading'],
-      raw['admissions.sat_scores.25th_percentile.math']
+      raw['latest.admissions.sat_scores.25th_percentile.critical_reading'],
+      raw['latest.admissions.sat_scores.25th_percentile.math']
     ),
     sat75th: compositeScore(
-      raw['admissions.sat_scores.75th_percentile.critical_reading'],
-      raw['admissions.sat_scores.75th_percentile.math']
+      raw['latest.admissions.sat_scores.75th_percentile.critical_reading'],
+      raw['latest.admissions.sat_scores.75th_percentile.math']
     ),
-    enrollment: raw['student.size'] ?? null,
+    enrollment: raw['latest.student.size'] ?? null,
   }
 }
 
