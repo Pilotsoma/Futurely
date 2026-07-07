@@ -56,19 +56,35 @@ function formatSessionDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+const AiSparkIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+  </svg>
+)
+
 function AIChatInner() {
-  const [sessions, setSessions]   = useState<ChatSession[]>([])
-  const [activeId, setActiveId]   = useState<string | null>(null)
-  const [messages, setMessages]   = useState<Msg[]>([])
-  const [input, setInput]         = useState('')
-  const [sending, setSending]     = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const [sessions, setSessions]     = useState<ChatSession[]>([])
+  const [activeId, setActiveId]     = useState<string | null>(null)
+  const [messages, setMessages]     = useState<Msg[]>([])
+  const [input, setInput]           = useState('')
+  const [sending, setSending]       = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const bottomRef   = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     const loaded = loadSessions()
     setSessions(loaded)
     saveSessions(loaded)
   }, [])
+
+  // Auto-grow the composer textarea up to a max height, then scroll internally.
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`
+  }, [input])
 
   // Auto-send a message passed from the dashboard AiBar via sessionStorage.
   // We use a cancel flag so React 18 Strict Mode's mount→unmount→remount
@@ -126,12 +142,14 @@ function AIChatInner() {
     setActiveId(null)
     setMessages([])
     setInput('')
+    setHistoryOpen(false)
   }
 
   function openSession(session: ChatSession) {
     setActiveId(session.id)
     setMessages(session.messages)
     setInput('')
+    setHistoryOpen(false)
   }
 
   function persistMessages(msgs: Msg[], sessionId: string, title: string) {
@@ -184,104 +202,353 @@ function AIChatInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input, sending, messages, sessions, activeId])
 
-  return (
-    <div className="fade-up" style={S.shell}>
+  const isEmpty = messages.length === 0
 
-      {/* ── Chat History Panel ── */}
-      <div style={S.historyPanel}>
-        <button onClick={startNewChat} style={S.newChatBtn}>+ New Chat</button>
-        <p style={S.historyNotice}>Chats are automatically deleted after 7 days.</p>
-        <p style={S.historyLabel}>Recent</p>
-        <div style={S.historyList}>
+  return (
+    <div className="aic-shell fade-up">
+
+      {/* ── Chat history (collapsible on mobile) ── */}
+      <aside className={`aic-history ${historyOpen ? 'aic-history--open' : ''}`}>
+        <button onClick={startNewChat} className="aic-new-chat">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Chat
+        </button>
+        <p className="aic-history-notice">Chats are automatically deleted after 7 days.</p>
+        <p className="aic-eyebrow">Recent</p>
+        <div className="aic-history-list">
           {sessions.length === 0 ? (
-            <p style={S.historyEmpty}>No conversations yet.</p>
+            <p className="aic-history-empty">No conversations yet.</p>
           ) : [...sessions].sort((a, b) => b.updatedAt - a.updatedAt).map(s => (
             <button
               key={s.id}
               onClick={() => openSession(s)}
-              style={{
-                ...S.historyItem,
-                background: activeId === s.id ? 'var(--surface-2)' : 'transparent',
-                borderColor: activeId === s.id ? 'var(--border)' : 'transparent',
-              }}
+              className={`aic-history-item ${activeId === s.id ? 'aic-history-item--active' : ''}`}
             >
-              <span style={S.historyItemTitle}>{s.title}</span>
-              <span style={S.historyItemDate}>{formatSessionDate(s.updatedAt)}</span>
+              <span className="aic-history-item-title">{s.title}</span>
+              <span className="aic-history-item-date">{formatSessionDate(s.updatedAt)}</span>
             </button>
           ))}
         </div>
-      </div>
-
-      {/* ── Quick Questions ── */}
-      <div style={S.sidebar}>
-        <p style={S.sidebarLabel}>Quick Questions</p>
-        {CHIPS.map(chip => (
-          <button key={chip} className="ns-chip" onClick={() => void handleSend(chip)}>{chip}</button>
-        ))}
-        <p style={S.sidebarHint}>Personalized to your grades &amp; schedule.</p>
-      </div>
+      </aside>
+      {historyOpen && <div className="aic-scrim" onClick={() => setHistoryOpen(false)} aria-hidden="true" />}
 
       {/* ── Chat ── */}
-      <div style={S.chat}>
-        <div style={S.chatHeader}>
-          <div style={S.aiLogo}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-            </svg>
-          </div>
-          <div>
-            <div style={S.aiName}>Futurely AI</div>
-          </div>
-        </div>
+      <section className="aic-chat">
+        <header className="aic-header">
+          <button
+            className="aic-history-toggle"
+            onClick={() => setHistoryOpen(v => !v)}
+            aria-label={historyOpen ? 'Close chat history' : 'Open chat history'}
+            aria-expanded={historyOpen}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div className="aic-header-avatar"><AiSparkIcon size={16} /></div>
+          <div className="aic-header-name">Futurely AI</div>
+        </header>
 
-        <div style={S.messages}>
-          {messages.length === 0 && (
-            <div style={S.empty}>
-              <div style={S.emptyLogo}>
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-                </svg>
+        <div className="aic-messages" role="log" aria-live="polite" aria-label="Conversation">
+          {isEmpty && (
+            <div className="aic-empty">
+              <div className="aic-orb-wrap" aria-hidden="true">
+                <div className="aic-orb-glow" />
+                <div className="aic-orb"><AiSparkIcon size={26} /></div>
               </div>
-              <p style={S.emptyTitle}>How can I help you today?</p>
-              <p style={S.emptySub}>Ask about your grades, upcoming assignments, or college planning.</p>
+              <h1 className="aic-empty-title">How can I help you today?</h1>
+              <p className="aic-empty-sub">Ask about your grades, upcoming assignments, or college planning.</p>
+
+              <div className="aic-chips stagger">
+                {CHIPS.map(chip => (
+                  <button key={chip} className="aic-chip" onClick={() => void handleSend(chip)}>{chip}</button>
+                ))}
+              </div>
+              <p className="aic-empty-hint">Personalized to your grades &amp; schedule.</p>
             </div>
           )}
-          {messages.map(m => (
-            <div key={m.id} style={m.role === 'user' ? S.bubbleUser : S.bubbleAi}>
-              {m.text}
+
+          {messages.map((m, i) => (
+            <div
+              key={m.id}
+              className={`aic-row ${m.role === 'user' ? 'aic-row--user' : 'aic-row--ai'}`}
+              style={{ animationDelay: `${Math.min(i, 6) * 30}ms` }}
+            >
+              {m.role === 'ai' && <div className="aic-avatar" aria-hidden="true"><AiSparkIcon size={14} /></div>}
+              <div className={m.role === 'user' ? 'aic-bubble-user' : 'aic-bubble-ai'}>{m.text}</div>
             </div>
           ))}
+
           {sending && (
-            <div style={{ ...S.bubbleAi, display: 'flex', gap: 6, alignItems: 'center', padding: '14px 18px' }}>
-              <span className="ai-dot"/><span className="ai-dot"/><span className="ai-dot"/>
+            <div className="aic-row aic-row--ai">
+              <div className="aic-avatar" aria-hidden="true"><AiSparkIcon size={14} /></div>
+              <div className="aic-bubble-ai aic-typing" aria-label="Futurely AI is thinking">
+                <span className="ai-dot"/><span className="ai-dot"/><span className="ai-dot"/>
+              </div>
             </div>
           )}
           <div ref={bottomRef} />
         </div>
 
-        <div style={S.inputBar}>
-          <input
-            className="ns-input"
-            style={{ flex: 1, height: 46, fontSize: 14 }}
+        <div className="aic-input-bar">
+          <textarea
+            ref={textareaRef}
+            className="aic-textarea"
+            rows={1}
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend() } }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                void handleSend()
+              }
+            }}
             placeholder="Ask anything about your academics…"
             disabled={sending}
+            aria-label="Message Futurely AI"
           />
           <button
-            className="ns-btn-primary"
-            style={{ height: 46, padding: '0 22px', flexShrink: 0, opacity: sending ? 0.5 : 1 }}
+            className="aic-send-btn"
             onClick={() => void handleSend()}
-            disabled={sending}
+            disabled={sending || !input.trim()}
+            aria-label="Send message"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/>
               <polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
           </button>
         </div>
-      </div>
+      </section>
+
+      <style jsx>{`
+        .aic-shell {
+          display: flex;
+          height: calc(100vh - 64px);
+          gap: 0;
+          position: relative;
+        }
+
+        /* ── History sidebar ── */
+        .aic-history {
+          width: 220px;
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          padding: 4px 16px 16px 0;
+          border-right: 1px solid rgba(255,255,255,0.08);
+        }
+        .aic-new-chat {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          border-radius: 10px;
+          border: 1px solid rgba(255,255,255,0.09);
+          background: var(--surface-2);
+          color: var(--text);
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          margin-bottom: 14px;
+          transition: border-color var(--dur-fast, 120ms) ease, background var(--dur-fast, 120ms) ease, transform var(--dur-fast, 120ms) ease;
+        }
+        .aic-new-chat:hover { border-color: var(--primary); background: var(--surface-3); transform: translateY(-1px); }
+        .aic-new-chat:active { transform: scale(0.98); }
+        .aic-history-notice { font-size: 10.5px; color: var(--text-muted); line-height: 1.55; margin-bottom: 16px; font-style: italic; }
+        .aic-eyebrow { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 8px; }
+        .aic-history-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+        .aic-history-empty { font-size: 12px; color: var(--text-muted); font-style: italic; }
+        .aic-history-item {
+          width: 100%;
+          background: transparent;
+          border: 1px solid transparent;
+          border-radius: 8px;
+          padding: 8px 10px;
+          cursor: pointer;
+          text-align: left;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          transition: background 100ms ease;
+        }
+        .aic-history-item:hover { background: rgba(255,255,255,0.04); }
+        .aic-history-item--active { background: var(--surface-2); border-color: rgba(255,255,255,0.08); }
+        .aic-history-item-title { font-size: 12.5px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .aic-history-item-date { font-size: 10.5px; color: var(--text-muted); }
+        .aic-scrim { display: none; }
+
+        /* ── Chat column ── */
+        .aic-chat { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; padding-left: 24px; }
+        .aic-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .aic-history-toggle { display: none; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.08); background: var(--surface-2); color: var(--text-secondary); }
+        .aic-header-avatar {
+          width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          color: #fff;
+          background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 55%, var(--accent-blue) 100%);
+        }
+        .aic-header-name { font-family: var(--font-display, inherit); font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: 0.1px; }
+
+        /* ── Messages ── */
+        .aic-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px; margin-bottom: 16px; }
+
+        .aic-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; text-align: center; padding: 20px 24px; }
+        .aic-orb-wrap { position: relative; width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; margin-bottom: 22px; }
+        .aic-orb-glow {
+          position: absolute; inset: 0;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(41,121,255,0.35) 0%, rgba(124,58,237,0.22) 45%, rgba(0,229,255,0.10) 70%, transparent 75%);
+          filter: blur(6px);
+        }
+        .aic-orb {
+          position: relative;
+          width: 62px; height: 62px; border-radius: 20px;
+          display: flex; align-items: center; justify-content: center;
+          color: #fff;
+          background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 55%, var(--accent-blue) 100%);
+          box-shadow: 0 8px 28px rgba(41,121,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+        }
+        .aic-empty-title { font-family: var(--font-display, inherit); font-size: 24px; font-weight: 600; letter-spacing: -0.2px; color: var(--text); margin-bottom: 10px; }
+        .aic-empty-sub { font-size: 14px; color: var(--text-secondary); line-height: 1.6; max-width: 380px; margin-bottom: 28px; }
+
+        .aic-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 480px; margin-bottom: 16px; }
+        .aic-chip {
+          padding: 9px 16px;
+          border-radius: 100px;
+          border: 1px solid rgba(255,255,255,0.09);
+          background: var(--surface-2);
+          color: var(--text-secondary);
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: border-color 120ms ease, color 120ms ease, background 120ms ease, transform 120ms ease;
+        }
+        .aic-chip:hover { border-color: var(--primary); color: var(--text); background: var(--primary-dim); transform: translateY(-1px); }
+        .aic-chip:active { transform: scale(0.97); }
+        .aic-empty-hint { font-size: 11.5px; color: var(--text-muted); }
+
+        /* ── Bubbles ── */
+        .aic-row { display: flex; align-items: flex-end; gap: 8px; max-width: 78%; opacity: 0; animation: aicRise 320ms var(--ease-out-quart, ease) both; }
+        .aic-row--ai { align-self: flex-start; }
+        .aic-row--user { align-self: flex-end; margin-left: auto; }
+        .aic-avatar {
+          width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0; margin-bottom: 2px;
+          display: flex; align-items: center; justify-content: center;
+          color: #fff;
+          background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 55%, var(--accent-blue) 100%);
+        }
+        .aic-bubble-user {
+          padding: 11px 16px;
+          border-radius: 16px 16px 4px 16px;
+          font-size: 14px;
+          line-height: 1.55;
+          background: var(--primary);
+          color: #fff;
+          font-weight: 500;
+        }
+        .aic-bubble-ai {
+          padding: 11px 16px;
+          border-radius: 16px 16px 16px 4px;
+          font-size: 14px;
+          line-height: 1.55;
+          background: var(--surface-2);
+          border: 1px solid rgba(255,255,255,0.08);
+          color: var(--text);
+          white-space: pre-wrap;
+        }
+        .aic-typing { display: flex; gap: 6px; align-items: center; padding: 14px 18px; }
+
+        /* ── Input bar ── */
+        .aic-input-bar {
+          display: flex;
+          align-items: flex-end;
+          gap: 10px;
+          padding: 8px;
+          border-radius: 18px;
+          background: var(--surface-2);
+          border: 1px solid rgba(255,255,255,0.08);
+          transition: border-color 150ms ease, box-shadow 150ms ease;
+        }
+        .aic-input-bar:focus-within {
+          border-color: var(--primary);
+          box-shadow: 0 0 0 4px var(--primary-dim);
+        }
+        .aic-textarea {
+          flex: 1;
+          resize: none;
+          border: none;
+          outline: none;
+          background: transparent;
+          color: var(--text);
+          font-size: 14px;
+          font-family: inherit;
+          line-height: 1.5;
+          padding: 10px 8px;
+          max-height: 160px;
+        }
+        .aic-textarea::placeholder { color: var(--text-muted); }
+        .aic-textarea:disabled { opacity: 0.6; }
+        .aic-send-btn {
+          flex-shrink: 0;
+          width: 40px; height: 40px;
+          border-radius: 12px;
+          border: none;
+          color: #fff;
+          display: flex; align-items: center; justify-content: center;
+          background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
+          transition: transform 120ms var(--ease-spring, ease), box-shadow 150ms ease, opacity 120ms ease;
+        }
+        .aic-send-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(41,121,255,0.4); }
+        .aic-send-btn:active:not(:disabled) { transform: scale(0.94); }
+        .aic-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .aic-send-btn:focus-visible,
+        .aic-chip:focus-visible,
+        .aic-new-chat:focus-visible,
+        .aic-history-item:focus-visible,
+        .aic-history-toggle:focus-visible,
+        .aic-textarea:focus-visible {
+          outline: 2px solid var(--accent-blue);
+          outline-offset: 2px;
+        }
+
+        @keyframes aicRise {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes aicBreathe {
+          0%, 100% { transform: scale(1); opacity: 0.9; }
+          50%      { transform: scale(1.08); opacity: 1; }
+        }
+        @media (prefers-reduced-motion: no-preference) {
+          .aic-orb-glow { animation: aicBreathe 4.5s ease-in-out infinite; }
+        }
+        :global(.reduce-motion) .aic-orb-glow,
+        :global(.reduce-motion) .aic-row {
+          animation: none !important;
+          opacity: 1 !important;
+          transform: none !important;
+        }
+
+        /* ── Mobile ── */
+        @media (max-width: 760px) {
+          .aic-history {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 260px;
+            z-index: 40;
+            background: var(--bg);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            padding: 20px 16px;
+            transform: translateX(-100%);
+            transition: transform 220ms var(--ease-out-quart, ease);
+          }
+          .aic-history--open { transform: translateX(0); }
+          .aic-scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 30; }
+          .aic-chat { padding-left: 0; }
+          .aic-history-toggle { display: flex; }
+          .aic-row { max-width: 90%; }
+        }
+      `}</style>
     </div>
   )
 }
@@ -292,39 +559,4 @@ export default function AIChatPage() {
       <AIChatInner />
     </Suspense>
   )
-}
-
-const S: Record<string, React.CSSProperties> = {
-  shell:            { display: 'flex', gap: 20, height: 'calc(100vh - 64px)' },
-
-  // History panel
-  historyPanel:     { width: 200, flexShrink: 0, display: 'flex', flexDirection: 'column', paddingTop: 4, borderRight: '1px solid var(--border)', paddingRight: 14, gap: 0 },
-  newChatBtn:       { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 12, textAlign: 'left' as const, transition: 'background 0.15s', boxShadow: 'var(--neo-raised)' },
-  historyNotice:    { fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.55, marginBottom: 12, fontStyle: 'italic' },
-  historyLabel:     { fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 6 },
-  historyList:      { flex: 1, overflowY: 'auto' as const, display: 'flex', flexDirection: 'column' as const, gap: 2 },
-  historyEmpty:     { fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' },
-  historyItem:      { width: '100%', background: 'transparent', border: '1px solid transparent', borderRadius: 7, padding: '7px 9px', cursor: 'pointer', textAlign: 'left' as const, display: 'flex', flexDirection: 'column' as const, gap: 2, transition: 'background 0.1s' },
-  historyItemTitle: { fontSize: 12.5, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, display: 'block' },
-  historyItemDate:  { fontSize: 10.5, color: 'var(--text-muted)' },
-
-  // Quick questions
-  sidebar:          { width: 160, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, gap: 6, paddingTop: 4 },
-  sidebarLabel:     { fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 4 },
-  sidebarHint:      { fontSize: 11.5, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.5 },
-
-  // Chat
-  chat:             { flex: 1, display: 'flex', flexDirection: 'column' as const, minHeight: 0 },
-  chatHeader:       { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' },
-  aiLogo:           { width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#2B4A8E,#2D6A4F)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  aiName:           { fontSize: 15, fontWeight: 700, color: 'var(--text)' },
-  aiSub:            { fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 },
-  messages:         { flex: 1, overflowY: 'auto' as const, display: 'flex', flexDirection: 'column' as const, gap: 10, paddingRight: 4, marginBottom: 16 },
-  empty:            { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', flex: 1, textAlign: 'center' as const, padding: '20px 40px' },
-  emptyLogo:        { width: 60, height: 60, borderRadius: 18, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle:       { fontSize: 17, fontWeight: 700, marginBottom: 8 },
-  emptySub:         { fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 },
-  bubbleUser:       { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 14, lineHeight: 1.55, background: 'var(--primary)', color: '#FFFFFF', alignSelf: 'flex-end', fontWeight: 500 },
-  bubbleAi:         { maxWidth: '72%', padding: '11px 16px', borderRadius: '16px 16px 16px 4px', fontSize: 14, lineHeight: 1.55, background: 'var(--surface-2)', border: '1px solid var(--border)', alignSelf: 'flex-start', color: 'var(--text)', whiteSpace: 'pre-wrap' as const, boxShadow: 'var(--neo-raised)' },
-  inputBar:         { display: 'flex', gap: 10 },
 }
