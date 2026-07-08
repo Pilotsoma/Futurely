@@ -349,7 +349,10 @@ function AIChatInner() {
       </section>
 
       <style jsx>{`
-        .aic-shell {
+        /* :global because this class lives on a motion.div — styled-jsx's
+           scoping class only gets attached to plain native elements, so a
+           scoped selector here would silently never match. */
+        :global(.aic-shell) {
           display: flex;
           height: calc(100vh - (var(--page-px) * 2));
           gap: 0;
