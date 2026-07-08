@@ -549,12 +549,17 @@ export default function PlannerPage() {
             disabled={studyPlanLoading}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              background: showStudyPlan ? 'var(--surface-2)' : 'none',
-              border: '1px solid var(--border)',
+              background: showStudyPlan
+                ? 'var(--surface-2)'
+                : 'linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%)',
+              border: showStudyPlan ? '1px solid var(--border)' : 'none',
               borderRadius: 8, padding: '8px 14px',
-              fontSize: 13, fontWeight: 600, color: 'var(--text)',
+              fontSize: 13, fontWeight: 600,
+              color: showStudyPlan ? 'var(--text)' : '#fff',
+              boxShadow: showStudyPlan ? 'none' : '0 2px 10px rgba(124,58,237,0.35)',
               cursor: studyPlanLoading ? 'not-allowed' : 'pointer',
               opacity: studyPlanLoading ? 0.7 : 1,
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
             }}
           >
             <SparklesIcon size={15}/>
