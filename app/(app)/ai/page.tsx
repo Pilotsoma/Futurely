@@ -351,7 +351,7 @@ function AIChatInner() {
       <style jsx>{`
         .aic-shell {
           display: flex;
-          height: calc(100vh - 64px - (var(--page-px) * 2));
+          height: calc(100vh - (var(--page-px) * 2));
           gap: 0;
           position: relative;
         }
