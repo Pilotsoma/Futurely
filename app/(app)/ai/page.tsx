@@ -280,7 +280,7 @@ function AIChatInner() {
             <div className="aic-empty">
               <div aria-hidden="true" className="aic-orb-wrap">
                 <div className="aic-orb-glow" />
-                <div className="aic-orb"><AiSparkIcon size={26} /></div>
+                <div className="aic-orb"><AiSparkIcon size={38} /></div>
               </div>
               <h1 className="aic-empty-title">How can I help you today?</h1>
               <p className="aic-empty-sub">Ask about your grades, upcoming assignments, or college planning.</p>
@@ -424,7 +424,7 @@ function AIChatInner() {
         .aic-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px; margin-bottom: 16px; }
 
         .aic-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; text-align: center; padding: 20px 24px; }
-        .aic-orb-wrap { position: relative; width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; margin-bottom: 22px; }
+        .aic-orb-wrap { position: relative; width: 116px; height: 116px; display: flex; align-items: center; justify-content: center; margin-bottom: 22px; }
         .aic-orb-glow {
           position: absolute; inset: 0;
           border-radius: 50%;
@@ -433,9 +433,9 @@ function AIChatInner() {
         }
         .aic-orb {
           position: relative;
-          width: 62px; height: 62px; border-radius: 20px;
+          width: 80px; height: 80px; border-radius: 22px;
           display: flex; align-items: center; justify-content: center;
-          padding: 9px;
+          padding: 11px;
           background: var(--surface-2);
           border: 1px solid rgba(255,255,255,0.08);
           box-shadow: 0 8px 28px rgba(41,121,255,0.25), inset 0 1px 0 rgba(255,255,255,0.12);
