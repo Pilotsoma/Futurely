@@ -50,18 +50,12 @@ function detectLevel(courseName: string): CourseLevel {
   return 'Regular'
 }
 
-interface TranscriptCourse {
-  name: string
-  grade: string   // numeric grade like "97"
-  credits: string
-}
-
-
 interface SimCourse {
   id: string
   name: string
   level: CourseLevel
-  average: number  // grade percentage
+  average: number          // projected grade percentage (editable)
+  originalAverage: number  // synced grade percentage, for reset/delta comparisons
 }
 
 const LETTER_COLORS: Record<string, string> = {
@@ -94,13 +88,11 @@ async function apiFetch<T>(path: string): Promise<T> {
 
 export default function WhatIfGpaPage() {
   const router = useRouter()
-  const [currentClasses, setCurrentClasses] = useState<TranscriptCourse[]>([])
   const [simCourses, setSimCourses]         = useState<SimCourse[]>([])
   const [loading, setLoading]               = useState(true)
   const [error, setError]                   = useState<string | null>(null)
   const [resyncing, setResyncing]           = useState(false)
   const [gpaType, setGpaType]               = useState<GpaType>('weighted')
-  const [simSemesters, setSimSemesters]     = useState(1)
 
   // Exact GPAs from HAC (same source as dashboard)
   const [exactWeightedGpa, setExactWeightedGpa]     = useState<number | null>(null)
@@ -127,20 +119,25 @@ export default function WhatIfGpaPage() {
         setExactUnweightedGpa(gpaJson.unweightedGpa)
         setCourseCount(gpaJson.courseCount)
 
-        // 2. Fetch current classes for the reference panel
+        // 2. Fetch current classes and seed the simulator with them,
+        // using each course's real weight/level and synced grade.
         const classworkRes = await fetch('/api/integrations/grades/classwork', {
           credentials: 'include',
           headers: { Authorization: `Bearer ${typeof window !== 'undefined' ? getApiToken() : null}` },
         })
         const classworkJson = await classworkRes.json()
         const raw = classworkJson.data?.classes ?? []
-        setCurrentClasses(raw.map((c: { name: string; average: string | null }) => ({
-          name: c.name ?? '',
-          grade: c.average ?? '0',
-          credits: '0.5',
-        })))
-
-        setSimCourses(generateBlankCourses(7))
+        setSimCourses(raw.map((c: { name: string; average: string | null }, i: number) => {
+          const avg = parseFloat(c.average ?? '')
+          const average = isNaN(avg) ? 0 : avg
+          return {
+            id: `sim-${i}`,
+            name: c.name ?? '',
+            level: detectLevel(c.name ?? ''),
+            average,
+            originalAverage: average,
+          }
+        }))
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load data')
       } finally {
@@ -163,53 +160,19 @@ export default function WhatIfGpaPage() {
     }
   }
 
-  function generateBlankCourses(count: number): SimCourse[] {
-    return Array.from({ length: count }, (_, i) => ({
-      id: `sim-${i}`,
-      name: `New Course ${i + 1}`,
-      level: 'Regular' as CourseLevel,
-      average: 0,
-    }))
-  }
-
-  function handleSemesterChange(n: number) {
-    const count = n * 7
-    setSimSemesters(n)
-    setSimCourses(prev => {
-      if (prev.length === count) return prev
-      return Array.from({ length: count }, (_, i) => prev[i] ?? {
-        id: `sim-${i}`,
-        name: `New Course ${i + 1}`,
-        level: 'Regular' as CourseLevel,
-        average: 0,
-      })
-    })
-  }
-
-  // Project simulated GPA by starting from the exact HAC GPA × courseCount,
-  // then adding the simulated courses' grade points on top.
+  // Project the simulated GPA from the synced courses' (possibly edited) grades,
+  // using each course's real weight/level.
   function calcSimulatedGpa(type: GpaType): number {
-    const base = type === 'weighted' ? exactWeightedGpa : exactUnweightedGpa
-    if (base === null || courseCount === 0) return 0
-
-    let simPts = 0
-    let simCount = 0
-    for (const c of simCourses) {
-      if (c.average > 0) {
-        simPts += gradePoints(c.average, c.level, type)
-        simCount++
-      }
-    }
-    if (simCount === 0) return base
-
-    const totalPts = base * courseCount + simPts
-    return Math.round((totalPts / (courseCount + simCount)) * 1000) / 1000
+    const valid = simCourses.filter(c => c.average > 0)
+    if (valid.length === 0) return 0
+    const totalPts = valid.reduce((sum, c) => sum + gradePoints(c.average, c.level, type), 0)
+    return Math.round((totalPts / valid.length) * 1000) / 1000
   }
 
   const baselineGpa = (gpaType === 'weighted' ? exactWeightedGpa : exactUnweightedGpa) ?? 0
   const simGPA      = calcSimulatedGpa(gpaType)
   const delta       = simGPA - baselineGpa
-  const hasSimCourses = simCourses.some(c => c.average > 0)
+  const isEdited     = simCourses.some(c => c.average !== c.originalAverage)
 
   const updateSimCourse = (id: string, field: 'average' | 'level', value: string) =>
     setSimCourses(prev => prev.map(c => c.id === id ? {
@@ -217,7 +180,7 @@ export default function WhatIfGpaPage() {
       [field]: field === 'average' ? (parseFloat(value) || 0) : (value as CourseLevel),
     } : c))
 
-  const clearAll = () => setSimCourses(prev => prev.map(c => ({ ...c, average: 0 })))
+  const resetAll = () => setSimCourses(prev => prev.map(c => ({ ...c, average: c.originalAverage })))
 
   if (loading) return <PageLoader message="Opening GPA calculator…" />
 
@@ -269,10 +232,10 @@ export default function WhatIfGpaPage() {
             {courseCount} courses from transcript
           </div>
         </div>
-        <div className="ns-card" style={{ flex: 1, padding: 20, borderColor: hasSimCourses ? 'var(--primary-glow)' : 'var(--border)', background: hasSimCourses ? 'var(--primary-dim)' : undefined }}>
+        <div className="ns-card" style={{ flex: 1, padding: 20, borderColor: isEdited ? 'var(--primary-glow)' : 'var(--border)', background: isEdited ? 'var(--primary-dim)' : undefined }}>
           <div style={S.gpaLabel}>Simulated {gpaType === 'weighted' ? 'Weighted' : 'Unweighted'} GPA</div>
-          <div style={{ ...S.gpaNum, marginTop: 8, color: hasSimCourses ? 'var(--primary)' : 'var(--text-muted)' }}>{simGPA.toFixed(3)}</div>
-          {hasSimCourses && (
+          <div style={{ ...S.gpaNum, marginTop: 8, color: isEdited ? 'var(--primary)' : 'var(--text-muted)' }}>{simGPA.toFixed(3)}</div>
+          {isEdited && (
             <div style={{ fontSize: 13, fontWeight: 700, color: delta >= 0 ? '#22C55E' : '#EF4444', marginTop: 4 }}>
               {delta >= 0 ? '+' : ''}{delta.toFixed(3)}
             </div>
@@ -286,28 +249,13 @@ export default function WhatIfGpaPage() {
           : 'Unweighted scale: All courses use Regular scale (A=4.0, B=3.0, C=2.0, F=0.0)'}
       </p>
 
-      {/* Semester selector */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={S.sectionLabel}>Simulate additional courses</div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <button onClick={() => handleSemesterChange(1)}
-            style={{ ...S.semBtn, background: simSemesters === 1 ? 'var(--primary)' : 'var(--surface)', color: simSemesters === 1 ? '#fff' : 'var(--text-secondary)', borderColor: simSemesters === 1 ? 'var(--primary)' : 'var(--border)' }}>
-            1 Semester (7 courses)
-          </button>
-          <button onClick={() => handleSemesterChange(2)}
-            style={{ ...S.semBtn, background: simSemesters === 2 ? 'var(--primary)' : 'var(--surface)', color: simSemesters === 2 ? '#fff' : 'var(--text-secondary)', borderColor: simSemesters === 2 ? 'var(--primary)' : 'var(--border)' }}>
-            1 Year (14 courses)
-          </button>
-          <button onClick={() => handleSemesterChange(4)}
-            style={{ ...S.semBtn, background: simSemesters === 4 ? 'var(--primary)' : 'var(--surface)', color: simSemesters === 4 ? '#fff' : 'var(--text-secondary)', borderColor: simSemesters === 4 ? 'var(--primary)' : 'var(--border)' }}>
-            2 Years (28 courses)
-          </button>
-        </div>
+      <div style={{ marginBottom: 12 }}>
+        <div style={S.sectionLabel}>Simulate this semester</div>
       </div>
 
-      {hasSimCourses && (
+      {isEdited && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-          <button onClick={clearAll} style={S.clearBtn}>Clear all</button>
+          <button onClick={resetAll} style={S.clearBtn}>Reset to synced grades</button>
         </div>
       )}
 
@@ -360,33 +308,10 @@ export default function WhatIfGpaPage() {
         </div>
       )}
 
-      {/* Current classes for reference */}
-      {currentClasses.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <div style={S.sectionLabel}>Your current classes</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
-            {currentClasses.map((c, i) => {
-              const avg = parseFloat(c.grade)
-              const level = detectLevel(c.name)
-              return (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 12.5, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>
-                  <span>{c.name}</span>
-                  <span>
-                    {!isNaN(avg) && avg > 0
-                      ? `${avg.toFixed(1)}% → ${gradePoints(avg, level, gpaType).toFixed(1)} pts`
-                      : 'N/A'}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' as const, marginTop: 20, lineHeight: 1.5 }}>
         {gpaType === 'weighted'
-          ? 'Set the course type and enter a grade (0–100) to simulate new courses.'
-          : 'Enter a grade (0–100) to simulate new courses. Unweighted uses Regular scale for all types.'}
+          ? 'Courses are synced from your portal with their real weight. Adjust a grade to see how it changes your GPA.'
+          : 'Courses are synced from your portal. Adjust a grade to see how it changes your GPA. Unweighted uses Regular scale for all types.'}
       </p>
 
       {!loading && !error && courseCount === 0 && (
