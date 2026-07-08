@@ -10,17 +10,17 @@ import { api, getApiToken } from '../../../../lib/api'
 
 // ── Official Katy ISD GPA Scale ───────────────────────────────────────────────
 // Regular:     A=4.0  B=3.0  C=2.0  F=0.0
-// KAP/AP:      A=5.0  B=4.0  C=3.0  F=1.0 (Weighted only)
+// Pre-AP/AP:   A=5.0  B=4.0  C=3.0  F=1.0 (Weighted only)
 // Dual Credit: A=4.5  B=3.5  C=2.5  F=0.5 (Weighted only)
 // Unweighted:  All courses use Regular scale (A=4.0, B=3.0, C=2.0, F=0.0)
 // Grade cutoffs: A≥90  B≥80  C≥70  F<70
 
-type CourseLevel = 'Regular' | 'KAP' | 'AP' | 'Dual Credit'
+type CourseLevel = 'Regular' | 'Pre-AP' | 'AP' | 'Dual Credit'
 type GpaType = 'weighted' | 'unweighted'
 
 const GRADE_POINTS: Record<CourseLevel, Record<string, number>> = {
   'Regular':     { A: 4.0, B: 3.0, C: 2.0, D: 1.0, F: 0.0 },
-  'KAP':         { A: 5.0, B: 4.0, C: 3.0, D: 2.0, F: 0.0 },
+  'Pre-AP':      { A: 5.0, B: 4.0, C: 3.0, D: 2.0, F: 0.0 },
   'AP':          { A: 5.0, B: 4.0, C: 3.0, D: 2.0, F: 0.0 },
   'Dual Credit': { A: 4.5, B: 3.5, C: 2.5, D: 1.5, F: 0.0 },
 }
@@ -48,7 +48,7 @@ function detectLevel(courseName: string): CourseLevel {
     ? n.slice(n.lastIndexOf(' — ') + 3)
     : n.replace(/^[A-Z0-9]+\s*-\s*\d+\s+/, '')
   if (/^AP/.test(desc)) return 'AP'
-  if (/^KAP/.test(desc)) return 'KAP'
+  if (/^KAP/.test(desc)) return 'Pre-AP'
   if (/^DUAL|^DC\b/.test(desc)) return 'Dual Credit'
   return 'Regular'
 }
@@ -68,7 +68,7 @@ const letterColor = (avg: number) => LETTER_COLORS[avgToLetter(avg)] ?? 'var(--t
 
 const LEVEL_COLORS: Record<CourseLevel, { bg: string; color: string; border: string }> = {
   'AP':          { bg: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: 'rgba(167,139,250,0.3)' },
-  'KAP':         { bg: 'rgba(96,165,250,0.15)',  color: '#60A5FA', border: 'rgba(96,165,250,0.3)'  },
+  'Pre-AP':      { bg: 'rgba(96,165,250,0.15)',  color: '#60A5FA', border: 'rgba(96,165,250,0.3)'  },
   'Dual Credit': { bg: 'rgba(52,211,153,0.15)',  color: '#34D399', border: 'rgba(52,211,153,0.3)'  },
   'Regular':     { bg: 'var(--surface-2)', color: 'var(--text-muted)', border: 'var(--border)' },
 }
@@ -249,7 +249,7 @@ export default function WhatIfGpaPage() {
 
       <p style={S.sub}>
         {gpaType === 'weighted'
-          ? 'Official Katy ISD weighted scale: AP/KAP=5.0, Dual=4.5, Regular=4.0'
+          ? 'Weighted scale: AP/Pre-AP=5.0, Dual=4.5, Regular=4.0'
           : 'Unweighted scale: All courses use Regular scale (A=4.0, B=3.0, C=2.0, F=0.0)'}
       </p>
 
@@ -291,7 +291,7 @@ export default function WhatIfGpaPage() {
                       style={{ background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 11,
                         border: '1px solid var(--border)', borderRadius: 6, padding: '4px 6px', outline: 'none', cursor: 'pointer' }}>
                       <option>Regular</option>
-                      <option>KAP</option>
+                      <option>Pre-AP</option>
                       <option>AP</option>
                       <option>Dual Credit</option>
                     </select>
