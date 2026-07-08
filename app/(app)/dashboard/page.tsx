@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, animate, stagger, useReducedMotion } from 'framer-motion'
 import { api, type StudentData } from '../../../lib/api'
 import { consumeStudentPrefetch } from '../../../lib/prefetch'
 import AiBar from '../../../components/ui/AiBar'
@@ -311,6 +311,7 @@ export default function DashboardPage() {
   const animStreak  = useCountUp(dayStreak, 500)
   const animUGpa    = useCountUpFloat(portalUGpa ?? data?.profile?.unweightedGpa ?? null, 900)
   const animWGpa    = useCountUpFloat(portalWGpa ?? data?.profile?.weightedGpa ?? null, 900)
+  const prefersReducedMotion = useReducedMotion()
 
   if (error) return <div style={{ padding: 40, color: 'var(--error)' }}>{error}</div>
   if (!data) return <PageLoader message="Opening dashboard…" />
@@ -332,6 +333,34 @@ export default function DashboardPage() {
     return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
   })
 
+  // Curtain-rise exit: stagger all content sections upward, then navigate to AI chat.
+  // Called by AiBar when the user submits a query. Pushes the route mid-animation so
+  // the dashboard exit and AI page entry overlap for a continuous upward sweep.
+  async function handleAiSubmit(query: string) {
+    sessionStorage.setItem('ai_pending_msg', query)
+    sessionStorage.setItem('ai_curtain_enter', '1')
+
+    if (!prefersReducedMotion) {
+      const items = Array.from(document.querySelectorAll<HTMLElement>('.db-curtain-item'))
+      if (items.length > 0) {
+        animate(
+          items,
+          { y: -72, opacity: 0 },
+          {
+            duration: 0.3,
+            ease: [0.19, 1, 0.22, 1] as [number, number, number, number],
+            delay: stagger(0.05),
+          }
+        )
+        // Push route mid-animation so the AI page rises while dashboard content is still
+        // in motion — this creates the continuous upward sweep feel.
+        await new Promise<void>(r => setTimeout(r, 200))
+      }
+    }
+
+    router.push('/ai')
+  }
+
   const staggerItem = (i: number) => ({
     initial: { opacity: 0, y: 12 },
     animate: { opacity: 1, y: 0 },
@@ -347,7 +376,7 @@ export default function DashboardPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
       {/* Header */}
-      <div style={S.pageHeader}>
+      <div className="db-curtain-item" style={S.pageHeader}>
         <div>
           <p style={S.greeting}>Good {getTimeOfDay()},</p>
           <h1 style={S.name}>{firstName}</h1>
@@ -359,7 +388,7 @@ export default function DashboardPage() {
       </div>
 
       {/* GPA + Due Today */}
-      <motion.div style={S.topRow} {...staggerItem(0)}>
+      <motion.div className="db-curtain-item" style={S.topRow} {...staggerItem(0)}>
         <div className="ns-card" style={{ ...S.card, flex: 1, cursor: 'pointer' }} onClick={() => router.push('/grades/what-if')}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ ...S.cardLabel, marginBottom: 0 }}>GPA</p>
@@ -419,7 +448,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Stat row */}
-      <div style={S.statsRow}>
+      <div className="db-curtain-item" style={S.statsRow}>
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/grades/schedule')} {...staggerItem(1)}>
           <div style={S.statNum}>{animCourses}</div>
           <div style={S.statLabel}>Courses · {semesterLabel || 'This Semester'}</div>
@@ -439,20 +468,22 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Access */}
-      <motion.p style={{ ...S.cardLabel, marginBottom: 14 }} {...staggerItem(5)}>Quick Access</motion.p>
-      <div style={S.quickAccessRow}>
-        {QUICK_ACCESS_LINKS.map((link, i) => (
-          <motion.button
-            key={link.href}
-            className="ns-card"
-            style={S.quickAccessTile}
-            onClick={() => router.push(link.href)}
-            {...staggerItem(6 + i)}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 10, background: link.bg, color: link.color, flexShrink: 0 }}>{link.icon}</span>
-            <span style={S.quickAccessLabel}>{link.label}</span>
-          </motion.button>
-        ))}
+      <div className="db-curtain-item">
+        <motion.p style={{ ...S.cardLabel, marginBottom: 14 }} {...staggerItem(5)}>Quick Access</motion.p>
+        <div style={S.quickAccessRow}>
+          {QUICK_ACCESS_LINKS.map((link, i) => (
+            <motion.button
+              key={link.href}
+              className="ns-card"
+              style={S.quickAccessTile}
+              onClick={() => router.push(link.href)}
+              {...staggerItem(6 + i)}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 10, background: link.bg, color: link.color, flexShrink: 0 }}>{link.icon}</span>
+              <span style={S.quickAccessLabel}>{link.label}</span>
+            </motion.button>
+          ))}
+        </div>
       </div>
 
       <div style={{ flex: 1 }} />
@@ -713,9 +744,9 @@ export default function DashboardPage() {
       )}
 
       {/* AI bar */}
-      <div style={S.aiBarWrap}>
+      <div className="db-curtain-item" style={S.aiBarWrap}>
         <p style={{ ...S.cardLabel, marginBottom: 10 }}>Ask Futurely AI</p>
-        <AiBar />
+        <AiBar onSubmit={handleAiSubmit} />
       </div>
 
     </div>

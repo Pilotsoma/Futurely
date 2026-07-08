@@ -473,13 +473,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         transition={springTransition}
         style={S.main}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -6, filter: 'blur(2px)' }}
-            transition={{ duration: 0.28, ease: [0.19, 1, 0.22, 1] }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            style={{ width: '100%' }}
           >
             {children}
           </motion.div>
@@ -501,5 +502,5 @@ const S: Record<string, React.CSSProperties> = {
   userAvatar: { width: 32, height: 32, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 },
   userName:   { fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   logoutBtn:  { display: 'flex', alignItems: 'center', gap: 9, fontSize: 14, padding: '9px 12px' },
-  main:       { flex: 1, padding: 'var(--page-px)', minHeight: '100vh' },
+  main:       { flex: 1, padding: 'var(--page-px)', minHeight: '100vh', position: 'relative' },
 }

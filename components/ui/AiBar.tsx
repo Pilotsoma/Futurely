@@ -2,53 +2,38 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, useAnimation, useReducedMotion } from 'framer-motion'
+import { motion } from 'framer-motion'
 
 interface AiBarProps {
   placeholder?: string
+  /**
+   * When provided, the parent owns the full submit flow (animation + navigation).
+   * AiBar calls this with the trimmed query string and waits for it to resolve.
+   * When omitted, AiBar falls back to writing ai_pending_msg and pushing /ai directly.
+   */
+  onSubmit?: (query: string) => Promise<void>
 }
 
-const PULSE_DURATION_S = 0.22
-
-export default function AiBar({ placeholder = 'Ask Futurely AI…' }: AiBarProps) {
+export default function AiBar({ placeholder = 'Ask Futurely AI…', onSubmit }: AiBarProps) {
   const [query, setQuery] = useState('')
   const router = useRouter()
-  const controls = useAnimation()
-  const prefersReducedMotion = useReducedMotion()
 
   async function handleSubmit() {
     const trimmed = query.trim()
     if (!trimmed) return
 
-    sessionStorage.setItem('ai_pending_msg', trimmed)
-    sessionStorage.setItem('ai_morph_enter', '1')
-
-    if (!prefersReducedMotion) {
-      // Pill-pulse: compress then release with a ring glow radiating outward.
-      // Resolves after PULSE_DURATION_S before navigation fires.
-      await controls.start({
-        scale: [1, 0.97, 1.0],
-        boxShadow: [
-          '0 0 0 0px rgba(41,121,255,0)',
-          '0 0 0 7px rgba(41,121,255,0.30)',
-          '0 0 0 14px rgba(41,121,255,0)',
-        ],
-        transition: {
-          duration: PULSE_DURATION_S,
-          ease: [0.19, 1, 0.22, 1],
-        },
-      })
+    if (onSubmit) {
+      await onSubmit(trimmed)
+    } else {
+      sessionStorage.setItem('ai_pending_msg', trimmed)
+      router.push('/ai')
     }
-
-    router.push('/ai')
   }
 
   return (
     <motion.div
-      animate={controls}
-      // Suppress layout shift: reset boxShadow to a valid initial value so
-      // framer-motion does not interpolate from undefined on the first frame.
-      initial={{ boxShadow: '0 0 0 0px rgba(41,121,255,0)' }}
+      whileTap={{ scale: 0.995 }}
+      transition={{ duration: 0.1, ease: 'easeOut' }}
       style={S.wrap}
     >
       <input

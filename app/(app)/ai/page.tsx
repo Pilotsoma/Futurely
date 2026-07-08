@@ -74,13 +74,14 @@ function AIChatInner() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const prefersReducedMotion = useReducedMotion()
 
-  // Read and immediately clear the morph-enter flag written by AiBar on submit.
-  // Lazy initializer runs once on first client render — safe for SSR because
-  // useState lazy initializers only run on the client in Next.js app router.
-  const [morphEnter] = useState<boolean>(() => {
+  // Read and immediately clear the curtain-enter flag written by the dashboard
+  // when the user submits a query via AiBar. When set, the page rises from below
+  // to continue the upward-sweep motion started by the dashboard exit animation.
+  // Lazy initializer runs once on first client render — safe for SSR.
+  const [curtainEnter] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
-    const flag = sessionStorage.getItem('ai_morph_enter') === '1'
-    if (flag) sessionStorage.removeItem('ai_morph_enter')
+    const flag = sessionStorage.getItem('ai_curtain_enter') === '1'
+    if (flag) sessionStorage.removeItem('ai_curtain_enter')
     return flag
   })
 
@@ -216,8 +217,22 @@ function AIChatInner() {
 
   const isEmpty = messages.length === 0
 
+  // Curtain-rise entry: when coming from dashboard AiBar submit, the page rises
+  // from below to continue the upward sweep. Otherwise a simple fade suffices.
+  const shellInitial = curtainEnter && !prefersReducedMotion
+    ? { y: 56, opacity: 0 }
+    : { opacity: 0 }
+  const shellTransition = curtainEnter && !prefersReducedMotion
+    ? { duration: 0.48, ease: [0.19, 1, 0.22, 1] as [number, number, number, number] }
+    : { duration: 0.22, ease: 'easeOut' as const }
+
   return (
-    <div className="aic-shell fade-up">
+    <motion.div
+      className="aic-shell"
+      initial={shellInitial}
+      animate={{ y: 0, opacity: 1 }}
+      transition={shellTransition}
+    >
 
       {/* ── Chat history (collapsible on mobile) ── */}
       <aside className={`aic-history ${historyOpen ? 'aic-history--open' : ''}`}>
@@ -262,22 +277,10 @@ function AIChatInner() {
         <div className="aic-messages" role="log" aria-live="polite" aria-label="Conversation">
           {isEmpty && (
             <div className="aic-empty">
-              <motion.div
-                aria-hidden="true"
-                className="aic-orb-wrap"
-                initial={morphEnter && !prefersReducedMotion
-                  ? { scale: 0.55, opacity: 0 }
-                  : false
-                }
-                animate={morphEnter && !prefersReducedMotion
-                  ? { scale: 1, opacity: 1 }
-                  : undefined
-                }
-                transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1], delay: 0.05 }}
-              >
+              <div aria-hidden="true" className="aic-orb-wrap">
                 <div className="aic-orb-glow" />
                 <div className="aic-orb"><AiSparkIcon size={26} /></div>
-              </motion.div>
+              </div>
               <h1 className="aic-empty-title">How can I help you today?</h1>
               <p className="aic-empty-sub">Ask about your grades, upcoming assignments, or college planning.</p>
 
@@ -312,24 +315,7 @@ function AIChatInner() {
           <div ref={bottomRef} />
         </div>
 
-        <motion.div
-          className="aic-input-bar"
-          initial={morphEnter && !prefersReducedMotion
-            ? {
-                scale: 1.05,
-                boxShadow: '0 0 0 10px rgba(41,121,255,0.22), 0 0 0 20px rgba(41,121,255,0.08)',
-              }
-            : false
-          }
-          animate={morphEnter && !prefersReducedMotion
-            ? {
-                scale: 1,
-                boxShadow: '0 0 0 0px rgba(41,121,255,0), 0 0 0 0px rgba(41,121,255,0)',
-              }
-            : undefined
-          }
-          transition={{ duration: 0.55, ease: [0.19, 1, 0.22, 1] }}
-        >
+        <div className="aic-input-bar">
           <textarea
             ref={textareaRef}
             className="aic-textarea"
@@ -357,7 +343,7 @@ function AIChatInner() {
               <polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
           </button>
-        </motion.div>
+        </div>
       </section>
 
       <style jsx>{`
@@ -570,14 +556,6 @@ function AIChatInner() {
           transform: none !important;
         }
 
-        /* ── Morph-enter: cursor focus on input bar after expand ── */
-        /* The framer-motion inline style handles the scale/glow fade;  */
-        /* this class is used only to ensure the textarea is focusable  */
-        /* as soon as the animation settles.                            */
-        .aic-input-bar-morph-focus:focus-within {
-          border-color: var(--primary);
-        }
-
         /* ── Mobile ── */
         @media (max-width: 760px) {
           .aic-history {
@@ -598,7 +576,7 @@ function AIChatInner() {
           .aic-row { max-width: 90%; }
         }
       `}</style>
-    </div>
+    </motion.div>
   )
 }
 
