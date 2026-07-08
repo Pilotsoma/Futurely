@@ -41,9 +41,12 @@ function gradePoints(avg: number, level: CourseLevel, gpaType: GpaType): number 
 
 function detectLevel(courseName: string): CourseLevel {
   const n = courseName.toUpperCase().trim()
-  // Transcript stores names as "COURSECODE — DESCRIPTION" (e.g. "A3580300 - 1 — APCSPRIN")
-  // Extract just the description part so AP/KAP detection works on the meaningful text
-  const desc = n.includes(' — ') ? n.slice(n.lastIndexOf(' — ') + 3) : n
+  // Strip a leading course-code prefix so detection runs on the actual title:
+  //  - Transcript rows: "CODE — DESCRIPTION" (em dash), e.g. "A3580300 - 1 — APCSPRIN"
+  //  - Classwork rows: "CODE - SECTION DESCRIPTION" (plain hyphen), e.g. "0231B - 10 AP PRE CALC GT B"
+  const desc = n.includes(' — ')
+    ? n.slice(n.lastIndexOf(' — ') + 3)
+    : n.replace(/^[A-Z0-9]+\s*-\s*\d+\s+/, '')
   if (/^AP/.test(desc)) return 'AP'
   if (/^KAP/.test(desc)) return 'KAP'
   if (/^DUAL|^DC\b/.test(desc)) return 'Dual Credit'
