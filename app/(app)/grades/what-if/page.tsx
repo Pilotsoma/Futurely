@@ -93,6 +93,7 @@ export default function WhatIfGpaPage() {
   const [error, setError]                   = useState<string | null>(null)
   const [resyncing, setResyncing]           = useState(false)
   const [gpaType, setGpaType]               = useState<GpaType>('weighted')
+  const [editingLevelId, setEditingLevelId] = useState<string | null>(null)
 
   // Exact GPAs from HAC (same source as dashboard)
   const [exactWeightedGpa, setExactWeightedGpa]     = useState<number | null>(null)
@@ -278,16 +279,26 @@ export default function WhatIfGpaPage() {
                   </span>
                 </div>
 
-                {/* Level selector (weighted only) */}
+                {/* Synced level badge (weighted only) — click to override */}
                 {gpaType === 'weighted' && (
-                  <select value={c.level} onChange={e => updateSimCourse(c.id, 'level', e.target.value)}
-                    style={{ background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 11,
-                      border: '1px solid var(--border)', borderRadius: 6, padding: '4px 6px', outline: 'none', cursor: 'pointer' }}>
-                    <option>Regular</option>
-                    <option>KAP</option>
-                    <option>AP</option>
-                    <option>Dual Credit</option>
-                  </select>
+                  editingLevelId === c.id ? (
+                    <select value={c.level} autoFocus
+                      onChange={e => { updateSimCourse(c.id, 'level', e.target.value); setEditingLevelId(null) }}
+                      onBlur={() => setEditingLevelId(null)}
+                      style={{ background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 11,
+                        border: '1px solid var(--border)', borderRadius: 6, padding: '4px 6px', outline: 'none', cursor: 'pointer' }}>
+                      <option>Regular</option>
+                      <option>KAP</option>
+                      <option>AP</option>
+                      <option>Dual Credit</option>
+                    </select>
+                  ) : (
+                    <button onClick={() => setEditingLevelId(c.id)} title="Click to override synced level"
+                      style={{ background: levelStyle.bg, color: levelStyle.color, border: `1px solid ${levelStyle.border}`,
+                        fontSize: 11, fontWeight: 600, borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}>
+                      {c.level}
+                    </button>
+                  )
                 )}
 
                 <input type="number" min="0" max="100"
