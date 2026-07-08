@@ -252,7 +252,7 @@ export default function DashboardScreen(): React.JSX.Element {
             Nothing due today!
           </Text>
         ) : (
-          dueToday.slice(0, 5).map((a) => <DueTodayRow key={a.id} assignment={a} />)
+          dueToday.slice(0, 2).map((a) => <DueTodayRow key={a.id} assignment={a} />)
         )}
         <TouchableOpacity
           style={styles.viewAllRow}
