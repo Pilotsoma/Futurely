@@ -8,13 +8,12 @@ import { api, type StudentData } from '../../../lib/api'
 import { consumeStudentPrefetch } from '../../../lib/prefetch'
 import AiBar from '../../../components/ui/AiBar'
 import PageLoader from '../../../components/ui/PageLoader'
-import CoinIcon from '../../../components/ui/CoinIcon'
 import NotificationBell from '../../../components/ui/NotificationBell'
 import {
   BarChartIcon, DocumentIcon, CalendarIcon, ClipboardIcon,
   CheckCircleIcon, LightningBoltIcon, MedalIcon, DiamondIcon, CrownIcon,
   FlameIcon, LockIcon, GraduationCapIcon, LinkIcon, RefreshIcon,
-  CheckIcon, RocketIcon, BooksIcon, PartyPopperIcon,
+  CheckIcon, RocketIcon, PartyPopperIcon,
 } from '@/components/icons'
 
 const QUICK_ACCESS_LINKS: Array<{ href: string; label: string; icon: React.ReactNode; color: string; bg: string }> = [
@@ -82,10 +81,6 @@ const STREAK_MILESTONES: Array<{ days: number; icon: React.ReactNode; tag?: stri
   { days: 50,  tag: 'Legend',  tagColor: '#EC4899', icon: <DiamondIcon size={16}/> },
   { days: 100, tag: 'GOAT',    tagColor: '#EAB308', icon: <CrownIcon size={16}/> },
 ]
-
-function streakCoinBonus(streak: number) {
-  return Math.min(400, 50 + Math.max(0, streak - 1) * 7)
-}
 
 function normalCdf(z: number): number {
   const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741
@@ -371,7 +366,6 @@ export default function DashboardPage() {
   const effectiveWGpa = portalWGpa ?? data.profile?.weightedGpa ?? null
   const gpaPercentile = computeGpaPercentile(effectiveUGpa, effectiveWGpa)
   const gpaBonusPct = getGpaBonusPct(effectiveUGpa, effectiveWGpa)
-  const totalDailyCoins = Math.round(streakCoinBonus(dayStreak) * (1 + gpaBonusPct / 100))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
@@ -541,29 +535,8 @@ export default function DashboardPage() {
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>
               {dayStreak} Day Streak!
             </h3>
-            <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#EAB308', fontWeight: 600, textAlign: 'center' as const }}>
-              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{totalDailyCoins} today
-            </div>
-
-            {/* GPA Bonus Section */}
-            {gpaBonusPct > 0 ? (
-              <div style={{ background: 'rgba(43,74,142,0.08)', border: '1px solid rgba(43,74,142,0.25)', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', color: 'var(--text-muted)', marginBottom: 5 }}>GPA Bonus</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-blue)' }}>
-                    {gpaPercentile !== null ? `${percentileStr(gpaPercentile)} Percentile` : `${gpaBonusPct.toFixed(1)}% boost`}
-                  </span>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>+{gpaBonusPct.toFixed(1)}% on streak</span>
-                </div>
-              </div>
-            ) : (effectiveUGpa !== null || effectiveWGpa !== null) ? (
-              <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '9px 14px', marginBottom: 10, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                <BooksIcon size={13}/> Raise your GPA to unlock a daily bonus
-              </div>
-            ) : null}
-
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Start at +50 on day 1, earn +7 more per consecutive day, up to +400/day at day 51. Log in every day to unlock exclusive tags too!
+              Log in every day to unlock exclusive tags!
             </p>
 
             {newlyAwardedTags.length > 0 && (
@@ -603,7 +576,7 @@ export default function DashboardPage() {
                         </span>
                       )}
                       <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: m.tag ? 4 : 8 }}>
-                        {m.days}d{!m.perk && <> · <CoinIcon size={11} style={{ margin: '0 2px' }} /> +{streakCoinBonus(m.days)}/day</>}
+                        {m.days}d
                       </span>
                     </div>
                     {earned && (
