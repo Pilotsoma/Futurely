@@ -5,7 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
-const FREE_MODEL = process.env.AI_MODEL ?? 'meta-llama/llama-3.3-70b-instruct:free'
+const FREE_MODEL = process.env.AI_MODEL ?? 'openrouter/free'
 
 function deriveGradeLevel(graduationYear: number | null, stored: number | null): number | null {
   if (graduationYear) {

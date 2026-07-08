@@ -16,7 +16,7 @@ import type {
   SatPosition,
 } from '../../types/collegeInsights'
 
-const MODEL = process.env.AI_MODEL ?? 'meta-llama/llama-3.3-70b-instruct:free'
+const MODEL = process.env.AI_MODEL ?? 'openrouter/free'
 
 // Strip markdown code fences and extract raw JSON — mirrors the pattern used
 // by the other AI routes in this codebase (see routes/ai.ts extractJson).

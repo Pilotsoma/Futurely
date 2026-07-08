@@ -634,7 +634,7 @@ Pending assignments: ${pendingCount}
 Answer the parent's question clearly and helpfully. Be concise.`
 
     const response = await openrouter.chat.completions.create({
-      model: process.env.AI_MODEL ?? 'meta-llama/llama-3.3-70b-instruct:free',
+      model: process.env.AI_MODEL ?? 'openrouter/free',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: message.trim() },
