@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
+import Image from 'next/image'
 import { motion, useReducedMotion } from 'framer-motion'
 import { api } from '../../../lib/api'
 
@@ -58,9 +59,7 @@ function formatSessionDate(ts: number): string {
 }
 
 const AiSparkIcon = ({ size = 18 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-  </svg>
+  <Image src="/logo.png" alt="" width={size} height={size} style={{ objectFit: 'contain', width: size, height: size }} />
 )
 
 function AIChatInner() {
@@ -415,8 +414,9 @@ function AIChatInner() {
         .aic-header-avatar {
           width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          color: #fff;
-          background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 55%, var(--accent-blue) 100%);
+          padding: 5px;
+          background: var(--surface-2);
+          border: 1px solid rgba(255,255,255,0.08);
         }
         .aic-header-name { font-family: var(--font-display, inherit); font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: 0.1px; }
 
@@ -435,9 +435,10 @@ function AIChatInner() {
           position: relative;
           width: 62px; height: 62px; border-radius: 20px;
           display: flex; align-items: center; justify-content: center;
-          color: #fff;
-          background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 55%, var(--accent-blue) 100%);
-          box-shadow: 0 8px 28px rgba(41,121,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+          padding: 9px;
+          background: var(--surface-2);
+          border: 1px solid rgba(255,255,255,0.08);
+          box-shadow: 0 8px 28px rgba(41,121,255,0.25), inset 0 1px 0 rgba(255,255,255,0.12);
         }
         .aic-empty-title { font-family: var(--font-display, inherit); font-size: 24px; font-weight: 600; letter-spacing: -0.2px; color: var(--text); margin-bottom: 10px; }
         .aic-empty-sub { font-size: 14px; color: var(--text-secondary); line-height: 1.6; max-width: 380px; margin-bottom: 28px; }
@@ -465,8 +466,9 @@ function AIChatInner() {
         .aic-avatar {
           width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0; margin-bottom: 2px;
           display: flex; align-items: center; justify-content: center;
-          color: #fff;
-          background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 55%, var(--accent-blue) 100%);
+          padding: 4px;
+          background: var(--surface-2);
+          border: 1px solid rgba(255,255,255,0.08);
         }
         .aic-bubble-user {
           padding: 11px 16px;
