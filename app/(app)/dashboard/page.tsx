@@ -542,7 +542,7 @@ export default function DashboardPage() {
               {dayStreak} Day Streak!
             </h3>
             <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#EAB308', fontWeight: 600, textAlign: 'center' as const }}>
-              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{totalDailyCoins} coins today
+              <CoinIcon size={13} style={{ marginRight: 4 }} /> +{totalDailyCoins} today
             </div>
 
             {/* GPA Bonus Section */}
@@ -558,12 +558,12 @@ export default function DashboardPage() {
               </div>
             ) : (effectiveUGpa !== null || effectiveWGpa !== null) ? (
               <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '9px 14px', marginBottom: 10, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                <BooksIcon size={13}/> Raise your GPA to unlock daily bonus coins
+                <BooksIcon size={13}/> Raise your GPA to unlock a daily bonus
               </div>
             ) : null}
 
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Start at +50 coins on day 1, earn +7 more per consecutive day, up to +400/day at day 51. Log in every day to unlock exclusive tags too!
+              Start at +50 on day 1, earn +7 more per consecutive day, up to +400/day at day 51. Log in every day to unlock exclusive tags too!
             </p>
 
             {newlyAwardedTags.length > 0 && (
