@@ -64,7 +64,15 @@ const AiSparkIcon = ({ size = 18 }: { size?: number }) => (
 )
 
 function AIChatInner() {
-  const [sessions, setSessions]     = useState<ChatSession[]>([])
+  // Load persisted sessions synchronously on first client render (mirrors the
+  // curtainEnter pattern below) so the history sidebar never flashes empty
+  // before populating — avoids a layout jump right as the entrance animation settles.
+  const [sessions, setSessions]     = useState<ChatSession[]>(() => {
+    if (typeof window === 'undefined') return []
+    const loaded = loadSessions()
+    saveSessions(loaded)
+    return loaded
+  })
   const [activeId, setActiveId]     = useState<string | null>(null)
   const [messages, setMessages]     = useState<Msg[]>([])
   const [input, setInput]           = useState('')
@@ -84,12 +92,6 @@ function AIChatInner() {
     if (flag) sessionStorage.removeItem('ai_curtain_enter')
     return flag
   })
-
-  useEffect(() => {
-    const loaded = loadSessions()
-    setSessions(loaded)
-    saveSessions(loaded)
-  }, [])
 
   // Auto-grow the composer textarea up to a max height, then scroll internally.
   useEffect(() => {
@@ -349,7 +351,7 @@ function AIChatInner() {
       <style jsx>{`
         .aic-shell {
           display: flex;
-          height: calc(100vh - 64px);
+          height: calc(100vh - 64px - (var(--page-px) * 2));
           gap: 0;
           position: relative;
         }
