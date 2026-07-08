@@ -171,13 +171,23 @@ export default function WhatIfGpaPage() {
     }
   }
 
-  // Project the simulated GPA from the synced courses' (possibly edited) grades,
-  // using each course's real weight/level.
+  // Project the simulated GPA by swapping each edited course's grade-point
+  // contribution in and out of the real cumulative GPA — NOT by averaging
+  // the synced courses on their own, which would ignore all prior semesters'
+  // history baked into the exact HAC GPA and produce a bogus number even
+  // with zero edits. With no edits, originalPts === editedPts, so this
+  // always resolves back to exactly the baseline GPA.
   function calcSimulatedGpa(type: GpaType): number {
-    const valid = simCourses.filter(c => c.average > 0)
-    if (valid.length === 0) return 0
-    const totalPts = valid.reduce((sum, c) => sum + gradePoints(c.average, c.level, type), 0)
-    return Math.round((totalPts / valid.length) * 1000) / 1000
+    const base = type === 'weighted' ? exactWeightedGpa : exactUnweightedGpa
+    if (base === null || courseCount === 0) return 0
+
+    const originalPts = simCourses.reduce((sum, c) =>
+      sum + (c.originalAverage > 0 ? gradePoints(c.originalAverage, c.level, type) : 0), 0)
+    const editedPts = simCourses.reduce((sum, c) =>
+      sum + (c.average > 0 ? gradePoints(c.average, c.level, type) : 0), 0)
+
+    const otherPoints = base * courseCount - originalPts
+    return Math.round(((otherPoints + editedPts) / courseCount) * 1000) / 1000
   }
 
   const baselineGpa = (gpaType === 'weighted' ? exactWeightedGpa : exactUnweightedGpa) ?? 0
