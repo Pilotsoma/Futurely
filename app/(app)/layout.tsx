@@ -209,9 +209,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         onMouseLeave={() => setHoverExpanded(false)}
         style={{
           ...S.sidebar,
-          boxShadow: isExpanded && !pinnedExpanded
-            ? '6px 0 40px rgba(0,0,0,0.42), -2px 0 8px rgba(255,255,255,0.04)'
-            : 'var(--neo-sidebar)',
+          boxShadow: 'var(--neo-sidebar)',
         }}
       >
         {/* Pin toggle */}
