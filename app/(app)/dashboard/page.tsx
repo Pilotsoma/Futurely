@@ -512,7 +512,7 @@ export default function DashboardPage() {
               {streakEncouragement(dayStreak)}
             </p>
             <button onClick={() => setShowStreakPopup(false)} style={S.popupButton}>
-              Keep it up!
+              Got it!
             </button>
           </div>
         </div>,

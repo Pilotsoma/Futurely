@@ -130,8 +130,10 @@ export default function WhatIfGpaPage() {
         setExactUnweightedGpa(gpaJson.unweightedGpa)
         setCourseCount(gpaJson.courseCount)
 
-        // 2. Fetch current classes and seed the simulator with them,
-        // using each course's real weight/level and synced grade.
+        // 2. Fetch current classes and seed the simulator with them, using
+        // each course's real synced weight/level — but leave the grade
+        // field itself blank so the user types in their own projected
+        // grade rather than seeing a previous grading period's number.
         const classworkRes = await fetch('/api/integrations/grades/classwork', {
           credentials: 'include',
           headers: { Authorization: `Bearer ${typeof window !== 'undefined' ? getApiToken() : null}` },
@@ -140,13 +142,12 @@ export default function WhatIfGpaPage() {
         const raw = classworkJson.data?.classes ?? []
         setSimCourses(raw.map((c: { name: string; average: string | null }, i: number) => {
           const avg = parseFloat(c.average ?? '')
-          const average = isNaN(avg) ? 0 : avg
           return {
             id: `sim-${i}`,
             name: c.name ?? '',
             level: detectLevel(c.name ?? ''),
-            average,
-            originalAverage: average,
+            average: 0,
+            originalAverage: isNaN(avg) ? 0 : avg,
           }
         }))
       } catch (e) {
@@ -174,26 +175,29 @@ export default function WhatIfGpaPage() {
   // Project the simulated GPA by swapping each edited course's grade-point
   // contribution in and out of the real cumulative GPA — NOT by averaging
   // the synced courses on their own, which would ignore all prior semesters'
-  // history baked into the exact HAC GPA and produce a bogus number even
-  // with zero edits. With no edits, originalPts === editedPts, so this
-  // always resolves back to exactly the baseline GPA.
+  // history baked into the exact HAC GPA and produce a bogus number.
+  // A course whose grade field is left blank falls back to its real synced
+  // average, so the projection only shifts for the courses the user
+  // actually typed a new grade into.
   function calcSimulatedGpa(type: GpaType): number {
     const base = type === 'weighted' ? exactWeightedGpa : exactUnweightedGpa
     if (base === null || courseCount === 0) return 0
 
     const originalPts = simCourses.reduce((sum, c) =>
       sum + (c.originalAverage > 0 ? gradePoints(c.originalAverage, c.level, type) : 0), 0)
-    const editedPts = simCourses.reduce((sum, c) =>
-      sum + (c.average > 0 ? gradePoints(c.average, c.level, type) : 0), 0)
+    const projectedPts = simCourses.reduce((sum, c) => {
+      const effective = c.average > 0 ? c.average : c.originalAverage
+      return sum + (effective > 0 ? gradePoints(effective, c.level, type) : 0)
+    }, 0)
 
     const otherPoints = base * courseCount - originalPts
-    return Math.round(((otherPoints + editedPts) / courseCount) * 1000) / 1000
+    return Math.round(((otherPoints + projectedPts) / courseCount) * 1000) / 1000
   }
 
   const baselineGpa = (gpaType === 'weighted' ? exactWeightedGpa : exactUnweightedGpa) ?? 0
   const simGPA      = calcSimulatedGpa(gpaType)
   const delta       = simGPA - baselineGpa
-  const isEdited     = simCourses.some(c => c.average !== c.originalAverage)
+  const isEdited     = simCourses.some(c => c.average > 0)
 
   const updateSimCourse = (id: string, field: 'average' | 'level', value: string) =>
     setSimCourses(prev => prev.map(c => c.id === id ? {
@@ -201,7 +205,7 @@ export default function WhatIfGpaPage() {
       [field]: field === 'average' ? (parseFloat(value) || 0) : (value as CourseLevel),
     } : c))
 
-  const resetAll = () => setSimCourses(prev => prev.map(c => ({ ...c, average: c.originalAverage })))
+  const resetAll = () => setSimCourses(prev => prev.map(c => ({ ...c, average: 0 })))
 
   if (loading) return <PageLoader message="Opening GPA calculator…" />
 
@@ -276,7 +280,7 @@ export default function WhatIfGpaPage() {
 
       {isEdited && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-          <button onClick={resetAll} style={S.clearBtn}>Reset to synced grades</button>
+          <button onClick={resetAll} style={S.clearBtn}>Clear all</button>
         </div>
       )}
 
@@ -341,8 +345,8 @@ export default function WhatIfGpaPage() {
 
       <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' as const, marginTop: 20, lineHeight: 1.5 }}>
         {gpaType === 'weighted'
-          ? 'Courses are synced from your portal with their real weight. Adjust a grade to see how it changes your GPA.'
-          : 'Courses are synced from your portal. Adjust a grade to see how it changes your GPA. Unweighted uses Regular scale for all types.'}
+          ? 'Courses and their weight are synced from your portal. Enter a projected grade (0–100) to see how it changes your GPA.'
+          : 'Courses are synced from your portal. Enter a projected grade (0–100) to see how it changes your GPA. Unweighted uses Regular scale for all types.'}
       </p>
 
       {!loading && !error && courseCount === 0 && (
