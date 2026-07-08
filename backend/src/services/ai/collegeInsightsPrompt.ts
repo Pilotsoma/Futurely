@@ -229,6 +229,31 @@ function getClient(): OpenAI {
 export async function generateCollegeInsights(
   input: CollegeInsightsPromptInput
 ): Promise<CollegeInsightsPayload> {
+  const maxAttempts = 3
+  const backoffMs = [300, 900]
+
+  let lastError: unknown
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await generateCollegeInsightsOnce(input)
+    } catch (err) {
+      lastError = err
+      if (attempt < maxAttempts - 1) {
+        logger.warn('College insights generation attempt failed — retrying', {
+          feature: 'collegeInsights',
+          attempt: attempt + 1,
+        })
+        await new Promise((resolve) => setTimeout(resolve, backoffMs[attempt]))
+      }
+    }
+  }
+
+  throw lastError
+}
+
+async function generateCollegeInsightsOnce(
+  input: CollegeInsightsPromptInput
+): Promise<CollegeInsightsPayload> {
   const startMs = Date.now()
 
   let raw: string
