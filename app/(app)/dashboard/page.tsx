@@ -12,8 +12,8 @@ import NotificationBell from '../../../components/ui/NotificationBell'
 import {
   BarChartIcon, DocumentIcon, CalendarIcon, ClipboardIcon,
   CheckCircleIcon, LightningBoltIcon, MedalIcon, DiamondIcon, CrownIcon,
-  FlameIcon, LockIcon, GraduationCapIcon, LinkIcon, RefreshIcon,
-  CheckIcon, RocketIcon, PartyPopperIcon,
+  FlameIcon, GraduationCapIcon, LinkIcon, RefreshIcon,
+  CheckIcon, RocketIcon,
 } from '@/components/icons'
 
 const QUICK_ACCESS_LINKS: Array<{ href: string; label: string; icon: React.ReactNode; color: string; bg: string }> = [
@@ -23,17 +23,14 @@ const QUICK_ACCESS_LINKS: Array<{ href: string; label: string; icon: React.React
   { href: '/grades/report-card',label: 'Report Card',  icon: <ClipboardIcon size={20}/>, color: '#3B82F6', bg: 'rgba(59,130,246,0.14)' },
 ]
 
-function tagCssClass(tag?: string | null, tagColor?: string | null): string {
-  if (tag === 'DEV') return 'tag-rainbow'
-  if (tag === 'VIP') return 'tag-mythic'
-  if (tag === 'GOAT') return 'tag-god'
-  if (tag === 'Prodigy') return 'tag-prodigy'
-  if (tag === 'Valedictorian') return 'tag-valedictorian'
-  if (tagColor === 'curse') return 'tag-curse'
-  return ''
-}
-function isAnimatedTag(tag?: string | null): boolean {
-  return tag === 'DEV' || tag === 'VIP' || tag === 'GOAT' || tag === 'Prodigy' || tag === 'Valedictorian'
+function streakEncouragement(days: number): string {
+  if (days <= 0) return 'Start your streak today!'
+  if (days === 1) return 'Nice start — come back tomorrow to keep it going!'
+  if (days < 7) return 'Way to go! Keep logging in to build your streak.'
+  if (days < 14) return "You're on a roll! Keep it up."
+  if (days < 30) return "Great consistency! Don't break the chain now."
+  if (days < 100) return "Impressive dedication — keep showing up!"
+  return "Legendary streak. You're unstoppable!"
 }
 
 function useCountUp(target: number | null, duration = 700): number {
@@ -145,7 +142,6 @@ export default function DashboardPage() {
   const [semesterLabel, setSemesterLabel] = useState<string>('')
   const [dayStreak, setDayStreak] = useState(0)
   const [coins, setCoins] = useState<number | null>(null)
-  const [newlyAwardedTags, setNewlyAwardedTags] = useState<Array<{ tag: string; tagColor: string }>>([])
   const [showStreakPopup, setShowStreakPopup] = useState(false)
   const [streakMilestone, setStreakMilestone] = useState<typeof STREAK_MILESTONES[0] | null>(null)
   const [showResyncPopup, setShowResyncPopup] = useState(false)
@@ -222,11 +218,9 @@ export default function DashboardPage() {
       }
     }
 
-    // Claim daily coins + award any streak milestone tags
+    // Claim daily coins + award any streak milestone tags (silent — no UI display)
     if (currentStreak > 0) {
-      api.streakReward(currentStreak)
-        .then(r => { if (r.newTags?.length) setNewlyAwardedTags(r.newTags) })
-        .catch(() => {})
+      api.streakReward(currentStreak).catch(() => {})
     }
     api.marketplaceDailyClaim(currentStreak)
       .then(r => setCoins(r.coins))
@@ -491,33 +485,9 @@ export default function DashboardPage() {
             <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6, color: 'var(--text)', letterSpacing: '-0.5px' }}>
               {streakMilestone.days}-Day Streak!
             </h3>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 18 }}>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
               You&apos;ve logged in {streakMilestone.days} days in a row. That&apos;s dedication — keep it going!
             </p>
-            <div style={{
-              background: (streakMilestone.tagColor ?? streakMilestone.perkColor ?? '#22C55E') + '18',
-              border: `1px solid ${(streakMilestone.tagColor ?? streakMilestone.perkColor ?? '#22C55E')}44`,
-              borderRadius: 12, padding: '14px 18px', marginBottom: 20,
-            }}>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', marginBottom: 8 }}>
-                You just unlocked
-              </p>
-              {streakMilestone.tag ? (
-                <span style={{
-                  display: 'inline-block',
-                  fontSize: 16, fontWeight: 800,
-                  color: '#fff',
-                  background: streakMilestone.tagColor,
-                  borderRadius: 8, padding: '4px 14px',
-                }}>
-                  {streakMilestone.tag}
-                </span>
-              ) : (
-                <span style={{ fontSize: 16, fontWeight: 800, color: streakMilestone.perkColor }}>
-                  {streakMilestone.perk}
-                </span>
-              )}
-            </div>
             <button onClick={() => setStreakMilestone(null)} style={{ ...S.popupButton, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               Let&apos;s go! <RocketIcon size={16}/>
             </button>
@@ -529,66 +499,20 @@ export default function DashboardPage() {
       {/* Streak Popup */}
       {showStreakPopup && createPortal(
         <div style={S.popupOverlay} onClick={() => setShowStreakPopup(false)}>
-          <div style={S.popupCard} onClick={e => e.stopPropagation()}>
+          <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowStreakPopup(false)} style={S.popupClose}>×</button>
-            <div style={{ marginBottom: 12 }}><FlameIcon size={40}/></div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>
-              {dayStreak} Day Streak!
+            <div style={{ marginBottom: 14 }}><FlameIcon size={44}/></div>
+            <h3 style={{ fontSize: 40, fontWeight: 800, marginBottom: 6, color: 'var(--text)', letterSpacing: '-1px' }}>
+              {dayStreak}
             </h3>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Log in every day to unlock exclusive tags!
+            <p style={{ fontSize: 13, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 16 }}>
+              Day Streak
             </p>
-
-            {newlyAwardedTags.length > 0 && (
-              <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#22C55E', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-                <PartyPopperIcon size={13}/> You just earned: {newlyAwardedTags.map(t => t.tag).join(', ')}!
-              </div>
-            )}
-
-            <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 10 }}>Tag Rewards</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              {STREAK_MILESTONES.map(m => {
-                const earned = dayStreak >= m.days
-                const accentColor = m.tagColor ?? m.perkColor ?? '#6B7280'
-                return (
-                  <div key={m.days} style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '9px 12px', borderRadius: 10,
-                    background: earned ? 'var(--surface-2)' : 'transparent',
-                    border: `1px solid ${earned ? accentColor + '44' : 'var(--border)'}`,
-                    opacity: earned ? 1 : 0.6,
-                  }}>
-                    <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{earned ? m.icon : <LockIcon size={16}/>}</span>
-                    <div style={{ flex: 1 }}>
-                      {m.tag ? (
-                        <span className={tagCssClass(m.tag, m.tagColor)} style={{
-                          fontSize: 13, fontWeight: 700,
-                          color: isAnimatedTag(m.tag) ? undefined : '#fff',
-                          background: isAnimatedTag(m.tag) ? undefined : m.tagColor,
-                          borderRadius: 6, padding: '2px 8px',
-                          marginRight: 4,
-                        }}>
-                          {m.tag}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 13, fontWeight: 700, color: accentColor }}>
-                          {m.perk}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: m.tag ? 4 : 8 }}>
-                        {m.days}d
-                      </span>
-                    </div>
-                    {earned && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: accentColor, background: accentColor + '22', borderRadius: 6, padding: '2px 7px' }}>Earned</span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+              {streakEncouragement(dayStreak)}
+            </p>
             <button onClick={() => setShowStreakPopup(false)} style={S.popupButton}>
-              Got it!
+              Keep it up!
             </button>
           </div>
         </div>,
