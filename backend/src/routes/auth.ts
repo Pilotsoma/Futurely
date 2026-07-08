@@ -134,9 +134,9 @@ async function sendVerificationEmail(email: string, token: string): Promise<void
   const link = `${appUrl}/verify-email?token=${token}`
   await sendEmail({
     to: email,
-    subject: 'Verify your Futurely email',
+    subject: 'Verify your myFuturely email',
     html: `
-      <p>Welcome to Futurely!</p>
+      <p>Welcome to myFuturely!</p>
       <p>Please verify your email address by clicking the link below:</p>
       <p><a href="${link}">Verify Email</a></p>
       <p>This link expires in ${VERIFY_TOKEN_EXPIRY_HOURS} hours.</p>
@@ -165,7 +165,7 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
   const link = `${appUrl}/reset-password?token=${token}`
   await sendEmail({
     to: email,
-    subject: 'Reset your Futurely password',
+    subject: 'Reset your myFuturely password',
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -176,14 +176,14 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
       <table width="100%" style="max-width:480px;background:#ffffff;border-radius:18px;border:1px solid #C0CCE8;box-shadow:0 8px 40px rgba(26,21,14,0.08);overflow:hidden;">
         <tr>
           <td style="padding:36px 40px 28px;text-align:center;border-bottom:1px solid #C0CCE8;">
-            <span style="font-size:28px;font-weight:700;color:#050B18;letter-spacing:-0.5px;">Futurely</span>
+            <span style="font-size:28px;font-weight:700;color:#050B18;letter-spacing:-0.5px;">myFuturely</span>
           </td>
         </tr>
         <tr>
           <td style="padding:36px 40px 28px;">
             <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#050B18;">Reset your password</h1>
             <p style="margin:0 0 24px;font-size:15px;color:#3D4F72;line-height:1.6;">
-              We received a request to reset your Futurely password. Click the button below — this link expires in <strong>${RESET_TOKEN_EXPIRY_MINUTES} minutes</strong>.
+              We received a request to reset your myFuturely password. Click the button below — this link expires in <strong>${RESET_TOKEN_EXPIRY_MINUTES} minutes</strong>.
             </p>
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
@@ -992,11 +992,11 @@ router.post('/send-otp', otpLimiter, async (req: Request, res: Response): Promis
 
   await sendEmail({
     to: email,
-    subject: 'Your Futurely verification code',
+    subject: 'Your myFuturely verification code',
     html: `
       <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:40px 20px;background:#F0F4FF;">
         <div style="background:#fff;border-radius:16px;border:1px solid #C0CCE8;padding:36px 40px;text-align:center;">
-          <div style="font-size:26px;font-weight:800;color:#050B18;margin-bottom:24px;">Futurely</div>
+          <div style="font-size:26px;font-weight:800;color:#050B18;margin-bottom:24px;">myFuturely</div>
           <div style="font-size:16px;font-weight:600;color:#050B18;margin-bottom:8px;">Your verification code</div>
           <div style="font-size:42px;font-weight:800;letter-spacing:10px;color:#2979FF;margin:24px 0;">${code}</div>
           <div style="font-size:13px;color:#7B8DB0;">This code expires in ${OTP_EXPIRY_MINUTES} minutes.<br>If you didn't request this, ignore this email.</div>
@@ -1031,7 +1031,7 @@ router.get('/test-email', async (req: Request, res: Response): Promise<void> => 
   }
 
   try {
-    await sendEmail({ to, subject: 'Futurely email test', html: '<p>If you see this, email delivery works!</p>' })
+    await sendEmail({ to, subject: 'myFuturely email test', html: '<p>If you see this, email delivery works!</p>' })
     res.json({ data: { status: 'sent', to, db: dbResult, env } })
   } catch (e) {
     res.status(500).json({ data: null, error: { message: e instanceof Error ? e.message : String(e) }, db: dbResult, env })

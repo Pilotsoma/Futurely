@@ -272,7 +272,7 @@ function AIChatInner() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
           <div className="aic-header-avatar"><AiSparkIcon size={16} /></div>
-          <div className="aic-header-name">Futurely AI</div>
+          <div className="aic-header-name">myFuturely AI</div>
         </header>
 
         <div className="aic-messages" role="log" aria-live="polite" aria-label="Conversation">
@@ -308,7 +308,7 @@ function AIChatInner() {
           {sending && (
             <div className="aic-row aic-row--ai">
               <div className="aic-avatar" aria-hidden="true"><AiSparkIcon size={14} /></div>
-              <div className="aic-bubble-ai aic-typing" aria-label="Futurely AI is thinking">
+              <div className="aic-bubble-ai aic-typing" aria-label="myFuturely AI is thinking">
                 <span className="ai-dot"/><span className="ai-dot"/><span className="ai-dot"/>
               </div>
             </div>
@@ -331,7 +331,7 @@ function AIChatInner() {
             }}
             placeholder="Ask anything about your academics…"
             disabled={sending}
-            aria-label="Message Futurely AI"
+            aria-label="Message myFuturely AI"
           />
           <button
             className="aic-send-btn"

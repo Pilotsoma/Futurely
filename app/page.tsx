@@ -189,9 +189,15 @@ export default function LandingPage() {
         transition: 'background 0.4s ease, border-color 0.4s ease, backdrop-filter 0.4s ease',
       }}>
         <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 28px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}>
+          <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo1.png" alt="Futurely" style={{ height: 150, width: 'auto', objectFit: 'contain', display: 'block' }} />
+            <img src="/logo.png" alt="" style={{ height: 34, width: 'auto', objectFit: 'contain', display: 'block' }} />
+            <span style={{
+              fontSize: 20, fontWeight: 800, letterSpacing: '-0.4px',
+              backgroundImage: 'linear-gradient(90deg, #22d3ee 0%, var(--primary) 45%, var(--purple) 100%)',
+              WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+            }}>myFuturely</span>
           </motion.div>
           <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
             style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -274,7 +280,7 @@ export default function LandingPage() {
             transition={{ duration: 0.65, ease: [0.19, 1, 0.22, 1], delay: 0.17 }}
             style={{ fontSize: 18.5, color: 'var(--text-secondary)', maxWidth: 560, margin: '0 auto 48px', lineHeight: 1.75, fontWeight: 400, letterSpacing: '-0.1px' }}
           >
-            Futurely syncs directly with your school portal, pairs it with an AI advisor
+            myFuturely syncs directly with your school portal, pairs it with an AI advisor
             that actually knows your transcript, and gives you the tools to plan — not just track.
           </motion.p>
 
@@ -436,7 +442,7 @@ export default function LandingPage() {
                 Your data.<br />Not ours.
               </h2>
               <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 32 }}>
-                We built Futurely privacy-first from the beginning — not as a checkbox. Your academic
+                We built myFuturely privacy-first from the beginning — not as a checkbox. Your academic
                 data is one of the most sensitive things about you. We treat it that way.
               </p>
               <div style={{
@@ -466,7 +472,7 @@ export default function LandingPage() {
                   icon: ICON_EYE_OFF,
                   color: '#A78BFA',
                   title: 'No ad tracking. No data mining.',
-                  body: "Futurely doesn't embed Facebook Pixel, Google Analytics, or any third-party tracker that profiles your behavior. We collect only what's needed to run the app.",
+                  body: "myFuturely doesn't embed Facebook Pixel, Google Analytics, or any third-party tracker that profiles your behavior. We collect only what's needed to run the app.",
                 },
                 {
                   icon: ICON_SHIELD,
@@ -510,12 +516,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Why Futurely: Competitor comparison ──────────────────────────── */}
+      {/* ── Why myFuturely: Competitor comparison ──────────────────────────── */}
       <section id="compare" style={{ borderTop: '1px solid var(--border)', padding: '100px 28px' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <Reveal>
             <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#F59E0B', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: 16 }}>
-              Why Futurely
+              Why myFuturely
             </p>
             <h2 style={{ fontFamily: 'var(--font-display)', textAlign: 'center', fontSize: 'clamp(30px, 4.5vw, 54px)', fontWeight: 600, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 16 }}>
               Other tools track homework.{' '}
@@ -544,7 +550,7 @@ export default function LandingPage() {
                 padding: '0',
               }}>
                 <div style={{ padding: '18px 24px', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Feature</div>
-                {['Futurely', 'Grade Way', 'Google Classroom', 'Home Access Center', 'Schoology'].map((col, i) => (
+                {['myFuturely', 'Grade Way', 'Google Classroom', 'Home Access Center', 'Schoology'].map((col, i) => (
                   <div key={col} style={{
                     padding: '18px 12px', textAlign: 'center',
                     fontSize: 12, fontWeight: 700,
@@ -599,7 +605,7 @@ export default function LandingPage() {
               {
                 color: '#F59E0B',
                 title: 'Grade Way just shows your grades.',
-                body: "It displays what your teacher entered. Futurely tells you what those grades mean — for your GPA, your college odds, and exactly what to fix.",
+                body: "It displays what your teacher entered. myFuturely tells you what those grades mean — for your GPA, your college odds, and exactly what to fix.",
               },
               {
                 color: '#60A5FA',
@@ -609,12 +615,12 @@ export default function LandingPage() {
               {
                 color: '#A78BFA',
                 title: 'Home Access Center is school-controlled.',
-                body: "Your school owns it, admins control it, and it disappears when you graduate. Futurely belongs to you — and follows your journey.",
+                body: "Your school owns it, admins control it, and it disappears when you graduate. myFuturely belongs to you — and follows your journey.",
               },
               {
                 color: '#34D399',
                 title: 'Schoology is built for teachers, not students.',
-                body: "It manages assignments and submissions. Futurely puts the student first — with AI coaching, progress insights, and tools you actually want to use.",
+                body: "It manages assignments and submissions. myFuturely puts the student first — with AI coaching, progress insights, and tools you actually want to use.",
               },
             ].map((card, i) => (
               <Reveal key={i} delay={i * 0.09}>
@@ -648,7 +654,7 @@ export default function LandingPage() {
               <span style={{ color: '#F59E0B' }}>a school app every day.</span>
             </h2>
             <p style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto 72px', lineHeight: 1.75 }}>
-              Showing up consistently is how academics actually improve. Futurely rewards you for it.
+              Showing up consistently is how academics actually improve. myFuturely rewards you for it.
             </p>
           </Reveal>
 
@@ -663,7 +669,7 @@ export default function LandingPage() {
                   </div>
                   <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.25 }}>Daily Login Streaks</h3>
                   <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 16 }}>
-                    Every day you open Futurely, your streak grows. Miss one day and it resets. Keep it alive and earn bonus coins, exclusive drop chances, and eventually a Marketplace key.
+                    Every day you open myFuturely, your streak grows. Miss one day and it resets. Keep it alive and earn bonus coins, exclusive drop chances, and eventually a Marketplace key.
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {([
@@ -690,7 +696,7 @@ export default function LandingPage() {
                   </div>
                   <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.25 }}>Coin Economy</h3>
                   <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 16 }}>
-                    Earn coins by logging in, maintaining streaks, participating in giveaways, and winning trades. Coins are the currency of Futurely — and they&apos;re earned, not bought.
+                    Earn coins by logging in, maintaining streaks, participating in giveaways, and winning trades. Coins are the currency of myFuturely — and they&apos;re earned, not bought.
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {([
@@ -756,7 +762,7 @@ export default function LandingPage() {
               {
                 n: '01',
                 title: 'Create your account',
-                desc: 'Sign up free with your email. No credit card, no trial period, no paywall. The core of Futurely is free — forever.',
+                desc: 'Sign up free with your email. No credit card, no trial period, no paywall. The core of myFuturely is free — forever.',
                 color: 'var(--primary)',
               },
               {
@@ -821,7 +827,7 @@ export default function LandingPage() {
             </h2>
             <p style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.8, letterSpacing: '-0.05px', maxWidth: 480, margin: '0 auto 16px' }}>
               The students who succeed in college started taking their academics seriously
-              before they had to. Futurely is where that starts.
+              before they had to. myFuturely is where that starts.
             </p>
             <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 44, lineHeight: 1.6 }}>
               Free to use. No credit card. No trial period. Just your grades and a plan.
@@ -859,7 +865,7 @@ export default function LandingPage() {
         <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Futurely" style={{ height: 36, width: 'auto', objectFit: 'contain' }} />
+            <img src="/logo.png" alt="myFuturely" style={{ height: 36, width: 'auto', objectFit: 'contain' }} />
             <span style={{ color: 'var(--border)' }}>|</span>
             <span>Built for students who mean business.</span>
           </div>
@@ -867,7 +873,7 @@ export default function LandingPage() {
             <a href="#privacy" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 13 }}>Privacy</a>
             <a href="#features" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 13 }}>Features</a>
             <Link href="/login" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: 13 }}>Sign in</Link>
-            <span>© 2026 Futurely</span>
+            <span>© 2026 myFuturely</span>
           </div>
         </div>
       </footer>

@@ -53,7 +53,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
         <div style={S.logoRow}>
           <a href="/parent/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={S.logoMark}>N</div>
-            <span style={S.logoText}>Futurely</span>
+            <span style={S.logoText}>myFuturely</span>
           </a>
         </div>
 

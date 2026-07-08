@@ -4120,7 +4120,7 @@ export default function MarketplacePage() {
           <div style={{ fontSize: 13, fontWeight: 700, color: '#ff6b6b', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}><WrenchIcon size={14}/> DEV Panel — Grant to Self</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-            {/* User lookup by Futurely ID */}
+            {/* User lookup by myFuturely ID */}
             <div style={{ borderBottom: '1px solid rgba(255,107,107,0.2)', paddingBottom: 14, marginBottom: 2 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#ff6b6b', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 4 }}><MagnifyingGlassIcon size={13}/> Look Up User by ID</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -4136,7 +4136,7 @@ export default function MarketplacePage() {
                     catch { setDevLookupError('User not found') }
                     finally { setDevLookupBusy(false) }
                   }}
-                  placeholder="Futurely ID"
+                  placeholder="myFuturely ID"
                   type="number"
                   style={{ width: 130, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13 }}
                 />

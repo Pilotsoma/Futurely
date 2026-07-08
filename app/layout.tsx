@@ -17,8 +17,8 @@ const spaceGrotesk = Space_Grotesk({
 })
 
 export const metadata: Metadata = {
-  title: 'Futurely — AI Academic Companion',
-  description: 'Futurely helps high school students track grades, plan assignments, and prepare for college.',
+  title: 'myFuturely — AI Academic Companion',
+  description: 'myFuturely helps high school students track grades, plan assignments, and prepare for college.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

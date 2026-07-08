@@ -70,7 +70,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         emoji: '🧹',
         headline: 'Cleaner Planner & AI',
-        detail: 'Removed old auto-scraped HAC assignments that were cluttering your planner and confusing the AI. Futurely AI now only references your real Canvas and manually added work.',
+        detail: 'Removed old auto-scraped HAC assignments that were cluttering your planner and confusing the AI. myFuturely AI now only references your real Canvas and manually added work.',
       },
       {
         emoji: '🔔',
@@ -102,7 +102,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       {
         emoji: '🤖',
         headline: 'Faster AI Responses',
-        detail: 'Switched to a faster AI model so Futurely AI responds more quickly.',
+        detail: 'Switched to a faster AI model so myFuturely AI responds more quickly.',
       },
     ],
   },
@@ -113,7 +113,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     changes: [
       {
         emoji: '🚀',
-        headline: 'Futurely is Live',
+        headline: 'myFuturely is Live',
         detail: 'GPA tracking, planner, AI academic companion, social feed, marketplace, college tools, and Canvas grade integration — all in one place.',
       },
     ],

@@ -1,5 +1,5 @@
 /**
- * Shared SVG path data for the Futurely icon system.
+ * Shared SVG path data for the myFuturely icon system.
  * All paths are designed for a 24×24 viewBox, stroke-based (fill="none"),
  * strokeWidth 2, strokeLinecap round, strokeLinejoin round.
  *

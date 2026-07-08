@@ -10,7 +10,7 @@ interface MailOptions {
 // in serverless environments (no TLS handshake, no connection timeout).
 async function sendViaResend(opts: MailOptions): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY ?? process.env.SMTP_PASS
-  const from = process.env.SMTP_FROM ?? 'Futurely <onboarding@resend.dev>'
+  const from = process.env.SMTP_FROM ?? 'myFuturely <onboarding@resend.dev>'
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -37,7 +37,7 @@ async function sendViaSMTP(opts: MailOptions): Promise<void> {
       : undefined,
   })
   await transporter.sendMail({
-    from: process.env.SMTP_FROM ?? '"Futurely" <noreply@futurely.app>',
+    from: process.env.SMTP_FROM ?? '"myFuturely" <noreply@futurely.app>',
     ...opts,
   })
 }

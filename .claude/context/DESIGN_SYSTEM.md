@@ -1,7 +1,7 @@
-# Futurely — Design System
+# myFuturely — Design System
 
 ## Brand Identity
-- **Product:** Futurely — AI-powered academic companion for high schoolers
+- **Product:** myFuturely — AI-powered academic companion for high schoolers
 - **Tone:** Confident, encouraging, clear. Not corporate. Not childish.
 - **Users are teenagers** — UI must feel modern, fast, and trustworthy.
 
@@ -64,7 +64,7 @@ F: #EF4444  (red)
   - No external package required (pure React Native View + Text)
 - **Web SVG** (`public/logo.png`)
   - Mortarboard + book icon with brand gradient: `#00E5FF → #2979FF → #7C3AED`
-  - Includes "Futurely" wordmark in the SVG
+  - Includes "myFuturely" wordmark in the SVG
   - Used at 28×28 in sidebar, 48×48 on login page
 
 ## Spacing

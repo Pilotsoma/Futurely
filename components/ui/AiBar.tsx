@@ -14,7 +14,7 @@ interface AiBarProps {
   onSubmit?: (query: string) => Promise<void>
 }
 
-export default function AiBar({ placeholder = 'Ask Futurely AI…', onSubmit }: AiBarProps) {
+export default function AiBar({ placeholder = 'Ask myFuturely AI…', onSubmit }: AiBarProps) {
   const [query, setQuery] = useState('')
   const router = useRouter()
 
@@ -42,7 +42,7 @@ export default function AiBar({ placeholder = 'Ask Futurely AI…', onSubmit }: 
         onChange={e => setQuery(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') void handleSubmit() }}
         placeholder={placeholder}
-        aria-label="Ask Futurely AI"
+        aria-label="Ask myFuturely AI"
         style={S.input}
       />
       <button

@@ -86,7 +86,7 @@ function ResetPasswordForm() {
   return (
     <form onSubmit={e => void handleSubmit(e)} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-        Choose a new password for your Futurely account.
+        Choose a new password for your myFuturely account.
       </p>
 
       <div style={styles.field}>
@@ -157,8 +157,14 @@ export default function ResetPasswordPage() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <div style={{ marginBottom: 16 }}>
-          <Image src="/logo2.png" alt="Futurely" width={100} height={100} />
+        {/* Logo — icon + live text wordmark (logo2.png has "Futurely" baked into the pixels) */}
+        <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <Image src="/logo.png" alt="" width={54} height={54} style={{ objectFit: 'contain' }} />
+          <span style={{
+            fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px',
+            backgroundImage: 'linear-gradient(90deg, #22d3ee 0%, var(--primary) 45%, var(--purple) 100%)',
+            WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+          }}>myFuturely</span>
         </div>
         <p style={{ color: 'var(--text-secondary)', marginBottom: 28, textAlign: 'center', fontSize: 14 }}>
           Reset your password

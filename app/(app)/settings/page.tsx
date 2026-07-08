@@ -399,7 +399,7 @@ export default function SettingsPage() {
               </div>
               {data?.id && (
                 <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
-                  Futurely ID: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1 }}>{data.id}</span>
+                  myFuturely ID: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1 }}>{data.id}</span>
                   <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-muted)' }}>(share with your counselor to get linked)</span>
                 </div>
               )}
@@ -669,7 +669,7 @@ export default function SettingsPage() {
                   Get your token: Canvas → Profile → Settings → Approved Integrations → New Access Token
                 </p>
                 <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, padding: '6px 10px', background: 'var(--surface-2)', borderRadius: 6, border: '1px solid var(--border)', boxShadow: 'var(--neo-inset)' }}>
-                  When creating the token, set the expiry to <strong>120 days</strong> (the maximum recommended). Futurely will alert you when your token expires so you can renew it.
+                  When creating the token, set the expiry to <strong>120 days</strong> (the maximum recommended). myFuturely will alert you when your token expires so you can renew it.
                 </p>
                 <div ref={districtRef} style={{ position: 'relative' }}>
                   <input
@@ -1042,7 +1042,7 @@ export default function SettingsPage() {
               <div>
                 <p style={{ ...S.cardLabel, marginBottom: 4 }}>Changelog</p>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                  Every update to Futurely, explained in plain English.
+                  Every update to myFuturely, explained in plain English.
                 </p>
               </div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"

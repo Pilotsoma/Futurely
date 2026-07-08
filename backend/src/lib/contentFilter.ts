@@ -194,14 +194,19 @@ export function filterContent(text: string): FilterResult {
 // Reserved names — stripped to lowercase alphanumeric for comparison so
 // leet-speak variants like "Futur3ly", "adm1n", or "off1cial" are also blocked.
 const RESERVED_NAMES: readonly string[] = [
-  // Brand
+  // Brand — old name (still blocked to prevent legacy impersonation)
   'futurely', 'futurly', 'futurley',
+  // Brand — new name (blocked to prevent impersonation after rebrand)
+  'myfuturely', 'myfuturly', 'myfuturley',
   // Staff / authority roles
   'admin', 'administrator', 'moderator', 'mod', 'staff', 'support',
   'official', 'team', 'owner', 'ceo', 'founder',
-  // System / bot
+  // System / bot — old brand compounds
   'system', 'bot', 'robot', 'automated', 'futurelybot', 'futurelyteam',
   'futurelyofficial', 'futurelystaff', 'futurelymod', 'futurelysupport',
+  // System / bot — new brand compounds
+  'myfuturleybot', 'myfuturleyteam',
+  'myfuturleyofficial', 'myfuturleystaff', 'myfuturleymod', 'myfuturleysupport',
   // Dev roles
   'dev', 'developer', 'devteam',
 ]

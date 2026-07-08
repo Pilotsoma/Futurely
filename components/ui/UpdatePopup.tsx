@@ -29,7 +29,7 @@ export default function UpdatePopup() {
         <div style={S.header}>
           <div>
             <div style={S.badge}>v{latest.version}</div>
-            <h2 style={S.title}>What&apos;s New in Futurely</h2>
+            <h2 style={S.title}>What&apos;s New in myFuturely</h2>
             <p style={S.subtitle}>{latest.title} · {latest.date}</p>
           </div>
           <button style={S.closeBtn} onClick={dismiss} aria-label="Close">

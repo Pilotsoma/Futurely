@@ -294,7 +294,7 @@ export default function ParentStudentDetailPage() {
 
             {!periodLoading && hacClasses.length === 0 && (
               <p style={{ color: 'var(--text-secondary)', fontSize: 13, padding: 16 }}>
-                No grade data yet. The student needs to sync their grades in Futurely first.
+                No grade data yet. The student needs to sync their grades in myFuturely first.
               </p>
             )}
 

@@ -194,7 +194,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div><BanIcon size={52}/></div>
       <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', margin: 0 }}>Your account has been deleted</h1>
       <p style={{ fontSize: 15, color: 'var(--text-muted)', textAlign: 'center' as const, maxWidth: 360, margin: 0, lineHeight: 1.6 }}>
-        Your Futurely account has been permanently removed by an administrator.
+        Your myFuturely account has been permanently removed by an administrator.
       </p>
       <button className="ns-btn-ghost" style={{ marginTop: 8 }} onClick={handleLogout}>Log out</button>
     </div>
@@ -237,7 +237,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div style={{ ...S.logoRow, justifyContent: isExpanded ? 'flex-start' : 'center' }}>
           <a href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12, overflow: 'hidden' }}>
-            <Image src="/logo.png" alt="Futurely" width={44} height={44} style={{ flexShrink: 0 }} />
+            <Image src="/logo.png" alt="myFuturely" width={44} height={44} style={{ flexShrink: 0 }} />
             <AnimatePresence>
               {isExpanded && (
                 <motion.span
@@ -248,7 +248,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   transition={fastSpring}
                   style={S.logoText}
                 >
-                  Futurely
+                  myFuturely
                 </motion.span>
               )}
             </AnimatePresence>

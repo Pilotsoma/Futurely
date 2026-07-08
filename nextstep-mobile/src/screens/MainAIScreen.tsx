@@ -200,7 +200,7 @@ export default function MainAIScreen(): React.JSX.Element {
             ListFooterComponent={
               <View style={styles.aiSection}>
                 <Text variant="label" color={colors.textSecondary} style={{ marginBottom: 8 }}>
-                  Futurely AI
+                  myFuturely AI
                 </Text>
                 <Text variant="body" color={colors.textSecondary} style={{ marginBottom: 12, fontWeight: '500' }}>
                   What can I help you with?
@@ -231,11 +231,11 @@ export default function MainAIScreen(): React.JSX.Element {
             style={styles.input}
             value={aiInput}
             onChangeText={setAiInput}
-            placeholder="Ask Futurely AI..."
+            placeholder="Ask myFuturely AI..."
             placeholderTextColor={colors.textMuted}
             returnKeyType="send"
             onSubmitEditing={() => void handleSend()}
-            accessibilityLabel="Ask Futurely AI"
+            accessibilityLabel="Ask myFuturely AI"
             editable={!isSending}
           />
           <TouchableOpacity

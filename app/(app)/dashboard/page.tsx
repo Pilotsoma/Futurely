@@ -637,7 +637,7 @@ export default function DashboardPage() {
                   {percentileStr(gpaPercentile)} Percentile
                 </p>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-                  Based on your {effectiveUGpa !== null ? `${effectiveUGpa.toFixed(2)} unweighted GPA` : 'GPA'}, you rank above the vast majority of Futurely students.
+                  Based on your {effectiveUGpa !== null ? `${effectiveUGpa.toFixed(2)} unweighted GPA` : 'GPA'}, you rank above the vast majority of myFuturely students.
                 </p>
                 <div style={{ background: 'rgba(43,74,142,0.1)', border: '1px solid rgba(43,74,142,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', marginBottom: 6 }}>
@@ -745,7 +745,7 @@ export default function DashboardPage() {
 
       {/* AI bar */}
       <div className="db-curtain-item" style={S.aiBarWrap}>
-        <p style={{ ...S.cardLabel, marginBottom: 10 }}>Ask Futurely AI</p>
+        <p style={{ ...S.cardLabel, marginBottom: 10 }}>Ask myFuturely AI</p>
         <AiBar onSubmit={handleAiSubmit} />
       </div>
 

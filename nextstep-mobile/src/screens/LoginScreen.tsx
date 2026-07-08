@@ -76,7 +76,7 @@ export default function LoginScreen(): React.JSX.Element {
         <View style={styles.brand}>
           <FuturelyLogo size={80} />
           <Text variant="display" color={colors.primary} style={{ textAlign: 'center', marginTop: 16 }}>
-            Futurely
+            myFuturely
           </Text>
           <Text variant="body" color={colors.textSecondary} style={{ textAlign: 'center', marginTop: 8 }}>
             {isRegister ? 'Create your account' : 'Your academic companion'}

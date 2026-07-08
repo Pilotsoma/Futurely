@@ -1,5 +1,5 @@
 /**
- * Futurely Icon System — Web (Next.js)
+ * myFuturely Icon System — Web (Next.js)
  *
  * All icons are stroke-based SVGs, 24×24 viewBox.
  * strokeWidth 2, strokeLinecap round, strokeLinejoin round.

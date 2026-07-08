@@ -1277,13 +1277,13 @@ type CourseTab = 'modules' | 'assignments' | 'announcements' | 'files' | 'grades
 type PendingCanvasItem = { title: string; type: string; href: string }
 
 function canvasRedirectMessage(type: string, href: string): string {
-  if (type === 'Quiz') return "Classic quizzes must be taken on Canvas. Once completed, click to view your attempt scores and question review inside Futurely."
-  if (type === 'Discussion') return "This discussion will open in Futurely once loaded."
+  if (type === 'Quiz') return "Classic quizzes must be taken on Canvas. Once completed, click to view your attempt scores and question review inside myFuturely."
+  if (type === 'Discussion') return "This discussion will open in myFuturely once loaded."
   if (type === 'ExternalTool' && href.includes('/quizzes/')) return "Your school uses New Quizzes (LTI). These can't be accessed via the Canvas API and must be taken directly in Canvas."
   if (type === 'ExternalTool') return "This external tool must be launched from Canvas."
   if (type === 'ExternalUrl') return "This is an external link that will open in your browser."
   if (/\/modules/.test(href)) return "This links to a Canvas modules section."
-  return "This content isn't available inside Futurely and will open in Canvas."
+  return "This content isn't available inside myFuturely and will open in Canvas."
 }
 
 function ModulesTab({

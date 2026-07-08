@@ -47,7 +47,7 @@ export default function ExternalLinkGuard() {
           Do you want to visit this site?
         </div>
         <div style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 12 }}>
-          This link will open outside of Futurely.
+          This link will open outside of myFuturely.
         </div>
         <div style={{
           fontSize: 12,
@@ -68,7 +68,7 @@ export default function ExternalLinkGuard() {
             onClick={() => setPending(null)}
             style={{ flex: 1, padding: '11px 0', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
           >
-            Stay on Futurely
+            Stay on myFuturely
           </button>
           <button
             onClick={() => { window.open(pending.href, '_blank', 'noopener,noreferrer'); setPending(null) }}
