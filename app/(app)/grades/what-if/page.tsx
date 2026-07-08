@@ -47,9 +47,16 @@ function detectLevel(courseName: string): CourseLevel {
   const desc = n.includes(' — ')
     ? n.slice(n.lastIndexOf(' — ') + 3)
     : n.replace(/^[A-Z0-9]+\s*-\s*\d+\s+/, '')
-  if (/^AP/.test(desc)) return 'AP'
-  if (/^KAP/.test(desc)) return 'Pre-AP'
-  if (/^DUAL|^DC\b/.test(desc)) return 'Dual Credit'
+
+  // Match AP/KAP/Dual-Credit markers as a standalone token anywhere in the
+  // title — as a prefix ("AP PRE CALC"), a suffix ("... (DUAL CR)"), etc. —
+  // not just at the very start. Bounded by non-letters on both sides so
+  // "APPLIED" or "MAP" don't false-match.
+  const hasToken = (token: string) => new RegExp(`(?:^|[^A-Z])${token}(?:[^A-Z]|$)`).test(desc)
+
+  if (hasToken('KAP')) return 'Pre-AP'
+  if (hasToken('AP')) return 'AP'
+  if (hasToken('DUAL') || hasToken('DC')) return 'Dual Credit'
   return 'Regular'
 }
 
