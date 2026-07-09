@@ -155,4 +155,13 @@ F: #EF4444  (red)
 - `react-native-svg` is now installed (mobile) — added for the "Continue with Google"
   button's real multi-color Google logo, since Google's brand guidelines require the
   actual logo, not a substitute. It's Expo Go-compatible (bundled support, no dev-client
-  needed). Still no `expo-linear-gradient` — don't install it without updating this doc.
+  needed). Gradient card fills (`Card` component's `variant="gradient"`) also use
+  `react-native-svg`'s `LinearGradient`/`Rect` rather than adding `expo-linear-gradient`
+  as a second, redundant gradient dependency — don't install `expo-linear-gradient`
+  without updating this doc.
+- Mobile visual language was rebuilt against a Figma prototype reference
+  (`https://cute-near-11852013.figma.site`, see `melodic-wobbling-pillow.md` plan) —
+  dark near-black background (`#07080F`), violet/indigo gradient hero cards and quick-
+  action tiles, hairline card borders instead of drop shadows, circular tint+border
+  grade badges, pill-shaped segmented controls and urgency badges. `theme/tokens.ts`'s
+  `colors`/`gradients` exports are the source of truth; update this doc if they drift.
