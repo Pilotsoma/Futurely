@@ -1,29 +1,12 @@
 {
   "_comment": "Declare which files/dirs are in scope for the CURRENT task before editing existing (git-tracked) files. Glob patterns relative to project root, ** and * and ? supported. Anything git-tracked that is NOT matched here triggers an 'ask' permission prompt from .claude/hooks/guard-protected-paths.js instead of a silent edit. New/untracked files are always allowed regardless of this file. Clear or narrow this list when a task finishes so the next task starts from a protected baseline.",
-  "task": "Diagnose & fix signal-aborted errors, College feature regression, general stability, plus a security audit (report-only unless trivial)",
-  "updated": "2026-07-07",
+  "task": "Full rewrite of nextstep-mobile/src (student-nav scope) per approved plan melodic-wobbling-pillow.md",
+  "updated": "2026-07-09",
   "in_scope": [
-    "DIAGNOSTIC_REPORT.md",
-    "lib/api.ts",
-    "app/(app)/colleges/**",
-    "app/(app)/roadmap/**",
-    "nextstep-mobile/src/api/**",
-    "nextstep-mobile/src/context/**",
-    "nextstep-mobile/src/screens/CollegesScreen.tsx",
-    "nextstep-mobile/src/screens/**Roadmap**",
-    "nextstep-mobile/src/navigation/**",
-    "nextstep-mobile/src/utils/**",
-    "backend/src/routes/colleges.ts",
-    "backend/src/routes/collegeCatalog.ts",
-    "backend/src/routes/collegePath.ts",
-    "backend/src/routes/roadmap.ts",
-    "backend/src/services/collegeProbability.ts",
-    "backend/src/services/pathRecommendations.ts",
-    "backend/src/middleware/**",
-    "backend/src/lib/**",
-    "backend/src/app.ts",
-    "backend/src/index.ts",
-    "backend/src/integrations/grades/testGetGrades.ts",
-    "backend/src/integrations/grades/testHacLogin.ts"
+    "nextstep-mobile/src/**",
+    "nextstep-mobile/App.tsx",
+    "nextstep-mobile/AGENTS.md",
+    "nextstep-mobile/metro.config.js",
+    ".claude/context/ARCHITECTURE.md"
   ]
 }
