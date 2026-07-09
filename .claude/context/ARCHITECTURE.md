@@ -37,33 +37,57 @@ and run `npm start` (or `npm run ios` / `npm run android`) separately, in its ow
   module Expo Go doesn't support, that's an architecture decision (introduce `expo-dev-client`
   + EAS) — flag it, don't silently add the dependency.
 - **Navigation:** React Navigation **v7** (`@react-navigation/native`, `native-stack`,
-  `bottom-tabs`, `drawer`). Structure: `RootNavigator` → auth gate → `MainDrawerNavigator` →
-  `TabNavigator` → feature stacks (`GradePortalNavigator`, `PlanningNavigator`,
-  `CollegeHelpNavigator`). Not v6 — don't use v6-only APIs.
-- **Styling:** NativeWind v4 (Tailwind for RN) + `tailwindcss` v3. `expo-linear-gradient` and
-  `react-native-svg` are **not installed** — see DESIGN_SYSTEM.md before adding gradients/SVG.
+  `drawer`; `bottom-tabs` is installed but unused — Drawer was chosen instead, see below).
+  Structure: `RootNavigator` (3-state auth gate: unauthenticated → `AuthNavigator`;
+  authenticated + no school portal linked → `ConnectSchoolNavigator`; authenticated + portal
+  linked → `MainNavigator`) → `MainNavigator` is a flat **Drawer**, not nested tabs, with 7
+  screens matching web's real sidebar order (Dashboard, Grades, Planner, StudyFeed, Colleges,
+  AIChat, Settings) — `Grades` is itself a native-stack (`GradesNavigator`) wrapping a hub
+  screen + 8 sub-screens. Not v6 — don't use v6-only APIs.
+- **Why Drawer, not bottom tabs:** matches web's collapsible sidebar, and 7 top-level items
+  exceeds iOS bottom tabs' ~5-item limit before a fragmenting "More" overflow.
+- **Scope note:** this rebuild deliberately covers only the 7 screens in web's visible student
+  nav, plus auth/connect-school. Battle, Play, Classroom, Marketplace (full), Study Sets, My
+  Counselor, the Canvas LMS integration, and ClassLink are **out of scope** — all are hidden
+  from regular students on web itself (DEV-tag-gated, or reachable only via a notification
+  deep-link or a typed URL), so mobile has no parity gap for a normal student. Don't assume
+  these are accidentally missing; treat adding them as a scope-expansion decision, not a bug fix.
+- **Styling:** NativeWind v4 (Tailwind for RN) + `tailwindcss` v3 are dependencies, but screens
+  are actually styled with plain RN `StyleSheet.create` + `src/theme/tokens.ts` constants (dark
+  theme only — `app.json` hardcodes `"userInterfaceStyle": "dark"`, so no `ThemeContext`/
+  provider exists). `expo-linear-gradient` and `react-native-svg` are **not installed** — icons
+  come from `@expo/vector-icons` (already a dependency) instead of inline SVG paths; see
+  DESIGN_SYSTEM.md before adding gradients/SVG.
 - **State management:** No Redux, no RTK Query, no Zustand. State is React Context
-  (`src/context/AuthContext.tsx` for auth/session) + local component state + a thin
-  per-domain fetch layer in `src/api/*.ts` (`authApi.ts`, `portalApi.ts`, `gradesApi.ts`,
-  `assignmentsApi.ts`, `aiApi.ts`, `roadmapApi.ts`, `studentApi.ts`). Each wraps `fetch`
-  against `API_BASE_URL` — there is no generic data-fetching/caching library (no
-  TanStack/SWR/RTK Query). Don't introduce one without an architect decision; follow the
-  existing per-domain module pattern instead.
+  (`src/context/AuthContext.tsx` for auth/session + portal-connection status) + local component
+  state + a thin per-domain fetch layer in `src/api/*.ts` (`authApi.ts`, `studentsApi.ts`,
+  `gradesApi.ts`, `assignmentsApi.ts`, `collegesApi.ts`, `feedApi.ts`, `aiApi.ts`,
+  `marketplaceApi.ts`). Each calls through the single typed wrapper in `src/api/client.ts` —
+  there is no generic data-fetching/caching library (no TanStack/SWR/RTK Query). Don't
+  introduce one without an architect decision; follow the existing per-domain module pattern.
+- **API client (`src/api/client.ts`):** two timeout tiers (10s CRUD, 45s for any
+  `/integrations/grades/*` path, matching the backend's own HAC/PowerSchool scrape timeouts),
+  and a de-duplicated 401→refresh→retry interceptor — refresh tokens rotate server-side
+  (`POST /auth/refresh` revokes the old one and issues a new pair), so concurrent 401s share
+  one in-flight refresh via a module-level promise rather than each firing their own. Also
+  normalizes the backend's inconsistent error envelopes (`{error:{code,message}}` on
+  auth/assignments/grades/ai/marketplace, `{error:{message}}` with no code on colleges, a bare
+  `{error:"string"}` on feed) into one `ApiRequestError` shape.
 - **Auth/session storage:** JWT access + refresh tokens persisted via
-  `@react-native-async-storage/async-storage` (`src/utils/auth.ts`). Refresh handled in
-  `AuthContext.tryRefresh`. No Firebase Auth anywhere in this repo.
+  `@react-native-async-storage/async-storage` (`src/utils/storage.ts`). `AuthContext` restores
+  the session on launch via `GET /auth/me` (which itself goes through the refresh interceptor).
+  No Firebase Auth anywhere in this repo.
 - **API base URL — the #1 mobile dev-environment gotcha:** `src/constants/api.ts` hardcodes
-  `API_BASE_URL` to a developer's LAN IP (e.g. `http://192.168.40.75:3001`). It is **not**
-  read from an env var. Every developer must edit this file locally to their own machine's IP
-  (physical device via Expo Go) or `http://10.0.2.2:3001` (Android emulator) /
-  `http://localhost:3001` (iOS simulator). This is a common "why is nothing loading" cause —
-  check this file first when the mobile app can't reach the backend.
+  `API_BASE_URL` (default `http://localhost:3001`, which works for the `expo start --web`
+  preview loop and iOS Simulator). It is **not** read from an env var. Physical device via Expo
+  Go needs your computer's LAN IP; Android Emulator needs `http://10.0.2.2:3001`. This is a
+  common "why is nothing loading" cause — check this file first when the mobile app can't reach
+  the backend.
 - **Push notifications:** not implemented. No FCM, no `expo-notifications` dependency yet.
 - **Testing:** `@types/jest` is present as a dev dependency, but **no test runner
-  (`jest`, `jest-expo`, Detox, Playwright) is actually installed**. `src/lib/__tests__` and
-  `src/utils/__tests__` exist but there is currently no way to execute them. Treat
-  ENGINEERING_RULES.md's Jest/Detox requirements as aspirational until a runner is wired up —
-  don't claim tests "pass" without verifying a runner exists.
+  (`jest`, `jest-expo`, Detox, Playwright) is actually installed**. Treat ENGINEERING_RULES.md's
+  Jest/Detox requirements as aspirational until a runner is wired up — don't claim tests "pass"
+  without verifying a runner exists.
 
 ## Backend (`backend/`)
 

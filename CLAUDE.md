@@ -229,10 +229,14 @@ These commands are available via the `.claude/commands/` folder:
   apply it.
 - No test runner (Jest/Detox/Playwright) is installed anywhere in this repo yet, despite
   ENGINEERING_RULES.md describing target testing standards — verify before claiming tests ran.
-- `nextstep-mobile/AGENTS.md` currently tells every session to fetch Expo's "v56.0.0" versioned
-  docs before writing any code — the pinned Expo version in `package.json` is `^54.0.35`, so
-  that instruction points at the wrong SDK version. Treat it as unreliable until updated;
-  check `package.json` for the real version instead of fetching that URL.
+- `nextstep-mobile/AGENTS.md` now correctly points at Expo SDK 54 docs (matching the pinned
+  `expo@^54.0.35`) — fixed during the mobile-rebuild teardown; if it ever drifts from
+  `package.json` again, fix it before trusting it.
+- The mobile app (`nextstep-mobile/`) was fully rebuilt from zero on the `mobile-rebuild`
+  branch, scoped to the 7 screens in web's visible student nav (Dashboard, Grades, Planner,
+  Study Feed, Colleges, AI Chat, Settings) plus auth/connect-school — see the "Scope note" in
+  `.claude/context/ARCHITECTURE.md`'s Mobile App section for what's deliberately excluded and
+  why.
 - A `PreToolUse` hook now guards every `Edit`/`Write` against silently touching existing,
   working, git-tracked code — see `.claude/context/GUARDRAILS.md`. Declare task scope in
   `.claude/guardrails/task-scope.json` before editing existing files, or expect an `ask`
