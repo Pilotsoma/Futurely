@@ -78,6 +78,11 @@ async function request<T>(path: string, options?: RequestInit, _retried = false)
     const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }
     const msg  = typeof body?.error === 'string' ? body.error : body?.error?.message
     const code = typeof body?.error === 'object' ? body?.error?.code : undefined
+    // Consent not yet recorded for this OAuth account — redirect back to the consent modal.
+    if (res.status === 403 && code === 'CONSENT_REQUIRED' && typeof window !== 'undefined') {
+      window.location.replace('/login?oauth=new')
+      return new Promise<T>(() => {})
+    }
     throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining, res.status)
   }
   const { data } = await res.json() as { data: T }
@@ -147,10 +152,15 @@ interface StudentData {
 }
 
 export const api = {
-  register: (email: string, password: string, otp: string, name?: string, role?: string) =>
+  register: (email: string, password: string, otp: string, name: string | undefined, role: string | undefined, agreedTos: boolean, agreedPrivacy: boolean, agreedAge: boolean) =>
     request<LoginResult>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, otp, name, role }),
+      body: JSON.stringify({ email, password, otp, name, role, agreedTos, agreedPrivacy, agreedAge }),
+    }),
+  submitConsent: () =>
+    request<{ tosAcceptedAt: string; privacyAcceptedAt: string; ageConfirmedAt: string }>('/api/auth/consent', {
+      method: 'POST',
+      body: JSON.stringify({ agreedTos: true, agreedPrivacy: true, agreedAge: true }),
     }),
   login: (email: string, password: string) =>
     request<LoginResult>('/api/auth/login', {

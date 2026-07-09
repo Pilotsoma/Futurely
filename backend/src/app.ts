@@ -47,6 +47,7 @@ import setsRouter from './routes/sets'
 import gamesRouter from './routes/games'
 
 import { requireAuth } from './middleware/auth'
+import { requireConsent } from './middleware/requireConsent'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
 import classlinkRouter from './integrations/classlink/classlinkRouter'
@@ -258,7 +259,7 @@ app.get('/health/connectivity', async (_req, res) => {
 app.use('/auth/register', registerLimiter)
 app.use('/auth', authLimiter, authRoutes)
 app.use('/schools', schoolsRouter)
-app.use('/grades', gradesRoutes)
+app.use('/grades', requireAuth, requireConsent, gradesRoutes)
 
 /**
  * TEMPORARY LOCAL DEV ONLY:
@@ -297,44 +298,44 @@ function devBypass(req: any, _res: any, next: any): void {
 if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   console.warn('⚠️  [DEV] Auth bypass active — requests will use real JWT userId or fall back to userId=1')
   console.warn('⚠️  [DEV] Set ENABLE_DEV_INTEGRATION_AUTH_BYPASS=false before any real testing')
-  app.use('/assignments', devBypass, assignmentsRouter)
-  app.use('/students', devBypass, studentsRouter)
-  app.use('/roadmap', devBypass, roadmapRouter)
-  app.use('/ai', aiLimiter, devBypass, aiRouter)
-  app.use('/feed', devBypass, feedRouter)
-  app.use('/notifications', devBypass, notificationsRouter)
-  app.use('/integrations/grades', devBypass, gradesIntegrationRouter)
-  app.use('/integrations/canvas', devBypass, canvasRouter)
-  app.use('/integrations/classlink', devBypass, classlinkRouter)
-  app.use('/colleges', devBypass, collegesRouter)
-  app.use('/marketplace', devBypass, marketplaceRouter)
-  app.use('/educator', devBypass, educatorRouter)
-  app.use('/counselor', devBypass, counselorRouter)
-  app.use('/admin', devBypass, adminRouter)
-  app.use('/sets', devBypass, setsRouter)
-  app.use('/games', devBypass, gamesRouter)
+  app.use('/assignments', devBypass, requireConsent, assignmentsRouter)
+  app.use('/students', devBypass, requireConsent, studentsRouter)
+  app.use('/roadmap', devBypass, requireConsent, roadmapRouter)
+  app.use('/ai', aiLimiter, devBypass, requireConsent, aiRouter)
+  app.use('/feed', devBypass, requireConsent, feedRouter)
+  app.use('/notifications', devBypass, requireConsent, notificationsRouter)
+  app.use('/integrations/grades', devBypass, requireConsent, gradesIntegrationRouter)
+  app.use('/integrations/canvas', devBypass, requireConsent, canvasRouter)
+  app.use('/integrations/classlink', devBypass, requireConsent, classlinkRouter)
+  app.use('/colleges', devBypass, requireConsent, collegesRouter)
+  app.use('/marketplace', devBypass, requireConsent, marketplaceRouter)
+  app.use('/educator', devBypass, requireConsent, educatorRouter)
+  app.use('/counselor', devBypass, requireConsent, counselorRouter)
+  app.use('/admin', devBypass, requireConsent, adminRouter)
+  app.use('/sets', devBypass, requireConsent, setsRouter)
+  app.use('/games', devBypass, requireConsent, gamesRouter)
 
 } else {
-  app.use('/assignments', requireAuth, assignmentsRouter)
-  app.use('/students', requireAuth, studentsRouter)
-  app.use('/roadmap', requireAuth, roadmapRouter)
-  app.use('/ai', aiLimiter, requireAuth, aiRouter)
-  app.use('/feed', requireAuth, feedRouter)
-  app.use('/notifications', requireAuth, notificationsRouter)
-  app.use('/integrations/grades', requireAuth, gradesIntegrationRouter)
-  app.use('/integrations/canvas', requireAuth, canvasRouter)
-  app.use('/integrations/classlink', requireAuth, classlinkRouter)
-  app.use('/colleges', requireAuth, collegesRouter)
-  app.use('/marketplace', requireAuth, marketplaceRouter)
-  app.use('/educator', requireAuth, educatorRouter)
-  app.use('/counselor', requireAuth, counselorRouter)
-  app.use('/admin', requireAuth, adminRouter)
-  app.use('/sets', requireAuth, setsRouter)
-  app.use('/games', requireAuth, gamesRouter)
+  app.use('/assignments', requireAuth, requireConsent, assignmentsRouter)
+  app.use('/students', requireAuth, requireConsent, studentsRouter)
+  app.use('/roadmap', requireAuth, requireConsent, roadmapRouter)
+  app.use('/ai', aiLimiter, requireAuth, requireConsent, aiRouter)
+  app.use('/feed', requireAuth, requireConsent, feedRouter)
+  app.use('/notifications', requireAuth, requireConsent, notificationsRouter)
+  app.use('/integrations/grades', requireAuth, requireConsent, gradesIntegrationRouter)
+  app.use('/integrations/canvas', requireAuth, requireConsent, canvasRouter)
+  app.use('/integrations/classlink', requireAuth, requireConsent, classlinkRouter)
+  app.use('/colleges', requireAuth, requireConsent, collegesRouter)
+  app.use('/marketplace', requireAuth, requireConsent, marketplaceRouter)
+  app.use('/educator', requireAuth, requireConsent, educatorRouter)
+  app.use('/counselor', requireAuth, requireConsent, counselorRouter)
+  app.use('/admin', requireAuth, requireConsent, adminRouter)
+  app.use('/sets', requireAuth, requireConsent, setsRouter)
+  app.use('/games', requireAuth, requireConsent, gamesRouter)
 
 }
 
-app.use('/parent', authLimiter, parentRouter)
+app.use('/parent', authLimiter, requireAuth, requireConsent, parentRouter)
 
 // ── Global error handler ─────────────────────────────────────────────────────
 // Catches any error passed to next(err) or thrown inside non-async route handlers.

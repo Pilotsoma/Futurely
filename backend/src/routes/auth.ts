@@ -219,8 +219,15 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
 // ── POST /auth/register ───────────────────────────────────────────────────────
 
 router.post('/register', registerLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email, password, name, role: roleInput, otp } = req.body as {
-    email?: string; password?: string; name?: string; role?: string; otp?: string
+  const { email, password, name, role: roleInput, otp, agreedTos, agreedPrivacy, agreedAge } = req.body as {
+    email?: string
+    password?: string
+    name?: string
+    role?: string
+    otp?: string
+    agreedTos?: unknown
+    agreedPrivacy?: unknown
+    agreedAge?: unknown
   }
 
   if (!email || !password) {
@@ -270,6 +277,18 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     }
   }
 
+  // Consent is required before account creation — all three must be strictly true
+  if (agreedTos !== true || agreedPrivacy !== true || agreedAge !== true) {
+    res.status(400).json({
+      data: null,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'You must agree to the Terms of Service, Privacy Policy, and confirm your age to register.',
+      },
+    })
+    return
+  }
+
   try {
     const [emailTaken, nameTaken] = await Promise.all([
       prisma.user.findUnique({ where: { email } }),
@@ -310,19 +329,37 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     const userRole = roleInput === 'PARENT' ? 'PARENT' : roleInput === 'TEACHER' ? 'TEACHER' : roleInput === 'COUNSELOR' ? 'COUNSELOR' : 'STUDENT'
     const defaultTag = userRole === 'PARENT' ? 'Parent' : userRole === 'TEACHER' || userRole === 'COUNSELOR' ? 'Teacher' : 'Student'
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        name: displayName,
-        role: userRole,
-        tag: defaultTag,
-        tagColor: 'grey',
-        emailVerified: true,
-      },
-    })
+    const consentTimestamp = new Date()
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          name: displayName,
+          role: userRole,
+          tag: defaultTag,
+          tagColor: 'grey',
+          emailVerified: true,
+          tosAcceptedAt: consentTimestamp,
+          privacyAcceptedAt: consentTimestamp,
+          ageConfirmedAt: consentTimestamp,
+        },
+      })
 
-    // Email is already verified via OTP — no verification link needed
+      // Email is already verified via OTP — no verification link needed
+
+      await tx.complianceAuditLog.create({
+        data: {
+          userId: created.id,
+          resourceType: 'consent',
+          resourceId: String(created.id),
+          action: 'ACCEPT',
+          ipAddress: req.ip ?? 'unknown',
+        },
+      })
+
+      return created
+    })
 
     const token = issueAccessToken(user.id, user.role)
     const refreshToken = await issueRefreshToken(user.id)
@@ -823,6 +860,90 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
     res.json({ data: { deleted: true } })
   } catch (e) {
     logger.error('auth.error', { event: 'delete_account', error: e instanceof Error ? e.message : String(e) })
+    res.status(500).json({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
+    })
+  }
+})
+
+// ── POST /auth/consent ────────────────────────────────────────────────────────
+// Records ToS / Privacy / age consent for the authenticated user.
+// This endpoint is deliberately exempt from the requireConsent guard so that
+// OAuth-created accounts (which start with null consent fields) can reach it.
+
+router.post('/consent', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const { agreedTos, agreedPrivacy, agreedAge } = req.body as {
+    agreedTos?: unknown
+    agreedPrivacy?: unknown
+    agreedAge?: unknown
+  }
+
+  if (agreedTos !== true || agreedPrivacy !== true || agreedAge !== true) {
+    res.status(400).json({
+      data: null,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'agreedTos, agreedPrivacy, and agreedAge must all be true',
+      },
+    })
+    return
+  }
+
+  const userId = req.userId!
+
+  try {
+    const existing = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { tosAcceptedAt: true, privacyAcceptedAt: true, ageConfirmedAt: true },
+    })
+
+    if (!existing) {
+      res.status(404).json({
+        data: null,
+        error: { code: 'NOT_FOUND', message: 'User not found' },
+      })
+      return
+    }
+
+    const now = new Date()
+
+    // Only set timestamps that are not yet recorded — never overwrite an existing acceptance.
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.user.update({
+        where: { id: userId },
+        data: {
+          tosAcceptedAt: existing.tosAcceptedAt ?? now,
+          privacyAcceptedAt: existing.privacyAcceptedAt ?? now,
+          ageConfirmedAt: existing.ageConfirmedAt ?? now,
+        },
+        select: { tosAcceptedAt: true, privacyAcceptedAt: true, ageConfirmedAt: true },
+      })
+
+      await tx.complianceAuditLog.create({
+        data: {
+          userId,
+          resourceType: 'consent',
+          resourceId: String(userId),
+          action: 'ACCEPT',
+          ipAddress: req.ip ?? 'unknown',
+        },
+      })
+
+      return result
+    })
+
+    logger.info('auth.consent_recorded', { userId })
+
+    res.json({
+      data: {
+        tosAcceptedAt: updated.tosAcceptedAt,
+        privacyAcceptedAt: updated.privacyAcceptedAt,
+        ageConfirmedAt: updated.ageConfirmedAt,
+      },
+    })
+  } catch (e) {
+    logger.error('auth.error', { event: 'consent', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },

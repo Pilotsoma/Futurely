@@ -188,11 +188,11 @@ function LoginPageInner() {
       if (mode === 'login') {
         result = await api.login(email, password)
       } else if (mode === 'register-student') {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined)
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, undefined, agreedTos, agreedPrivacy, agreedAge)
       } else if (mode === 'register-teacher') {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'TEACHER')
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'TEACHER', agreedTos, agreedPrivacy, agreedAge)
       } else {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'PARENT')
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'PARENT', agreedTos, agreedPrivacy, agreedAge)
       }
       setWebLogin(result.token)
       localStorage.setItem('ns_user', JSON.stringify(result.user))
@@ -812,8 +812,19 @@ function LoginPageInner() {
                 disabled={!agreedTos || !agreedPrivacy || !agreedAge || isLoading}
                 onClick={() => {
                   if (pendingOAuthNew) {
-                    setShowPrivacyModal(false)
-                    router.push('/dashboard')
+                    setIsLoading(true)
+                    setError(null)
+                    void (async () => {
+                      try {
+                        await api.submitConsent()
+                        setShowPrivacyModal(false)
+                        router.push('/dashboard')
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Failed to save consent. Please try again.')
+                      } finally {
+                        setIsLoading(false)
+                      }
+                    })()
                   } else {
                     setError(null)
                     void doRegisterOrLogin()
