@@ -6,37 +6,62 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import type { CompositeNavigationProp } from '@react-navigation/native'
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import Text from '../components/ui/Text'
 import Skeleton from '../components/ui/Skeleton'
 import Button from '../components/ui/Button'
 import { colors } from '../constants/colors'
 import { fetchStudentData, type StudentData, type Assignment } from '../api/studentApi'
-import { getSyncStatus, type SyncStatus } from '../api/portalApi'
-import { ArrowRightIcon, FlameIcon } from '../components/icons'
+import {
+  getSyncStatus,
+  getPortalStatus,
+  getPortalGpa,
+  type SyncStatus,
+  type PortalGpa,
+} from '../api/portalApi'
+import {
+  ArrowRightIcon,
+  FlameIcon,
+} from '../components/icons'
 import type { AppParamList } from '../navigation/AppNavigator'
+import type { MainTabParamList } from '../navigation/MainTabNavigator'
 import { shadows } from '../constants/shadows'
+import { useAuth } from '../context/AuthContext'
 
-type NavProp = NativeStackNavigationProp<AppParamList>
+// ─── Navigation ───────────────────────────────────────────────────────────────
 
-const GRADE_COLORS: Record<string, string> = {
-  A: '#34D399',
-  B: '#38BDF8',
-  C: '#FBBF24',
-  D: '#FB923C',
-  F: '#F87171',
-}
+type NavProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Home'>,
+  NativeStackNavigationProp<AppParamList>
+>
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const SUBJECT_PALETTE = [
+  colors.purple,
+  colors.info,
+  colors.warning,
+  colors.orange,
+  colors.success,
+  colors.error,
+  colors.lavender,
+]
 
 function subjectColor(subject: string): string {
-  const palette = ['#7B61FF', '#38BDF8', '#FBBF24', '#FB923C', '#34D399', '#F87171', '#A78BFA']
   let hash = 0
   for (const ch of subject) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffff
-  return palette[hash % palette.length] ?? '#8B8FB5'
+  return SUBJECT_PALETTE[hash % SUBJECT_PALETTE.length] ?? colors.textMuted
 }
 
-function gradeColor(letter: string): string {
-  return GRADE_COLORS[letter.charAt(0).toUpperCase()] ?? colors.textMuted
+function greeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning,'
+  if (h < 17) return 'Good afternoon,'
+  return 'Good evening,'
 }
 
 function formatToday(): string {
@@ -55,23 +80,72 @@ function isSameDay(a: Date, b: Date): boolean {
     a.getDate() === b.getDate()
 }
 
+function isYesterday(candidate: Date, reference: Date): boolean {
+  const prev = new Date(reference)
+  prev.setDate(prev.getDate() - 1)
+  return isSameDay(candidate, prev)
+}
+
+// ─── Streak helpers (mirrors web dashboard logic) ─────────────────────────────
+
+async function computeStreak(uid: number): Promise<number> {
+  const streakKey = `ns_streak_${uid}`
+  const visitKey = `ns_lastVisit_${uid}`
+
+  const [streakRaw, visitRaw] = await AsyncStorage.multiGet([streakKey, visitKey])
+  const storedStreak = parseInt(streakRaw[1] ?? '0', 10) || 0
+  const storedVisit = visitRaw[1] ? new Date(visitRaw[1]) : null
+
+  const now = new Date()
+
+  if (storedVisit === null) {
+    // First visit ever
+    await AsyncStorage.multiSet([[streakKey, '1'], [visitKey, now.toISOString()]])
+    return 1
+  }
+
+  if (isSameDay(storedVisit, now)) {
+    // Already counted today
+    return storedStreak
+  }
+
+  if (isYesterday(storedVisit, now)) {
+    // Consecutive day — extend streak
+    const next = storedStreak + 1
+    await AsyncStorage.multiSet([[streakKey, String(next)], [visitKey, now.toISOString()]])
+    return next
+  }
+
+  // Missed a day — reset
+  await AsyncStorage.multiSet([[streakKey, '1'], [visitKey, now.toISOString()]])
+  return 1
+}
+
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
+
 function LoadingSkeleton(): React.JSX.Element {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} scrollEnabled={false}>
-      <Skeleton width={120} height={14} style={{ marginBottom: 6 }} />
+      {/* Header */}
+      <Skeleton width={120} height={14} style={{ marginBottom: 6, marginTop: 24 }} />
       <Skeleton width={200} height={28} style={{ marginBottom: 6 }} />
-      <Skeleton width={100} height={12} style={{ marginBottom: 24 }} />
-      <View style={styles.card}>
+      <Skeleton width={100} height={12} style={{ marginBottom: 16 }} />
+      {/* GPA card */}
+      <View style={[styles.card, { marginBottom: 0 }]}>
         <Skeleton width="60%" height={11} style={{ marginBottom: 16 }} />
         <Skeleton width="90%" height={44} />
       </View>
+      {/* Today card */}
       <View style={[styles.card, { marginTop: 12 }]}>
         <Skeleton width="50%" height={15} style={{ marginBottom: 12 }} />
-        <Skeleton width="100%" height={52} />
+        <Skeleton width="100%" height={40} style={{ marginBottom: 8 }} />
+        <Skeleton width="100%" height={40} />
       </View>
     </ScrollView>
   )
 }
+
+// ─── Error state ──────────────────────────────────────────────────────────────
 
 function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => void }): React.JSX.Element {
   const isAuthError = message.startsWith('401') || message.toLowerCase().includes('unauthorized')
@@ -82,13 +156,15 @@ function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => voi
       </Text>
       <Text variant="body" color={colors.textSecondary} style={{ marginBottom: 24, textAlign: 'center' }}>
         {isAuthError
-          ? 'Sign in to your NextStep account to view your dashboard.'
+          ? 'Sign in to your myFuturely account to view your dashboard.'
           : message}
       </Text>
       <Button label="Try Again" onPress={onRetry} />
     </View>
   )
 }
+
+// ─── Sync banner ──────────────────────────────────────────────────────────────
 
 function SyncBanner({ syncStatus }: { syncStatus: SyncStatus | null }): React.JSX.Element | null {
   if (!syncStatus || syncStatus.status === 'complete' || syncStatus.status === 'idle') return null
@@ -112,12 +188,18 @@ function SyncBanner({ syncStatus }: { syncStatus: SyncStatus | null }): React.JS
   return null
 }
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function DashboardScreen(): React.JSX.Element {
   const navigation = useNavigation<NavProp>()
+  const { user } = useAuth()
+
   const [data, setData] = useState<StudentData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
+  const [streak, setStreak] = useState(0)
+  const [portalGpa, setPortalGpa] = useState<PortalGpa | null>(null)
   const syncPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const stopSyncPoll = useCallback((): void => {
@@ -131,17 +213,14 @@ export default function DashboardScreen(): React.JSX.Element {
     try {
       const s = await getSyncStatus()
       setSyncStatus(s)
-      // Stop polling once sync resolves
       if (s.status === 'complete' || s.status === 'error' || s.status === 'idle') {
         stopSyncPoll()
-        // Reload data if sync just completed
         if (s.status === 'complete') {
           const d = await fetchStudentData().catch(() => null)
           if (d) setData(d)
         }
       }
     } catch {
-      // Sync-status endpoint not available (e.g. no school connection) — fail silently
       stopSyncPoll()
     }
   }, [stopSyncPoll])
@@ -150,7 +229,6 @@ export default function DashboardScreen(): React.JSX.Element {
     stopSyncPoll()
     void checkSyncStatus()
     syncPollRef.current = setInterval(() => { void checkSyncStatus() }, 3000)
-    // Hard stop after 5 minutes to avoid infinite polling
     setTimeout(stopSyncPoll, 5 * 60 * 1000)
   }, [checkSyncStatus, stopSyncPoll])
 
@@ -158,16 +236,27 @@ export default function DashboardScreen(): React.JSX.Element {
     setIsLoading(true)
     setError(null)
     try {
-      const d = await fetchStudentData()
+      if (user) {
+        void computeStreak(user.id).then(setStreak).catch(() => undefined)
+      }
+      const [d, status] = await Promise.all([
+        fetchStudentData(),
+        getPortalStatus().catch((): null => null),
+      ])
       setData(d)
+      if (status?.connected === true) {
+        const pg = await getPortalGpa().catch((): null => null)
+        setPortalGpa(pg)
+      } else {
+        setPortalGpa(null)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load dashboard.')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [user])
 
-  // Start sync-status polling on mount; stop on unmount
   useEffect(() => {
     startSyncPoll()
     return stopSyncPoll
@@ -179,9 +268,14 @@ export default function DashboardScreen(): React.JSX.Element {
   if (error !== null) return <ErrorScreen message={error} onRetry={() => void load()} />
 
   const profile = data?.profile ?? null
-  const courses = data?.courses ?? []
   const assignments = data?.assignments ?? []
-  const stats = data?.stats ?? { totalCourses: 0, completedAssignments: 0, pendingAssignments: 0, assignmentsDueToday: 0, assignmentsDueThisWeek: 0 }
+  const stats = data?.stats ?? {
+    totalCourses: 0,
+    completedAssignments: 0,
+    pendingAssignments: 0,
+    assignmentsDueToday: 0,
+    assignmentsDueThisWeek: 0,
+  }
 
   const now = new Date()
   const dueToday = assignments.filter(a => {
@@ -191,10 +285,9 @@ export default function DashboardScreen(): React.JSX.Element {
 
   const firstName = data?.name?.split(' ')[0] ?? 'Student'
   const gradeLevel = profile?.gradeLevel ?? null
-  const uGpa = (profile?.unweightedGpa ?? 0).toFixed(2)
-  const wGpa = (profile?.weightedGpa ?? 0).toFixed(2)
-
-  const isSyncing = syncStatus?.status === 'syncing'
+  const uGpa = (portalGpa?.unweightedGpa ?? portalGpa?.gpa ?? profile?.unweightedGpa ?? 0).toFixed(2)
+  const wGpa = (portalGpa?.weightedGpa ?? portalGpa?.gpa ?? profile?.weightedGpa ?? 0).toFixed(2)
+  const courseCount = portalGpa?.courseCount ?? stats.totalCourses
 
   return (
     <ScrollView
@@ -203,9 +296,10 @@ export default function DashboardScreen(): React.JSX.Element {
       showsVerticalScrollIndicator={false}
     >
       <SyncBanner syncStatus={syncStatus} />
+
       {/* Header */}
       <View style={styles.header}>
-        <Text variant="body" color={colors.textSecondary}>Good morning,</Text>
+        <Text variant="body" color={colors.textSecondary}>{greeting()}</Text>
         <Text style={styles.nameText}>{firstName}</Text>
         <Text style={styles.dateText}>{formatToday()}</Text>
         {gradeLevel !== null && (
@@ -218,8 +312,10 @@ export default function DashboardScreen(): React.JSX.Element {
       {/* GPA Card */}
       <TouchableOpacity
         style={[styles.card, styles.gpaCard]}
-        onPress={() => navigation.navigate('GradePortal')}
-        activeOpacity={0.8}
+        onPress={() => navigation.navigate('MainTabs', { screen: 'Grades' })}
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityLabel="View grade portal"
       >
         <Text variant="label" color={colors.textSecondary} style={{ marginBottom: 12 }}>
           Current GPA
@@ -237,10 +333,10 @@ export default function DashboardScreen(): React.JSX.Element {
         </View>
       </TouchableOpacity>
 
-      {/* Due Today Card */}
+      {/* Today Card — merges due-today items with a courses/streak summary line */}
       <View style={[styles.card, { marginTop: 12 }]}>
         <View style={styles.cardHeaderRow}>
-          <Text variant="h3">Due Today</Text>
+          <Text variant="h3">Today</Text>
           {dueToday.length > 0 && (
             <View style={styles.countBadge}>
               <Text style={styles.countBadgeText}>{dueToday.length}</Text>
@@ -252,66 +348,40 @@ export default function DashboardScreen(): React.JSX.Element {
             Nothing due today!
           </Text>
         ) : (
-          dueToday.slice(0, 2).map((a) => <DueTodayRow key={a.id} assignment={a} />)
+          dueToday.slice(0, 3).map((a) => <DueTodayRow key={a.id} assignment={a} />)
         )}
         <TouchableOpacity
           style={styles.viewAllRow}
-          onPress={() => navigation.navigate('Planning')}
-          activeOpacity={0.7}
+          onPress={() => navigation.navigate('MainTabs', { screen: 'Planner' })}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="View all assignments in Planner"
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
             <Text style={styles.viewAllText}>View all</Text>
-            <ArrowRightIcon size={12} color={colors.primary}/>
+            <ArrowRightIcon size={12} color={colors.primary} />
           </View>
         </TouchableOpacity>
-      </View>
 
-      {/* Quick Stats */}
-      <View style={styles.statsRow}>
-        <StatCard value={stats.totalCourses.toString()} label="Courses" />
-        <StatCard value={stats.assignmentsDueThisWeek.toString()} label="Due Soon" />
-        <StatCard value="3" label="Day Streak" labelNode={<><Text variant="caption">Day Streak</Text><FlameIcon size={12} color={colors.warning}/></>} />
-      </View>
-
-      {/* Recent Grades */}
-      <View style={[styles.card, { marginTop: 12 }]}>
-        <View style={styles.cardHeaderRow}>
-          <Text variant="h3">Recent Grades</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('GradePortal')} activeOpacity={0.7}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              <Text style={styles.viewAllText}>See all</Text>
-              <ArrowRightIcon size={12} color={colors.primary}/>
-            </View>
-          </TouchableOpacity>
-        </View>
-        {courses.slice(0, 3).map((c) => (
-          <View key={c.id} style={styles.gradeRow}>
-            <Text variant="body" style={{ flex: 1 }}>{c.name}</Text>
-            {c.grade ? (
-              <>
-                <Text style={[styles.letterGrade, { color: gradeColor(c.grade.letterGrade) }]}>
-                  {c.grade.letterGrade}
-                </Text>
-                <Text variant="caption" style={{ minWidth: 48, textAlign: 'right' }}>
-                  {c.grade.percentage.toFixed(1)}%
-                </Text>
-              </>
-            ) : (
-              <Text variant="caption">—</Text>
-            )}
-          </View>
-        ))}
-        {courses.length === 0 && (
-          <Text variant="caption" style={{ textAlign: 'center', paddingVertical: 12 }}>
-            {isSyncing ? 'Syncing your grades…' : 'No courses found'}
+        <View style={styles.todayFooter}>
+          <Text variant="caption" color={colors.textSecondary}>
+            {courseCount} {courseCount === 1 ? 'course' : 'courses'}
           </Text>
-        )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <FlameIcon size={12} color={colors.warning} />
+            <Text variant="caption" color={colors.textSecondary}>
+              {streak} day{streak === 1 ? '' : 's'} streak
+            </Text>
+          </View>
+        </View>
       </View>
 
       <View style={{ height: 40 }} />
     </ScrollView>
   )
 }
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function DueTodayRow({ assignment }: { assignment: Assignment }): React.JSX.Element {
   return (
@@ -326,17 +396,7 @@ function DueTodayRow({ assignment }: { assignment: Assignment }): React.JSX.Elem
   )
 }
 
-function StatCard({ value, label, labelNode }: { value: string; label: string; labelNode?: React.ReactNode }): React.JSX.Element {
-  return (
-    <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
-      {labelNode
-        ? <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 }}>{labelNode}</View>
-        : <Text variant="caption" style={{ textAlign: 'center' }}>{label}</Text>
-      }
-    </View>
-  )
-}
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.background },
@@ -355,7 +415,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   // Header
-  header: { paddingTop: 24, paddingBottom: 20 },
+  header: { paddingTop: 24, paddingBottom: 16 },
   nameText: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
   dateText: { fontSize: 13, color: colors.textMuted, marginBottom: 10 },
   gradeBadge: {
@@ -378,7 +438,7 @@ const styles = StyleSheet.create({
   gpaCard: { borderLeftWidth: 3, borderLeftColor: colors.primary },
   gpaRow: { flexDirection: 'row', alignItems: 'center' },
   gpaCol: { flex: 1, alignItems: 'center' },
-  gpaValue: { fontSize: 32, fontWeight: '700', color: colors.textPrimary },
+  gpaValue: { fontSize: 40, fontWeight: '700', color: colors.textPrimary },
   gpaDivider: { width: 1, height: 40, backgroundColor: colors.border },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   countBadge: {
@@ -396,26 +456,14 @@ const styles = StyleSheet.create({
   // Due today
   dueTodayRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  // Stats
-  statsRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  statCard: {
-    ...shadows.raised,
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-    alignItems: 'center',
-  },
-  statValue: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
-  // Grade rows
-  gradeRow: {
+  // Today card footer — courses count + streak, replaces the old 4-tile stats row
+  todayFooter: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    marginTop: 14,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  letterGrade: { fontSize: 15, fontWeight: '700' as const, marginRight: 8 },
 })

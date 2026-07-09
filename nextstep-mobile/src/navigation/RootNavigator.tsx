@@ -21,9 +21,9 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>()
 
 function AuthNavigator(): React.JSX.Element {
   return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="SchoolLogin" component={SchoolLoginScreen} />
+    <AuthStack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Login">
       <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="SchoolLogin" component={SchoolLoginScreen} />
     </AuthStack.Navigator>
   )
 }

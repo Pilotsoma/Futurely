@@ -13,10 +13,26 @@ import Skeleton from '../components/ui/Skeleton'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { fetchStudentData } from '../api/studentApi'
+import {
+  getPortalStatus,
+  getPortalContactTeachers,
+  type PortalTeacher,
+} from '../api/portalApi'
 
 interface TeacherEntry {
   name: string
   subject: string
+  email?: string
+}
+
+// ── Portal teacher adapter ─────────────────────────────────────────────────────
+
+function adaptPortalTeachers(teachers: PortalTeacher[]): TeacherEntry[] {
+  return teachers.map(t => ({
+    name: t.name,
+    subject: t.courses[0]?.courseName ?? '',
+    email: t.email,
+  }))
 }
 
 function initials(name: string): string {
@@ -34,8 +50,9 @@ function teacherEmail(name: string): string {
   return `${first.charAt(0).toLowerCase()}.${last.toLowerCase()}@slhs.edu`
 }
 
-function showContactAlert(name: string): void {
-  Alert.alert('Contact Teacher', `Email: ${teacherEmail(name)}`)
+function showContactAlert(teacher: TeacherEntry): void {
+  const email = teacher.email ?? teacherEmail(teacher.name)
+  Alert.alert('Contact Teacher', `Email: ${email}`)
 }
 
 function LoadingSkeleton(): React.JSX.Element {
@@ -68,7 +85,7 @@ function TeacherRow({ teacher }: { teacher: TeacherEntry }): React.JSX.Element {
   return (
     <TouchableOpacity
       style={styles.row}
-      onPress={() => showContactAlert(teacher.name)}
+      onPress={() => showContactAlert(teacher)}
       activeOpacity={0.75}
     >
       <View style={styles.avatar}>
@@ -82,7 +99,7 @@ function TeacherRow({ teacher }: { teacher: TeacherEntry }): React.JSX.Element {
         <Text style={styles.inText}>IN</Text>
       </View>
       <TouchableOpacity
-        onPress={() => showContactAlert(teacher.name)}
+        onPress={() => showContactAlert(teacher)}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Text style={styles.emailBtn}>Email</Text>
@@ -100,16 +117,24 @@ export default function ContactTeachersScreen(): React.JSX.Element {
     setIsLoading(true)
     setError(null)
     try {
-      const d = await fetchStudentData()
-      const seen = new Set<string>()
-      const unique: TeacherEntry[] = []
-      for (const c of d.courses) {
-        if (!seen.has(c.teacher)) {
-          seen.add(c.teacher)
-          unique.push({ name: c.teacher, subject: c.name })
+      const [d, status] = await Promise.all([
+        fetchStudentData(),
+        getPortalStatus().catch((): null => null),
+      ])
+      if (status?.connected === true) {
+        const portalTeachers = await getPortalContactTeachers()
+        setTeachers(adaptPortalTeachers(portalTeachers))
+      } else {
+        const seen = new Set<string>()
+        const unique: TeacherEntry[] = []
+        for (const c of d.courses) {
+          if (!seen.has(c.teacher)) {
+            seen.add(c.teacher)
+            unique.push({ name: c.teacher, subject: c.name })
+          }
         }
+        setTeachers(unique)
       }
-      setTeachers(unique)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load teachers.')
     } finally {

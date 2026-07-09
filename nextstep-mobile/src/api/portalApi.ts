@@ -52,8 +52,90 @@ export interface ConnectResult {
 
 export interface PortalGpa {
   gpa: number | null
+  unweightedGpa: number | null
+  weightedGpa: number | null
   courseCount: number
   systemType: 'HAC' | 'PowerSchool'
+}
+
+// ── Classwork types ───────────────────────────────────────────────────────────
+
+export interface PortalClassworkScore {
+  name: string
+  score: number | null
+  dateDue: string
+  category: string
+  percentage: string
+  totalPoints: number | null
+}
+
+export interface PortalClassworkClass {
+  name: string
+  room: string
+  period: string
+  teacher: string
+  average: number | null
+  categoryWeights: Record<string, number>
+  scores: PortalClassworkScore[]
+}
+
+export interface PortalClassworkResult {
+  classes: PortalClassworkClass[]
+  currentPeriod: string
+  availablePeriods: string[]
+}
+
+// ── Transcript types ──────────────────────────────────────────────────────────
+
+export interface PortalTranscriptCourse {
+  name: string
+  grade: string
+  credits: string
+}
+
+export interface PortalTranscriptSemester {
+  year: string
+  courses: PortalTranscriptCourse[]
+  semester: string
+}
+
+export interface PortalTranscriptData {
+  quartile: string
+  classRank: string
+  semesters: PortalTranscriptSemester[]
+  weightedGPA: string
+  cumulativeGPA: string
+  unweightedGPA: string
+}
+
+export interface PortalTranscriptResult {
+  systemType: string
+  transcript: PortalTranscriptData
+}
+
+// ── Schedule types ────────────────────────────────────────────────────────────
+
+export interface PortalScheduleEntry {
+  room: string
+  period: string
+  teacher: string
+  courseCode: string
+  courseName: string
+}
+
+// ── Contact teacher types ─────────────────────────────────────────────────────
+
+export interface PortalTeacherCourse {
+  period: string
+  courseName: string
+}
+
+export interface PortalTeacher {
+  name: string
+  room: string
+  email: string
+  courses: PortalTeacherCourse[]
+  building: string
 }
 
 // ── Internal request helper ───────────────────────────────────────────────────
@@ -70,10 +152,6 @@ async function portalRequest<T>(
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   const url = `${normalizedBaseUrl}${normalizedPath}`
-
-  console.log('[PORTAL API] URL:', url)
-  console.log('[PORTAL API] METHOD:', options.method ?? 'GET')
-  console.log('[PORTAL API] HAS TOKEN:', Boolean(token))
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -92,8 +170,6 @@ async function portalRequest<T>(
       headers,
     })
   } catch (error: unknown) {
-    console.log('[PORTAL API] FETCH FAILED:', error)
-
     throw new Error(
       `Network request failed. The app could not reach the backend. Check API_BASE_URL in src/constants/api.ts. Current URL: ${url}`,
     )
@@ -101,10 +177,7 @@ async function portalRequest<T>(
 
   const text = await response.text()
 
-  console.log('[PORTAL API] STATUS:', response.status)
-  console.log('[PORTAL API] RESPONSE TEXT:', text)
-
-  let json: any = {}
+  let json: unknown = {}
 
   try {
     json = text ? JSON.parse(text) : {}
@@ -113,10 +186,14 @@ async function portalRequest<T>(
   }
 
   if (!response.ok) {
+    const body = (json && typeof json === 'object' ? json : {}) as {
+      error?: string | { message?: string }
+      message?: string
+    }
     const message =
-      typeof json.error === 'string'
-        ? json.error
-        : json.error?.message || json.message || response.statusText
+      typeof body.error === 'string'
+        ? body.error
+        : body.error?.message || body.message || response.statusText
 
     throw new Error(`${response.status}: ${message}`)
   }
@@ -131,11 +208,6 @@ export async function connectHac(
   username: string,
   password: string,
 ): Promise<ConnectResult> {
-  console.log('[PORTAL API] connectHac called')
-  console.log('[PORTAL API] HAC baseUrl:', baseUrl)
-  console.log('[PORTAL API] HAC username exists:', Boolean(username))
-  console.log('[PORTAL API] HAC password exists:', Boolean(password))
-
   const res = await portalRequest<{
     data: {
       sessionToken?: string
@@ -161,11 +233,6 @@ export async function connectPowerSchool(
   username: string,
   password: string,
 ): Promise<ConnectResult> {
-  console.log('[PORTAL API] connectPowerSchool called')
-  console.log('[PORTAL API] PowerSchool baseUrl:', baseUrl)
-  console.log('[PORTAL API] PowerSchool username exists:', Boolean(username))
-  console.log('[PORTAL API] PowerSchool password exists:', Boolean(password))
-
   const res = await portalRequest<{
     data: {
       sessionToken?: string
@@ -228,6 +295,67 @@ export async function getPortalGpa(): Promise<PortalGpa> {
   )
 
   return res.data
+}
+
+export async function getPortalClasswork(period?: string): Promise<PortalClassworkResult> {
+  const path =
+    period !== undefined
+      ? `/integrations/grades/classwork?period=${encodeURIComponent(period)}`
+      : '/integrations/grades/classwork'
+
+  const res = await portalRequest<{ data: PortalClassworkResult }>(path)
+  return res.data
+}
+
+export interface PortalReportCardCourse {
+  name: string
+  period: string
+  numericGrade: string
+  letterGrade: string
+  credits: string
+  teacher: string
+}
+
+export interface PortalReportCardResult {
+  reportingPeriods: string[]
+  currentPeriod: string
+  /** Set when HAC has an explanatory status message (e.g. no report cards published yet). */
+  message?: string
+  semesters: {
+    sem1: PortalReportCardCourse[]
+    sem2: PortalReportCardCourse[]
+  }
+}
+
+export async function getPortalReportCard(period?: string): Promise<PortalReportCardResult> {
+  const path =
+    period !== undefined
+      ? `/integrations/grades/report-card?period=${encodeURIComponent(period)}`
+      : '/integrations/grades/report-card'
+
+  const res = await portalRequest<{ data: PortalReportCardResult }>(path)
+  return res.data
+}
+
+export async function getPortalTranscript(): Promise<PortalTranscriptResult> {
+  const res = await portalRequest<{ data: PortalTranscriptResult }>(
+    '/integrations/grades/transcript',
+  )
+  return res.data
+}
+
+export async function getPortalSchedule(): Promise<PortalScheduleEntry[]> {
+  const res = await portalRequest<{ data: { schedule: PortalScheduleEntry[] } }>(
+    '/integrations/grades/schedule',
+  )
+  return res.data.schedule ?? []
+}
+
+export async function getPortalContactTeachers(): Promise<PortalTeacher[]> {
+  const res = await portalRequest<{ data: { teachers: PortalTeacher[] } }>(
+    '/integrations/grades/contact-teachers',
+  )
+  return res.data.teachers ?? []
 }
 
 // ── Disconnect ────────────────────────────────────────────────────────────────

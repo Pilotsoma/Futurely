@@ -21,7 +21,16 @@ interface AuthContextValue {
   token: string | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, name?: string) => Promise<void>
+  sendOtp: (email: string) => Promise<void>
+  register: (
+    email: string,
+    password: string,
+    otp: string,
+    agreedTos: boolean,
+    agreedPrivacy: boolean,
+    agreedAge: boolean,
+    name?: string,
+  ) => Promise<void>
   logout: () => Promise<void>
   refreshSession: () => Promise<boolean>
 }
@@ -129,11 +138,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setUser(data.user)
   }
 
-  async function register(email: string, password: string, name?: string): Promise<void> {
+  async function sendOtp(email: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+
+    if (!res.ok) {
+      const body = (await res.json()) as { error?: { message?: string } }
+      throw new Error(body.error?.message ?? 'Failed to send verification code')
+    }
+  }
+
+  async function register(
+    email: string,
+    password: string,
+    otp: string,
+    agreedTos: boolean,
+    agreedPrivacy: boolean,
+    agreedAge: boolean,
+    name?: string,
+  ): Promise<void> {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ email, password, otp, agreedTos, agreedPrivacy, agreedAge, name }),
     })
 
     if (!res.ok) {
@@ -170,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, refreshSession }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, sendOtp, register, logout, refreshSession }}>
       {children}
     </AuthContext.Provider>
   )

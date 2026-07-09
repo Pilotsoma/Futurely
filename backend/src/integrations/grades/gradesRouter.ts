@@ -161,19 +161,30 @@ function sendError(res: Response, label: string, err: unknown, fallbackCode: str
   })
 
   // Client-facing message: safe, categorised, no internal detail.
+  const isFeatureDisabled = details.message.toLowerCase().includes('not enabled') ||
+    details.message.toLowerCase().includes('option not enabled')
+
   const clientMessage =
     err instanceof AuthenticationError
       ? 'Invalid credentials. Please check your username and password.'
+      : isFeatureDisabled
+      ? 'This feature is not available for your school account. Your district may have disabled individual assignment grades in the student portal.'
       : status === 504
       ? 'The school portal did not respond in time. Please try again later.'
       : status === 502
       ? 'Could not reach the school portal. Please try again later.'
       : 'An error occurred. Please try again.'
 
+  const clientCode = err instanceof AuthenticationError
+    ? 'AUTH_ERROR'
+    : isFeatureDisabled
+    ? 'FEATURE_NOT_ENABLED'
+    : fallbackCode
+
   res.status(status).json({
     data: null,
     error: {
-      code: err instanceof AuthenticationError ? 'AUTH_ERROR' : fallbackCode,
+      code: clientCode,
       message: clientMessage,
     },
   })
@@ -444,11 +455,17 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
           infoErr instanceof Error ? infoErr.message : String(infoErr))
       }
 
-      // Fetch HAC grades to seed the classwork cache (no assignment sync — HAC assignments are not used)
-      const { classes: rawHacGrades, availablePeriods: hacAvailablePeriods, currentPeriod: hacCurrentPeriod } = await hacGrades(entry.token)
-
-      // Seed classwork cache with the grades data already fetched above (free — no extra HAC request)
-      void writeHacCache(userId, 'classwork:__default__', { classes: rawHacGrades, availablePeriods: hacAvailablePeriods, currentPeriod: hacCurrentPeriod })
+      // Fetch HAC grades to seed the classwork cache (non-fatal — some districts or account
+      // types have Classes/Classwork disabled; in that case skip the cache write and let the
+      // other endpoints (transcript, schedule, etc.) still populate so the sync is not a total
+      // failure). The on-demand /classwork route will surface a clear error to the client.
+      try {
+        const { classes: rawHacGrades, availablePeriods: hacAvailablePeriods, currentPeriod: hacCurrentPeriod } = await hacGrades(entry.token)
+        void writeHacCache(userId, 'classwork:__default__', { classes: rawHacGrades, availablePeriods: hacAvailablePeriods, currentPeriod: hacCurrentPeriod })
+      } catch (cwErr) {
+        console.warn('[GRADES ROUTER] Background sync: classwork fetch failed (non-fatal):',
+          cwErr instanceof Error ? cwErr.message : String(cwErr))
+      }
 
       // Pre-warm the remaining slow endpoints in parallel — fire and forget, non-fatal
       // By the time the user navigates to these pages the cache will already be populated
@@ -1020,9 +1037,10 @@ router.get('/report-card', asyncHandler(async (req: AuthRequest, res: Response):
       return
     }
 
-    const { reportingPeriods, currentPeriod, semesters } = await getReportCard(entry.token, period)
-    void writeHacCache(req.userId!, cacheKey, { reportingPeriods, currentPeriod, semesters })
-    res.json({ data: { reportingPeriods, currentPeriod, semesters } })
+    const { reportingPeriods, currentPeriod, message, semesters } = await getReportCard(entry.token, period)
+    const payload = { reportingPeriods, currentPeriod, semesters, ...(message ? { message } : {}) }
+    void writeHacCache(req.userId!, cacheKey, payload)
+    res.json({ data: payload })
   } catch (err: unknown) {
     sendError(res, 'FETCH_REPORT_CARD', err, 'FETCH_ERROR')
   }

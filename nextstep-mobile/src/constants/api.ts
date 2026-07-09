@@ -14,4 +14,4 @@
 // Production (Vercel — Express served at /api via vercel.json rewrite):
 // export const API_BASE_URL = 'https://your-app.vercel.app/api'
 
-export const API_BASE_URL = 'http://192.168.40.75:3001'
+export const API_BASE_URL = 'http://localhost:3001'

@@ -6,7 +6,7 @@ import {
 } from 'react-native'
 import { useRoute } from '@react-navigation/native'
 import type { RouteProp } from '@react-navigation/native'
-import { Ionicons } from '@expo/vector-icons'
+import { DocumentIcon } from '../components/icons'
 import Text from '../components/ui/Text'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
@@ -226,7 +226,7 @@ export default function CourseDetailScreen(): React.JSX.Element {
         <View style={styles.emptyState}>
           {Header}
           <View style={styles.emptyContent}>
-            <Ionicons name="document-text-outline" size={40} color={colors.textMuted} />
+            <DocumentIcon size={40} color={colors.textMuted} />
             <Text variant="h3" style={{ marginTop: 12, textAlign: 'center' }}>
               No Assignments Found
             </Text>

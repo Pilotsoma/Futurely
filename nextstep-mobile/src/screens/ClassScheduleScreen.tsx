@@ -11,6 +11,38 @@ import Skeleton from '../components/ui/Skeleton'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { fetchStudentData, type CourseWithGrade } from '../api/studentApi'
+import {
+  getPortalStatus,
+  getPortalSchedule,
+  type PortalScheduleEntry,
+} from '../api/portalApi'
+
+// ── Portal schedule adapter ────────────────────────────────────────────────────
+
+const LUNCH_PATTERN = /^lunch/i
+
+function adaptPortalSchedule(entries: PortalScheduleEntry[]): CourseWithGrade[] {
+  const seen = new Set<string>()
+  const result: CourseWithGrade[] = []
+  let id = 0
+  for (const entry of entries) {
+    if (LUNCH_PATTERN.test(entry.courseName) || entry.teacher === 'Staff') continue
+    const dedupeKey = `${entry.period}|${entry.teacher}`
+    if (seen.has(dedupeKey)) continue
+    seen.add(dedupeKey)
+    result.push({
+      id: id++,
+      name: entry.courseName,
+      teacher: entry.teacher,
+      period: parseInt(entry.period, 10) || 0,
+      courseType: 'STANDARD',
+      creditHours: 1.0,
+      semester: 'CURRENT',
+      grade: null,
+    })
+  }
+  return result.sort((a, b) => a.period - b.period)
+}
 
 function LoadingSkeleton(): React.JSX.Element {
   return (
@@ -62,8 +94,16 @@ export default function ClassScheduleScreen(): React.JSX.Element {
     setIsLoading(true)
     setError(null)
     try {
-      const d = await fetchStudentData()
-      setCourses([...d.courses].sort((a, b) => a.period - b.period))
+      const [d, status] = await Promise.all([
+        fetchStudentData(),
+        getPortalStatus().catch((): null => null),
+      ])
+      if (status?.connected === true) {
+        const entries = await getPortalSchedule()
+        setCourses(adaptPortalSchedule(entries))
+      } else {
+        setCourses([...d.courses].sort((a, b) => a.period - b.period))
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load schedule.')
     } finally {

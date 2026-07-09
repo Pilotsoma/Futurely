@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { CalculatorIcon, ChevronRightIcon, PencilIcon, SchoolBuildingIcon, MapIcon } from '../components/icons'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import Text from '../components/ui/Text'
@@ -14,6 +14,7 @@ import Skeleton from '../components/ui/Skeleton'
 import { colors } from '../constants/colors'
 import type { CollegeHelpParamList } from '../navigation/CollegeHelpNavigator'
 import { fetchStudentData, type StudentData } from '../api/studentApi'
+import { getPortalStatus, getPortalGpa, type PortalGpa } from '../api/portalApi'
 import { shadows } from '../constants/shadows'
 
 type NavProp = NativeStackNavigationProp<CollegeHelpParamList>
@@ -21,15 +22,32 @@ type NavProp = NativeStackNavigationProp<CollegeHelpParamList>
 export default function CollegeHelpScreen(): React.JSX.Element {
   const navigation = useNavigation<NavProp>()
   const [studentData, setStudentData] = useState<StudentData | null>(null)
+  const [portalGpa, setPortalGpa] = useState<PortalGpa | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useFocusEffect(
     useCallback(() => {
-      fetchStudentData().then(setStudentData).catch(() => null)
+      let cancelled = false
+      setIsLoading(true)
+      void (async () => {
+        const [data, status] = await Promise.all([
+          fetchStudentData().catch((): null => null),
+          getPortalStatus().catch((): null => null),
+        ])
+        const pg = status?.connected ? await getPortalGpa().catch((): null => null) : null
+        if (cancelled) return
+        setStudentData(data)
+        setPortalGpa(pg)
+        setIsLoading(false)
+      })()
+      return () => { cancelled = true }
     }, [])
   )
 
-  const uGpa = studentData?.profile?.unweightedGpa
-  const wGpa = studentData?.profile?.weightedGpa
+  // Portal-synced GPA wins when connected — the relational Profile fields
+  // are only reliably populated by /sync-profile, not by the HAC scraper.
+  const uGpa = portalGpa?.unweightedGpa ?? studentData?.profile?.unweightedGpa
+  const wGpa = portalGpa?.weightedGpa ?? studentData?.profile?.weightedGpa
 
   return (
     <View style={styles.container}>
@@ -47,7 +65,7 @@ export default function CollegeHelpScreen(): React.JSX.Element {
             <Text variant="caption" color={colors.textMuted} style={styles.gpaLabel}>
               Unweighted GPA
             </Text>
-            {studentData === null ? (
+            {isLoading ? (
               <Skeleton width={80} height={36} style={{ borderRadius: 6 }} />
             ) : (
               <Text variant="display">{uGpa !== undefined ? uGpa.toFixed(3) : '—'}</Text>
@@ -58,7 +76,7 @@ export default function CollegeHelpScreen(): React.JSX.Element {
             <Text variant="caption" color={colors.textMuted} style={styles.gpaLabel}>
               Weighted GPA
             </Text>
-            {studentData === null ? (
+            {isLoading ? (
               <Skeleton width={80} height={36} style={{ borderRadius: 6 }} />
             ) : (
               <Text variant="display" color={colors.primary}>
@@ -78,13 +96,13 @@ export default function CollegeHelpScreen(): React.JSX.Element {
             accessibilityLabel="What-If Calculator"
           >
             <View style={[styles.actionIcon, { backgroundColor: colors.primary + '1A' }]}>
-              <Ionicons name="calculator-outline" size={20} color={colors.primary} />
+              <CalculatorIcon size={20} color={colors.primary} />
             </View>
             <View style={styles.actionText}>
               <Text variant="h3">What If Calculator</Text>
               <Text variant="caption" color={colors.textMuted}>Calculate your GPA with custom grades</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            <ChevronRightIcon size={16} color={colors.textMuted} />
           </TouchableOpacity>
 
           <View style={styles.actionDivider} />
@@ -96,7 +114,7 @@ export default function CollegeHelpScreen(): React.JSX.Element {
             accessibilityLabel="GPA Editor — coming soon"
           >
             <View style={[styles.actionIcon, { backgroundColor: colors.info + '1A' }]}>
-              <Ionicons name="create-outline" size={20} color={colors.info} />
+              <PencilIcon size={20} color={colors.info} />
             </View>
             <View style={styles.actionText}>
               <Text variant="h3">GPA Editor</Text>
@@ -117,10 +135,10 @@ export default function CollegeHelpScreen(): React.JSX.Element {
           accessibilityLabel="Colleges"
         >
           <View style={[styles.actionIcon, { backgroundColor: colors.warning + '1A' }]}>
-            <Ionicons name="business-outline" size={20} color={colors.warning} />
+            <SchoolBuildingIcon size={20} color={colors.warning} />
           </View>
           <Text variant="h3" style={{ flex: 1 }}>Colleges</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          <ChevronRightIcon size={16} color={colors.textMuted} />
         </TouchableOpacity>
 
         {/* Road-map */}
@@ -132,10 +150,10 @@ export default function CollegeHelpScreen(): React.JSX.Element {
           accessibilityLabel="Road-map"
         >
           <View style={[styles.actionIcon, { backgroundColor: colors.success + '1A' }]}>
-            <Ionicons name="map-outline" size={20} color={colors.success} />
+            <MapIcon size={20} color={colors.success} />
           </View>
           <Text variant="h3" style={{ flex: 1 }}>Road-map</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          <ChevronRightIcon size={16} color={colors.textMuted} />
         </TouchableOpacity>
       </ScrollView>
     </View>

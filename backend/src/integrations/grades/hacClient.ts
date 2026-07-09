@@ -626,14 +626,39 @@ export async function getGrades(sessionToken: string, period?: string): Promise<
   const origin = stored.baseUrl // already cleaned to https://hostname/
 
   // The correct URL for grades and classwork in PowerSchool HAC
-  const classworkUrl = `${origin}HomeAccess/Classes/Classwork`
+  const classesParentUrl = `${origin}HomeAccess/Classes`
+  const classworkUrl     = `${origin}HomeAccess/Classes/Classwork`
+
+  // HAC (eSchoolPlus) requires that the Classes module be initialized in the
+  // server-side session before any sub-route (Classwork, Schedule) is accessible.
+  // Jumping directly to Classes/Classwork on a fresh or re-authenticated session
+  // causes a redirect to Frame/OptionNotEnabled because the server hasn't seen a
+  // navigation to the parent Classes page yet. We warm up the session by visiting
+  // HomeAccess/Classes first, which is exactly what a real browser does when the
+  // user clicks "Classes" in the navigation menu.
+  console.log('[HAC CLIENT] Warming up Classes module context:', classesParentUrl)
+  try {
+    await sleep(600 + Math.random() * 300) // 0.6–0.9s
+    await http.get(classesParentUrl, {
+      headers: {
+        Referer: `${origin}HomeAccess/`,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Upgrade-Insecure-Requests': '1',
+      },
+    })
+  } catch (warmupErr) {
+    // Non-fatal — if the warm-up GET fails we still attempt Classwork directly
+    console.warn('[HAC CLIENT] Classes module warm-up failed (non-fatal):',
+      warmupErr instanceof Error ? warmupErr.message : String(warmupErr))
+  }
 
   console.log('[HAC CLIENT] Fetching classwork from:', classworkUrl)
 
-  await sleep(800 + Math.random() * 400) // 0.8–1.2s delay
+  await sleep(600 + Math.random() * 300) // 0.6–0.9s after warm-up
   const res = await getChecked(http, classworkUrl, {
     headers: {
-      Referer: `${origin}HomeAccess/Home.aspx`,
+      Referer: classesParentUrl,
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
       'Upgrade-Insecure-Requests': '1',
@@ -648,6 +673,18 @@ export async function getGrades(sessionToken: string, period?: string): Promise<
   // If redirected to login, session expired
   if (finalUrl.includes('Account/LogOn') || finalUrl.includes('Account/Login')) {
     throw new AuthenticationError('School session expired — please log in again')
+  }
+
+  // If HAC redirected to OptionNotEnabled, the Classwork feature is unavailable
+  // for this account (district configuration or account-level restriction). Do
+  // NOT return empty data — throw a ScrapeError so the caller knows the feature
+  // is disabled rather than silently caching a useless empty result.
+  if (finalUrl.includes('OptionNotEnabled') || finalUrl.includes('Frame/OptionNotEnabled')) {
+    throw new ScrapeError(
+      'The Classwork page is not enabled for this account. ' +
+      'Your school district may not have enabled individual assignment grades in the student portal, ' +
+      'or your account type may not have access to this feature.',
+    )
   }
 
   const outerHtml = res.data as string
@@ -1329,10 +1366,27 @@ export async function getSchedule(sessionToken: string): Promise<object[]> {
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
 
-  await sleep(800 + Math.random() * 400)
+  // Warm up the Classes module before accessing Schedule sub-route (same
+  // pattern as getGrades — jumping directly to Classes/Schedule on a fresh
+  // session causes Frame/OptionNotEnabled without this parent-page visit).
+  const classesParentUrl = `${origin}HomeAccess/Classes`
+  try {
+    await sleep(600 + Math.random() * 300)
+    await http.get(classesParentUrl, {
+      headers: {
+        Referer: `${origin}HomeAccess/`,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    })
+  } catch (warmupErr) {
+    console.warn('[SCHEDULE] Classes module warm-up failed (non-fatal):',
+      warmupErr instanceof Error ? warmupErr.message : String(warmupErr))
+  }
+
+  await sleep(600 + Math.random() * 300)
   const scheduleUrl = `${origin}HomeAccess/Classes/Schedule`
   const res = await getChecked(http, scheduleUrl, {
-    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
+    headers: { Referer: classesParentUrl },
   })
 
   const outerSchedHtml = res.data as string
@@ -1441,6 +1495,7 @@ function numericToLetter(grade: string): string {
 export async function getReportCard(sessionToken: string, period?: string): Promise<{
   reportingPeriods: string[]
   currentPeriod: string
+  message?: string
   semesters: {
     sem1: Array<{ name: string; period: string; numericGrade: string; letterGrade: string; credits: string; teacher: string }>
     sem2: Array<{ name: string; period: string; numericGrade: string; letterGrade: string; credits: string; teacher: string }>
@@ -1475,6 +1530,13 @@ export async function getReportCard(sessionToken: string, period?: string): Prom
   }
 
   let $ = cheerio.load(html)
+
+  // Extract HAC status message — present when no report cards have been published yet
+  // (e.g. "This student does not have any Report Cards for this school year.")
+  const hacMessage = $('#plnMain_lblMessage').text().trim()
+  if (hacMessage) {
+    console.log('[REPORT CARD] HAC status message:', hacMessage)
+  }
 
   // Extract reporting period dropdown options
   const reportingPeriods: string[] = []
@@ -1560,8 +1622,8 @@ export async function getReportCard(sessionToken: string, period?: string): Prom
   }
 
   console.log(`[REPORT CARD] Parsed sem1=${sem1.length} sem2=${sem2.length} courses, ${reportingPeriods.length} periods`)
-  if (sem1.length === 0) console.warn('[REPORT CARD] No courses found — check debug_reportcard.html')
-  return { reportingPeriods, currentPeriod, semesters: { sem1, sem2 } }
+  if (sem1.length === 0 && !hacMessage) console.warn('[REPORT CARD] No courses found and no HAC message — check debug_reportcard.html')
+  return { reportingPeriods, currentPeriod, ...(hacMessage ? { message: hacMessage } : {}), semesters: { sem1, sem2 } }
 }
 
 export async function getProgressReport(sessionToken: string, date?: string): Promise<{
@@ -1700,10 +1762,25 @@ export async function getContactTeachers(sessionToken: string): Promise<{
   const { http } = restoreSession(stored)
   const origin = stored.baseUrl
 
-  await sleep(800 + Math.random() * 400)
+  // Warm up the Classes module before accessing Schedule sub-route.
+  const classesParentUrlForTeachers = `${origin}HomeAccess/Classes`
+  try {
+    await sleep(600 + Math.random() * 300)
+    await http.get(classesParentUrlForTeachers, {
+      headers: {
+        Referer: `${origin}HomeAccess/`,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    })
+  } catch (warmupErr) {
+    console.warn('[CONTACT TEACHERS] Classes module warm-up failed (non-fatal):',
+      warmupErr instanceof Error ? warmupErr.message : String(warmupErr))
+  }
+
+  await sleep(600 + Math.random() * 300)
   const scheduleUrl = `${origin}HomeAccess/Classes/Schedule`
   const res = await getChecked(http, scheduleUrl, {
-    headers: { Referer: `${origin}HomeAccess/Home.aspx` },
+    headers: { Referer: classesParentUrlForTeachers },
   })
 
   let html = res.data as string

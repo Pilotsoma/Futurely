@@ -464,4 +464,79 @@ export const ICON_PATHS: Record<string, PathElement[]> = {
     { tag: 'path', d: 'M2 20h20M12 4L2 20M12 4L22 20' },
     { tag: 'path', d: 'M9 20V14h6v6' },
   ],
+
+  // ── New icons added for Batch 1 icon consolidation ──────────────────────────
+
+  /** 2×2 tile grid — Home / Dashboard tab */
+  GridIcon: [
+    { tag: 'rect', x: 3, y: 3, width: 7, height: 7, rx: 1 },
+    { tag: 'rect', x: 14, y: 3, width: 7, height: 7, rx: 1 },
+    { tag: 'rect', x: 14, y: 14, width: 7, height: 7, rx: 1 },
+    { tag: 'rect', x: 3, y: 14, width: 7, height: 7, rx: 1 },
+  ],
+
+  /** Gear / cog — Settings */
+  SettingsIcon: [
+    { tag: 'circle', cx: 12, cy: 12, r: 3 },
+    { tag: 'path', d: 'M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z' },
+  ],
+
+  /** Chevron pointing down */
+  ChevronDownIcon: [
+    { tag: 'polyline', points: '6 9 12 15 18 9' },
+  ],
+
+  /** Chevron pointing up */
+  ChevronUpIcon: [
+    { tag: 'polyline', points: '18 15 12 9 6 15' },
+  ],
+
+  /** Eye — show password / reveal */
+  EyeIcon: [
+    { tag: 'path', d: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z' },
+    { tag: 'circle', cx: 12, cy: 12, r: 3 },
+  ],
+
+  /** Eye with slash — hide password */
+  EyeOffIcon: [
+    { tag: 'path', d: 'M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24' },
+    { tag: 'line', x1: 1, y1: 1, x2: 23, y2: 23 },
+  ],
+
+  /** Paper plane — send / submit */
+  SendIcon: [
+    { tag: 'line', x1: 22, y1: 2, x2: 11, y2: 13 },
+    { tag: 'polygon', points: '22 2 15 22 11 13 2 9 22 2' },
+  ],
+
+  /** Three horizontal lines — hamburger / menu */
+  MenuIcon: [
+    { tag: 'line', x1: 3, y1: 6, x2: 21, y2: 6 },
+    { tag: 'line', x1: 3, y1: 12, x2: 21, y2: 12 },
+    { tag: 'line', x1: 3, y1: 18, x2: 21, y2: 18 },
+  ],
+
+  /** Shield with checkmark — security / portal verified */
+  ShieldCheckmarkIcon: [
+    { tag: 'path', d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+    { tag: 'polyline', points: '9 12 11 14 15 10' },
+  ],
+
+  /** Map pin — location / roadmap */
+  MapIcon: [
+    { tag: 'path', d: 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z' },
+    { tag: 'circle', cx: 12, cy: 10, r: 3 },
+  ],
+
+  /** Circle outline — unchecked checkbox / empty state */
+  CircleIcon: [
+    { tag: 'circle', cx: 12, cy: 12, r: 10 },
+  ],
+
+  /** Circle with X inside — close / dismiss (filled variant) */
+  XCircleIcon: [
+    { tag: 'circle', cx: 12, cy: 12, r: 10 },
+    { tag: 'line', x1: 15, y1: 9, x2: 9, y2: 15 },
+    { tag: 'line', x1: 9, y1: 9, x2: 15, y2: 15 },
+  ],
 }

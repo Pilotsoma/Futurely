@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import Text from '../components/ui/Text'
@@ -19,65 +18,72 @@ import {
   disconnectPortal,
   type PortalStatus,
 } from '../api/portalApi'
+import {
+  LinkIcon,
+  ClipboardIcon,
+  DocumentIcon,
+  ClockIcon,
+  CalculatorIcon,
+  EnvelopeIcon,
+  type IconProps,
+} from '../components/icons'
 import { shadows } from '../constants/shadows'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type NavProp = NativeStackNavigationProp<GradePortalParamList>
 
-type ParamlessDashboardScreen = 'GradePortalHome' | 'GradeViewer' | 'Transcript' | 'ClassSchedule' | 'ContactTeachers' | 'Simulator' | 'PortalConnect'
+type TileScreen = 'GradeViewer' | 'Transcript' | 'ClassSchedule' | 'WhatIfCalculator' | 'ContactTeachers'
 
 interface Tile {
   title: string
   description: string
-  icon: React.ComponentProps<typeof Ionicons>['name']
+  Icon: React.FC<IconProps>
   iconColor: string
-  screen?: ParamlessDashboardScreen
-  soon?: boolean
+  screen: TileScreen
 }
+
+// ─── Tiles (Progress Report removed — no backend endpoint in Phase 1) ─────────
 
 const TILES: Tile[] = [
   {
     title: 'Report Card',
     description: 'Grades & letter grades',
-    icon: 'clipboard-outline',
+    Icon: ClipboardIcon,
     iconColor: colors.primary,
     screen: 'GradeViewer',
   },
   {
     title: 'Transcript',
     description: 'Credits & GPA history',
-    icon: 'document-text-outline',
+    Icon: DocumentIcon,
     iconColor: colors.info,
     screen: 'Transcript',
   },
   {
     title: 'Class Schedule',
     description: 'Your class periods',
-    icon: 'time-outline',
+    Icon: ClockIcon,
     iconColor: colors.warning,
     screen: 'ClassSchedule',
   },
   {
     title: 'What-If Calculator',
     description: 'Simulate grade changes',
-    icon: 'calculator-outline',
+    Icon: CalculatorIcon,
     iconColor: colors.success,
-    screen: 'Simulator',
+    screen: 'WhatIfCalculator',
   },
   {
     title: 'Contact Teachers',
     description: 'Email your teachers',
-    icon: 'mail-outline',
+    Icon: EnvelopeIcon,
     iconColor: colors.orange,
     screen: 'ContactTeachers',
   },
-  {
-    title: 'Progress Report',
-    description: 'Interim grades',
-    icon: 'bar-chart-outline',
-    iconColor: '#BC8CFF',
-    soon: true,
-  },
 ]
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function GradePortalDashboard(): React.JSX.Element {
   const navigation = useNavigation<NavProp>()
@@ -89,12 +95,12 @@ export default function GradePortalDashboard(): React.JSX.Element {
   const [disconnecting, setDisconnecting] = useState(false)
 
   useEffect(() => {
-    loadPortalStatus()
+    void loadPortalStatus()
   }, [])
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadPortalStatus()
+      void loadPortalStatus()
     })
     return unsubscribe
   }, [navigation])
@@ -130,17 +136,19 @@ export default function GradePortalDashboard(): React.JSX.Element {
         {
           text: 'Disconnect',
           style: 'destructive',
-          onPress: async () => {
-            setDisconnecting(true)
-            try {
-              await disconnectPortal()
-              setPortalStatus(null)
-              await loadPortalStatus()
-            } catch (err: unknown) {
-              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to disconnect')
-            } finally {
-              setDisconnecting(false)
-            }
+          onPress: (): void => {
+            void (async () => {
+              setDisconnecting(true)
+              try {
+                await disconnectPortal()
+                setPortalStatus(null)
+                await loadPortalStatus()
+              } catch (err: unknown) {
+                Alert.alert('Error', err instanceof Error ? err.message : 'Failed to disconnect')
+              } finally {
+                setDisconnecting(false)
+              }
+            })()
           },
         },
       ]
@@ -164,7 +172,12 @@ export default function GradePortalDashboard(): React.JSX.Element {
             <Text variant="caption" style={{ color: colors.textSecondary }}>
               Could not load portal status. Tap to retry.
             </Text>
-            <TouchableOpacity onPress={loadPortalStatus} style={{ marginTop: 8 }}>
+            <TouchableOpacity
+              onPress={() => void loadPortalStatus()}
+              style={{ marginTop: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading portal status"
+            >
               <Text variant="caption" style={{ color: colors.primary }}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -190,8 +203,10 @@ export default function GradePortalDashboard(): React.JSX.Element {
             <View style={styles.statusCardActions}>
               <TouchableOpacity
                 style={[styles.statusActionButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
-                onPress={handleSync}
+                onPress={() => void handleSync()}
                 disabled={syncing}
+                accessibilityRole="button"
+                accessibilityLabel="Sync grades"
               >
                 {syncing
                   ? <ActivityIndicator color="#000" size="small" />
@@ -202,6 +217,8 @@ export default function GradePortalDashboard(): React.JSX.Element {
                 style={[styles.statusActionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={handleDisconnect}
                 disabled={disconnecting}
+                accessibilityRole="button"
+                accessibilityLabel="Disconnect portal"
               >
                 {disconnecting
                   ? <ActivityIndicator color={colors.textSecondary} size="small" />
@@ -212,7 +229,7 @@ export default function GradePortalDashboard(): React.JSX.Element {
           </View>
         ) : (
           <View style={[styles.connectBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Ionicons name="link-outline" size={28} color={colors.textSecondary} />
+            <LinkIcon size={28} color={colors.textSecondary} />
             <Text style={[styles.connectBannerText, { color: colors.textPrimary }]}>
               Connect your school portal to see live grades
             </Text>
@@ -233,19 +250,13 @@ export default function GradePortalDashboard(): React.JSX.Element {
             <TouchableOpacity
               key={tile.title}
               style={styles.tile}
-              onPress={() => {
-                if (tile.soon) {
-                  Alert.alert('Coming Soon', 'This feature is coming in Phase 2!')
-                } else if (tile.screen) {
-                  navigation.navigate(tile.screen)
-                }
-              }}
+              onPress={() => navigation.navigate(tile.screen)}
               activeOpacity={0.75}
               accessibilityRole="button"
               accessibilityLabel={tile.title}
             >
-              <View style={[styles.iconCircle, { backgroundColor: tile.iconColor + '26' }]}>
-                <Ionicons name={tile.icon} size={24} color={tile.iconColor} />
+              <View style={[styles.iconSquare, { backgroundColor: tile.iconColor + '26' }]}>
+                <tile.Icon size={24} color={tile.iconColor} />
               </View>
               <Text variant="h3" style={styles.tileTitle}>{tile.title}</Text>
               <Text variant="caption" style={styles.tileDesc}>{tile.description}</Text>
@@ -256,6 +267,8 @@ export default function GradePortalDashboard(): React.JSX.Element {
     </View>
   )
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   scrollContent: {
@@ -277,10 +290,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 16,
   },
-  iconCircle: {
+  iconSquare: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },

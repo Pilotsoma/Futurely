@@ -5,12 +5,13 @@ import {
   View,
 } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
-import { Ionicons } from '@expo/vector-icons'
+import { LockIcon, SchoolBuildingIcon } from '../components/icons'
 import Text from '../components/ui/Text'
 import Skeleton from '../components/ui/Skeleton'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { fetchStudentData, type StudentData } from '../api/studentApi'
+import { getPortalStatus, getPortalGpa, type PortalGpa } from '../api/portalApi'
 import { shadows } from '../constants/shadows'
 
 interface SampleCollege {
@@ -45,7 +46,7 @@ function CollegeCard({ college }: CollegeCardProps): React.JSX.Element {
       accessibilityLabel={`${college.name} — available in Phase 2`}
     >
       <View style={styles.collegeLocked}>
-        <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
+        <LockIcon size={18} color={colors.textMuted} />
         <Text variant="caption" style={{ marginLeft: 6, marginTop: 2 }}>Phase 2 feature</Text>
       </View>
       <View style={{ opacity: 0.4 }}>
@@ -59,12 +60,18 @@ function CollegeCard({ college }: CollegeCardProps): React.JSX.Element {
 
 export default function CollegesScreen(): React.JSX.Element {
   const [data, setData] = useState<StudentData | null>(null)
+  const [portalGpa, setPortalGpa] = useState<PortalGpa | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   const load = useCallback(async (): Promise<void> => {
     setIsLoading(true)
     try {
-      setData(await fetchStudentData())
+      const [studentData, status] = await Promise.all([
+        fetchStudentData(),
+        getPortalStatus().catch((): null => null),
+      ])
+      setData(studentData)
+      setPortalGpa(status?.connected ? await getPortalGpa().catch((): null => null) : null)
     } catch {
       // silently fail — show placeholder anyway
     } finally {
@@ -74,7 +81,9 @@ export default function CollegesScreen(): React.JSX.Element {
 
   useFocusEffect(useCallback(() => { void load() }, [load]))
 
-  const uGpa = (data?.profile?.unweightedGpa ?? 0).toFixed(2)
+  // Portal-synced GPA wins when connected — the relational Profile fields
+  // are only reliably populated by /sync-profile, not by the HAC scraper.
+  const uGpa = (portalGpa?.unweightedGpa ?? data?.profile?.unweightedGpa ?? 0).toFixed(2)
   const futureDecision = data?.profile?.futureDecision ?? null
 
   return (
@@ -113,7 +122,7 @@ export default function CollegesScreen(): React.JSX.Element {
 
         {/* Encourage message */}
         <View style={[styles.card, { marginTop: 12, marginBottom: 40 }]}>
-          <Ionicons name="school-outline" size={32} color={colors.primary} style={{ marginBottom: 8 }} />
+          <SchoolBuildingIcon size={32} color={colors.primary} />
           <Text variant="body" style={{ lineHeight: 22 }}>
             Based on your <Text style={{ color: colors.primary, fontWeight: '700' }}>{uGpa}</Text> GPA,
             we'll match you with the best-fit schools when this feature launches in Phase 2.

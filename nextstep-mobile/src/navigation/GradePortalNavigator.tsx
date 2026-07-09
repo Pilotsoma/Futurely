@@ -19,7 +19,8 @@ export type GradePortalParamList = {
   Transcript: undefined
   ClassSchedule: undefined
   ContactTeachers: undefined
-  Simulator: undefined
+  /** Canonical name aligned with CollegeHelpNavigator — replaced old 'Simulator' */
+  WhatIfCalculator: undefined
   PortalConnect: undefined
 }
 
@@ -33,7 +34,7 @@ export default function GradePortalNavigator(): React.JSX.Element {
       <Stack.Screen name="Transcript" component={TranscriptScreen} />
       <Stack.Screen name="ClassSchedule" component={ClassScheduleScreen} />
       <Stack.Screen name="ContactTeachers" component={ContactTeachersScreen} />
-      <Stack.Screen name="Simulator" component={GpaSimulatorScreen} />
+      <Stack.Screen name="WhatIfCalculator" component={GpaSimulatorScreen} />
       <Stack.Screen name="PortalConnect" component={PortalConnectScreen} />
       <Stack.Screen name="CourseDetail" component={CourseDetailScreen} options={{ headerShown: false }} />
     </Stack.Navigator>

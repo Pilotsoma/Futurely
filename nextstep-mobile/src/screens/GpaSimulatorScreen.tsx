@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  AccessibilityInfo,
+  Animated,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -48,8 +50,9 @@ function LoadingView(): React.JSX.Element {
     <ScrollView scrollEnabled={false} contentContainerStyle={styles.scrollContent}>
       <Text variant="heading" style={styles.screenTitle}>GPA Simulator</Text>
 
-      {/* DeltaCard skeleton */}
+      {/* DeltaCard skeleton — mirrors both weighted and unweighted rows */}
       <Card style={styles.cardSpacing}>
+        {/* Row 1: Weighted */}
         <View style={styles.skeletonDeltaRow}>
           <View style={{ flex: 1 }}>
             <Skeleton width={80} height={11} style={{ marginBottom: 12 }} />
@@ -60,6 +63,19 @@ function LoadingView(): React.JSX.Element {
           <View style={{ flex: 1 }}>
             <Skeleton width={88} height={11} style={{ marginBottom: 12 }} />
             <Skeleton width={100} height={28} />
+          </View>
+        </View>
+        {/* Row 2: Unweighted */}
+        <View style={styles.skeletonHDivider} />
+        <View style={styles.skeletonDeltaRow}>
+          <View style={{ flex: 1 }}>
+            <Skeleton width={72} height={11} style={{ marginBottom: 8 }} />
+            <Skeleton width={52} height={22} />
+          </View>
+          <View style={styles.skeletonDivider} />
+          <View style={{ flex: 1 }}>
+            <Skeleton width={84} height={11} style={{ marginBottom: 8 }} />
+            <Skeleton width={52} height={22} />
           </View>
         </View>
       </Card>
@@ -114,6 +130,65 @@ function EmptyView(): React.JSX.Element {
       <Text variant="h3" style={styles.stateTitle}>No Grades to Simulate</Text>
       <Text variant="body" color={colors.textSecondary} style={styles.stateMessage}>
         Check back once your courses have grades recorded.
+      </Text>
+    </View>
+  )
+}
+
+// ─── College readiness bar ────────────────────────────────────────────────────
+
+const TARGET_GPA = 3.5
+
+function CollegeReadinessBar({ gpa }: { gpa: number | null }): React.JSX.Element {
+  const progress = useMemo(() => {
+    if (gpa === null) return 0
+    return Math.min(1, Math.max(0, gpa / TARGET_GPA))
+  }, [gpa])
+
+  const anim = useRef(new Animated.Value(0)).current
+  const [reduceMotion, setReduceMotion] = useState(false)
+
+  useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion)
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion)
+    return () => sub.remove()
+  }, [])
+
+  useEffect(() => {
+    if (reduceMotion) {
+      anim.setValue(progress)
+      return
+    }
+    Animated.timing(anim, {
+      toValue: progress,
+      duration: 400,
+      useNativeDriver: false,
+    }).start()
+  }, [progress, anim, reduceMotion])
+
+  const barColor = gpa !== null && gpa >= TARGET_GPA ? colors.success : colors.primary
+
+  return (
+    <View style={styles.readinessCard}>
+      <View style={styles.readinessHeader}>
+        <Text variant="label" color={colors.textSecondary}>College Readiness</Text>
+        <Text variant="label" color={gpa !== null && gpa >= TARGET_GPA ? colors.success : colors.textSecondary}>
+          {gpa !== null ? `${((progress) * 100).toFixed(0)}%` : '—'} toward 3.5
+        </Text>
+      </View>
+      <View style={styles.readinessTrack} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}>
+        <Animated.View
+          style={[
+            styles.readinessFill,
+            {
+              backgroundColor: barColor,
+              width: anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+            },
+          ]}
+        />
+      </View>
+      <Text variant="caption" color={colors.textMuted} style={{ marginTop: 6 }}>
+        Target: 3.50 weighted GPA for competitive admissions
       </Text>
     </View>
   )
@@ -207,7 +282,13 @@ export default function GpaSimulatorScreen(): React.JSX.Element {
         <DeltaCard
           currentGpa={originalGpa?.weighted ?? null}
           projectedGpa={projectedGpa?.weighted ?? null}
+          currentUnweightedGpa={originalGpa?.unweighted ?? null}
+          projectedUnweightedGpa={projectedGpa?.unweighted ?? null}
           hasChanges={hasChanges}
+        />
+
+        <CollegeReadinessBar
+          gpa={hasChanges ? (projectedGpa?.weighted ?? null) : (originalGpa?.weighted ?? null)}
         />
 
         <View style={styles.sectionHeader}>
@@ -299,6 +380,36 @@ const styles = StyleSheet.create({
   skeletonPillRow: {
     flexDirection: 'row',
     gap: 6,
+  },
+  skeletonHDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 12,
+  },
+  // College readiness bar
+  readinessCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 8,
+  },
+  readinessHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  readinessTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+  },
+  readinessFill: {
+    height: '100%',
+    borderRadius: 4,
   },
   // State views
   centerState: {

@@ -10,7 +10,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import {
+  XMarkIcon,
+  MagnifyingGlassIcon,
+  XCircleIcon,
+  CheckIcon,
+  SchoolBuildingIcon,
+  ChevronDownIcon,
+  GlobeIcon,
+  UserIcon,
+  LockIcon,
+  EyeIcon,
+  EyeOffIcon,
+  WarningIcon,
+} from '../components/icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useNavigation } from '@react-navigation/native'
@@ -131,19 +144,12 @@ export default function SchoolLoginScreen(): React.JSX.Element {
     setError(null)
 
     try {
-      console.log('[SCHOOL LOGIN] Attempting backend portal connection...')
-      console.log('[SCHOOL LOGIN] system:', selectedDistrict.system)
-      console.log('[SCHOOL LOGIN] baseUrl:', baseUrl)
-      console.log('[SCHOOL LOGIN] username exists:', Boolean(username.trim()))
-
       // Step 1: Hit the backend to create a real HAC/PowerSchool session
       if (selectedDistrict.system === 'HAC') {
         await connectHac(baseUrl, username.trim(), password)
       } else {
         await connectPowerSchool(baseUrl, username.trim(), password)
       }
-
-      console.log('[SCHOOL LOGIN] Backend connection successful — saving session metadata')
 
       // Step 2: Only if the backend call succeeded, persist metadata to AsyncStorage
       // NOTE: password is intentionally NOT persisted anywhere
@@ -157,7 +163,6 @@ export default function SchoolLoginScreen(): React.JSX.Element {
       // Step 3: Clear password from memory immediately
       setPassword('')
 
-      console.log('[SCHOOL LOGIN] Sign-in complete')
       // RootNavigator will automatically re-render to AppNavigator
       // because hasSchoolSession is now true
 
@@ -166,7 +171,6 @@ export default function SchoolLoginScreen(): React.JSX.Element {
       setPassword('')
 
       const message = err instanceof Error ? err.message : 'Sign in failed. Please try again.'
-      console.log('[SCHOOL LOGIN] Error:', message)
 
       // Provide user-friendly error messages
       if (message.includes('Invalid credentials') || message.includes('401')) {
@@ -216,13 +220,13 @@ export default function SchoolLoginScreen(): React.JSX.Element {
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
+              <XMarkIcon size={22} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {/* Search input */}
           <View style={styles.dropdownSearch}>
-            <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
+            <MagnifyingGlassIcon size={16} color={colors.textSecondary} />
             <TextInput
               style={styles.dropdownSearchInput}
               placeholder="Search districts..."
@@ -239,7 +243,7 @@ export default function SchoolLoginScreen(): React.JSX.Element {
                 onPress={() => setSearchText('')}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+                <XCircleIcon size={16} color={colors.textMuted} />
               </TouchableOpacity>
             )}
           </View>
@@ -275,7 +279,7 @@ export default function SchoolLoginScreen(): React.JSX.Element {
                   {item.label}
                 </Text>
                 {selectedDistrict?.label === item.label && (
-                  <Ionicons name="checkmark" size={18} color={colors.primary} />
+                  <CheckIcon size={18} color={colors.primary} />
                 )}
               </TouchableOpacity>
             )}
@@ -309,7 +313,7 @@ export default function SchoolLoginScreen(): React.JSX.Element {
               accessibilityLabel="Select school district"
               activeOpacity={0.75}
             >
-              <Ionicons name="school-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+              <SchoolBuildingIcon size={20} color={colors.textSecondary} />
               <Text
                 style={[
                   styles.dropdownBtnText,
@@ -319,7 +323,7 @@ export default function SchoolLoginScreen(): React.JSX.Element {
               >
                 {selectedDistrict ? selectedDistrict.label : 'Select your district…'}
               </Text>
-              <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
+              <ChevronDownIcon size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -328,7 +332,7 @@ export default function SchoolLoginScreen(): React.JSX.Element {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>District portal URL</Text>
               <View style={[styles.inputRow, focused === 'url' && styles.inputRowFocused]}>
-                <Ionicons name="globe-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+                <GlobeIcon size={20} color={colors.textSecondary} />
                 <TextInput
                   style={styles.textInput}
                   placeholder="https://hac.yourdistrict.org"
@@ -352,7 +356,7 @@ export default function SchoolLoginScreen(): React.JSX.Element {
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Username</Text>
             <View style={[styles.inputRow, focused === 'username' && styles.inputRowFocused]}>
-              <Ionicons name="person-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+              <UserIcon size={20} color={colors.textSecondary} />
               <TextInput
                 ref={usernameRef}
                 style={styles.textInput}
@@ -376,7 +380,7 @@ export default function SchoolLoginScreen(): React.JSX.Element {
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Password</Text>
             <View style={[styles.inputRow, focused === 'password' && styles.inputRowFocused]}>
-              <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+              <LockIcon size={20} color={colors.textSecondary} />
               <TextInput
                 ref={passwordRef}
                 style={styles.textInput}
@@ -400,11 +404,10 @@ export default function SchoolLoginScreen(): React.JSX.Element {
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color={colors.textSecondary}
-                />
+                {showPassword
+                  ? <EyeOffIcon size={20} color={colors.textSecondary} />
+                  : <EyeIcon size={20} color={colors.textSecondary} />
+                }
               </TouchableOpacity>
             </View>
           </View>
@@ -412,7 +415,7 @@ export default function SchoolLoginScreen(): React.JSX.Element {
           {/* Error banner */}
           {error !== null && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle-outline" size={16} color={colors.error} />
+              <WarningIcon size={16} color={colors.error} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}

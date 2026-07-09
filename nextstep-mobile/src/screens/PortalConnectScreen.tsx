@@ -10,7 +10,20 @@ import {
   Platform,
   Text as NativeText,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import {
+  SchoolBuildingIcon,
+  ClipboardIcon,
+  GlobeIcon,
+  CheckCircleIcon,
+  UserIcon,
+  LockIcon,
+  EyeIcon,
+  EyeOffIcon,
+  WarningIcon,
+  ShieldCheckmarkIcon,
+  LinkIcon,
+  type IconProps,
+} from '../components/icons'
 import { useNavigation } from '@react-navigation/native'
 import { useFocusEffect } from '@react-navigation/native'
 import Text from '../components/ui/Text'
@@ -37,7 +50,7 @@ interface PortalOption {
   type: PortalType
   label: string
   subtitle: string
-  icon: React.ComponentProps<typeof Ionicons>['name']
+  Icon: React.FC<IconProps>
   placeholder: string
 }
 
@@ -51,14 +64,14 @@ const PORTAL_OPTIONS: PortalOption[] = [
     type: 'HAC',
     label: 'HAC',
     subtitle: 'Home Access Center',
-    icon: 'school-outline',
+    Icon: SchoolBuildingIcon,
     placeholder: 'https://hac.katyisd.org',
   },
   {
     type: 'PowerSchool',
     label: 'PowerSchool',
     subtitle: 'Student Info System',
-    icon: 'laptop-outline',
+    Icon: ClipboardIcon,
     placeholder: 'https://powerschool.yourdistrict.org',
   },
 ]
@@ -152,12 +165,9 @@ export default function PortalConnectScreen(): React.JSX.Element {
   }, [districtUrl, username, password])
 
   const handleConnect = useCallback(async (): Promise<void> => {
-    console.log('[PORTAL CONNECT] button pressed')
-
     const validationError = validate()
 
     if (validationError) {
-      console.log('[PORTAL CONNECT] validation failed:', validationError)
       setConnectionState({ status: 'error', message: validationError })
       return
     }
@@ -168,21 +178,11 @@ export default function PortalConnectScreen(): React.JSX.Element {
     const user = username.trim()
     const pass = password
 
-    console.log('[PORTAL CONNECT] validation passed')
-    console.log('[PORTAL CONNECT] portal type:', portalType)
-    console.log('[PORTAL CONNECT] district URL:', url)
-    console.log('[PORTAL CONNECT] username exists:', Boolean(user))
-    console.log('[PORTAL CONNECT] password exists:', Boolean(pass))
-
     try {
       if (portalType === 'HAC') {
-        console.log('[PORTAL CONNECT] calling connectHac')
         await connectHac(url, user, pass)
-        console.log('[PORTAL CONNECT] connectHac completed')
       } else {
-        console.log('[PORTAL CONNECT] calling connectPowerSchool')
         await connectPowerSchool(url, user, pass)
-        console.log('[PORTAL CONNECT] connectPowerSchool completed')
       }
 
       setPassword('')
@@ -192,8 +192,6 @@ export default function PortalConnectScreen(): React.JSX.Element {
         navigation.goBack()
       }, 1800)
     } catch (err: unknown) {
-      console.log('[PORTAL CONNECT] failed:', err)
-
       const message =
         err instanceof Error
           ? err.message.replace(pass, '[hidden]')
@@ -307,8 +305,7 @@ export default function PortalConnectScreen(): React.JSX.Element {
                   accessibilityLabel={option.label}
                   activeOpacity={0.75}
                 >
-                  <Ionicons
-                    name={option.icon}
+                  <option.Icon
                     size={28}
                     color={isSelected ? colors.primary : colors.textSecondary}
                   />
@@ -327,7 +324,7 @@ export default function PortalConnectScreen(): React.JSX.Element {
           <View style={styles.inputGroup}>
             <Text variant="caption" style={styles.inputLabel}>District portal URL</Text>
             <View style={[styles.inputRow, focused === 'url' && styles.inputRowFocused]}>
-              <Ionicons name="globe-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+              <GlobeIcon size={20} color={colors.textSecondary} />
               <TextInput
                 style={styles.textInput}
                 placeholder={selectedPortal.placeholder}
@@ -350,7 +347,7 @@ export default function PortalConnectScreen(): React.JSX.Element {
             </View>
             {portalDetected && (
               <View style={styles.detectRow}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <CheckCircleIcon size={14} color={colors.success} />
                 <Text style={styles.detectText}>Portal detected</Text>
               </View>
             )}
@@ -389,7 +386,7 @@ export default function PortalConnectScreen(): React.JSX.Element {
           <View style={styles.inputGroup}>
             <Text variant="caption" style={styles.inputLabel}>Username</Text>
             <View style={[styles.inputRow, focused === 'username' && styles.inputRowFocused]}>
-              <Ionicons name="person-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+              <UserIcon size={20} color={colors.textSecondary} />
               <TextInput
                 ref={usernameRef}
                 style={styles.textInput}
@@ -416,7 +413,7 @@ export default function PortalConnectScreen(): React.JSX.Element {
           <View style={styles.inputGroup}>
             <Text variant="caption" style={styles.inputLabel}>Password</Text>
             <View style={[styles.inputRow, focused === 'password' && styles.inputRowFocused]}>
-              <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
+              <LockIcon size={20} color={colors.textSecondary} />
               <TextInput
                 ref={passwordRef}
                 style={styles.textInput}
@@ -443,11 +440,10 @@ export default function PortalConnectScreen(): React.JSX.Element {
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color={colors.textSecondary}
-                />
+                {showPassword
+                  ? <EyeOffIcon size={20} color={colors.textSecondary} />
+                  : <EyeIcon size={20} color={colors.textSecondary} />
+                }
               </TouchableOpacity>
             </View>
           </View>
@@ -455,20 +451,20 @@ export default function PortalConnectScreen(): React.JSX.Element {
           {/* ── 6. Error / Success banners ── */}
           {connectionState.status === 'error' && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle-outline" size={18} color={colors.error} />
+              <WarningIcon size={18} color={colors.error} />
               <Text style={styles.errorText}>{connectionState.message}</Text>
             </View>
           )}
           {connectionState.status === 'success' && (
             <View style={styles.successBanner}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={colors.primary} />
+              <CheckCircleIcon size={18} color={colors.primary} />
               <Text style={styles.successText}>Connected! Returning to Grade Portal…</Text>
             </View>
           )}
 
           {/* ── 7. Security disclaimer ── */}
           <View style={styles.disclaimer}>
-            <Ionicons name="shield-checkmark-outline" size={20} color={colors.textSecondary} style={styles.disclaimerIcon} />
+            <ShieldCheckmarkIcon size={20} color={colors.textSecondary} />
             <Text variant="caption" style={styles.disclaimerBody}>
               {'Your credentials are only used for this session and are '}
               <NativeText style={styles.disclaimerBold}>never stored</NativeText>
@@ -496,7 +492,7 @@ export default function PortalConnectScreen(): React.JSX.Element {
               <>
                 {connectionState.status === 'success'
                   ? <><CheckIcon size={18} color="#000"/><Text style={styles.connectButtonText}>Connected</Text></>
-                  : <><Ionicons name="link-outline" size={20} color="#000" /><Text style={styles.connectButtonText}>Connect Portal</Text></>
+                  : <><LinkIcon size={20} color="#000" /><Text style={styles.connectButtonText}>Connect Portal</Text></>
                 }
               </>
             )}

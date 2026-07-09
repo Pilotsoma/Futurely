@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  ActivityIndicator,
   FlatList,
   RefreshControl,
   ScrollView,
@@ -10,7 +11,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { ChevronRightIcon, SchoolBuildingIcon, LinkIcon } from '../components/icons'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import Text from '../components/ui/Text'
@@ -19,11 +20,16 @@ import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { fetchGrades, type CourseWithGrade, type GpaData } from '../api/gradesApi'
 import { coursesCache } from './CourseDetailScreen'
-import { getPortalStatus, getCurrentPortalGrades, type PortalStatus } from '../api/portalApi'
+import {
+  getPortalStatus,
+  getPortalClasswork,
+  getPortalReportCard,
+  type PortalStatus,
+  type PortalClassworkClass,
+  type PortalReportCardResult,
+} from '../api/portalApi'
 import type { GradePortalParamList } from '../navigation/GradePortalNavigator'
 import { StatusDotGreenIcon, StatusDotYellowIcon } from '../components/icons'
-
-type GradeViewerNavProp = NativeStackNavigationProp<GradePortalParamList>
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +59,8 @@ const COURSE_TYPE_LABELS: Partial<Record<string, string>> = {
 }
 
 const SKELETON_ROW_COUNT = 5
+const SIX_WEEKS_PERIODS = ['1', '2', '3', '4', '5', '6'] as const
+const DATE_PATTERN = /^\d{2}\/\d{2}\/\d{4}$/
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -65,6 +73,86 @@ function gpaColor(value: number): string {
   if (value >= 3.0) return colors.info
   if (value >= 2.5) return colors.warning
   return colors.error
+}
+
+function averageToLetterGrade(average: number): string {
+  if (average >= 90) return 'A'
+  if (average >= 80) return 'B'
+  if (average >= 70) return 'C'
+  if (average >= 60) return 'D'
+  return 'F'
+}
+
+function ordinalSuffix(n: string): string {
+  const num = parseInt(n, 10)
+  if (num === 1) return 'st'
+  if (num === 2) return 'nd'
+  if (num === 3) return 'rd'
+  return 'th'
+}
+
+function filterJunkScores(
+  scores: PortalClassworkClass['scores'],
+): PortalClassworkClass['scores'] {
+  return scores.filter(s => DATE_PATTERN.test(s.dateDue))
+}
+
+function adaptClassworkGrades(classes: PortalClassworkClass[]): CourseWithGrade[] {
+  return classes.map((cls, index) => ({
+    id: index,
+    name: cls.name,
+    teacher: cls.teacher,
+    period: parseInt(cls.period, 10) || index + 1,
+    courseType: 'STANDARD',
+    creditHours: 1.0,
+    semester: 'CURRENT',
+    grade:
+      cls.average !== null
+        ? {
+            letterGrade: averageToLetterGrade(cls.average),
+            percentage: cls.average,
+            gradingPeriod: 'CURRENT',
+          }
+        : null,
+    assignments: filterJunkScores(cls.scores).map(s => ({
+      name: s.name,
+      category: s.category,
+      score: s.score,
+      totalPoints: s.totalPoints,
+      percentage: s.percentage,
+      dateDue: s.dateDue,
+    })),
+  }))
+}
+
+function adaptReportCardCourses(result: PortalReportCardResult): CourseWithGrade[] {
+  const allCourses = [...result.semesters.sem1, ...result.semesters.sem2]
+  return allCourses.map((c, index) => ({
+    id: index,
+    name: c.name,
+    teacher: c.teacher,
+    period: parseInt(c.period, 10) || index + 1,
+    courseType: 'STANDARD',
+    creditHours: parseFloat(c.credits) || 1.0,
+    semester: 'CURRENT',
+    grade: c.letterGrade
+      ? { letterGrade: c.letterGrade, percentage: parseFloat(c.numericGrade) || 0, gradingPeriod: 'CURRENT' }
+      : null,
+    assignments: [],
+  }))
+}
+
+function deriveGpaFromClasswork(classes: PortalClassworkClass[]): GpaData | null {
+  const graded = classes.filter(c => c.average !== null)
+  if (graded.length === 0) return null
+
+  const pointMap: Record<string, number> = { A: 4.0, B: 3.0, C: 2.0, D: 1.0, F: 0.0 }
+  const totalPoints = graded.reduce((sum, c) => {
+    const letter = averageToLetterGrade(c.average ?? 0)
+    return sum + (pointMap[letter] ?? 0)
+  }, 0)
+  const unweighted = Math.round((totalPoints / graded.length) * 100) / 100
+  return { weighted: unweighted, unweighted }
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -111,6 +199,25 @@ function LoadingView(): React.JSX.Element {
   )
 }
 
+function CourseListSkeleton(): React.JSX.Element {
+  return (
+    <>
+      {Array.from({ length: SKELETON_ROW_COUNT }, (_, i) => (
+        <React.Fragment key={i}>
+          <View style={styles.courseRow}>
+            <View style={styles.courseLeft}>
+              <SkeletonBlock width="65%" height={15} style={{ marginBottom: 8 }} />
+              <SkeletonBlock width="45%" height={11} />
+            </View>
+            <SkeletonBlock width={52} height={52} style={{ borderRadius: 10 }} />
+          </View>
+          {i < SKELETON_ROW_COUNT - 1 && <View style={styles.separator} />}
+        </React.Fragment>
+      ))}
+    </>
+  )
+}
+
 // ─── Error & Empty ────────────────────────────────────────────────────────────
 
 function ErrorView({
@@ -133,14 +240,11 @@ function ErrorView({
   )
 }
 
-function EmptyView(): React.JSX.Element {
+function PeriodErrorBanner({ message, isInfo = false }: { message: string; isInfo?: boolean }): React.JSX.Element {
   return (
-    <View style={styles.emptyState}>
-      <Text variant="h3" style={styles.stateTitle}>
-        No Grades Yet
-      </Text>
-      <Text variant="body" color={colors.textSecondary} style={styles.stateMessage}>
-        Your grades will appear here once your courses are set up.
+    <View style={[styles.periodErrorBanner, isInfo && styles.periodInfoBanner]}>
+      <Text variant="caption" color={isInfo ? colors.textSecondary : colors.error}>
+        {message}
       </Text>
     </View>
   )
@@ -210,6 +314,59 @@ function GpaCard({
   )
 }
 
+// ─── Six Weeks Period Picker ──────────────────────────────────────────────────
+
+function SixWeeksPicker({
+  selectedPeriod,
+  loadingPeriod,
+  onSelect,
+}: {
+  selectedPeriod: string | null
+  loadingPeriod: string | null
+  onSelect: (period: string) => void
+}): React.JSX.Element {
+  return (
+    <View style={styles.periodPickerContainer}>
+      <Text variant="label" color={colors.textSecondary} style={styles.periodPickerLabel}>
+        Six Weeks
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.periodScrollContent}
+      >
+        {SIX_WEEKS_PERIODS.map((period) => {
+          const isSelected = selectedPeriod === period
+          const isThisLoading = loadingPeriod === period
+          return (
+            <TouchableOpacity
+              key={period}
+              style={[styles.periodPill, isSelected && styles.periodPillActive]}
+              onPress={() => onSelect(period)}
+              accessibilityRole="button"
+              accessibilityLabel={`${period}${ordinalSuffix(period)} six weeks`}
+              accessibilityState={{ selected: isSelected }}
+              activeOpacity={0.7}
+            >
+              {isThisLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={isSelected ? colors.primary : colors.textSecondary}
+                  style={styles.periodPillSpinner}
+                />
+              ) : (
+                <Text style={[styles.periodPillText, isSelected && styles.periodPillTextActive]}>
+                  {period}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )
+        })}
+      </ScrollView>
+    </View>
+  )
+}
+
 // ─── Course Row ───────────────────────────────────────────────────────────────
 
 function CourseTypeBadge({ type }: { type: string }): React.JSX.Element | null {
@@ -251,7 +408,7 @@ function CourseRow({
           <CourseTypeBadge type={course.courseType} />
         </View>
         <Text variant="caption" color={colors.textSecondary}>
-          {course.teacher} · Period {course.period}
+          {course.teacher !== '' ? `${course.teacher} · ` : ''}Period {course.period}
           {course.assignments.length > 0 && ` · ${course.assignments.length} assignments`}
         </Text>
       </View>
@@ -268,7 +425,7 @@ function CourseRow({
             {displayScore}
           </Text>
         )}
-        <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginTop: 2 }} />
+        <ChevronRightIcon size={14} color={colors.textMuted} />
       </View>
     </TouchableOpacity>
   )
@@ -278,43 +435,12 @@ function Separator(): React.JSX.Element {
   return <View style={styles.separator} />
 }
 
-// ─── Portal adapter ───────────────────────────────────────────────────────────
-
-// NOTE: PowerSchool courses from the home page do not include assignment detail.
-// assignments[] will be empty for PS users. Only course-level averages are available.
-function adaptPortalGrades(
-  portalCourses: import('../api/portalApi').NormalizedCourse[]
-): CourseWithGrade[] {
-  return portalCourses.map((course, index) => ({
-    id: index,
-    name: course.name,
-    teacher: course.teacher,
-    period: parseInt(course.period, 10) || (index + 1),
-    courseType: 'STANDARD',
-    creditHours: 1.0,
-    semester: 'CURRENT',
-    grade: course.average !== null
-      ? {
-          letterGrade: course.letterGrade ?? 'N/A',
-          percentage: course.average,
-          gradingPeriod: 'CURRENT',
-        }
-      : null,
-    assignments: (course.assignments ?? []).map(a => ({
-      name: a.name,
-      category: a.category,
-      score: a.score,
-      totalPoints: a.totalPoints,
-      percentage: a.percentage,
-      dateDue: a.dateDue,
-    })),
-  }))
-}
-
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function GradeViewerScreen(): React.JSX.Element {
   const navigation = useNavigation<NativeStackNavigationProp<GradePortalParamList>>()
+
+  // Core data state
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -324,6 +450,23 @@ export default function GradeViewerScreen(): React.JSX.Element {
   const [portalStatus, setPortalStatus] = useState<PortalStatus | null>(null)
   const [dataSource, setDataSource] = useState<'portal' | 'seeded' | 'unknown'>('unknown')
 
+  // Period picker state (portal mode only)
+  const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null)
+  const [loadingPeriod, setLoadingPeriod] = useState<string | null>(null)
+  const [isPeriodLoading, setIsPeriodLoading] = useState(false)
+  const [periodError, setPeriodError] = useState<string | null>(null)
+  const [periodIsInfo, setPeriodIsInfo] = useState(false)
+  const [periodCache, setPeriodCache] = useState<Record<string, PortalClassworkClass[]>>({})
+
+  const applyClasswork = useCallback(
+    (period: string, classes: PortalClassworkClass[]): void => {
+      setCourses(adaptClassworkGrades(classes))
+      setGpa(deriveGpaFromClasswork(classes))
+      setSelectedPeriod(period)
+    },
+    [],
+  )
+
   const loadGrades = useCallback(async (refresh: boolean = false): Promise<void> => {
     if (refresh) {
       setIsRefreshing(true)
@@ -331,30 +474,19 @@ export default function GradeViewerScreen(): React.JSX.Element {
       setIsLoading(true)
     }
     setError(null)
+    setPeriodError(null)
+
     try {
       const status = await getPortalStatus()
       setPortalStatus(status)
 
       if (status.connected) {
         setDataSource('portal')
-        const portalCourses = await getCurrentPortalGrades()
-        const adapted = adaptPortalGrades(portalCourses)
-        setCourses(adapted)
-
-        const graded = adapted.filter(c => c.grade !== null)
-        const pointMap: Record<string, number> = { A: 4.0, B: 3.0, C: 2.0, D: 1.0, F: 0.0 }
-        const totalPoints = graded.reduce((sum, c) => {
-          const letter = (c.grade?.letterGrade ?? 'F').charAt(0)
-          return sum + (pointMap[letter] ?? 0)
-        }, 0)
-        const unweighted = graded.length > 0
-          ? Math.round((totalPoints / graded.length) * 100) / 100
-          : null
-
-        setGpa(unweighted !== null ? { weighted: unweighted, unweighted } : null)
-
+        const result = await getPortalClasswork()
+        const period = result.currentPeriod
+        setPeriodCache({ [period]: result.classes })
+        applyClasswork(period, result.classes)
       } else if (status.sessionExpiresIn === 0 && status.districtUrl !== null) {
-        // Session expired or lost — show re-auth prompt
         setDataSource('seeded')
         setError('Your school portal session expired. Please reconnect.')
       } else if (__DEV__) {
@@ -373,9 +505,76 @@ export default function GradeViewerScreen(): React.JSX.Element {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [])
+  }, [applyClasswork])
+
+  const handlePeriodSelect = useCallback(
+    (period: string): void => {
+      if (period === selectedPeriod || loadingPeriod !== null) return
+
+      // Serve from cache without a network round trip
+      if (periodCache[period] !== undefined) {
+        setPeriodError(null)
+        setPeriodIsInfo(false)
+        applyClasswork(period, periodCache[period])
+        return
+      }
+
+      setLoadingPeriod(period)
+      setIsPeriodLoading(true)
+      setPeriodError(null)
+      setPeriodIsInfo(false)
+
+      getPortalClasswork(period)
+        .then(result => {
+          setPeriodCache(prev => ({ ...prev, [period]: result.classes }))
+          applyClasswork(period, result.classes)
+        })
+        .catch((classworkErr: unknown) => {
+          // Classwork (assignment-level detail) is blocked for some districts —
+          // fall back to the six-weeks Report Card (period-level letter grades)
+          // before giving up entirely.
+          return getPortalReportCard(period)
+            .then((result: PortalReportCardResult) => {
+              const adapted = adaptReportCardCourses(result)
+              if (adapted.length > 0) {
+                setCourses(adapted)
+                setSelectedPeriod(period)
+                setPeriodError(null)
+                return
+              }
+              // No real course rows — surface HAC's own explanation if it gave one,
+              // as an informational note rather than a red error.
+              setPeriodError(
+                result.message ?? `No report card data available for period ${period}.`,
+              )
+              setPeriodIsInfo(true)
+            })
+            .catch(() => {
+              const msg = classworkErr instanceof Error ? classworkErr.message : 'Unknown error'
+              const isAuthError =
+                msg.toLowerCase().includes('auth') ||
+                msg.toLowerCase().includes('credential') ||
+                msg.toLowerCase().includes('invalid')
+              setPeriodIsInfo(false)
+              setPeriodError(
+                isAuthError
+                  ? "Couldn't load this grading period — try again shortly"
+                  : `Couldn't load period ${period}: ${msg}`,
+              )
+              // selectedPeriod and courses remain unchanged — the previous period's data
+              // stays visible so the user doesn't lose their current view
+            })
+        })
+        .finally(() => {
+          setLoadingPeriod(null)
+          setIsPeriodLoading(false)
+        })
+    },
+    [selectedPeriod, loadingPeriod, periodCache, applyClasswork],
+  )
 
   const handleRefresh = useCallback((): void => {
+    setPeriodCache({})
     void loadGrades(true)
   }, [loadGrades])
 
@@ -413,12 +612,14 @@ export default function GradeViewerScreen(): React.JSX.Element {
     )
   }
 
+  const showPeriodPicker = dataSource === 'portal'
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScreenHeader title="Report Card" />
       <FlatList
         style={styles.list}
-        data={sortedCourses}
+        data={isPeriodLoading ? [] : sortedCourses}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <CourseRow
@@ -435,22 +636,30 @@ export default function GradeViewerScreen(): React.JSX.Element {
         ListHeaderComponent={
           <>
             {__DEV__ && dataSource !== 'unknown' && (
-              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 8, marginBottom: 2 }}>
+              <View style={styles.devBadgeRow}>
                 {dataSource === 'portal'
-                  ? <StatusDotGreenIcon size={11}/>
-                  : <StatusDotYellowIcon size={11}/>
+                  ? <StatusDotGreenIcon size={11} />
+                  : <StatusDotYellowIcon size={11} />
                 }
-                <Text style={{ fontSize: 11, color: colors.textMuted }}>
+                <Text style={styles.devBadgeText}>
                   {dataSource === 'portal' ? 'Live portal data' : 'Demo/seeded data'}
                 </Text>
               </View>
             )}
             <GpaCard gpa={gpa} mode={gpaMode} onToggle={setGpaMode} />
+            {showPeriodPicker && (
+              <SixWeeksPicker
+                selectedPeriod={selectedPeriod}
+                loadingPeriod={loadingPeriod}
+                onSelect={handlePeriodSelect}
+              />
+            )}
+            {periodError !== null && <PeriodErrorBanner message={periodError} isInfo={periodIsInfo} />}
             <View style={styles.sectionRow}>
               <Text variant="label" color={colors.textSecondary}>
                 Courses
               </Text>
-              {sortedCourses.length > 0 && (
+              {!isPeriodLoading && sortedCourses.length > 0 && (
                 <Text variant="caption" color={colors.textMuted}>
                   {sortedCourses.length}
                 </Text>
@@ -459,28 +668,31 @@ export default function GradeViewerScreen(): React.JSX.Element {
           </>
         }
         ListEmptyComponent={
-          dataSource === 'portal' || portalStatus?.connected ? (
+          isPeriodLoading ? (
+            <CourseListSkeleton />
+          ) : dataSource === 'portal' || portalStatus?.connected ? (
             <View style={styles.emptyState}>
-              <Ionicons name="school-outline" size={40} color={colors.textSecondary} />
+              <SchoolBuildingIcon size={40} color={colors.textSecondary} />
               <Text variant="h3" style={styles.stateTitle}>No Grades Found</Text>
               <Text variant="body" style={[styles.stateMessage, { color: colors.textSecondary }]}>
-                Your school portal is connected but no grades were returned. Grades may not be
-                available yet for this term.
+                Your school portal is connected but no grades were returned
+                {selectedPeriod !== null ? ` for six weeks ${selectedPeriod}` : ''}.
               </Text>
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="link-outline" size={40} color={colors.textSecondary} />
+              <LinkIcon size={40} color={colors.textSecondary} />
               <Text variant="h3" style={styles.stateTitle}>Connect Your School Portal</Text>
               <Text variant="body" style={[styles.stateMessage, { color: colors.textSecondary }]}>
                 Link your HAC or PowerSchool account to see your real grades here.
               </Text>
               <TouchableOpacity
-                style={{ backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 }}
+                style={styles.connectButton}
                 onPress={() => navigation.navigate('PortalConnect')}
                 accessibilityRole="button"
+                accessibilityLabel="Connect school portal"
               >
-                <Text style={{ color: '#000', fontWeight: '700', fontSize: 14 }}>
+                <Text style={styles.connectButtonText}>
                   Connect School Portal
                 </Text>
               </TouchableOpacity>
@@ -489,7 +701,9 @@ export default function GradeViewerScreen(): React.JSX.Element {
                   style={{ marginTop: 12 }}
                   onPress={() => {
                     setDataSource('seeded')
-                    fetchGrades().then(d => { setGpa(d.gpa); setCourses(d.courses) }).catch(() => {})
+                    fetchGrades()
+                      .then(d => { setGpa(d.gpa); setCourses(d.courses) })
+                      .catch(() => {})
                   }}
                 >
                   <Text variant="caption" style={{ color: colors.textSecondary }}>
@@ -525,6 +739,19 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 32,
   },
+  // Dev badge
+  devBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    marginBottom: 2,
+  },
+  devBadgeText: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
   // GPA card
   gpaCard: {
     paddingHorizontal: 20,
@@ -545,7 +772,7 @@ const styles = StyleSheet.create({
   gpaScale: {
     marginBottom: 6,
   },
-  // Toggle
+  // GPA Toggle
   toggle: {
     flexDirection: 'row',
     gap: 8,
@@ -560,7 +787,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   togglePillActive: {
-    backgroundColor: colors.primary + '26',
+    backgroundColor: `${colors.primary}26`,
     borderColor: colors.primary,
   },
   toggleText: {
@@ -571,6 +798,61 @@ const styles = StyleSheet.create({
   toggleTextActive: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  // Period picker
+  periodPickerContainer: {
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  periodPickerLabel: {
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  periodScrollContent: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  periodPill: {
+    minWidth: 44,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  periodPillActive: {
+    backgroundColor: `${colors.primary}26`,
+    borderColor: colors.primary,
+  },
+  periodPillText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  periodPillTextActive: {
+    color: colors.primary,
+  },
+  periodPillSpinner: {
+    width: 20,
+    height: 20,
+  },
+  // Period error banner
+  periodErrorBanner: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: `${colors.error}18`,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: `${colors.error}40`,
+  },
+  periodInfoBanner: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
   },
   // Section header row
   sectionRow: {
@@ -644,6 +926,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     marginHorizontal: 20,
   },
+  // Connect button
+  connectButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  connectButtonText: {
+    color: '#000',
+    fontWeight: '700',
+    fontSize: 14,
+  },
   // States
   centerState: {
     flex: 1,
@@ -660,7 +956,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stateMessage: {
-    textAlign: 'center' as const,
+    textAlign: 'center',
     marginBottom: 24,
   },
 })

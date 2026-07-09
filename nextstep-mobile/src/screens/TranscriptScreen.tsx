@@ -11,10 +11,15 @@ import Skeleton from '../components/ui/Skeleton'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { fetchStudentData, type CourseWithGrade, type StudentData } from '../api/studentApi'
+import {
+  getPortalStatus,
+  getPortalTranscript,
+  type PortalTranscriptResult,
+} from '../api/portalApi'
 import { shadows } from '../constants/shadows'
 
 const GRADE_COLORS: Record<string, string> = {
-  A: '#34D399', B: '#38BDF8', C: '#FBBF24', D: '#FB923C', F: '#F87171',
+  A: colors.success, B: colors.info, C: colors.warning, D: colors.orange, F: colors.error,
 }
 
 function gradeColor(letter: string): string {
@@ -43,6 +48,49 @@ function groupBySemester(courses: CourseWithGrade[]): { title: string; data: Cou
     .map(([sem, data]) => ({ title: formatSemester(sem), data }))
 }
 
+// ── Portal transcript adapter ──────────────────────────────────────────────────
+
+function numericToLetter(grade: string): string {
+  const n = parseFloat(grade)
+  if (n >= 90) return 'A'
+  if (n >= 80) return 'B'
+  if (n >= 70) return 'C'
+  if (n >= 60) return 'D'
+  return 'F'
+}
+
+function extractStartYear(yearStr: string): number {
+  const match = yearStr.match(/^(\d{4})/)
+  return match ? parseInt(match[1], 10) : 0
+}
+
+function adaptPortalTranscript(result: PortalTranscriptResult): CourseWithGrade[] {
+  const courses: CourseWithGrade[] = []
+  let id = 0
+  for (const sem of result.transcript.semesters) {
+    const startYear = extractStartYear(sem.year)
+    // Semester "1" = fall (start year), "2" = spring (start year + 1)
+    const termYear = sem.semester === '2' ? startYear + 1 : startYear
+    const term = sem.semester === '2' ? 'SP' : 'FA'
+    const semKey = `${termYear}-${term}`
+    for (const c of sem.courses) {
+      const letterGrade = numericToLetter(c.grade)
+      const percentage = parseFloat(c.grade)
+      courses.push({
+        id: id++,
+        name: c.name,
+        teacher: '',
+        period: 0,
+        courseType: 'STANDARD',
+        creditHours: parseFloat(c.credits),
+        semester: semKey,
+        grade: { letterGrade, percentage: isNaN(percentage) ? 0 : percentage },
+      })
+    }
+  }
+  return courses
+}
+
 function LoadingSkeleton(): React.JSX.Element {
   return (
     <View style={{ padding: 20 }}>
@@ -65,14 +113,24 @@ function ErrorView({ message, onRetry }: { message: string; onRetry: () => void 
 
 export default function TranscriptScreen(): React.JSX.Element {
   const [data, setData] = useState<StudentData | null>(null)
+  const [portalTranscript, setPortalTranscript] = useState<PortalTranscriptResult | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async (): Promise<void> => {
     setIsLoading(true)
     setError(null)
+    setPortalTranscript(null)
     try {
-      setData(await fetchStudentData())
+      const [d, status] = await Promise.all([
+        fetchStudentData(),
+        getPortalStatus().catch((): null => null),
+      ])
+      setData(d)
+      if (status?.connected === true) {
+        const result = await getPortalTranscript()
+        setPortalTranscript(result)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load transcript.')
     } finally {
@@ -82,11 +140,22 @@ export default function TranscriptScreen(): React.JSX.Element {
 
   useFocusEffect(useCallback(() => { void load() }, [load]))
 
-  const courses = data?.courses ?? []
+  const courses: CourseWithGrade[] = portalTranscript !== null
+    ? adaptPortalTranscript(portalTranscript)
+    : (data?.courses ?? [])
   const sections = groupBySemester(courses)
-  const totalCredits = courses.filter(c => c.grade && c.grade.letterGrade !== 'F').length
-  const uGpa = (data?.profile?.unweightedGpa ?? 0).toFixed(2)
-  const wGpa = (data?.profile?.weightedGpa ?? 0).toFixed(2)
+  const totalCredits = portalTranscript !== null
+    ? portalTranscript.transcript.semesters.reduce(
+        (sum, sem) => sum + sem.courses.reduce((s, c) => s + parseFloat(c.credits), 0),
+        0,
+      )
+    : courses.filter(c => c.grade !== null && c.grade.letterGrade !== 'F').length
+  const uGpa = portalTranscript !== null
+    ? portalTranscript.transcript.unweightedGPA
+    : (data?.profile?.unweightedGpa ?? 0).toFixed(2)
+  const wGpa = portalTranscript !== null
+    ? portalTranscript.transcript.weightedGPA
+    : (data?.profile?.weightedGpa ?? 0).toFixed(2)
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -126,7 +195,11 @@ export default function TranscriptScreen(): React.JSX.Element {
                 <Text variant="body">Unweighted: <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>{uGpa}</Text></Text>
                 <Text variant="body" style={{ marginLeft: 16 }}>Weighted: <Text style={{ color: colors.primary, fontWeight: '700' }}>{wGpa}</Text></Text>
               </View>
-              <Text variant="caption" style={{ marginTop: 8 }}>Total Credits Earned: {totalCredits}</Text>
+              <Text variant="caption" style={{ marginTop: 8 }}>
+                Total Credits Earned: {typeof totalCredits === 'number' && totalCredits % 1 !== 0
+                  ? totalCredits.toFixed(1)
+                  : totalCredits}
+              </Text>
             </View>
           }
           contentContainerStyle={{ paddingBottom: 40 }}

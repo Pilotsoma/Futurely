@@ -1,6 +1,6 @@
 import React from 'react'
 import { TouchableOpacity, View } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { ChevronUpIcon, ChevronDownIcon } from '../icons'
 import Text from '../ui/Text'
 import { colors } from '../../constants/colors'
 
@@ -47,11 +47,10 @@ export default function SectionHeader({
           accessibilityState={{ expanded: isExpanded }}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Ionicons
-            name={isExpanded ? 'chevron-up' : 'chevron-down'}
-            size={16}
-            color={colors.textMuted}
-          />
+          {isExpanded
+            ? <ChevronUpIcon size={16} color={colors.textMuted} />
+            : <ChevronDownIcon size={16} color={colors.textMuted} />
+          }
         </TouchableOpacity>
       )}
     </View>

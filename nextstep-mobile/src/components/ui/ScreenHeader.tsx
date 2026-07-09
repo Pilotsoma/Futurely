@@ -1,18 +1,28 @@
 import React from 'react'
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import Text from './Text'
+import { ChevronLeftIcon } from '../icons'
 import { colors } from '../../constants/colors'
 
 interface ScreenHeaderProps {
   title: string
+  /** Set false for tab-root screens with no stack history to return to. */
+  showBack?: boolean
 }
 
-export default function ScreenHeader({ title }: ScreenHeaderProps): React.JSX.Element {
+export default function ScreenHeader({ title, showBack = true }: ScreenHeaderProps): React.JSX.Element {
   const navigation = useNavigation()
   const insets = useSafeAreaInsets()
+
+  if (!showBack) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
+        <Text variant="heading">{title}</Text>
+      </View>
+    )
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
@@ -24,7 +34,7 @@ export default function ScreenHeader({ title }: ScreenHeaderProps): React.JSX.El
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         activeOpacity={0.7}
       >
-        <Ionicons name="chevron-back" size={24} color={colors.primary} />
+        <ChevronLeftIcon size={24} color={colors.primary} />
       </TouchableOpacity>
       <Text variant="h3" style={styles.title}>{title}</Text>
       <View style={styles.spacer} />

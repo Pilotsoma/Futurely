@@ -9,7 +9,7 @@ import {
 import { useRoute, type RouteProp } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
-import { Ionicons } from '@expo/vector-icons'
+import { WarningIcon, ChevronLeftIcon, BarChartIcon } from '../components/icons'
 import Text from '../components/ui/Text'
 import Skeleton from '../components/ui/Skeleton'
 import { colors } from '../constants/colors'
@@ -25,17 +25,17 @@ import { shadows } from '../constants/shadows'
 // ── Constants matching the web implementation ──────────────────────────────────
 
 const CATEGORY_COLORS: Record<CollegeInsightsStep['category'], string> = {
-  test:            '#2979FF',
-  gpa:             '#10B981',
-  essay:           '#7C3AED',
-  extracurricular: '#F97316',
-  strategy:        '#00BCD4',
+  test:            colors.primary,
+  gpa:             colors.success,
+  essay:           colors.purple,
+  extracurricular: colors.orange,
+  strategy:        colors.teal,
 }
 
 const PRIORITY_COLORS: Record<CollegeInsightsStep['priority'], string> = {
-  high:   '#EF4444',
-  medium: '#F59E0B',
-  low:    '#52698A',
+  high:   colors.error,
+  medium: colors.warning,
+  low:    colors.textMuted,
 }
 
 const PRIORITY_LABELS: Record<CollegeInsightsStep['priority'], string> = {
@@ -108,7 +108,7 @@ function InsightsErrorState({ message, onRetry }: ErrorStateProps): React.JSX.El
   return (
     <View style={styles.errorContainer}>
       <View style={styles.errorRow}>
-        <Ionicons name="warning-outline" size={18} color={colors.warning} style={styles.errorIcon} />
+        <WarningIcon size={18} color={colors.warning} />
         <Text variant="body" color={colors.textSecondary} style={styles.errorText}>
           {message}
         </Text>
@@ -267,7 +267,7 @@ export default function CollegeInsightsScreen(): React.JSX.Element {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={24} color={colors.primary} />
+          <ChevronLeftIcon size={24} color={colors.primary} />
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
@@ -300,7 +300,7 @@ export default function CollegeInsightsScreen(): React.JSX.Element {
       >
         <View style={styles.card}>
           <View style={styles.cardTitleRow}>
-            <Ionicons name="analytics-outline" size={18} color={colors.primary} />
+            <BarChartIcon size={18} color={colors.primary} />
             <Text variant="h3" style={styles.cardTitle}>Admission Insights</Text>
             {isLoading && (
               <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />

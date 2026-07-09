@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { SparklesIcon, RefreshIcon, CalendarIcon } from '../components/icons'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import Text from '../components/ui/Text'
@@ -223,7 +223,7 @@ export default function SmartPlannerScreen(): React.JSX.Element {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <PlannerHeader onCalendar={() => navigation.navigate('Calendar')} date={headerDate} navigation={navigation} />
+      <PlannerHeader onCalendar={() => navigation.navigate('Calendar')} date={headerDate} />
 
       {/* Tab bar */}
       <View style={tabBarStyles.container}>
@@ -241,11 +241,9 @@ export default function SmartPlannerScreen(): React.JSX.Element {
           onPress={() => handleTabChange('plan')}
           activeOpacity={0.7}
         >
-          <Ionicons
-            name="sparkles-outline"
+          <SparklesIcon
             size={13}
             color={activeTab === 'plan' ? colors.primary : colors.textMuted}
-            style={{ marginRight: 4 }}
           />
           <Text style={[tabBarStyles.tabText, activeTab === 'plan' && tabBarStyles.activeTabText]}>
             AI Study Plan
@@ -377,7 +375,7 @@ function AiPlanView({
   if (error !== null) {
     return (
       <View style={styles.centerState}>
-        <Ionicons name="sparkles-outline" size={40} color={colors.textMuted} style={{ marginBottom: 16 }} />
+        <SparklesIcon size={40} color={colors.textMuted} />
         <Text variant="h2" style={styles.stateTitle}>AI Study Plan</Text>
         <Text variant="body" color={colors.textSecondary} style={styles.stateMessage}>
           Your study plan will appear here once your grades sync. Make sure your school portal is connected in Settings.
@@ -388,7 +386,7 @@ function AiPlanView({
   if (plan === null) {
     return (
       <View style={styles.centerState}>
-        <Ionicons name="sparkles-outline" size={40} color={colors.primary} style={{ marginBottom: 16 }} />
+        <SparklesIcon size={40} color={colors.primary} />
         <Text variant="h2" style={styles.stateTitle}>AI Study Plan</Text>
         <Text variant="body" color={colors.textSecondary} style={styles.stateMessage}>
           NextStep AI will organize your assignments into a smart daily schedule.
@@ -401,7 +399,7 @@ function AiPlanView({
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={aiStyles.scrollContent}>
       {plan.overview ? (
         <View style={aiStyles.overviewCard}>
-          <Ionicons name="sparkles-outline" size={16} color={colors.primary} style={{ marginRight: 8, marginTop: 2 }} />
+          <SparklesIcon size={16} color={colors.primary} />
           <Text variant="body" style={{ flex: 1 }}>{plan.overview}</Text>
         </View>
       ) : null}
@@ -411,7 +409,7 @@ function AiPlanView({
         plan.days.map((day, i) => <AiDaySection key={`${day.label}-${i}`} day={day} />)
       )}
       <TouchableOpacity style={aiStyles.refreshBtn} onPress={onLoad} activeOpacity={0.7}>
-        <Ionicons name="refresh-outline" size={15} color={colors.textMuted} />
+        <RefreshIcon size={15} color={colors.textMuted} />
         <Text variant="caption" color={colors.textMuted} style={{ marginLeft: 6 }}>Regenerate Plan</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -421,23 +419,16 @@ function AiPlanView({
 // ─── PlannerHeader ────────────────────────────────────────────────────────────
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import type { NativeStackNavigationProp as NSNP } from '@react-navigation/native-stack'
 import { shadows } from '../constants/shadows'
 
-function PlannerHeader({ onCalendar, date, navigation }: { onCalendar: () => void; date: string; navigation: NSNP<PlanningParamList> }): React.JSX.Element {
+/**
+ * PlannerHeader — no back button since Planner is a tab root with no stack
+ * history to return to. The calendar shortcut remains.
+ */
+function PlannerHeader({ onCalendar, date }: { onCalendar: () => void; date: string }): React.JSX.Element {
   const insets = useSafeAreaInsets()
   return (
     <View style={[plannerHeaderStyles.container, { paddingTop: insets.top + 12 }]}>
-      <TouchableOpacity
-        style={plannerHeaderStyles.backBtn}
-        onPress={() => navigation.goBack()}
-        accessibilityRole="button"
-        accessibilityLabel="Go back"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="chevron-back" size={24} color={colors.primary} />
-      </TouchableOpacity>
       <View style={{ flex: 1 }}>
         <Text variant="heading">Planner</Text>
         <Text variant="caption" color={colors.textSecondary}>{date}</Text>
@@ -449,7 +440,7 @@ function PlannerHeader({ onCalendar, date, navigation }: { onCalendar: () => voi
         accessibilityLabel="Calendar view"
         activeOpacity={0.7}
       >
-        <Ionicons name="calendar-outline" size={22} color={colors.primary} />
+        <CalendarIcon size={22} color={colors.primary} />
       </TouchableOpacity>
     </View>
   )
@@ -463,13 +454,6 @@ const plannerHeaderStyles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 4,
   },
   calendarBtn: {
     width: 44,

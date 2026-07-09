@@ -9,11 +9,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import type { CompositeNavigationProp } from '@react-navigation/native'
-import type { DrawerNavigationProp } from '@react-navigation/drawer'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import Text from '../components/ui/Text'
 import { colors } from '../constants/colors'
@@ -22,14 +19,19 @@ import { useAuth } from '../context/AuthContext'
 import { sendChatMessage } from '../api/aiApi'
 import { fetchStudentData, type StudentData } from '../api/studentApi'
 import type { AppParamList } from '../navigation/AppNavigator'
+import type { MainTabParamList } from '../navigation/MainTabNavigator'
 import { shadows } from '../constants/shadows'
+import {
+  SchoolBuildingIcon,
+  GraduationCapIcon,
+  CalendarIcon,
+  ChevronRightIcon,
+  ArrowLeftIcon,
+  SettingsIcon,
+  SendIcon,
+} from '../components/icons'
 
-type DrawerParamList = { MainAIHome: undefined }
-
-type NavProp = CompositeNavigationProp<
-  DrawerNavigationProp<DrawerParamList, 'MainAIHome'>,
-  NativeStackNavigationProp<AppParamList>
->
+type NavProp = NativeStackNavigationProp<AppParamList>
 
 interface ChatMessage {
   id: string
@@ -38,33 +40,33 @@ interface ChatMessage {
 }
 
 interface FeatureOption {
-  key: keyof AppParamList
+  tabKey: keyof MainTabParamList
   label: string
   subtitle: string
-  icon: React.ComponentProps<typeof Ionicons>['name']
+  Icon: React.FC<{ size: number; color: string }>
   iconColor: string
 }
 
 const FEATURE_OPTIONS: FeatureOption[] = [
   {
-    key: 'GradePortal',
+    tabKey: 'Grades',
     label: 'Grade Portal',
     subtitle: 'Grades, schedule, reports & transcript',
-    icon: 'school-outline',
+    Icon: SchoolBuildingIcon,
     iconColor: colors.info,
   },
   {
-    key: 'CollegeHelp',
+    tabKey: 'Colleges',
     label: 'College Help',
     subtitle: 'GPA planning, colleges & roadmap',
-    icon: 'ribbon-outline',
+    Icon: GraduationCapIcon,
     iconColor: colors.primary,
   },
   {
-    key: 'Planning',
+    tabKey: 'Planner',
     label: 'Planning',
     subtitle: 'Smart planner & upcoming due dates',
-    icon: 'calendar-outline',
+    Icon: CalendarIcon,
     iconColor: colors.warning,
   },
 ]
@@ -122,34 +124,29 @@ export default function MainAIScreen(): React.JSX.Element {
       >
         {/* Top bar */}
         <View style={styles.topBar}>
-          {showChat ? (
-            <TouchableOpacity
-              style={styles.topBtn}
-              onPress={() => setShowChat(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Back to home"
-            >
-              <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.topBtn}
-              onPress={() => navigation.openDrawer()}
-              accessibilityRole="button"
-              accessibilityLabel="Open menu"
-              activeOpacity={0.7}
-            >
-              <Ionicons name="menu" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          )}
           <TouchableOpacity
             style={styles.topBtn}
-            onPress={() => navigation.navigate('Settings')}
+            onPress={() => {
+              if (showChat) {
+                setShowChat(false)
+              } else {
+                navigation.goBack()
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={showChat ? 'Back to home' : 'Back'}
+            activeOpacity={0.7}
+          >
+            <ArrowLeftIcon size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.topBtn}
+            onPress={() => navigation.navigate('MainTabs', { screen: 'Settings' })}
             accessibilityRole="button"
             accessibilityLabel="Settings"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="settings-outline" size={20} color={colors.textMuted} />
+            <SettingsIcon size={20} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -167,23 +164,23 @@ export default function MainAIScreen(): React.JSX.Element {
         ) : (
           <FlatList
             data={FEATURE_OPTIONS}
-            keyExtractor={item => item.key}
+            keyExtractor={item => item.tabKey}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.optionCard}
-                onPress={() => navigation.navigate(item.key as never)}
+                onPress={() => navigation.navigate('MainTabs', { screen: item.tabKey })}
                 activeOpacity={0.75}
                 accessibilityRole="button"
                 accessibilityLabel={item.label}
               >
                 <View style={[styles.optionIcon, { backgroundColor: item.iconColor + '1A' }]}>
-                  <Ionicons name={item.icon} size={22} color={item.iconColor} />
+                  <item.Icon size={22} color={item.iconColor} />
                 </View>
                 <View style={styles.optionText}>
                   <Text variant="h3" style={{ marginBottom: 2 }}>{item.label}</Text>
                   <Text variant="caption" color={colors.textMuted}>{item.subtitle}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                <ChevronRightIcon size={18} color={colors.textMuted} />
               </TouchableOpacity>
             )}
             ListHeaderComponent={
@@ -246,7 +243,7 @@ export default function MainAIScreen(): React.JSX.Element {
             accessibilityRole="button"
             accessibilityLabel="Send message"
           >
-            <Ionicons name="send" size={18} color={colors.background} />
+            <SendIcon size={18} color={colors.background} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

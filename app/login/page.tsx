@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { InboxIcon, ArrowLeftIcon, WarningIcon, XMarkIcon, MailboxIcon } from '@/components/icons'
+import { LEGAL_EFFECTIVE_DATE, TOS_INTRO, TOS_SECTIONS, PRIVACY_INTRO, PRIVACY_SECTIONS } from '@/lib/legalText'
 import { api, ApiError } from '../../lib/api'
 import { setWebLogin } from '../../lib/authState'
 import { SORTED_ISD_LIST, type ISDEntry } from '../../lib/isds'
@@ -629,152 +630,27 @@ function LoginPageInner() {
             </div>
 
             <div style={styles.modalBody}>
-              <p style={styles.ppMeta}>Effective Date: June 18, 2026 · myFuturely, Inc.</p>
+              <p style={styles.ppMeta}>{LEGAL_EFFECTIVE_DATE}</p>
 
               {/* ── Terms of Service ── */}
               <p style={{ ...styles.ppSection, marginTop: 0, fontSize: 14 }}>Terms of Service</p>
-
-              <p style={styles.ppText}>
-                By creating an account and using myFuturely, you agree to be bound by these Terms of
-                Service. Please read them carefully.
-              </p>
-
-              <p style={styles.ppSection}>1. Eligibility</p>
-              <p style={styles.ppText}>
-                You must be at least 13 years of age to use myFuturely. By registering, you confirm
-                that you meet this requirement. If you are under 18, a parent or guardian must
-                review and agree to these terms on your behalf.
-              </p>
-
-              <p style={styles.ppSection}>2. Acceptable Use</p>
-              <p style={styles.ppText}>
-                You agree to use myFuturely only for lawful purposes. You may not use the platform
-                to harass, threaten, or harm others; post content that is obscene, defamatory, or
-                unlawful; attempt to gain unauthorized access to other accounts or systems; or
-                engage in any activity that disrupts the platform or other users&apos; experience.
-              </p>
-
-              <p style={styles.ppSection}>3. Account Responsibility</p>
-              <p style={styles.ppText}>
-                You are responsible for maintaining the confidentiality of your account credentials.
-                You agree to notify us immediately at <strong>support@futurely.app</strong> if you
-                suspect unauthorized use of your account. myFuturely is not liable for losses
-                resulting from unauthorized access caused by your failure to keep credentials secure.
-              </p>
-
-              <p style={styles.ppSection}>4. Virtual Items &amp; Coins</p>
-              <p style={styles.ppText}>
-                myFuturely&apos;s marketplace, virtual coins, and in-app items have no real-world
-                monetary value and are not redeemable for cash or external goods. myFuturely
-                reserves the right to modify, adjust, or remove virtual items at any time.
-              </p>
-
-              <p style={styles.ppSection}>5. Intellectual Property</p>
-              <p style={styles.ppText}>
-                All content on myFuturely — including the platform design, logos, and software — is
-                owned by myFuturely, Inc. and protected by applicable intellectual property laws.
-                You may not copy, reproduce, or distribute any platform content without prior
-                written consent.
-              </p>
-
-              <p style={styles.ppSection}>6. Termination</p>
-              <p style={styles.ppText}>
-                myFuturely reserves the right to suspend or terminate accounts that violate these
-                Terms of Service, engage in harmful behavior, or misuse the platform. You may
-                delete your account at any time via Settings → Account.
-              </p>
-
-              <p style={styles.ppSection}>7. Disclaimer &amp; Limitation of Liability</p>
-              <p style={styles.ppText}>
-                myFuturely is provided &quot;as is&quot; without warranties of any kind. We do not
-                guarantee uninterrupted service or that academic data fetched from third-party
-                portals will be accurate or complete. To the extent permitted by law, myFuturely
-                is not liable for indirect, incidental, or consequential damages arising from
-                your use of the platform.
-              </p>
-
-              <p style={styles.ppSection}>8. Changes to Terms</p>
-              <p style={styles.ppText}>
-                We may update these Terms periodically. Material changes will be communicated via
-                email or in-app notice. Continued use of myFuturely after such notice constitutes
-                acceptance of the updated Terms.
-              </p>
+              <p style={styles.ppText}>{TOS_INTRO}</p>
+              {TOS_SECTIONS.map((section) => (
+                <React.Fragment key={section.heading}>
+                  <p style={styles.ppSection}>{section.heading}</p>
+                  <p style={styles.ppText}>{section.body}</p>
+                </React.Fragment>
+              ))}
 
               {/* ── Privacy Policy ── */}
               <p style={{ ...styles.ppSection, marginTop: 28, fontSize: 14 }}>Privacy Policy</p>
-
-              <p style={styles.ppText}>
-                This Privacy Policy explains how we collect, use, and protect your information
-                when you use our platform.
-              </p>
-
-              <p style={styles.ppSection}>1. Information We Collect</p>
-              <p style={styles.ppText}>
-                We collect the information you provide when registering (name, email address, and
-                password). For students who connect their school portal, we temporarily process
-                your Home Access Center credentials solely to fetch your academic data — these
-                credentials are <strong>never stored</strong> on our servers. We also collect
-                usage data (pages visited, features used) to improve the platform.
-              </p>
-
-              <p style={styles.ppSection}>2. How We Use Your Information</p>
-              <p style={styles.ppText}>
-                Your information is used to operate and personalize the myFuturely platform, display
-                your grades and academic progress, power AI-assisted features, and communicate
-                important account updates. We do <strong>not</strong> use your data for advertising
-                or sell it to third parties under any circumstances.
-              </p>
-
-              <p style={styles.ppSection}>3. Data Sharing</p>
-              <p style={styles.ppText}>
-                We do not sell, rent, or share your personal information with third parties except
-                as required by law or with your explicit consent. We use industry-standard
-                service providers (hosting, infrastructure) who are contractually bound to protect
-                your data and may not use it for any other purpose.
-              </p>
-
-              <p style={styles.ppSection}>4. Educational Records (FERPA)</p>
-              <p style={styles.ppText}>
-                myFuturely is designed to comply with the Family Educational Rights and Privacy Act
-                (FERPA). Academic data fetched from your school portal is used solely to provide
-                you with the services you request and is never disclosed to unauthorized parties.
-              </p>
-
-              <p style={styles.ppSection}>5. Children&apos;s Privacy (COPPA)</p>
-              <p style={styles.ppText}>
-                myFuturely is intended for users who are <strong>13 years of age or older</strong>.
-                We do not knowingly collect personal information from children under 13. If you
-                believe a child under 13 has created an account, please contact us and we will
-                promptly delete the account and any associated data.
-              </p>
-
-              <p style={styles.ppSection}>6. Data Security</p>
-              <p style={styles.ppText}>
-                We use encryption in transit (HTTPS/TLS) and at rest to protect your data.
-                Passwords are hashed using industry-standard algorithms and are never stored in
-                plain text. Despite these measures, no system is completely secure — please use a
-                strong, unique password for your account.
-              </p>
-
-              <p style={styles.ppSection}>7. Your Rights</p>
-              <p style={styles.ppText}>
-                You may request access to, correction of, or deletion of your personal data at any
-                time by visiting Settings → Account or contacting us at{' '}
-                <strong>support@futurely.app</strong>. Account deletion permanently removes all
-                your data from our systems within 30 days.
-              </p>
-
-              <p style={styles.ppSection}>8. Changes to This Policy</p>
-              <p style={styles.ppText}>
-                We may update this Privacy Policy periodically. We will notify you of material
-                changes via email or an in-app notice. Continued use of myFuturely after such notice
-                constitutes acceptance of the updated policy.
-              </p>
-
-              <p style={styles.ppSection}>9. Contact Us</p>
-              <p style={styles.ppText}>
-                Questions or concerns? Reach us at <strong>support@futurely.app</strong>.
-              </p>
+              <p style={styles.ppText}>{PRIVACY_INTRO}</p>
+              {PRIVACY_SECTIONS.map((section) => (
+                <React.Fragment key={section.heading}>
+                  <p style={styles.ppSection}>{section.heading}</p>
+                  <p style={styles.ppText}>{section.body}</p>
+                </React.Fragment>
+              ))}
             </div>
 
             <div style={styles.modalFooter}>

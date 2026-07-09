@@ -59,6 +59,7 @@ export async function sendEmail(opts: MailOptions): Promise<void> {
     return
   }
 
-  // No email provider configured — log for local dev
-  console.log(`[EMAIL] Not configured. To=${opts.to} Subject="${opts.subject}"`)
+  // No email provider configured — log the full content for local dev so
+  // OTP codes and links are still visible in the terminal.
+  console.log(`[EMAIL] Not configured. To=${opts.to} Subject="${opts.subject}"\n${opts.html}`)
 }

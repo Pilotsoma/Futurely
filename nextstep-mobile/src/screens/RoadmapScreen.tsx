@@ -2,8 +2,10 @@ import React, { useCallback, useState } from 'react'
 import {
   ScrollView,
   StyleSheet,
+  TouchableOpacity,
   View,
 } from 'react-native'
+import { Circle, Svg } from 'react-native-svg'
 import { useFocusEffect } from '@react-navigation/native'
 import Text from '../components/ui/Text'
 import Button from '../components/ui/Button'
@@ -11,8 +13,128 @@ import Skeleton from '../components/ui/Skeleton'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
 import { fetchRoadmap, type RoadmapData, type RoadmapMilestone } from '../api/roadmapApi'
-import { CheckIcon } from '../components/icons'
+import { CheckIcon, CircleIcon } from '../components/icons'
 import { shadows } from '../constants/shadows'
+
+// ─── Circular progress ring ───────────────────────────────────────────────────
+
+interface CircularRingProps {
+  percent: number
+}
+
+function CircularRing({ percent }: CircularRingProps): React.JSX.Element {
+  const SIZE = 120
+  const STROKE = 10
+  const RADIUS = (SIZE - STROKE) / 2
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+  const clampedPercent = Math.min(100, Math.max(0, percent))
+  const dashOffset = CIRCUMFERENCE * (1 - clampedPercent / 100)
+
+  return (
+    <View style={styles.ringContainer} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: clampedPercent }}>
+      <Svg width={SIZE} height={SIZE} style={{ transform: [{ rotate: '-90deg' }] }}>
+        {/* Track */}
+        <Circle
+          cx={SIZE / 2}
+          cy={SIZE / 2}
+          r={RADIUS}
+          stroke={colors.border}
+          strokeWidth={STROKE}
+          fill="none"
+        />
+        {/* Fill */}
+        <Circle
+          cx={SIZE / 2}
+          cy={SIZE / 2}
+          r={RADIUS}
+          stroke={colors.primary}
+          strokeWidth={STROKE}
+          fill="none"
+          strokeDasharray={CIRCUMFERENCE}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+        />
+      </Svg>
+      {/* Center label */}
+      <View style={styles.ringLabel}>
+        <Text style={styles.ringPercent}>{clampedPercent.toFixed(0)}%</Text>
+        <Text variant="caption" color={colors.textMuted}>done</Text>
+      </View>
+    </View>
+  )
+}
+
+// ─── College-prep checklist ───────────────────────────────────────────────────
+
+interface CheckItem {
+  id: string
+  label: string
+}
+
+const PREP_CHECKLIST: CheckItem[] = [
+  { id: 'gpa',        label: 'Maintain 3.5+ GPA' },
+  { id: 'sat',        label: 'Take the SAT / ACT' },
+  { id: 'ap',         label: 'Complete at least 2 AP courses' },
+  { id: 'volunteer',  label: 'Log 50+ volunteer hours' },
+  { id: 'clubs',      label: 'Join 2 extracurricular clubs' },
+  { id: 'tour',       label: 'Tour at least 3 colleges' },
+  { id: 'fafsa',      label: 'Submit FAFSA by deadline' },
+  { id: 'essays',     label: 'Draft college application essays' },
+  { id: 'recs',       label: 'Request letters of recommendation' },
+  { id: 'apply',      label: 'Submit college applications' },
+]
+
+function PrepChecklist(): React.JSX.Element {
+  const [checked, setChecked] = useState<Set<string>>(new Set())
+
+  const toggle = useCallback((id: string) => {
+    setChecked(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const doneCount = checked.size
+  const totalCount = PREP_CHECKLIST.length
+
+  return (
+    <View style={[styles.card, { marginTop: 12 }]}>
+      <View style={styles.checklistHeader}>
+        <Text variant="h3">College Prep Checklist</Text>
+        <Text variant="caption" color={colors.textSecondary}>{doneCount}/{totalCount}</Text>
+      </View>
+      {PREP_CHECKLIST.map(item => {
+        const isDone = checked.has(item.id)
+        return (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.checkRow}
+            onPress={() => toggle(item.id)}
+            activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: isDone }}
+            accessibilityLabel={item.label}
+          >
+            {isDone
+              ? <CheckIcon size={20} color={colors.primary} />
+              : <CircleIcon size={20} color={colors.border} />
+            }
+            <Text
+              variant="body"
+              style={[styles.checkLabel, isDone && styles.checkLabelDone]}
+            >
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        )
+      })}
+    </View>
+  )
+}
+
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
 
 function LoadingSkeleton(): React.JSX.Element {
   return (
@@ -28,6 +150,8 @@ function LoadingSkeleton(): React.JSX.Element {
   )
 }
 
+// ─── Error view ───────────────────────────────────────────────────────────────
+
 function ErrorView({ message, onRetry }: { message: string; onRetry: () => void }): React.JSX.Element {
   return (
     <View style={styles.centerState}>
@@ -37,6 +161,8 @@ function ErrorView({ message, onRetry }: { message: string; onRetry: () => void 
     </View>
   )
 }
+
+// ─── Milestone row ────────────────────────────────────────────────────────────
 
 function MilestoneRow({ milestone, isLast }: { milestone: RoadmapMilestone; isLast: boolean }): React.JSX.Element {
   const isCurrent = !milestone.done && !isLast
@@ -52,7 +178,7 @@ function MilestoneRow({ milestone, isLast }: { milestone: RoadmapMilestone; isLa
               : { backgroundColor: colors.border },
         ]}>
           {milestone.done && (
-            <CheckIcon size={14} color={colors.background}/>
+            <CheckIcon size={14} color={colors.background} />
           )}
           {!milestone.done && (
             <Text style={{ fontSize: 12, fontWeight: '700', color: isCurrent ? colors.primary : colors.textMuted }}>
@@ -69,6 +195,8 @@ function MilestoneRow({ milestone, isLast }: { milestone: RoadmapMilestone; isLa
     </View>
   )
 }
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function RoadmapScreen(): React.JSX.Element {
   const [data, setData] = useState<RoadmapData | null>(null)
@@ -106,19 +234,21 @@ export default function RoadmapScreen(): React.JSX.Element {
         <ErrorView message={error} onRetry={() => void load()} />
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Credits Progress */}
+
+          {/* ── Circular Credits Progress ── */}
           <View style={styles.card}>
-            <Text variant="h3" style={{ marginBottom: 12 }}>Credits to Graduation</Text>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${percentComplete}%` as `${number}%` }]} />
-            </View>
-            <View style={styles.progressRow}>
-              <Text variant="caption">{creditsCompleted} of {creditsRequired} credits earned</Text>
-              <Text variant="caption" color={colors.primary}>{percentComplete}% complete</Text>
+            <Text variant="h3" style={{ marginBottom: 16 }}>Credits to Graduation</Text>
+            <View style={styles.progressSection}>
+              <CircularRing percent={percentComplete} />
+              <View style={styles.progressDetails}>
+                <Text variant="label" color={colors.textSecondary}>Completed</Text>
+                <Text style={styles.creditValue}>{creditsCompleted}</Text>
+                <Text variant="caption" color={colors.textMuted}>of {creditsRequired} credits</Text>
+              </View>
             </View>
           </View>
 
-          {/* Credits by Category */}
+          {/* ── Credits by Category ── */}
           <View style={[styles.card, { marginTop: 12 }]}>
             <Text variant="h3" style={{ marginBottom: 12 }}>Credits by Subject Area</Text>
             {activeCats.map(([cat, count]) => (
@@ -135,7 +265,10 @@ export default function RoadmapScreen(): React.JSX.Element {
             )}
           </View>
 
-          {/* Milestones */}
+          {/* ── College Prep Checklist ── */}
+          <PrepChecklist />
+
+          {/* ── Milestones ── */}
           <View style={[styles.card, { marginTop: 12 }]}>
             <Text variant="h3" style={{ marginBottom: 16 }}>High School Timeline</Text>
             {milestones.map((m, i) => (
@@ -143,16 +276,18 @@ export default function RoadmapScreen(): React.JSX.Element {
             ))}
           </View>
 
-          {/* Goal */}
+          {/* ── Goal ── */}
           <View style={[styles.card, { marginTop: 12, marginBottom: 40 }]}>
             <Text variant="h3" style={{ marginBottom: 12 }}>Your Plan</Text>
             <Text variant="body" style={{ marginBottom: 6 }}>
-              Future goal: <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
+              Future goal:{' '}
+              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
                 {data?.futureDecision ?? 'Not set'}
               </Text>
             </Text>
             <Text variant="body" style={{ marginBottom: 6 }}>
-              Expected graduation: <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
+              Expected graduation:{' '}
+              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
                 {data?.graduationYear ?? '—'}
               </Text>
             </Text>
@@ -169,6 +304,8 @@ export default function RoadmapScreen(): React.JSX.Element {
   )
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   centerState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   stateText: { textAlign: 'center', marginBottom: 8 },
@@ -181,19 +318,31 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 16,
   },
-  progressTrack: {
-    width: '100%',
-    height: 12,
-    backgroundColor: colors.border,
-    borderRadius: 6,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 6 },
-  progressRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  // Circular ring
+  progressSection: { flexDirection: 'row', alignItems: 'center', gap: 24 },
+  ringContainer: { width: 120, height: 120, position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  ringLabel: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  ringPercent: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
+  progressDetails: { flex: 1 },
+  creditValue: { fontSize: 36, fontWeight: '700', color: colors.primary, marginVertical: 2 },
+  // Credits by category
   catRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   miniTrack: { flex: 2, height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' },
   miniFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
+  // Checklist
+  checklistHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    minHeight: 44,
+  },
+  checkLabel: { flex: 1, fontSize: 14, color: colors.textPrimary },
+  checkLabelDone: { color: colors.textMuted, textDecorationLine: 'line-through' },
+  // Milestones
   milestoneRow: { flexDirection: 'row', marginBottom: 4 },
   milestoneLeft: { alignItems: 'center', marginRight: 14 },
   gradeCircle: {

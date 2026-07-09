@@ -59,9 +59,9 @@ F: #EF4444  (red)
 
 ## Logo & Brand Mark
 - **FuturelyLogo** component (mobile: `nextstep-mobile/src/components/ui/FuturelyLogo.tsx`)
-  - Rounded square, brand blue `#2979FF` bg, cyan `#00E5FF` accent stripe, white "F" glyph
-  - Props: `size` (default 40) — scales all dimensions
-  - No external package required (pure React Native View + Text)
+  - Renders `nextstep-mobile/assets/futurely-logo.png` (same graduation-cap-over-"F" gradient mark as `public/logo.png` on web) via `Image`
+  - Props: `size` (default 40) — sets rendered height; width is derived from the source aspect ratio
+  - `nextstep-mobile/assets/logo.png`/`logo.jpg` are stale pre-rename ("NextStep" "N" mark) assets, unreferenced by any code — do not use them
 - **Web SVG** (`public/logo.png`)
   - Mortarboard + book icon with brand gradient: `#00E5FF → #2979FF → #7C3AED`
   - Includes "myFuturely" wordmark in the SVG

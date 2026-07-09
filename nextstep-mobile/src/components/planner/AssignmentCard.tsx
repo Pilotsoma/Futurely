@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react'
 import { TouchableOpacity, View } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { CheckCircleIcon, CircleIcon } from '../icons'
 import Text from '../ui/Text'
 import { colors } from '../../constants/colors'
 import { formatDuration } from '../../utils/formatDuration'
@@ -84,11 +84,10 @@ export default function AssignmentCard({
         disabled={isToggling}
         activeOpacity={0.6}
       >
-        <Ionicons
-          name={completed ? 'checkmark-circle' : 'ellipse-outline'}
-          size={24}
-          color={completed ? colors.primary : colors.textMuted}
-        />
+        {completed
+          ? <CheckCircleIcon size={24} color={colors.primary} />
+          : <CircleIcon size={24} color={colors.textMuted} />
+        }
       </TouchableOpacity>
 
       <View className="flex-1 mr-3">
