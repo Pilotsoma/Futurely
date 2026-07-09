@@ -898,7 +898,14 @@ const otpLimiter = rateLimit({
   message: { data: null, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many OTP requests. Try again in 1 hour.' } },
 })
 
-async function finishOAuth(res: Response, provider: string, providerId: string, email: string, name?: string): Promise<void> {
+async function finishOAuth(
+  res: Response,
+  provider: string,
+  providerId: string,
+  email: string,
+  name?: string,
+  mobileRedirectUri?: string,
+): Promise<void> {
   const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
 
   let existing = await prisma.oAuthAccount.findFirst({ where: { provider, providerId } })
@@ -926,6 +933,20 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
     prisma.schoolConnection.findUnique({ where: { userId } }),
   ])
   const accessToken = issueAccessToken(userId, oauthUser?.role ?? 'STUDENT')
+
+  // Mobile has no cookie-based session — hand the tokens back via the deep-link
+  // redirect the mobile app supplied instead of setting cookies + redirecting to a web page.
+  if (mobileRedirectUri) {
+    const params = new URLSearchParams({
+      token: accessToken,
+      refreshToken,
+      isNew: String(isNew),
+      hasSchool: String(Boolean(hasSchool)),
+    })
+    res.redirect(`${mobileRedirectUri}?${params.toString()}`)
+    return
+  }
+
   setAuthCookies(res, accessToken, refreshToken)
   if (isNew) {
     res.redirect(`${appUrl}/login?oauth=new`)
@@ -935,21 +956,29 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
 }
 
 // ── GET /auth/oauth/google ───────────────────────────────────────────────────
-router.get('/oauth/google', (_req: Request, res: Response): void => {
+// Mobile passes ?platform=mobile&redirectUri=<deep-link> (from expo-auth-session's
+// makeRedirectUri()) so the callback knows where to send tokens back to — signed
+// into `state` so it can't be tampered with in between.
+router.get('/oauth/google', (req: Request, res: Response): void => {
   const clientId = process.env.GOOGLE_CLIENT_ID
   if (!clientId) { res.status(500).json({ error: 'Google OAuth not configured' }); return }
   const redirect = encodeURIComponent(`${process.env.APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/google/callback`)
-  const state = jwt.sign({ ts: Date.now() }, process.env.JWT_SECRET!, { expiresIn: '10m' })
+  const { platform, redirectUri } = req.query as { platform?: string; redirectUri?: string }
+  const statePayload: { ts: number; mobileRedirectUri?: string } = { ts: Date.now() }
+  if (platform === 'mobile' && redirectUri) statePayload.mobileRedirectUri = redirectUri
+  const state = jwt.sign(statePayload, process.env.JWT_SECRET!, { expiresIn: '10m' })
   const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=openid%20email%20profile&state=${state}`
   res.redirect(url)
 })
 
 router.get('/oauth/google/callback', async (req: Request, res: Response): Promise<void> => {
   const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
+  let mobileRedirectUri: string | undefined
   try {
     const { code, state } = req.query as { code?: string; state?: string }
     if (!code || !state) { res.redirect(`${appUrl}/login?error=oauth_cancelled`); return }
-    jwt.verify(state, process.env.JWT_SECRET!)
+    const decodedState = jwt.verify(state, process.env.JWT_SECRET!) as { ts: number; mobileRedirectUri?: string }
+    mobileRedirectUri = decodedState.mobileRedirectUri
 
     const redirect = encodeURIComponent(`${appUrl}/api/auth/oauth/google/callback`)
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -961,18 +990,24 @@ router.get('/oauth/google/callback', async (req: Request, res: Response): Promis
       }),
     })
     const tokens = await tokenRes.json() as { access_token?: string; id_token?: string }
-    if (!tokens.access_token) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
+    if (!tokens.access_token) {
+      res.redirect(mobileRedirectUri ? `${mobileRedirectUri}?error=oauth_failed` : `${appUrl}/login?error=oauth_failed`)
+      return
+    }
 
     const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     })
     const info = await userRes.json() as { sub?: string; email?: string; name?: string }
-    if (!info.sub || !info.email) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
+    if (!info.sub || !info.email) {
+      res.redirect(mobileRedirectUri ? `${mobileRedirectUri}?error=oauth_failed` : `${appUrl}/login?error=oauth_failed`)
+      return
+    }
 
-    await finishOAuth(res, 'google', info.sub, info.email, info.name)
+    await finishOAuth(res, 'google', info.sub, info.email, info.name, mobileRedirectUri)
   } catch (e) {
     logger.error('auth.error', { event: 'oauth_google_callback', error: e instanceof Error ? e.message : String(e) })
-    res.redirect(`${appUrl}/login?error=oauth_failed`)
+    res.redirect(mobileRedirectUri ? `${mobileRedirectUri}?error=oauth_failed` : `${appUrl}/login?error=oauth_failed`)
   }
 })
 
