@@ -152,4 +152,7 @@ F: #EF4444  (red)
 - No lorem ipsum in any deliverable
 - All screens must have empty states and error states designed
 - Loading states required on every async action
-- Do NOT install `react-native-svg` or `expo-linear-gradient` without updating this doc
+- `react-native-svg` is now installed (mobile) — added for the "Continue with Google"
+  button's real multi-color Google logo, since Google's brand guidelines require the
+  actual logo, not a substitute. It's Expo Go-compatible (bundled support, no dev-client
+  needed). Still no `expo-linear-gradient` — don't install it without updating this doc.

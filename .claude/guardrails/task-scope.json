@@ -1,6 +1,12 @@
 {
   "_comment": "Declare which files/dirs are in scope for the CURRENT task before editing existing (git-tracked) files. Glob patterns relative to project root, ** and * and ? supported. Anything git-tracked that is NOT matched here triggers an 'ask' permission prompt from .claude/hooks/guard-protected-paths.js instead of a silent edit. New/untracked files are always allowed regardless of this file. Clear or narrow this list when a task finishes so the next task starts from a protected baseline.",
-  "task": "none (visual rework completed and verified — see melodic-wobbling-pillow.md)",
+  "task": "Deeper mobile visual overhaul (dashboard/planner/grades/login) + Google Sign-In (mobile expo-auth-session flow + minimal backend OAuth callback extension)",
   "updated": "2026-07-09",
-  "in_scope": []
+  "in_scope": [
+    "nextstep-mobile/src/**",
+    "nextstep-mobile/app.json",
+    "nextstep-mobile/package.json",
+    "backend/src/routes/auth.ts",
+    ".claude/context/DESIGN_SYSTEM.md"
+  ]
 }
