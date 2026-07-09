@@ -111,6 +111,12 @@ const PATCHES: string[] = [
     ADD COLUMN IF NOT EXISTS "spinLegendary"   INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS "spinMythic"      INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS "spinCurse"       INTEGER NOT NULL DEFAULT 0`,
+
+  // ── ToS/Privacy/age consent columns ──────────────────────────────────
+  `ALTER TABLE "User"
+    ADD COLUMN IF NOT EXISTS "tosAcceptedAt"     TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "privacyAcceptedAt" TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "ageConfirmedAt"    TIMESTAMP(3)`,
 ]
 
 // Data-level repairs that are always idempotent and safe to re-run on every cold start.
@@ -152,11 +158,16 @@ let patchPromise: Promise<void> | null = null
 export function ensureSchema(): Promise<void> {
   if (patchPromise) return patchPromise
   patchPromise = (async () => {
-    // Probe checks the two newest schema additions. If both exist, schema patches are skipped.
-    // IMPORTANT: update this probe whenever a new column/table is added to PATCHES above.
+    // Probe checks the newest schema additions. If all exist, schema patches are skipped.
+    // IMPORTANT: update this probe whenever a new column/table is added to PATCHES above —
+    // a stale probe silently skips every patch added after it, even ones further down the
+    // list (this caused a production outage: loginStreak/tosAcceptedAt/privacyAcceptedAt/
+    // ageConfirmedAt were in PATCHES but never applied because the probe still only checked
+    // spinCoinsSpent + EmailOTP, both already present from an earlier patch run).
     try {
       await prisma.$queryRawUnsafe(`SELECT "spinCoinsSpent" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT "loginStreak", "tosAcceptedAt", "privacyAcceptedAt", "ageConfirmedAt" FROM "User" LIMIT 0`)
     } catch {
       // Schema is incomplete — run patches below.
       for (const sql of PATCHES) {
