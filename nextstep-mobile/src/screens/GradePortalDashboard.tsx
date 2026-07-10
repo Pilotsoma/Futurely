@@ -25,6 +25,7 @@ import {
   ClockIcon,
   CalculatorIcon,
   EnvelopeIcon,
+  GraduationCapIcon,
   type IconProps,
 } from '../components/icons'
 import { shadows } from '../constants/shadows'
@@ -33,7 +34,7 @@ import { shadows } from '../constants/shadows'
 
 type NavProp = NativeStackNavigationProp<GradePortalParamList>
 
-type TileScreen = 'GradeViewer' | 'Transcript' | 'ClassSchedule' | 'WhatIfCalculator' | 'ContactTeachers'
+type TileScreen = 'GradeViewer' | 'Transcript' | 'ClassSchedule' | 'WhatIfCalculator' | 'ContactTeachers' | 'ReportCard'
 
 interface Tile {
   title: string
@@ -47,11 +48,18 @@ interface Tile {
 
 const TILES: Tile[] = [
   {
-    title: 'Report Card',
-    description: 'Grades & letter grades',
+    title: 'Grades',
+    description: 'Assignment-level scores',
     Icon: ClipboardIcon,
     iconColor: colors.primary,
     screen: 'GradeViewer',
+  },
+  {
+    title: 'Report Card',
+    description: 'Six-weeks period grades',
+    Icon: GraduationCapIcon,
+    iconColor: colors.purple,
+    screen: 'ReportCard',
   },
   {
     title: 'Transcript',

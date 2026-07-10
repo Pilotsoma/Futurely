@@ -23,10 +23,8 @@ import { coursesCache } from './CourseDetailScreen'
 import {
   getPortalStatus,
   getPortalClasswork,
-  getPortalReportCard,
   type PortalStatus,
   type PortalClassworkClass,
-  type PortalReportCardResult,
 } from '../api/portalApi'
 import type { GradePortalParamList } from '../navigation/GradePortalNavigator'
 import { StatusDotGreenIcon, StatusDotYellowIcon } from '../components/icons'
@@ -122,23 +120,6 @@ function adaptClassworkGrades(classes: PortalClassworkClass[]): CourseWithGrade[
       percentage: s.percentage,
       dateDue: s.dateDue,
     })),
-  }))
-}
-
-function adaptReportCardCourses(result: PortalReportCardResult): CourseWithGrade[] {
-  const allCourses = [...result.semesters.sem1, ...result.semesters.sem2]
-  return allCourses.map((c, index) => ({
-    id: index,
-    name: c.name,
-    teacher: c.teacher,
-    period: parseInt(c.period, 10) || index + 1,
-    courseType: 'STANDARD',
-    creditHours: parseFloat(c.credits) || 1.0,
-    semester: 'CURRENT',
-    grade: c.letterGrade
-      ? { letterGrade: c.letterGrade, percentage: parseFloat(c.numericGrade) || 0, gradingPeriod: 'CURRENT' }
-      : null,
-    assignments: [],
   }))
 }
 
@@ -482,10 +463,16 @@ export default function GradeViewerScreen(): React.JSX.Element {
 
       if (status.connected) {
         setDataSource('portal')
-        const result = await getPortalClasswork()
-        const period = result.currentPeriod
-        setPeriodCache({ [period]: result.classes })
-        applyClasswork(period, result.classes)
+        try {
+          const result = await getPortalClasswork()
+          const period = result.currentPeriod
+          setPeriodCache({ [period]: result.classes })
+          applyClasswork(period, result.classes)
+        } catch {
+          setError(
+            "Assignment-level grades aren't available for your school. Check the Report Card tile for official six-weeks grades.",
+          )
+        }
       } else if (status.sessionExpiresIn === 0 && status.districtUrl !== null) {
         setDataSource('seeded')
         setError('Your school portal session expired. Please reconnect.')
@@ -530,40 +517,19 @@ export default function GradeViewerScreen(): React.JSX.Element {
           applyClasswork(period, result.classes)
         })
         .catch((classworkErr: unknown) => {
-          // Classwork (assignment-level detail) is blocked for some districts —
-          // fall back to the six-weeks Report Card (period-level letter grades)
-          // before giving up entirely.
-          return getPortalReportCard(period)
-            .then((result: PortalReportCardResult) => {
-              const adapted = adaptReportCardCourses(result)
-              if (adapted.length > 0) {
-                setCourses(adapted)
-                setSelectedPeriod(period)
-                setPeriodError(null)
-                return
-              }
-              // No real course rows — surface HAC's own explanation if it gave one,
-              // as an informational note rather than a red error.
-              setPeriodError(
-                result.message ?? `No report card data available for period ${period}.`,
-              )
-              setPeriodIsInfo(true)
-            })
-            .catch(() => {
-              const msg = classworkErr instanceof Error ? classworkErr.message : 'Unknown error'
-              const isAuthError =
-                msg.toLowerCase().includes('auth') ||
-                msg.toLowerCase().includes('credential') ||
-                msg.toLowerCase().includes('invalid')
-              setPeriodIsInfo(false)
-              setPeriodError(
-                isAuthError
-                  ? "Couldn't load this grading period — try again shortly"
-                  : `Couldn't load period ${period}: ${msg}`,
-              )
-              // selectedPeriod and courses remain unchanged — the previous period's data
-              // stays visible so the user doesn't lose their current view
-            })
+          const msg = classworkErr instanceof Error ? classworkErr.message : 'Unknown error'
+          const isAuthError =
+            msg.toLowerCase().includes('auth') ||
+            msg.toLowerCase().includes('credential') ||
+            msg.toLowerCase().includes('invalid')
+          setPeriodIsInfo(false)
+          setPeriodError(
+            isAuthError
+              ? "Couldn't load this grading period — try again shortly"
+              : `Couldn't load period ${period}: ${msg}`,
+          )
+          // selectedPeriod and courses remain unchanged — the previous period's data
+          // stays visible so the user doesn't lose their current view
         })
         .finally(() => {
           setLoadingPeriod(null)
@@ -597,7 +563,7 @@ export default function GradeViewerScreen(): React.JSX.Element {
   if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScreenHeader title="Report Card" />
+        <ScreenHeader title="Grades" />
         <LoadingView />
       </View>
     )
@@ -606,7 +572,7 @@ export default function GradeViewerScreen(): React.JSX.Element {
   if (error !== null) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScreenHeader title="Report Card" />
+        <ScreenHeader title="Grades" />
         <ErrorView message={error} onRetry={() => void loadGrades()} />
       </View>
     )
@@ -616,7 +582,7 @@ export default function GradeViewerScreen(): React.JSX.Element {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScreenHeader title="Report Card" />
+      <ScreenHeader title="Grades" />
       <FlatList
         style={styles.list}
         data={isPeriodLoading ? [] : sortedCourses}

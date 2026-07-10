@@ -2,6 +2,7 @@ import React from 'react'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import GradePortalDashboard from '../screens/GradePortalDashboard'
 import GradeViewerScreen from '../screens/GradeViewerScreen'
+import ReportCardScreen from '../screens/ReportCardScreen'
 import TranscriptScreen from '../screens/TranscriptScreen'
 import ClassScheduleScreen from '../screens/ClassScheduleScreen'
 import ContactTeachersScreen from '../screens/ContactTeachersScreen'
@@ -12,6 +13,7 @@ import CourseDetailScreen from '../screens/CourseDetailScreen'
 export type GradePortalParamList = {
   GradePortalHome: undefined
   GradeViewer: undefined
+  ReportCard: undefined
   CourseDetail: {
     courseId: string
     courseName: string
@@ -31,6 +33,7 @@ export default function GradePortalNavigator(): React.JSX.Element {
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Screen name="GradePortalHome" component={GradePortalDashboard} />
       <Stack.Screen name="GradeViewer" component={GradeViewerScreen} />
+      <Stack.Screen name="ReportCard" component={ReportCardScreen} />
       <Stack.Screen name="Transcript" component={TranscriptScreen} />
       <Stack.Screen name="ClassSchedule" component={ClassScheduleScreen} />
       <Stack.Screen name="ContactTeachers" component={ContactTeachersScreen} />
