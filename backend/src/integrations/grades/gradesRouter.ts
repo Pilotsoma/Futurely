@@ -20,6 +20,7 @@ import {
 import { buildSessionWithCLCookie } from './classLinkHelper'
 import { getSessionByUserId, getSessionByToken, deleteSessionByUserId, restoreSessionFromCache, touchSession, wrapCachedSession, unwrapCachedSession, type SchoolSystemType } from './sessionStore'
 import { prisma } from '../../lib/prisma'
+import { writeAuditLog } from '../../lib/auditLog'
 import { APIError, AuthenticationError } from './errors'
 import { normalizeHacGrades, normalizePsGrades } from './normalizeGrades'
 import { encryptPassword, decryptPassword } from './credentialCrypto'
@@ -1096,6 +1097,12 @@ router.get('/attendance', asyncHandler(async (req: AuthRequest, res: Response): 
 
     const data = await getAttendance(entry.token, offset)
     void writeHacCache(req.userId!, cacheKey, data)
+    await writeAuditLog({
+      userId: req.userId!,
+      resourceType: 'ATTENDANCE',
+      action: 'ATTENDANCE_VIEW',
+      ipAddress: req.ip ?? 'unknown',
+    })
     res.json({ data })
   } catch (err: unknown) {
     sendError(res, 'FETCH_ATTENDANCE', err, 'FETCH_ERROR')

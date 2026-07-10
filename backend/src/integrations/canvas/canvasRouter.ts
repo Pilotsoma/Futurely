@@ -465,6 +465,10 @@ router.get(
       }
     }))
 
+    await prisma.complianceAuditLog.create({
+      data: { userId, resourceType: 'CANVAS_GRADES', action: 'CANVAS_VIEW', ipAddress: req.ip ?? 'unknown', timestamp: new Date() },
+    })
+
     res.status(200).json({ data: result })
   })
 )

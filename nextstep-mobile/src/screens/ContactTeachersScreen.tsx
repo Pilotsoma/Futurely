@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react'
 import {
   Alert,
   FlatList,
+  Linking,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -18,6 +19,7 @@ import {
   getPortalContactTeachers,
   type PortalTeacher,
 } from '../api/portalApi'
+import { UsersIcon } from '../components/icons'
 
 interface TeacherEntry {
   name: string
@@ -43,16 +45,15 @@ function initials(name: string): string {
     .slice(0, 2)
 }
 
-function teacherEmail(name: string): string {
-  const parts = name.trim().split(' ')
-  const first = parts[0] ?? ''
-  const last = parts[parts.length - 1] ?? ''
-  return `${first.charAt(0).toLowerCase()}.${last.toLowerCase()}@slhs.edu`
-}
-
-function showContactAlert(teacher: TeacherEntry): void {
-  const email = teacher.email ?? teacherEmail(teacher.name)
-  Alert.alert('Contact Teacher', `Email: ${email}`)
+function contactTeacher(teacher: TeacherEntry): void {
+  if (teacher.email) {
+    void Linking.openURL(`mailto:${teacher.email}`)
+  } else {
+    Alert.alert(
+      'Email not available',
+      'Connect your school portal to see teacher emails.',
+    )
+  }
 }
 
 function LoadingSkeleton(): React.JSX.Element {
@@ -85,8 +86,10 @@ function TeacherRow({ teacher }: { teacher: TeacherEntry }): React.JSX.Element {
   return (
     <TouchableOpacity
       style={styles.row}
-      onPress={() => showContactAlert(teacher)}
+      onPress={() => contactTeacher(teacher)}
       activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={`Contact ${teacher.name}`}
     >
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{initials(teacher.name)}</Text>
@@ -99,8 +102,10 @@ function TeacherRow({ teacher }: { teacher: TeacherEntry }): React.JSX.Element {
         <Text style={styles.inText}>IN</Text>
       </View>
       <TouchableOpacity
-        onPress={() => showContactAlert(teacher)}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={styles.emailBtnTouch}
+        onPress={() => contactTeacher(teacher)}
+        accessibilityRole="button"
+        accessibilityLabel={`Email ${teacher.name}`}
       >
         <Text style={styles.emailBtn}>Email</Text>
       </TouchableOpacity>
@@ -159,9 +164,13 @@ export default function ContactTeachersScreen(): React.JSX.Element {
           contentContainerStyle={{ paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <Text variant="caption" style={{ textAlign: 'center', paddingTop: 40 }}>
-              No teachers found
-            </Text>
+            <View style={styles.emptyState}>
+              <UsersIcon size={40} color={colors.textMuted} />
+              <Text variant="h3" color={colors.textSecondary} style={styles.emptyTitle}>No Teachers Found</Text>
+              <Text variant="body" color={colors.textMuted} style={styles.emptyBody}>
+                Connect your school portal to see your teachers and contact them directly.
+              </Text>
+            </View>
           }
         />
       )}
@@ -200,5 +209,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   inText: { fontSize: 10, fontWeight: '700', color: colors.textMuted },
+  emailBtnTouch: {
+    minHeight: 44,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emailBtn: { fontSize: 13, color: colors.primary, fontWeight: '500' as const },
+  emptyState: {
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 60,
+  },
+  emptyTitle: { textAlign: 'center', marginTop: 16, marginBottom: 8 },
+  emptyBody: { textAlign: 'center' },
 })

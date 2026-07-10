@@ -61,3 +61,23 @@ export async function fetchStudentData(): Promise<StudentData> {
   const res = await apiFetch<StudentApiResponse>('/students/me')
   return res.data
 }
+
+// ── Profile PATCH ─────────────────────────────────────────────────────────────
+
+export interface ProfilePatchBody {
+  satScore?: number | null
+  actScore?: number | null
+  futureDecision?: string | null
+}
+
+interface ProfilePatchResponse {
+  data: StudentProfile
+}
+
+export async function patchProfile(body: ProfilePatchBody): Promise<StudentProfile> {
+  const res = await apiFetch<ProfilePatchResponse>('/students/me/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+  return res.data
+}

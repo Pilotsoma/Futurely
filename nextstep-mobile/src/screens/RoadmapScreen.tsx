@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   ScrollView,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   View,
 } from 'react-native'
 import { Circle, Svg } from 'react-native-svg'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useFocusEffect } from '@react-navigation/native'
 import Text from '../components/ui/Text'
 import Button from '../components/ui/Button'
@@ -15,6 +16,7 @@ import { colors } from '../constants/colors'
 import { fetchRoadmap, type RoadmapData, type RoadmapMilestone } from '../api/roadmapApi'
 import { CheckIcon, CircleIcon } from '../components/icons'
 import { shadows } from '../constants/shadows'
+import { useAuth } from '../context/AuthContext'
 
 // ─── Circular progress ring ───────────────────────────────────────────────────
 
@@ -84,17 +86,35 @@ const PREP_CHECKLIST: CheckItem[] = [
   { id: 'apply',      label: 'Submit college applications' },
 ]
 
-function PrepChecklist(): React.JSX.Element {
+function PrepChecklist({ userId }: { userId: number | null }): React.JSX.Element {
   const [checked, setChecked] = useState<Set<string>>(new Set())
+
+  const storageKey = `roadmap_checklist_${userId ?? 'anon'}`
+
+  useEffect(() => {
+    AsyncStorage.getItem(storageKey)
+      .then(raw => {
+        if (raw !== null) {
+          const arr = JSON.parse(raw) as string[]
+          setChecked(new Set(arr))
+        }
+      })
+      .catch(err => {
+        console.warn('[PrepChecklist] Failed to load checklist from storage:', err)
+      })
+  }, [storageKey])
 
   const toggle = useCallback((id: string) => {
     setChecked(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
+      AsyncStorage.setItem(storageKey, JSON.stringify([...next])).catch(err => {
+        console.warn('[PrepChecklist] Failed to save checklist to storage:', err)
+      })
       return next
     })
-  }, [])
+  }, [storageKey])
 
   const doneCount = checked.size
   const totalCount = PREP_CHECKLIST.length
@@ -199,6 +219,7 @@ function MilestoneRow({ milestone, isLast }: { milestone: RoadmapMilestone; isLa
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function RoadmapScreen(): React.JSX.Element {
+  const { user } = useAuth()
   const [data, setData] = useState<RoadmapData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -266,7 +287,7 @@ export default function RoadmapScreen(): React.JSX.Element {
           </View>
 
           {/* ── College Prep Checklist ── */}
-          <PrepChecklist />
+          <PrepChecklist userId={user?.id ?? null} />
 
           {/* ── Milestones ── */}
           <View style={[styles.card, { marginTop: 12 }]}>

@@ -10,20 +10,36 @@ import Button from '../components/ui/Button'
 import Skeleton from '../components/ui/Skeleton'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
-import { fetchStudentData, type CourseWithGrade } from '../api/studentApi'
+import { fetchStudentData } from '../api/studentApi'
 import {
   getPortalStatus,
   getPortalSchedule,
   type PortalScheduleEntry,
 } from '../api/portalApi'
+import { ClipboardIcon } from '../components/icons'
+
+// ── Screen-local course type ──────────────────────────────────────────────────
+// Intentionally separate from CourseWithGrade to avoid polluting the shared type.
+// room semantics:
+//   null  → no room data available (non-portal fallback) → display "Room N/A"
+//   ""    → portal-connected but room field was blank    → display "Room TBD"
+//   other → actual room identifier from portal           → display "Room {room}"
+
+interface ScheduleCourse {
+  id: number
+  name: string
+  teacher: string
+  period: number
+  room: string | null
+}
 
 // ── Portal schedule adapter ────────────────────────────────────────────────────
 
 const LUNCH_PATTERN = /^lunch/i
 
-function adaptPortalSchedule(entries: PortalScheduleEntry[]): CourseWithGrade[] {
+function adaptPortalSchedule(entries: PortalScheduleEntry[]): ScheduleCourse[] {
   const seen = new Set<string>()
-  const result: CourseWithGrade[] = []
+  const result: ScheduleCourse[] = []
   let id = 0
   for (const entry of entries) {
     if (LUNCH_PATTERN.test(entry.courseName) || entry.teacher === 'Staff') continue
@@ -35,14 +51,21 @@ function adaptPortalSchedule(entries: PortalScheduleEntry[]): CourseWithGrade[] 
       name: entry.courseName,
       teacher: entry.teacher,
       period: parseInt(entry.period, 10) || 0,
-      courseType: 'STANDARD',
-      creditHours: 1.0,
-      semester: 'CURRENT',
-      grade: null,
+      room: entry.room,  // carry portal room through; "" if blank, non-empty if set
     })
   }
   return result.sort((a, b) => a.period - b.period)
 }
+
+// ── Room label helper ─────────────────────────────────────────────────────────
+
+function roomLabel(room: string | null): string {
+  if (room === null) return 'Room N/A'
+  if (room === '') return 'Room TBD'
+  return `Room ${room}`
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function LoadingSkeleton(): React.JSX.Element {
   return (
@@ -70,7 +93,7 @@ function ErrorView({ message, onRetry }: { message: string; onRetry: () => void 
   )
 }
 
-function CourseRow({ item, index }: { item: CourseWithGrade; index: number }): React.JSX.Element {
+function CourseRow({ item, index }: { item: ScheduleCourse; index: number }): React.JSX.Element {
   return (
     <View style={[styles.row, index % 2 === 1 && styles.rowAlt]}>
       <View style={styles.periodBubble}>
@@ -79,14 +102,18 @@ function CourseRow({ item, index }: { item: CourseWithGrade; index: number }): R
       <View style={{ flex: 1 }}>
         <Text variant="h3">{item.name}</Text>
         <Text variant="caption" style={{ marginTop: 2 }}>{item.teacher}</Text>
-        <Text variant="caption" color={colors.textMuted} style={{ marginTop: 1 }}>Room TBD</Text>
+        <Text variant="caption" color={colors.textMuted} style={{ marginTop: 1 }}>
+          {roomLabel(item.room)}
+        </Text>
       </View>
     </View>
   )
 }
 
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 export default function ClassScheduleScreen(): React.JSX.Element {
-  const [courses, setCourses] = useState<CourseWithGrade[]>([])
+  const [courses, setCourses] = useState<ScheduleCourse[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -102,7 +129,17 @@ export default function ClassScheduleScreen(): React.JSX.Element {
         const entries = await getPortalSchedule()
         setCourses(adaptPortalSchedule(entries))
       } else {
-        setCourses([...d.courses].sort((a, b) => a.period - b.period))
+        // Non-portal fallback: room data is not available for this path
+        const fallback: ScheduleCourse[] = [...d.courses]
+          .sort((a, b) => a.period - b.period)
+          .map(c => ({
+            id: c.id,
+            name: c.name,
+            teacher: c.teacher,
+            period: c.period,
+            room: null,
+          }))
+        setCourses(fallback)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load schedule.')
@@ -128,15 +165,21 @@ export default function ClassScheduleScreen(): React.JSX.Element {
           contentContainerStyle={{ paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <Text variant="caption" style={{ textAlign: 'center', paddingTop: 40 }}>
-              No courses found
-            </Text>
+            <View style={styles.emptyState}>
+              <ClipboardIcon size={40} color={colors.textMuted} />
+              <Text variant="h3" color={colors.textSecondary} style={styles.emptyTitle}>No Schedule Found</Text>
+              <Text variant="body" color={colors.textMuted} style={styles.emptyBody}>
+                Connect your school portal to see your class schedule here.
+              </Text>
+            </View>
           }
         />
       )}
     </View>
   )
 }
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   centerState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
@@ -164,4 +207,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   periodText: { fontSize: 16, fontWeight: '700' as const, color: colors.background },
+  emptyState: {
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 60,
+  },
+  emptyTitle: { textAlign: 'center', marginTop: 16, marginBottom: 8 },
+  emptyBody: { textAlign: 'center' },
 })

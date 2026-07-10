@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   ActivityIndicator,
   FlatList,
@@ -12,7 +13,8 @@ import {
   type ViewStyle,
 } from 'react-native'
 import { ChevronRightIcon, SchoolBuildingIcon, LinkIcon } from '../components/icons'
-import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { useAuth } from '../context/AuthContext'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import Text from '../components/ui/Text'
 import Button from '../components/ui/Button'
@@ -265,15 +267,19 @@ function GpaCard({
   gpa,
   mode,
   onToggle,
+  hidden = false,
 }: {
   gpa: GpaData | null
   mode: GpaMode
   onToggle: (m: GpaMode) => void
+  hidden?: boolean
 }): React.JSX.Element {
   const displayValue =
     gpa !== null ? (mode === 'weighted' ? gpa.weighted : gpa.unweighted) : null
   const scaleMax = mode === 'weighted' ? '/ 5.0' : '/ 4.0'
-  const valueColor = displayValue !== null ? gpaColor(displayValue) : colors.textMuted
+  const valueColor = hidden
+    ? colors.textMuted
+    : (displayValue !== null ? gpaColor(displayValue) : colors.textMuted)
 
   return (
     <View style={styles.gpaCard}>
@@ -282,9 +288,9 @@ function GpaCard({
       </Text>
       <View style={styles.gpaValueRow}>
         <Text variant="display" color={valueColor}>
-          {displayValue !== null ? displayValue.toFixed(2) : '—'}
+          {hidden ? '•  •  •' : (displayValue !== null ? displayValue.toFixed(2) : '—')}
         </Text>
-        {displayValue !== null && (
+        {!hidden && displayValue !== null && (
           <Text variant="caption" color={colors.textMuted} style={styles.gpaScale}>
             {scaleMax}
           </Text>
@@ -420,6 +426,7 @@ function Separator(): React.JSX.Element {
 
 export default function GradeViewerScreen(): React.JSX.Element {
   const navigation = useNavigation<NativeStackNavigationProp<GradePortalParamList>>()
+  const { user } = useAuth()
 
   // Core data state
   const [isLoading, setIsLoading] = useState(true)
@@ -427,6 +434,7 @@ export default function GradeViewerScreen(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [gpa, setGpa] = useState<GpaData | null>(null)
   const [courses, setCourses] = useState<CourseWithGrade[]>([])
+  const [hideGpa, setHideGpa] = useState(false)
   const [gpaMode, setGpaMode] = useState<GpaMode>('weighted')
   const [portalStatus, setPortalStatus] = useState<PortalStatus | null>(null)
   const [dataSource, setDataSource] = useState<'portal' | 'seeded' | 'unknown'>('unknown')
@@ -555,6 +563,13 @@ export default function GradeViewerScreen(): React.JSX.Element {
     return unsubscribe
   }, [navigation, loadGrades])
 
+  useFocusEffect(useCallback(() => {
+    const key = `settings_hideGpa_${user?.id ?? 'anon'}`
+    AsyncStorage.getItem(key)
+      .then(raw => { setHideGpa(raw === 'true') })
+      .catch(() => undefined)
+  }, [user]))
+
   const sortedCourses = useMemo(
     () => [...courses].sort((a, b) => a.period - b.period),
     [courses],
@@ -612,7 +627,7 @@ export default function GradeViewerScreen(): React.JSX.Element {
                 </Text>
               </View>
             )}
-            <GpaCard gpa={gpa} mode={gpaMode} onToggle={setGpaMode} />
+            <GpaCard gpa={gpa} mode={gpaMode} onToggle={setGpaMode} hidden={hideGpa} />
             {showPeriodPicker && (
               <SixWeeksPicker
                 selectedPeriod={selectedPeriod}
@@ -902,7 +917,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   connectButtonText: {
-    color: '#000',
+    color: colors.white,
     fontWeight: '700',
     fontSize: 14,
   },

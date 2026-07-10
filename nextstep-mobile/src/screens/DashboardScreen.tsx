@@ -200,6 +200,7 @@ export default function DashboardScreen(): React.JSX.Element {
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
   const [streak, setStreak] = useState(0)
   const [portalGpa, setPortalGpa] = useState<PortalGpa | null>(null)
+  const [hideGpa, setHideGpa] = useState(false)
   const syncPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const stopSyncPoll = useCallback((): void => {
@@ -264,6 +265,13 @@ export default function DashboardScreen(): React.JSX.Element {
 
   useFocusEffect(useCallback(() => { void load() }, [load]))
 
+  useFocusEffect(useCallback(() => {
+    const key = `settings_hideGpa_${user?.id ?? 'anon'}`
+    AsyncStorage.getItem(key)
+      .then(raw => { setHideGpa(raw === 'true') })
+      .catch(() => undefined)
+  }, [user]))
+
   if (isLoading) return <LoadingSkeleton />
   if (error !== null) return <ErrorScreen message={error} onRetry={() => void load()} />
 
@@ -322,12 +330,12 @@ export default function DashboardScreen(): React.JSX.Element {
         </Text>
         <View style={styles.gpaRow}>
           <View style={styles.gpaCol}>
-            <Text style={styles.gpaValue}>{uGpa}</Text>
+            <Text style={styles.gpaValue}>{hideGpa ? '•  •  •' : uGpa}</Text>
             <Text variant="caption">Unweighted</Text>
           </View>
           <View style={styles.gpaDivider} />
           <View style={styles.gpaCol}>
-            <Text style={[styles.gpaValue, { color: colors.primary }]}>{wGpa}</Text>
+            <Text style={[styles.gpaValue, { color: colors.primary }]}>{hideGpa ? '•  •  •' : wGpa}</Text>
             <Text variant="caption">Weighted</Text>
           </View>
         </View>
@@ -425,7 +433,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  gradeBadgeText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
+  gradeBadgeText: { fontSize: 11, fontWeight: '700', color: colors.white },
   // Cards
   card: {
     ...shadows.raised,
@@ -450,7 +458,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 6,
   },
-  countBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  countBadgeText: { fontSize: 11, fontWeight: '700', color: colors.white },
   viewAllRow: { alignItems: 'flex-end', marginTop: 8 },
   viewAllText: { fontSize: 13, color: colors.primary, fontWeight: '500' },
   // Due today

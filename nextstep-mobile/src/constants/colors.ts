@@ -31,6 +31,9 @@ export const colors = {
   orange:  '#F97316',
   error:   '#EF4444',
   info:    '#00E5FF',
+
+  // Utility
+  white: '#FFFFFF',
 } as const
 
 export type Color = (typeof colors)[keyof typeof colors]

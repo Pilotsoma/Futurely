@@ -103,10 +103,6 @@ export default function CalendarScreen(): React.JSX.Element {
             <Text style={styles.navArrow}>›</Text>
           </TouchableOpacity>
         </View>
-        <Text variant="caption" style={styles.attendanceRow}>
-          Tardies: 0  |  Excused: 0  |  Unexcused: 0
-        </Text>
-
         {/* Day headers */}
         <View style={styles.gridRow}>
           {DAY_LABELS.map(d => (
@@ -129,12 +125,23 @@ export default function CalendarScreen(): React.JSX.Element {
               const hasCompleted = dayAssignments.some(a => a.completed)
               const isSelected = selectedDate ? dateKey(selectedDate) === k : false
 
+              const pendingCount = dayAssignments.filter(a => !a.completed).length
+              const completedCount = dayAssignments.filter(a => a.completed).length
+              const dateLabel = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+              const assignmentParts: string[] = []
+              if (pendingCount > 0) assignmentParts.push(`${pendingCount} pending assignment${pendingCount !== 1 ? 's' : ''}`)
+              if (completedCount > 0) assignmentParts.push(`${completedCount} completed assignment${completedCount !== 1 ? 's' : ''}`)
+              const a11yLabel = assignmentParts.length > 0 ? `${dateLabel}, ${assignmentParts.join(', ')}` : dateLabel
+
               return (
                 <TouchableOpacity
                   key={k}
                   style={[styles.cell, isSelected && styles.cellSelected]}
                   onPress={() => setSelectedDate(date)}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={a11yLabel}
+                  accessibilityState={{ selected: isSelected }}
                 >
                   <View style={isToday ? styles.todayCircle : undefined}>
                     <Text
@@ -147,7 +154,7 @@ export default function CalendarScreen(): React.JSX.Element {
                       {date.getDate()}
                     </Text>
                   </View>
-                  <View style={styles.dotRow}>
+                  <View style={styles.dotRow} accessible={false}>
                     {hasPending && <View style={[styles.dot, { backgroundColor: colors.error }]} />}
                     {hasCompleted && <View style={[styles.dot, { backgroundColor: colors.success }]} />}
                   </View>
@@ -202,7 +209,6 @@ const styles = StyleSheet.create({
   },
   navBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   navArrow: { fontSize: 24, color: colors.textPrimary, fontWeight: '600' },
-  attendanceRow: { textAlign: 'center', marginBottom: 12 },
   gridRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 8 },
   dayLabel: { flex: 1, textAlign: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },

@@ -9,6 +9,9 @@ import ContactTeachersScreen from '../screens/ContactTeachersScreen'
 import GpaSimulatorScreen from '../screens/GpaSimulatorScreen'
 import PortalConnectScreen from '../screens/PortalConnectScreen'
 import CourseDetailScreen from '../screens/CourseDetailScreen'
+import AttendanceScreen from '../screens/AttendanceScreen'
+import ProgressReportScreen from '../screens/ProgressReportScreen'
+import CanvasNavigator from './CanvasNavigator'
 
 export type GradePortalParamList = {
   GradePortalHome: undefined
@@ -24,6 +27,10 @@ export type GradePortalParamList = {
   /** Canonical name aligned with CollegeHelpNavigator — replaced old 'Simulator' */
   WhatIfCalculator: undefined
   PortalConnect: undefined
+  Attendance: undefined
+  ProgressReport: undefined
+  /** Nested CanvasNavigator — params flow handled within CanvasNavigator itself. */
+  Canvas: undefined
 }
 
 const Stack = createNativeStackNavigator<GradePortalParamList>()
@@ -40,6 +47,9 @@ export default function GradePortalNavigator(): React.JSX.Element {
       <Stack.Screen name="WhatIfCalculator" component={GpaSimulatorScreen} />
       <Stack.Screen name="PortalConnect" component={PortalConnectScreen} />
       <Stack.Screen name="CourseDetail" component={CourseDetailScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Attendance" component={AttendanceScreen} />
+      <Stack.Screen name="ProgressReport" component={ProgressReportScreen} />
+      <Stack.Screen name="Canvas" component={CanvasNavigator} />
     </Stack.Navigator>
   )
 }

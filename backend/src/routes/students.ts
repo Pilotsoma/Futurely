@@ -139,13 +139,23 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
   }
 })
 
+const patchProfileSchema = z.object({
+  satScore: z.number().int().min(400).max(1600).nullable().optional(),
+  actScore: z.number().int().min(1).max(36).nullable().optional(),
+  futureDecision: z.string().max(500).nullable().optional(),
+})
+
 router.patch('/me/profile', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.userId) { res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }); return }
-  const { satScore, actScore, futureDecision } = req.body as {
-    satScore?: number | null
-    actScore?: number | null
-    futureDecision?: string | null
+
+  const parse = patchProfileSchema.safeParse(req.body)
+  if (!parse.success) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid request body' } })
+    return
   }
+
+  const { satScore, actScore, futureDecision } = parse.data
+
   try {
     const profile = await prisma.profile.upsert({
       where: { userId: req.userId },
@@ -161,8 +171,17 @@ router.patch('/me/profile', requireAuth, async (req: AuthRequest, res: Response)
         ...(futureDecision !== undefined && { futureDecision: futureDecision ?? null }),
       },
     })
+    await writeAuditLog({
+      userId: req.userId,
+      resourceType: 'STUDENT_PROFILE',
+      resourceId: String(req.userId),
+      action: 'PROFILE_UPDATED',
+      ipAddress: req.ip ?? 'unknown',
+    })
+    logger.info('student_profile_updated', { userId: req.userId })
     res.json({ data: profile })
-  } catch {
+  } catch (err: unknown) {
+    logger.error('student_profile_update_error', { userId: req.userId, error: err instanceof Error ? err.message : String(err) })
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to update profile' } })
   }
 })

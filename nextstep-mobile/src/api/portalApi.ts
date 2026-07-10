@@ -370,6 +370,79 @@ export async function getPortalContactTeachers(): Promise<PortalTeacher[]> {
   return res.data.teachers ?? []
 }
 
+// ── Attendance types ──────────────────────────────────────────────────────────
+
+export interface AttendancePeriod {
+  period: string
+  status: string
+}
+
+export interface AttendanceDay {
+  date: string
+  dayOfWeek: string
+  dayNum: number
+  bgColor: string
+  description: string
+  isSchoolClosed: boolean
+  periods: AttendancePeriod[]
+}
+
+export interface AttendanceSummary {
+  absences: number
+  excused: number
+  tardies: number
+  multiple: number
+}
+
+export interface PortalAttendanceResult {
+  month: string
+  year: number
+  monthIndex: number
+  days: AttendanceDay[]
+  summary: AttendanceSummary
+}
+
+// ── Progress report types ─────────────────────────────────────────────────────
+
+export interface ProgressReportCourse {
+  name: string
+  period: string
+  average: string
+  letterGrade: string
+  teacher: string
+}
+
+export interface PortalProgressReportResult {
+  availableDates: string[]
+  currentDate: string
+  courses: ProgressReportCourse[]
+}
+
+// ── Attendance ────────────────────────────────────────────────────────────────
+
+export async function getPortalAttendance(
+  monthOffset: number,
+): Promise<PortalAttendanceResult> {
+  const res = await portalRequest<{ data: PortalAttendanceResult }>(
+    `/integrations/grades/attendance?monthOffset=${monthOffset}`,
+  )
+  return res.data
+}
+
+// ── Progress report ───────────────────────────────────────────────────────────
+
+export async function getProgressReport(
+  date?: string,
+): Promise<PortalProgressReportResult> {
+  const path =
+    date !== undefined
+      ? `/integrations/grades/progress-report?date=${encodeURIComponent(date)}`
+      : '/integrations/grades/progress-report'
+
+  const res = await portalRequest<{ data: PortalProgressReportResult }>(path)
+  return res.data
+}
+
 // ── Disconnect ────────────────────────────────────────────────────────────────
 
 export async function disconnectPortal(): Promise<{ disconnected: boolean }> {

@@ -347,8 +347,11 @@ export async function loginHAC(
   formData.set('LogOnDetails.Password', password)
   formData.set('LogOnDetails_UserName', username)
   formData.set('LogOnDetails_Password', password)
-  if (formData.has('tempUN')) formData.set('tempUN', username)
-  if (formData.has('tempPW')) formData.set('tempPW', password)
+  // tempUN/tempPW are hidden honeypot fields on HAC's login form (class="hidden",
+  // no JS reads/writes them) — a real browser submits them empty. Filling them
+  // with real credentials trips HAC's bot detection and silently fails login.
+  if (formData.has('tempUN')) formData.set('tempUN', '')
+  if (formData.has('tempPW')) formData.set('tempPW', '')
 
   // SCKTY fields required by some eSchoolPlus/HAC districts
   if (!formData.has('SCKTY00328510CustomEnabled')) formData.set('SCKTY00328510CustomEnabled', 'true')

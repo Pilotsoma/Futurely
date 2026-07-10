@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { CalculatorIcon, ChevronRightIcon, PencilIcon, SchoolBuildingIcon, MapIcon } from '../components/icons'
+import { CalculatorIcon, ChevronRightIcon, SchoolBuildingIcon, MapIcon } from '../components/icons'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import Text from '../components/ui/Text'
@@ -105,25 +105,6 @@ export default function CollegeHelpScreen(): React.JSX.Element {
             <ChevronRightIcon size={16} color={colors.textMuted} />
           </TouchableOpacity>
 
-          <View style={styles.actionDivider} />
-
-          <TouchableOpacity
-            style={styles.actionRow}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel="GPA Editor — coming soon"
-          >
-            <View style={[styles.actionIcon, { backgroundColor: colors.info + '1A' }]}>
-              <PencilIcon size={20} color={colors.info} />
-            </View>
-            <View style={styles.actionText}>
-              <Text variant="h3">GPA Editor</Text>
-              <Text variant="caption" color={colors.textMuted}>Configure scales for each class</Text>
-            </View>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonText}>Soon</Text>
-            </View>
-          </TouchableOpacity>
         </View>
 
         {/* Colleges */}
@@ -187,6 +168,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border,
     flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12,
   },
-  comingSoonBadge: { backgroundColor: colors.border, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  comingSoonText: { fontSize: 11, fontWeight: '600' as const, color: colors.textMuted },
 })

@@ -1,160 +1,420 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  ScrollView,
+  ActivityIndicator,
+  FlatList,
   StyleSheet,
+  TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native'
-import { useFocusEffect } from '@react-navigation/native'
-import { LockIcon, SchoolBuildingIcon } from '../components/icons'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { MagnifyingGlassIcon, SchoolBuildingIcon, TrashIcon } from '../components/icons'
 import Text from '../components/ui/Text'
+import Button from '../components/ui/Button'
 import Skeleton from '../components/ui/Skeleton'
 import ScreenHeader from '../components/ui/ScreenHeader'
 import { colors } from '../constants/colors'
-import { fetchStudentData, type StudentData } from '../api/studentApi'
-import { getPortalStatus, getPortalGpa, type PortalGpa } from '../api/portalApi'
+import {
+  searchColleges,
+  getSavedColleges,
+  addCollege,
+  removeCollege,
+  type CollegeSearchResult,
+  type SavedCollege,
+} from '../api/collegesApi'
+import type { CollegeHelpParamList } from '../navigation/CollegeHelpNavigator'
 import { shadows } from '../constants/shadows'
 
-interface SampleCollege {
-  id: number
-  name: string
-  location: string
-  acceptance: string
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type NavProp = NativeStackNavigationProp<CollegeHelpParamList>
+type CollegeLabel = 'Likely' | 'Possible' | 'Reach' | 'Far Reach' | null
+
+const DEBOUNCE_MS = 300
+const VALID_LABELS = new Set<string>(['Likely', 'Possible', 'Reach', 'Far Reach'])
+
+function toCollegeLabel(raw: string | null): CollegeLabel {
+  if (raw !== null && VALID_LABELS.has(raw)) return raw as CollegeLabel
+  return null
 }
 
-const SAMPLE_COLLEGES: SampleCollege[] = [
-  { id: 1, name: 'University of Texas at Austin', location: 'Austin, TX', acceptance: '31%' },
-  { id: 2, name: 'Texas A&M University', location: 'College Station, TX', acceptance: '57%' },
-  { id: 3, name: 'University of Houston', location: 'Houston, TX', acceptance: '62%' },
-]
-
-interface CollegeCardProps {
-  college: SampleCollege
+const LABEL_COLORS: Record<NonNullable<CollegeLabel>, string> = {
+  Likely: colors.success,
+  Possible: colors.primary,
+  Reach: colors.warning,
+  'Far Reach': colors.error,
 }
 
-/**
- * These cards render sample data, not the student's real saved college list
- * (that list — and its CollegeListItem ids — lives on the web app only for now).
- * Navigation to CollegeInsightsScreen is intentionally disabled here since a
- * sample college's id does not correspond to a real CollegeListItem the
- * authenticated user owns, which would otherwise 404 against the live API.
- */
-function CollegeCard({ college }: CollegeCardProps): React.JSX.Element {
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function LikelihoodChip({ label }: { label: string | null }): React.JSX.Element | null {
+  const narrowed = toCollegeLabel(label)
+  if (narrowed === null) return null
+  const color = LABEL_COLORS[narrowed]
   return (
-    <View
-      style={styles.collegeCard}
-      accessibilityRole="text"
-      accessibilityLabel={`${college.name} — available in Phase 2`}
-    >
-      <View style={styles.collegeLocked}>
-        <LockIcon size={18} color={colors.textMuted} />
-        <Text variant="caption" style={{ marginLeft: 6, marginTop: 2 }}>Phase 2 feature</Text>
-      </View>
-      <View style={{ opacity: 0.4 }}>
-        <Text variant="h3">{college.name}</Text>
-        <Text variant="caption" style={{ marginTop: 4 }}>{college.location}</Text>
-        <Text variant="caption" style={{ marginTop: 2 }}>Acceptance: {college.acceptance}</Text>
-      </View>
+    <View style={[styles.chip, { borderColor: color }]}>
+      <Text style={[styles.chipText, { color }]}>{narrowed}</Text>
     </View>
   )
 }
 
-export default function CollegesScreen(): React.JSX.Element {
-  const [data, setData] = useState<StudentData | null>(null)
-  const [portalGpa, setPortalGpa] = useState<PortalGpa | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+function admitRateLabel(rate: number | null): string {
+  if (rate === null) return 'Admit rate unavailable'
+  return `${(rate * 100).toFixed(0)}% admit rate`
+}
 
-  const load = useCallback(async (): Promise<void> => {
-    setIsLoading(true)
+function LoadingSkeleton(): React.JSX.Element {
+  return (
+    <View style={styles.skeletonContainer}>
+      {[1, 2, 3].map(i => (
+        <View key={i} style={[styles.collegeRow, { marginBottom: 0 }]}>
+          <View style={{ flex: 1 }}>
+            <Skeleton width="70%" height={16} style={{ marginBottom: 6 }} />
+            <Skeleton width="50%" height={12} style={{ marginBottom: 4 }} />
+            <Skeleton width="40%" height={11} />
+          </View>
+        </View>
+      ))}
+    </View>
+  )
+}
+
+interface SearchResultRowProps {
+  item: CollegeSearchResult
+  isAdding: boolean
+  onAdd: () => void
+}
+
+function SearchResultRow({ item, isAdding, onAdd }: SearchResultRowProps): React.JSX.Element {
+  return (
+    <View style={styles.collegeRow}>
+      <View style={{ flex: 1 }}>
+        <Text variant="h3">{item.name}</Text>
+        <Text variant="caption" style={{ marginTop: 2 }}>
+          {[item.city, item.state].filter(Boolean).join(', ')}
+        </Text>
+        <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>
+          {admitRateLabel(item.admissionRate)}
+        </Text>
+        <View style={styles.chipRow}>
+          <LikelihoodChip label={item.label} />
+        </View>
+      </View>
+      <TouchableOpacity
+        style={[styles.addBtn, isAdding && styles.addBtnDisabled]}
+        onPress={onAdd}
+        disabled={isAdding}
+        accessibilityRole="button"
+        accessibilityLabel={`Add ${item.name}`}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        {isAdding
+          ? <ActivityIndicator size="small" color={colors.primary} />
+          : <Text style={styles.addBtnText}>+ Add</Text>
+        }
+      </TouchableOpacity>
+    </View>
+  )
+}
+
+interface SavedCollegeRowProps {
+  item: SavedCollege
+  isRemoving: boolean
+  onTap: () => void
+  onRemove: () => void
+}
+
+function SavedCollegeRow({ item, isRemoving, onTap, onRemove }: SavedCollegeRowProps): React.JSX.Element {
+  return (
+    <TouchableOpacity
+      style={styles.collegeRow}
+      onPress={onTap}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={`View insights for ${item.name}`}
+    >
+      <View style={{ flex: 1 }}>
+        <Text variant="h3">{item.name}</Text>
+        <Text variant="caption" style={{ marginTop: 2 }}>
+          {[item.city, item.state].filter(Boolean).join(', ')}
+        </Text>
+        <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>
+          {admitRateLabel(item.admissionRate)}
+        </Text>
+        <View style={styles.chipRow}>
+          <LikelihoodChip label={item.label} />
+        </View>
+      </View>
+      <TouchableOpacity
+        onPress={onRemove}
+        disabled={isRemoving}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel={`Remove ${item.name}`}
+        style={styles.removeBtn}
+      >
+        {isRemoving
+          ? <ActivityIndicator size="small" color={colors.error} />
+          : <TrashIcon size={18} color={colors.error} />
+        }
+      </TouchableOpacity>
+    </TouchableOpacity>
+  )
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
+export default function CollegesScreen(): React.JSX.Element {
+  const navigation = useNavigation<NavProp>()
+
+  const [query, setQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<CollegeSearchResult[]>([])
+  const [savedColleges, setSavedColleges] = useState<SavedCollege[]>([])
+  const [isLoadingSaved, setIsLoadingSaved] = useState(true)
+  const [isSearching, setIsSearching] = useState(false)
+  const [savedError, setSavedError] = useState<string | null>(null)
+  const [addingUnitId, setAddingUnitId] = useState<string | null>(null)
+  const [removingId, setRemovingId] = useState<number | null>(null)
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const loadSaved = useCallback(async (): Promise<void> => {
+    setIsLoadingSaved(true)
+    setSavedError(null)
     try {
-      const [studentData, status] = await Promise.all([
-        fetchStudentData(),
-        getPortalStatus().catch((): null => null),
-      ])
-      setData(studentData)
-      setPortalGpa(status?.connected ? await getPortalGpa().catch((): null => null) : null)
-    } catch {
-      // silently fail — show placeholder anyway
+      setSavedColleges(await getSavedColleges())
+    } catch (e) {
+      setSavedError(e instanceof Error ? e.message : 'Failed to load colleges.')
     } finally {
-      setIsLoading(false)
+      setIsLoadingSaved(false)
     }
   }, [])
 
-  useFocusEffect(useCallback(() => { void load() }, [load]))
+  useFocusEffect(useCallback(() => { void loadSaved() }, [loadSaved]))
 
-  // Portal-synced GPA wins when connected — the relational Profile fields
-  // are only reliably populated by /sync-profile, not by the HAC scraper.
-  const uGpa = (portalGpa?.unweightedGpa ?? data?.profile?.unweightedGpa ?? 0).toFixed(2)
-  const futureDecision = data?.profile?.futureDecision ?? null
+  useEffect(() => {
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current)
+    const trimmed = query.trim()
+    if (!trimmed) {
+      setSearchResults([])
+      setIsSearching(false)
+      return
+    }
+    setIsSearching(true)
+    debounceRef.current = setTimeout(() => {
+      void searchColleges(trimmed)
+        .then(results => {
+          setSearchResults(results)
+          setIsSearching(false)
+        })
+        .catch(() => {
+          setSearchResults([])
+          setIsSearching(false)
+        })
+    }, DEBOUNCE_MS)
+    return () => {
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current)
+    }
+  }, [query])
+
+  const handleAdd = useCallback(async (item: CollegeSearchResult): Promise<void> => {
+    setAddingUnitId(item.unitId)
+    try {
+      const saved = await addCollege(item.name, item.unitId)
+      setSavedColleges(prev => [...prev, saved])
+    } catch {
+      // leave search results intact so user can retry
+    } finally {
+      setAddingUnitId(null)
+    }
+  }, [])
+
+  const handleRemove = useCallback(async (id: number): Promise<void> => {
+    setRemovingId(id)
+    try {
+      await removeCollege(id)
+      setSavedColleges(prev => prev.filter(c => c.id !== id))
+    } catch {
+      // leave list intact so user can retry
+    } finally {
+      setRemovingId(null)
+    }
+  }, [])
+
+  const isSearchMode = query.trim().length > 0
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={styles.container}>
       <ScreenHeader title="Colleges" />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text variant="heading" style={{ marginBottom: 16 }}>Colleges</Text>
 
-        {/* Context card */}
-        <View style={styles.card}>
-          <Text variant="label" color={colors.textSecondary} style={{ marginBottom: 8 }}>
-            Your Profile
-          </Text>
-          {isLoading ? (
-            <>
-              <Skeleton width="60%" height={15} style={{ marginBottom: 8 }} />
-              <Skeleton width="80%" height={11} />
-            </>
-          ) : (
-            <>
-              <Text variant="body">GPA: <Text style={{ color: colors.primary, fontWeight: '700' }}>{uGpa}</Text></Text>
-              {futureDecision !== null && (
-                <Text variant="caption" style={{ marginTop: 4 }}>Goal: {futureDecision}</Text>
-              )}
-            </>
+      {/* Search bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <MagnifyingGlassIcon size={18} color={colors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search colleges..."
+            placeholderTextColor={colors.textMuted}
+            value={query}
+            onChangeText={setQuery}
+            autoCorrect={false}
+            autoCapitalize="words"
+            returnKeyType="search"
+            accessibilityLabel="Search colleges"
+          />
+        </View>
+      </View>
+
+      {isSearchMode ? (
+        isSearching ? (
+          <LoadingSkeleton />
+        ) : (
+          <FlatList
+            data={searchResults}
+            keyExtractor={item => item.unitId}
+            renderItem={({ item }) => (
+              <SearchResultRow
+                item={item}
+                isAdding={addingUnitId === item.unitId}
+                onAdd={() => void handleAdd(item)}
+              />
+            )}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <SchoolBuildingIcon size={36} color={colors.textMuted} />
+                <Text variant="h3" color={colors.textSecondary} style={styles.emptyTitle}>
+                  No results
+                </Text>
+                <Text variant="body" color={colors.textMuted} style={styles.emptyBody}>
+                  No colleges found for "{query}"
+                </Text>
+              </View>
+            }
+          />
+        )
+      ) : isLoadingSaved ? (
+        <LoadingSkeleton />
+      ) : savedError !== null ? (
+        <View style={styles.emptyState}>
+          <Text variant="h3" color={colors.error} style={styles.emptyTitle}>Unable to Load</Text>
+          <Text variant="body" color={colors.textSecondary} style={styles.emptyBody}>{savedError}</Text>
+          <Button label="Try Again" onPress={() => void loadSaved()} />
+        </View>
+      ) : (
+        <FlatList
+          data={savedColleges}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({ item }) => (
+            <SavedCollegeRow
+              item={item}
+              isRemoving={removingId === item.id}
+              onTap={() =>
+                navigation.navigate('CollegeInsights', {
+                  id: item.id,
+                  name: item.name,
+                  score: item.score,
+                  label: toCollegeLabel(item.label),
+                })
+              }
+              onRemove={() => void handleRemove(item.id)}
+            />
           )}
-        </View>
-
-        {/* College cards */}
-        <View style={[styles.card, { marginTop: 12 }]}>
-          <Text variant="h3" style={{ marginBottom: 12 }}>College Matches</Text>
-          {SAMPLE_COLLEGES.map(c => (
-            <CollegeCard key={c.id} college={c} />
-          ))}
-        </View>
-
-        {/* Encourage message */}
-        <View style={[styles.card, { marginTop: 12, marginBottom: 40 }]}>
-          <SchoolBuildingIcon size={32} color={colors.primary} />
-          <Text variant="body" style={{ lineHeight: 22 }}>
-            Based on your <Text style={{ color: colors.primary, fontWeight: '700' }}>{uGpa}</Text> GPA,
-            we'll match you with the best-fit schools when this feature launches in Phase 2.
-          </Text>
-        </View>
-      </ScrollView>
+          contentContainerStyle={{ paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <SchoolBuildingIcon size={48} color={colors.textMuted} />
+              <Text variant="h3" color={colors.textSecondary} style={styles.emptyTitle}>
+                No colleges saved yet
+              </Text>
+              <Text variant="body" color={colors.textMuted} style={styles.emptyBody}>
+                Search above to add your first college
+              </Text>
+            </View>
+          }
+        />
+      )}
     </View>
   )
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
-  card: {
+  container: { flex: 1, backgroundColor: colors.background },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  searchBar: {
     ...shadows.raised,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    paddingHorizontal: 12,
+    height: 44,
+    gap: 8,
   },
-  collegeCard: {
-    ...shadows.raised,
-    backgroundColor: colors.background,
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.textPrimary,
+    height: 44,
+  },
+  skeletonContainer: { paddingHorizontal: 20, paddingTop: 8 },
+  collegeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: 12,
+    minHeight: 44,
+  },
+  chipRow: { flexDirection: 'row', marginTop: 6 },
+  chip: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  chipText: { fontSize: 11, fontWeight: '600' as const },
+  addBtn: {
+    minWidth: 56,
+    height: 36,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-    marginBottom: 8,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    flexShrink: 0,
   },
-  collegeLocked: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    marginBottom: 8,
+  addBtnDisabled: { opacity: 0.4 },
+  addBtnText: { fontSize: 13, fontWeight: '600' as const, color: colors.primary },
+  removeBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 60,
+  },
+  emptyTitle: { textAlign: 'center', marginTop: 16, marginBottom: 8 },
+  emptyBody: { textAlign: 'center' },
 })
