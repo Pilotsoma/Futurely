@@ -1,2737 +1,504 @@
 
-
 <!DOCTYPE html>
-<html>
-<head><title>
-	HomeAccess
-</title>
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+
+        
     
-    <link href="/HomeAccess/Stylesheets/Themes/Base/css?v=ErOiUuOsVp6tquD2fInmzTQl3A3SlFxTXp8j5mZ8LI01" rel="Stylesheet" type="text/css" /> 
+    
+
+
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+            <title>Option Not Enabled</title>
+        
+
+        <!-- 3rd party CSS our globals override -->
+<link  href="/HomeAccess/Stylesheets/Themes/Base/css?v=ErOiUuOsVp6tquD2fInmzTQl3A3SlFxTXp8j5mZ8LI01" type="text/css" rel="stylesheet" />
+<link  href="/HomeAccess/Stylesheets/SunGard/sungard-font-awesome.css" type="text/css" rel="stylesheet" />
+
+        <link  href="/HomeAccess/Stylesheets/Trirand/ui.jqgrid.css" type="text/css" rel="stylesheet" />
 
     
-    <link rel="Stylesheet" href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=CrossSite" />
-    <link rel="Stylesheet" href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=ComboBox" />
-    <link rel="Stylesheet" href="/HomeAccess/Stylesheets/Common/font-awesome.css" />
+        <!-- Our globals -->
+        <link  href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=CrossSite" type="text/css" rel="stylesheet" />
+
+        <link  href="/HomeAccess/Stylesheets/Site.css" type="text/css" rel="stylesheet" />
+
+        <link href="/HomeAccess/Media/Themes/Base/Common/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+
+        <!-- Our shared -->
+        <link  href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=ComboBox" type="text/css" rel="stylesheet" />
+
+        <link  href="/HomeAccess/Stylesheets/Common/Navigation.css" type="text/css" rel="stylesheet" />
+
+        <link  href="/HomeAccess/Stylesheets/Common/font-awesome.css" type="text/css" rel="stylesheet" />
+
+    
+        <!-- JS -->
+        
+    <link  href="/HomeAccess/Stylesheets/Frame/Frame?v=yzZqewVSSkEGBkILgX7u5yHUgsp6zMBY6ZlU_7X3NQw1" type="text/css" rel="stylesheet" />
+
+<link href="/HomeAccess/eSchoolPLUSResource/GetEmbeddedStyle?file=SessionTracking" rel="stylesheet" />
     
     
-    <link rel="Stylesheet" href="/HomeAccess/Stylesheets/Site.css" />
-    <link rel="stylesheet" href="/HomeAccess/Stylesheets/Frame/Frame.css" /> 
-    <link rel="SHORTCUT ICON" href="/HomeAccess/Media/Themes/Base/Common/favicon.ico"/>
-    <style>
+
+
+
+        <script type="text/javascript" nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/Scripts/libs/modernizr-2.8.3.js"></script>
+
+        <script type="text/javascript" nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/Scripts/Common/BrowserTest.js"></script>
+
+        <script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" type="text/javascript">
+            if (!BrowserTest()) {
+                document.location = '/HomeAccess/' + 'BrowserReject'; // Done because browsers that vail won't support jQuery
+            }
+        </script>
+            
+        <script type="text/javascript" nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/Scripts/libs/jquery?v=qIcuP3UP_aRnf7YSojJ0X96urcPMuU40OLTAhIFZUhU1"></script>
+
+
+        <script type="text/javascript" nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/Scripts/Trirand/ui.multiselect.js"></script>
+
+        <script type="text/javascript" nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/Scripts/Trirand/i18n/grid.locale-en.js"></script>
+
+        <script type="text/javascript" nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/Scripts/Trirand/jquery.jqGrid.js"></script>
+
+
+
+        <script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=SungardCommon" type="text/javascript"></script>
+        <script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=Combobox" type="text/javascript"></script>
+
+        <script type="text/javascript" nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/Scripts/Common/HAC.js"></script>
+
+        <script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" type="text/javascript">
+            $(function () {
+                    parseForComboBoxes();
+
+                SunGard.Hac.Area('');
+                SunGard.Hac.Controller('Frame');
+                SunGard.Hac.Action('OptionNotEnabled');
+
+                SunGard.Common.Init('/HomeAccess/');
+                SunGard.Hac.Init('/HomeAccess/');
+            });
+        </script>
+   
+        <!-- Gainsights Logic -->
+            <!-- Gainsight PX Tag-->
+            <script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" type="text/javascript">
+                        (function (n, t, a, e, co) {
+                            var i = "aptrinsic"; n[i] = n[i] || function () {
+                                (n[i].q = n[i].q || []).push(arguments)
+                            }, n[i].p = e; n[i].c = co;
+                            var r = t.createElement("script"); r.async = !0, r.src = a + "?a=" + e;
+                            var c = t.getElementsByTagName("script")[0]; c.parentNode.insertBefore(r, c)
+                        })(window, document, "https://web-sdk-us2.aptrinsic.com/api/aptrinsic.js", "AP-YDUVDTYHCH0C-2" + '');
+            </script>
+            <!-- Gainsight PX Tag-->
+
+        <!-- This should be at the bottom of this section -->
+        
+    <script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=SungardCommon" type="text/javascript"></script>
+    <script type="text/javascript" nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/Scripts/Frame/Frame?v=1u9U5AXsn-Es4rBPNTMVm2UiMdW1xGOw3HiHDq7e3hk1"></script>
+
+    <script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=SessionTracking" type="text/javascript"></script>
+
+    <script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl">
+        $(function() {
+            var timeout = 600;
+            var expireAfter = 400.4556839;
+            var showBefore = 120;
+            var redirectUrl = "/HomeAccess/Account/TimedOut";
+            var settingsOverride = {
+                captionText: null,
+                renewText: null,
+                ignoreText: null
+            };
+
+            SunGard.Common.SessionTracking.Init(timeout, expireAfter, showBefore, redirectUrl, settingsOverride);
+        });
+    </script>
+
+    <style >
+        .sg-asp-table th,
         .sg-asp-table-header-row,
-        .ui-jqgrid-view .ui-jqgrid-hdiv, 
-        .ui-jqgrid tr.ui-jqgrid-labels th  {
-	        background-color: #00427c;
-            color: #FFFFFF;
+        .sg-banner-logo-color,
+        .sg-hac-submenu,
+        .ui-jqgrid-view .ui-jqgrid-hdiv,
+        .ui-jqgrid tr.ui-jqgrid-labels th  { /* asp datatables dont produce th elements, only td. Use this class to index the header rows */
+            background-color: #00427c;
+            color: #FFFFFF
+        }
+        .sg-asp-table-header-row a,
+        .sg-banner-text-color {
+            color: #FFFFFF
         }
     </style>
 
-    <script src="/HomeAccess/Scripts/libs/jquery?v=qIcuP3UP_aRnf7YSojJ0X96urcPMuU40OLTAhIFZUhU1" type="text/javascript"></script>   
-    <script src="/HomeAccess/Scripts/libs/modernizr-2.8.3.js" type="text/javascript"></script>   
-    <script src="/HomeAccess/Scripts/Trirand/ui.multiselect.js" type="text/javascript" ></script>
-    <script src="/HomeAccess/Scripts/Trirand/i18n/grid.locale-en.js" type="text/javascript"></script>
-    <script src="/HomeAccess/Scripts/Trirand/jquery.jqGrid.js" type="text/javascript"></script>
-    <script src="/HomeAccess/Scripts/libs/json2.js" type="text/javascript"></script>
-    <script src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=SungardCommon" type="text/javascript"></script>    
-    <script src="/HomeAccess/eSchoolPLUSResource/GetEmbeddedScript?file=Combobox" type="text/javascript"></script>
-    <script type="text/javascript">
-        $(function () {
-            parseForComboBoxes();
+    <!-- This should be at the bottom of this section -->
+    
+    <script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl">
+        $(SunGard.Hac.Frame.Init);
+        $(function() {
+            var helpUrl = '/HomeAccess/HelpTAC/Default.htm';
+            SunGard.Hac.Frame.Banner.Init();
         });
-    </script>    
-    
-
-    <script type="text/javascript">
-        $(SunGard.Common.Init('/HomeAccess/'));
     </script>
+
+    <!-- This should be at the bottom of this section -->
     
-    
-    
-    <link href="/HomeAccess/StyleSheets/Assignments/AssignmentsStyle.css" type="text/css" rel="stylesheet">
-    <script type="text/javascript" src="Assignments.js"></script>
-    <script type="text/javascript" src="OpenClassPopUp.js"></script>
-    <script type="text/javascript" src="/HomeAccess/Content/Common/functional.js"></script>
-    <script type="text/javascript" src="/HomeAccess/Content/Common/Validation.js"></script>
-    <meta name="format-detection" content="telephone=no">
-    <script type="text/javascript">
-        $(".comment-tooltip").tooltip({
-            classes: {
-                "ui-tooltip": "comment-tooltip-hover"
+    <link  href="/HomeAccess/Stylesheets/Frame/OptionNotEnabled.css" type="text/css" rel="stylesheet" />
+
+
+
+
+
+
+    </head>
+    <!-- add webkit-overflow to fix scrolling on IOS Devices-->
+    <body style="-webkit-overflow-scrolling: touch;">
+        <a href="#MainContent" class="sg-skip-link">Skip to main content</a>
+        <main role="main">
+            
+
+
+
+
+
+
+    <header class="sg-main-header" role="banner">
+        
+
+
+
+
+<div class="sg-banner sg-banner-logo-color" data-contact-id="3739215" data-student-id="K2308016">
+
+
+
+        <div class="sg-banner-left sg-banner-left-default-logo" tabindex="0" role="img" aria-label="Katy ISD">
+            <div class="sg-banner-info-container">
+                <span class="sg-banner-text sg-banner-text-color">Katy ISD</span>
+            </div>
+        </div>
+
+    <div class="sg-banner-right">
+        <div class="sg-banner-menu-container">
+            <div class="sg-banner-menu-left"></div>
+            <ul class="sg-banner-menu">
+                <li class="sg-banner-menu-element sg-menu-element-identity">
+                    <span tabindex="0" role="button" aria-haspopup="true" aria-expanded="false">Soma Srikara Sai Vattem</span>
+                    <ul class="sg-banner-submenu" role="menu">
+                            <li role="none"><a href="/HomeAccess/Account/Alerts" role="menuitem">My Alerts</a></li>
+                        <li role="none"><a href="/HomeAccess/Account/Details" role="menuitem">My Account</a></li>
+                    </ul>
+                </li>
+
+                <li class="sg-banner-menu-divider"></li>
+                <li class="sg-banner-menu-element sg-menu-element-logoff"><a href="/HomeAccess/Account/Logoff">Logout</a></li>
+            </ul>
+            <div class="sg-banner-menu-right"></div>
+        </div>
+            <div class="sg-banner-chooser">
+                <span class="sg-banner-learning-location"></span>
+            </div>
+    </div>
+</div>
+<script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl" type="text/javascript">
+    $(function () {
+        SunGard.Common.AddResource('Cancel', 'Cancel');
+        SunGard.Common.AddResource('Submit', 'Submit');
+        SunGard.Common.AddResource('EnrollNewStudent', 'Enroll New Student');
+        SunGard.Common.AddResource('ChangeStudentTitle', 'Choose Your Student');
+
+        var $identity = $('.sg-menu-element-identity');
+        var $identityTrigger = $identity.children('span[tabindex]');
+        $identity.on('focusin', function () {
+            $(this).addClass('sg-submenu-open');
+            $identityTrigger.attr('aria-expanded', 'true');
+        }).on('focusout', function () {
+            var $el = $(this);
+            setTimeout(function () {
+                if (!$.contains($el[0], document.activeElement)) {
+                    $el.removeClass('sg-submenu-open');
+                    $identityTrigger.attr('aria-expanded', 'false');
+                }
+            }, 0);
+        });
+        $identityTrigger.on('keydown', function (e) {
+            if (e.keyCode === 13 || e.keyCode === 32) {
+                e.preventDefault();
+                var $parent = $(this).parent();
+                $parent.toggleClass('sg-submenu-open');
+                var isOpen = $parent.hasClass('sg-submenu-open');
+                $(this).attr('aria-expanded', isOpen ? 'true' : 'false');
+                if (isOpen) {
+                    $parent.find('.sg-banner-submenu a').first().focus();
+                }
             }
         });
-    </script>
+    })
+</script>
+        
 
-</head>
-<body>
-    
-    <div id='MainContent' class='sg-main-content'>
-        <div class='sg-hac-content'>
-            <form method="post" action="./Assignments.aspx" onsubmit="javascript:return WebForm_OnSubmit();" id="fmMain">
-<div class="aspNetHidden">
-<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
-<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
-<input type="hidden" name="__LASTFOCUS" id="__LASTFOCUS" value="" />
-<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="NSVYlT2hdC+nsCJkLNInmPpXsp4qcdfC6aONbrOMiq5Ls7qZFyx6ejhecO+HuqxPFGa7C7RcHTpSBCPlh2D+/jMrIPadww9eF2BXftl3zFGGlvWN9Xnk5MQ1jc+NkcvH5jD44GJJ9cGR5a4RmMWqEuLxKQSnjpCpWKhteDLl3KxPrCWA18EPabiv8cpFzOoHEWTj35qY4DqgcJJCF+QUqo0UwVNyJLM/Z4eP0d2c5RPFuejx3EoR9X8EIhWxR3ukRpmF8LsQf5fxIzCLjR5c1j8xJCiyAEJK/VwPrmvNprqnGlHjJkTUoG2la2/oUJJ/vScNM1tS2bzU1lpGzwe4YK6P+LVHA37onJyyeWCeoHTfAm0OyMo+dm8BacF+pLIqjr/+Vutpb9e322f++wSc9cCXxnmq6o4hld5W7xX8yQKHRUVo8btJn2xQ+2EU5xVrYp3cu8dPTmDrHksZeP/Fp6vHT4SUU9UFl9R/T0yQuy+N8Mv/AaqT6gGJsbiVgD9neEcpl3RXpjTWLgXqUC8x+6Nd4Oe4ZIh5AdDkLvbNpFDVsKgGqTYMP4xQT4HIRE6levvpyFHJYwy2YI5fwyNzs8Fxb6W7rxT7PExxdsk9nfwYKkAifCPSBrHTS8ZPQ9OWlDQ67JVn1ehG+BXLX9SmAVaXxcWUxGP2AYD761ynp7xrhtn2u5+vm3mShGRcl3mCVPSm/MEM0jv9dPIHW5TVA3ttEPpDiCVs1cKOw2uRr1xGmbF/fqmPERclj11sVhxmieL9FZ/tRg5a9r6Ntl7QWmXa8drPVIsDVQRRJYKZhlpHCcJL1oUkn8VSrH7lqTG3UtV2A8VFkHuSp2wJXJgJmXU4z+vbhBf4kchM1h2fgv3kNSuXXbHZi6SNUzDh9QDdz3NoRZDO37EqFApmEihm4q+4eNeir2zZVQpp9v2YZjIf7LgPqBlexJ/gb/RMyA1F0AK/WIenrf4RE0CkiYlOMg868aaenoRc4x1rLKWLJgvPFT15n2DrRL+lWv7zBJkdLPafO7+8lqs8npMBG7eaSC4zobVcBm2tceVPJAKdyLOFoZEjcsLUffXw9hdLRm4n4lJ92/2tQAgIDBW+66GUBsQIBNxKx1G81zPLSdvaHbmPoDi2yjoETSq9qMUXwjRgx+NNBIWyB1EPDcCHXGWgl2HaCo/KLLhUMJwYq9GFr6LP6czbNo42ixyYSBQKTs8+b7VQ+iwSMRl+Li8l1hqVVSIdQtz6MRybxNYZ+reL2dgIb38EMGEHTCyXuA9bbv2Wa/WVJbgdmZ8B8qi3bjPWtsa6eqdMAFw6afICgei9HbKsy/R3XszNuEOedNNnjdriahnOk6nOSKV8jmaAMZrbaywfx2SVEM3JoPbHp6zePYDoL2oh0LTP7jGzjHOnUvAS5vYq3zgawFQy7Pc17huAZz76uTm9A3HMq9XJFG9kqXfrX6SvFJCGs5Dc5mstWdC9DstZnmownhHaekd4tNVc1EELBd+VvsieKH0Ycc/aw886wze1kdjx1QqLLOqLKriXw/raJSUF0nVHdyo++9HQGx5hqaG3UcaXRrJbFPuQ5JPwCBA2PGuXZlej3xNBTTX4eayhd+k9bM1yiLoO+yjGIJMGen2QGCEZiRRexBJaQRF1ohudMnDhLmAIwwupgESxshSDdzDNFaIONgR0tnH3Ycs3T9qxh8Gy6PgIU2RxkDwXDXl5EWj1xW2LVR6CUQapB4IKdBGLTW9/1OX8xh7IeZSWXOxgycL9uqHfWotZbg3q+BW/GdVQX73zbBIB1YvCXjpaJ8vu+/fCAfYwUA07e8fhL+0aMewJSV7ids0sWVoAUk4CJQ94P2pkA4wZjtppFHmR0t1apNis19KEsG7u6jD82thmpZ54DOTFOlbsseJX8gT9m1ZNEg2+RtU2Xux6JYU8w8+U8bwLlKxW/HvPfBSFJMgbZXr/yWtbHAVAIPzOd6QqR3pCfpMWe1ghrSChR35i+iDMesmrEf5+S1LpUsyKBggE2eNkvinwel4CtMU=" />
-</div>
+<script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl">
+    function navigateHacMenuItem(elementId, url) {
+        var $element = $('#' + elementId);
+        if ($element.attr('data-open-in-new-tab') === 'true') {
+            window.open($element.attr('data-url'), '_blank', 'noopener');
+            return;
+        }
 
-<script type="text/javascript">
-//<![CDATA[
-var theForm = document.forms['fmMain'];
-if (!theForm) {
-    theForm = document.fmMain;
-}
-function __doPostBack(eventTarget, eventArgument) {
-    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
-        theForm.__EVENTTARGET.value = eventTarget;
-        theForm.__EVENTARGUMENT.value = eventArgument;
-        theForm.submit();
+        window.location = url;
     }
-}
-//]]>
+
+        $(function() {
+            $('#hac-Home').click(function() { window.location = '/HomeAccess/Home/Home'; });
+            $('#hac-Home').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/Home/Home'; } });
+        });
+            $(function () {
+                $('#hac-nav-submenu-Home-SchoolLinks').click(function () { navigateHacMenuItem('hac-nav-submenu-Home-SchoolLinks', '/HomeAccess/Home/SchoolLinks'); });
+                $('#hac-nav-submenu-Home-SchoolLinks').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Home-SchoolLinks', '/HomeAccess/Home/SchoolLinks'); } });
+            });
+        $(function() {
+            $('#hac-Attendance').click(function() { window.location = '/HomeAccess/Attendance'; });
+            $('#hac-Attendance').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/Attendance'; } });
+        });
+            $(function () {
+                $('#hac-nav-submenu-Attendance-MonthView').click(function () { navigateHacMenuItem('hac-nav-submenu-Attendance-MonthView', '/HomeAccess/Attendance/MonthView'); });
+                $('#hac-nav-submenu-Attendance-MonthView').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Attendance-MonthView', '/HomeAccess/Attendance/MonthView'); } });
+            });
+        $(function() {
+            $('#hac-Classes').click(function() { window.location = '/HomeAccess/Classes'; });
+            $('#hac-Classes').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/Classes'; } });
+        });
+        $(function() {
+            $('#hac-Grades').click(function() { window.location = '/HomeAccess/Grades'; });
+            $('#hac-Grades').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/Grades'; } });
+        });
+            $(function () {
+                $('#hac-nav-submenu-Grades-IPR').click(function () { navigateHacMenuItem('hac-nav-submenu-Grades-IPR', '/HomeAccess/Grades/IPR'); });
+                $('#hac-nav-submenu-Grades-IPR').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Grades-IPR', '/HomeAccess/Grades/IPR'); } });
+            });
+            $(function () {
+                $('#hac-nav-submenu-Grades-ReportCard').click(function () { navigateHacMenuItem('hac-nav-submenu-Grades-ReportCard', '/HomeAccess/Grades/ReportCard'); });
+                $('#hac-nav-submenu-Grades-ReportCard').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Grades-ReportCard', '/HomeAccess/Grades/ReportCard'); } });
+            });
+            $(function () {
+                $('#hac-nav-submenu-Grades-Transcript').click(function () { navigateHacMenuItem('hac-nav-submenu-Grades-Transcript', '/HomeAccess/Grades/Transcript'); });
+                $('#hac-nav-submenu-Grades-Transcript').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Grades-Transcript', '/HomeAccess/Grades/Transcript'); } });
+            });
+            $(function () {
+                $('#hac-nav-submenu-Grades-TestScores').click(function () { navigateHacMenuItem('hac-nav-submenu-Grades-TestScores', '/HomeAccess/Grades/TestScores'); });
+                $('#hac-nav-submenu-Grades-TestScores').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Grades-TestScores', '/HomeAccess/Grades/TestScores'); } });
+            });
+            $(function () {
+                $('#hac-nav-submenu-Grades-TXTestScores').click(function () { navigateHacMenuItem('hac-nav-submenu-Grades-TXTestScores', '/HomeAccess/Grades/TXTestScores'); });
+                $('#hac-nav-submenu-Grades-TXTestScores').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Grades-TXTestScores', '/HomeAccess/Grades/TXTestScores'); } });
+            });
+        $(function() {
+            $('#hac-StudentSupport').click(function() { window.location = '/HomeAccess/StudentSupport'; });
+            $('#hac-StudentSupport').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/StudentSupport'; } });
+        });
+            $(function () {
+                $('#hac-nav-submenu-StudentSupport-Discipline').click(function () { navigateHacMenuItem('hac-nav-submenu-StudentSupport-Discipline', '/HomeAccess/StudentSupport/Discipline'); });
+                $('#hac-nav-submenu-StudentSupport-Discipline').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-StudentSupport-Discipline', '/HomeAccess/StudentSupport/Discipline'); } });
+            });
+        $(function() {
+            $('#hac-Registration').click(function() { window.location = '/HomeAccess/Registration'; });
+            $('#hac-Registration').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacMenuKeyboardNav', 'true'); window.location = '/HomeAccess/Registration'; } });
+        });
+            $(function () {
+                $('#hac-nav-submenu-Registration-Demographic').click(function () { navigateHacMenuItem('hac-nav-submenu-Registration-Demographic', '/HomeAccess/Registration/Demographic'); });
+                $('#hac-nav-submenu-Registration-Demographic').on('keypress', function(e) { if (e.which == 13) { sessionStorage.setItem('hacSubmenuKeyboardNav', 'true'); navigateHacMenuItem('hac-nav-submenu-Registration-Demographic', '/HomeAccess/Registration/Demographic'); } });
+            });
+    // Focus management: On page load, focus the currently selected submenu item for keyboard users
+    $(function() {
+        // Only set focus if user navigated via keyboard (check for hash or sessionStorage flag)
+        if (sessionStorage.getItem('hacMenuKeyboardNav') === 'true') {
+            var $selectedSubmenu = $('.sg-hac-submenu-option-selected');
+            if ($selectedSubmenu.length > 0) {
+                $selectedSubmenu.first().focus();
+            }
+            sessionStorage.removeItem('hacMenuKeyboardNav');
+        }
+        // After submenu keyboard navigation, focus main content area
+        if (sessionStorage.getItem('hacSubmenuKeyboardNav') === 'true') {
+            var mainContent = document.getElementById('MainContent');
+            if (mainContent) {
+                mainContent.focus();
+            }
+            sessionStorage.removeItem('hacSubmenuKeyboardNav');
+        }
+    });
 </script>
 
-
-<script src="/HomeAccess/WebResource.axd?d=pynGkmcFUV13He1Qd6_TZMyaL_wZ8s54Do6mdGkrxsfDoQExETxU37U2nuROZm4NT4hsGc_uNoCiORYmjAUdLg2&amp;t=638901591720898773" type="text/javascript"></script>
-
-
-<script src="/HomeAccess/WebResource.axd?d=x2nkrMJGXkMELz33nwnakNqx0lecQyU_Gk6uYb4hg-RAmzgXsFhB7W0fF8900rRMw_k89b-qEANHKt8QXHquWAsF3tiYN4Q8rwZKkJhTVR81&amp;t=638901591720898773" type="text/javascript"></script>
-<script type="text/javascript">
-//<![CDATA[
-function WebForm_OnSubmit() {
-if (typeof(ValidatorOnSubmit) == "function" && ValidatorOnSubmit() == false) return false;
-return true;
-}
-//]]>
-</script>
-
-<div class="aspNetHidden">
-
-	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="B0093F3C" />
-	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="NqCcV9tFfO1ppREY2kc/hreTimhY4i+4k02q9a649jAG9xqPPYRlEEr3bW2FgkoGU2rYFq7tBC4DOsi0UfOUiupIgTp2j5JpNfvUdBH4X7pNvjc4I5uY3olPPbceocxcC6JF7CIgsgu51H41P+WNojTi5+OqA6zacIfoDsOdKdmmb8wdp4JQGxaw53jXN7siv1lJ12nYY0BSNMwjCL34YN9puf4miO/9gLkafb4alu/LVQCzICCV7Vkt0K2S1zE1Xr68kP/DtGHKZ7ufqQJE63SG/eONMywobBR010Cu0ErUFz6WA038ASDNzQuZ3eUt5HPszGeTxAD3Yx1a7PXBpiafPrAUPKghSbTuHZGMyIlN3hwmDePuNMLIOtBshJlihrkOhRuvw1tLQz/a3NhmtAPlaBND340mtbMHCsoA+Bb4EmL6t2n/PLxKWlU3mcW5mIR93xTARZgpIfw4z8J0rJ9kPJRqHTQ00JLSIzsc7D82aPWKUA5i64+dpVihVivXDZkqtW64qpfNeICbTwOL/XorFukfxIlVQ2Fnl3kIZvckjRp+zVeariK4UV6ublTo+K7m/MwR5ukcz6rjgZwPABgMFCEuguJ+UUgBRoY5om8fjLotGf1B11SxJgaB31l6vNXSKpf0NI2lMi58EocOoKbjiarjLpjQY1ypLcAlVI8BQC4/kALMnsXN2ct1MOdxhwfOZ2p3u6/rKVvoL89YW6dVZcnETXXaTv5JIinQmA4ZcemOQaM1OXI5BXm/ndWSgBhdyf4n1JSh3qEfa0x54iaMBInKn+vVkZbhpK6AkFK7i3Le24SL0IZlzaKrStDSP7IPqIu/3+SBqoz+Px+HufPunjBnEXosL9kWeOOyGBxU05VYDYvIJGTAL3/2Yegjs7isPDPVi/buXjHKvc4b9gVGnsg77JKzxwb3zdTW5kwbTnKerFw6iAobzoGEgOJ0AFNAtc52H5HJk0WmzbcysilKzSiGYnVb5kUyzQGd23XJ5KKCtP3+3iqIlcIDqVVTVKi6gM6WnUnighOFVmdlJHPiSX+tbr4CzVZe79On/9ryZ5mbgDRABVG1wUQmLMTJVqeKW+WhvbC8eGR7RzPLZNPEwLJvdVrHd9cMmU2lq8BODkJuj1UprUngAcegrfnF3x12wh7L+3mezmo6LPrEm3NAOADuz/n1XHt1uVg+1R/t9Zu5kobUpen9unxQbI3L+o70I0laKTnpHKqzGehZPUVYI50RPpEFtiwcP0C4OP8jls8HoqIDDz/ZlGjTWbdd84VRNijJZUvSUDoOnKDy+M+JH8PjzUYA8l7NgHBMg0cD7yU3RYfV8AitVzBW+f5WWJc2N5AHQmbI4wPx2ArNO2ByWrvXojP0PVKPox29xrR8rPmsn7IVawGbrH5G1GHh/g9Ncn1q2kwzwsbGXTW9wJIzpd/+p9gQ8e9vYLcVjFmbBOrjMDyLEuym0WYZ7li4I2+3FjoRB/l3suDnnuh/q+cRq7qdt2eG2hqpWWgUhQKQp9ypJxHWq15kNh2PzBiQ+Q9HuueiIypIorx7mz/IoXfWFRx21Cerdberix+IsG2Iu3TrkdOQIIv9QBATf45CuX4MSuJGdABIr7HJMjoVycu890b75O7wftUAOCUTpbFkww4bxaHAT3lIypBI2Y07yUzEnUQ6+NdqCewwAileMEi6oEM+hxQGIeEHbaRVlVDaBo2o67sZGSzrlOb5MsniYLwALWfpVkjyk14sihm320pqVU4A9rjRMl0AJTgx0Z3rH2NFr4xAj59KTDVONKaq4TENxzd9Boc3/yMiT6okMUdtao964zHzxhvlEeNdJIM1HZpIwH+R8/1nI7lmo2X78H4+/iA2SO6HNBuP09N+w5Sys3eOi8fjOb5PnTPbQGs=" />
+<nav id="hac-nav-menu" class="sg-hac-menu" role="navigation" aria-label="Main menu">
+    <div class="sg-hac-menu-options" role="menubar">
+            <div id="hac-Home" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Home"  subDiv="#hac-nav-submenu-Home-options">
+                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-Home.png" />
+                <span>Home</span> 
+            </div>
+            <div id="hac-Attendance" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Attendance"  subDiv="#hac-nav-submenu-Attendance-options">
+                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-Attendance.png" />
+                <span>Attendance</span> 
+            </div>
+            <div id="hac-Classes" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Classes"  subDiv="#hac-nav-submenu-Classes-options">
+                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-Classes.png" />
+                <span>Classes</span> 
+            </div>
+            <div id="hac-Grades" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Grades"  subDiv="#hac-nav-submenu-Grades-options">
+                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-Grades.png" />
+                <span>Grades</span> 
+            </div>
+            <div id="hac-StudentSupport" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Student Support"  subDiv="#hac-nav-submenu-StudentSupport-options">
+                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-StudentSupport.png" />
+                <span>Student Support</span> 
+            </div>
+            <div id="hac-Registration" class="sg-hac-menu-option" tabindex="0" role="menuitem" aria-label="Registration"  subDiv="#hac-nav-submenu-Registration-options">
+                <img alt="" aria-hidden="true" src="/HomeAccess/Media/images/Menu/hac-Registration.png" />
+                <span>Registration</span> 
+            </div>
+    </div>
+</nav>
+<div id="hac-nav-submenu" class="sg-hac-submenu" role="navigation" aria-label="Sub menu">
+    <div id="hac-nav-submenu-Home-options" class="sg-hac-submenu-options" role="tablist" aria-label="Home" style="display:none;">
+            <div id="hac-nav-submenu-Home-SchoolLinks" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="School Links" aria-selected="false">
+                <span>School Links</span>
+            </div>
+    </div>
+    <div id="hac-nav-submenu-Attendance-options" class="sg-hac-submenu-options" role="tablist" aria-label="Attendance" style="display:none;">
+            <div id="hac-nav-submenu-Attendance-MonthView" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Month View" aria-selected="false">
+                <span>Month View</span>
+            </div>
+    </div>
+    <div id="hac-nav-submenu-Classes-options" class="sg-hac-submenu-options" role="tablist" aria-label="Classes" style="display:none;">
+    </div>
+    <div id="hac-nav-submenu-Grades-options" class="sg-hac-submenu-options" role="tablist" aria-label="Grades" style="display:none;">
+            <div id="hac-nav-submenu-Grades-IPR" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="IPR" aria-selected="false">
+                <span>IPR</span>
+            </div>
+            <div id="hac-nav-submenu-Grades-ReportCard" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Report Card" aria-selected="false">
+                <span>Report Card</span>
+            </div>
+            <div id="hac-nav-submenu-Grades-Transcript" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Transcript" aria-selected="false">
+                <span>Transcript</span>
+            </div>
+            <div id="hac-nav-submenu-Grades-TestScores" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Test Scores" aria-selected="false">
+                <span>Test Scores</span>
+            </div>
+            <div id="hac-nav-submenu-Grades-TXTestScores" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Texas Test Scores" aria-selected="false">
+                <span>Texas Test Scores</span>
+            </div>
+    </div>
+    <div id="hac-nav-submenu-StudentSupport-options" class="sg-hac-submenu-options" role="tablist" aria-label="Student Support" style="display:none;">
+            <div id="hac-nav-submenu-StudentSupport-Discipline" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Discipline" aria-selected="false">
+                <span>Discipline</span>
+            </div>
+    </div>
+    <div id="hac-nav-submenu-Registration-options" class="sg-hac-submenu-options" role="tablist" aria-label="Registration" style="display:none;">
+            <div id="hac-nav-submenu-Registration-Demographic" class="sg-hac-submenu-option" role="tab" tabindex="0" aria-label="Demographic" aria-selected="false">
+                <span>Demographic</span>
+            </div>
+    </div>
 </div>
-                
-<div class="sg-header">
-		<input name="ctl00$plnMain$hdnValidMHACLicense" type="hidden" id="plnMain_hdnValidMHACLicense" value="N" />
-        <input name="ctl00$plnMain$hdnIsVisibleClsWrk" type="hidden" id="plnMain_hdnIsVisibleClsWrk" value="N" />
-        <input name="ctl00$plnMain$hdnIsVisibleCrsAvg" type="hidden" id="plnMain_hdnIsVisibleCrsAvg" value="Y" />
-        <input name="ctl00$plnMain$hdnIsVisibleOverdue" type="hidden" id="plnMain_hdnIsVisibleOverdue" value="N" />
-        <input name="ctl00$plnMain$hdnIsVisibleUpcoming" type="hidden" id="plnMain_hdnIsVisibleUpcoming" value="N" />
-        <input name="ctl00$plnMain$hdnJsAlert" type="hidden" id="plnMain_hdnJsAlert" value="Averages cannot be displayed when  Report Card Run is set to (All Runs)." />
-        <input name="ctl00$plnMain$hdnTitle" type="hidden" id="plnMain_hdnTitle" value="Classwork" />
-        <input name="ctl00$plnMain$hdnLastUpdated" type="hidden" id="plnMain_hdnLastUpdated" value="Last Updated" />
-        <input name="ctl00$plnMain$hdnDroppedCourse" type="hidden" id="plnMain_hdnDroppedCourse" value=" This course was dropped as of " />
-        <input name="ctl00$plnMain$hdnddlClasses" type="hidden" id="plnMain_hdnddlClasses" value="(All Classes)" /> 
-        <input name="ctl00$plnMain$hdnddlCompetencies" type="hidden" id="plnMain_hdnddlCompetencies" value="(All Classes)" /> 
-        <input name="ctl00$plnMain$hdnCompDateDue" type="hidden" id="plnMain_hdnCompDateDue" value="Date Due" /> 
-        <input name="ctl00$plnMain$hdnCompDateAssigned" type="hidden" id="plnMain_hdnCompDateAssigned" value="Date Assigned" /> 
-        <input name="ctl00$plnMain$hdnCompCourse" type="hidden" id="plnMain_hdnCompCourse" value="Course" /> 
-        <input name="ctl00$plnMain$hdnCompAssignment" type="hidden" id="plnMain_hdnCompAssignment" value="Assignment" /> 
-        <input name="ctl00$plnMain$hdnCompAssignmentLabel" type="hidden" id="plnMain_hdnCompAssignmentLabel" value="Assignments Not Related to Any Competency" /> 
-        <input name="ctl00$plnMain$hdnCompNoAssignments" type="hidden" id="plnMain_hdnCompNoAssignments" value="No assignments found" /> 
-        <input name="ctl00$plnMain$hdnCompNoClasswork" type="hidden" id="plnMain_hdnCompNoClasswork" value="Classwork could not be found for this competency for the selected report card run." /> 
-        <input name="ctl00$plnMain$hdnCompScore" type="hidden" id="plnMain_hdnCompScore" value="Score" /> 
-        <input name="ctl00$plnMain$hdnCompPoints" type="hidden" id="plnMain_hdnCompPoints" value="Points" /> 
-        <input name="ctl00$plnMain$hdnddlReportCardRuns1" type="hidden" id="plnMain_hdnddlReportCardRuns1" value="(All Runs)" /> 
-        <input name="ctl00$plnMain$hdnddlReportCardRuns2" type="hidden" id="plnMain_hdnddlReportCardRuns2" value="(All Terms)" /> 
-        <input name="ctl00$plnMain$hdnbtnShowAverage" type="hidden" id="plnMain_hdnbtnShowAverage" value="Show All Averages" />
-        <input name="ctl00$plnMain$hdnShowAveragesToolTip" type="hidden" id="plnMain_hdnShowAveragesToolTip" value="Show all student&#39;s averages" />
-        <input name="ctl00$plnMain$hdnPrintClassworkToolTip" type="hidden" id="plnMain_hdnPrintClassworkToolTip" value="Print all classwork" />
-        <input name="ctl00$plnMain$hdnPrintClasswork" type="hidden" id="plnMain_hdnPrintClasswork" value="Print Classwork" />
-        <input name="ctl00$plnMain$hdnCollapseToolTip" type="hidden" id="plnMain_hdnCollapseToolTip" value="Collapse all courses" />
-        <input name="ctl00$plnMain$hdnCollapse" type="hidden" id="plnMain_hdnCollapse" value="Collapse All" />
-        <input name="ctl00$plnMain$hdnFullToolTip" type="hidden" id="plnMain_hdnFullToolTip" value="Switch courses to Full View" />
-        <input name="ctl00$plnMain$hdnViewFull" type="hidden" id="plnMain_hdnViewFull" value="Full View" />
-        <input name="ctl00$plnMain$hdnQuickToolTip" type="hidden" id="plnMain_hdnQuickToolTip" value="Switch courses to Quick View" />
-        <input name="ctl00$plnMain$hdnViewQuick" type="hidden" id="plnMain_hdnViewQuick" value="Quick View" />
-        <input name="ctl00$plnMain$hdnExpand" type="hidden" id="plnMain_hdnExpand" value="Expand All" />
-        <input name="ctl00$plnMain$hdnExpandToolTip" type="hidden" id="plnMain_hdnExpandToolTip" value="Expand all courses" />
-        <input name="ctl00$plnMain$hdnChildCompetencyMessage" type="hidden" id="plnMain_hdnChildCompetencyMessage" value="This competency is calculated as an average of the following competencies" />
-        <input name="ctl00$plnMain$hdnCompetencyScoreLabel" type="hidden" id="plnMain_hdnCompetencyScoreLabel" value="Grade" />
-        <input name="ctl00$plnMain$hdnAverageDetailsDialogTitle" type="hidden" id="plnMain_hdnAverageDetailsDialogTitle" value="Average Details" />
-        <input name="ctl00$plnMain$hdnAssignmentCompetency" type="hidden" id="plnMain_hdnAssignmentCompetency" value="Assignment Competency" />
-        <input name="ctl00$plnMain$hdnAssignmentCourse" type="hidden" id="plnMain_hdnAssignmentCourse" value="Assignment Course" />
-        <input name="ctl00$plnMain$hdnTooltipTitle" type="hidden" id="plnMain_hdnTooltipTitle" value="Title" />
-        <input name="ctl00$plnMain$hdnCategory" type="hidden" id="plnMain_hdnCategory" value="Category" />
-        <input name="ctl00$plnMain$hdnDueDate" type="hidden" id="plnMain_hdnDueDate" value="Due Date" />
-        <input name="ctl00$plnMain$hdnMaxPoints" type="hidden" id="plnMain_hdnMaxPoints" value="Max Points" />
-        <input name="ctl00$plnMain$hdnCanBeDropped" type="hidden" id="plnMain_hdnCanBeDropped" value="Can Be Dropped" />
-        <input name="ctl00$plnMain$hdnHasAttachments" type="hidden" id="plnMain_hdnHasAttachments" value="Has Attachments" />
-        <input name="ctl00$plnMain$hdnExtraCredit" type="hidden" id="plnMain_hdnExtraCredit" value="Extra Credit" />
-        <input name="ctl00$plnMain$hdnType" type="hidden" id="plnMain_hdnType" value="Type" />
-        <input name="ctl00$plnMain$hdnAssignmentDataInfo" type="hidden" id="plnMain_hdnAssignmentDataInfo" value="Information could not be found for the assignment" />
-        <input name="ctl00$plnMain$hdnUnpublishedScoresAlert" type="hidden" id="plnMain_hdnUnpublishedScoresAlert" value="Note: " />
-        <input name="ctl00$plnMain$hdnUnpublishedScoresAlertMsg" type="hidden" id="plnMain_hdnUnpublishedScoresAlertMsg" value="One or more unpublished assignment scores have been included in the average. The scores will not show on this page until the teacher publishes them." />
+    </header>
 
-        <div style="text-align: right;">
-            <button id="plnMain_btnPrintClasswork" onclick="btnPrintClasswork_onclick()" type="button" class="sg-button sg-5px-margin btnPrintClassworkAction">Print Classwork</button>
-            <button id="plnMain_btnCollapseExpand" type="button" class="sg-button sg-5px-margin btnCollapseExpand" title="Collapse all courses" onClick="javascript:return btnCollapseExpand_onclick(event);">Collapse All</button>
-            <span id="plnMain_spnView"><button id="btnView" onclick="btnView_onclick(); return false;" class="sg-button sg-5px-margin btnView" title="Switch courses to Full View" aria-label="Full View">Full View</button></span>
+    
+
+
+<div id="MainContent" class="sg-main-content" tabindex="0">
+    
+
+    <div style="display: none;" id="session-block" aria-hidden="true">
+    </div>
+    <div id="session-container" style="display: none;" class="sg-container" role="alertdialog" aria-modal="true" aria-labelledby="session-warning-heading" aria-describedby="session-warning-text">
+        <div class="sg-header">
+		    <img class="sg-header-image" src="/HomeAccess/Media/Themes/Base/Headers/header-session-expire.png" alt="" aria-hidden="true" />
+		    <span class="sg-header-heading" id="session-warning-heading">Session Warning</span>
+        </div>
+        <div class="sg-container-content" id="session-background">
+            <p id="session-warning-text">Your session is about to expire.  Unsaved changes will be lost.</p>
+            <div id="session-buttons" class="sg-container-button">
+                <button Name="session-renew" Value="" aria_label="Keep session open" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" id="session-renew"><span class="ui-button-text">Keep session open</span></button>
+                <button Name="session-ignore" Value="" aria_label="Ignore" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" id="session-ignore"><span class="ui-button-text">Ignore</span></button>
+            </div>
         </div>
     </div>
-    <div id="plnMain_pnlFullPage" class="sg-content-grid">
-	
-        <div class="sg-content-grid-container sg-container-content">
-            <div>
-                <span id="plnMain_lblViewClassworkfor" style="font-weight:bold;">View Classwork for</span>
-                
-                
-            <label for="plnMain_ddlReportCardRuns" id="plnMain_lblForRCardRun" style="font-weight:bold;">Report Card Run</label>
-            
-                <select name="ctl00$plnMain$ddlReportCardRuns" id="plnMain_ddlReportCardRuns" class="sg-combobox" aria-label="Report Card Run">
-		<option value="ALL">(All Runs)</option>
-		<option value="1-2026">1</option>
-		<option value="2-2026">2</option>
-		<option value="3-2026">3</option>
-		<option selected="selected" value="4-2026">4</option>
-		<option value="5-2026">5</option>
-		<option value="6-2026">6</option>
-
-	</select>
-             
-                <button onclick="__doPostBack('ctl00$plnMain$btnRefreshView','')" id="plnMain_btnRefreshView" type="button" class="sg-button sg-right">Refresh View</button>
-            </div>
-            <div>
-                <label id="plnMain_lblShow" for="ddlClasses">Show</label>
-                <span id="plnMain_spnCourse" class="asmt-course" style="display:;"><select name="ctl00$plnMain$ddlClasses" id="plnMain_ddlClasses" class="sg-combobox" aria-label="Show">
-		<option selected="selected" value="ALL">(All Classes)</option>
-		<option value="3371787|1">0020A - 144  STUDY HALL (INSTRUCT)</option>
-		<option value="3371788|1">0020B - 136  STUDY HALL (INSTRUCT)</option>
-		<option value="3564846|1">0110VIRSA - 1    APENGLIT GT A</option>
-		<option value="3564849|1">0110VIRSB - 1    APENGLIT GT B</option>
-		<option value="3261544|1">0230B - 6    AP PRE CALC B</option>
-		<option value="3260513|1">0231A - 7    AP PRE CALC GT A</option>
-		<option value="3261545|1">0231B - 6    AP PRE CALC GT B</option>
-		<option value="3246729|1">0314VA - 1    APUSHIST GT A</option>
-		<option value="3246730|1">0314VB - 1    APUSHIST GT B</option>
-		<option value="3404453|1">0314VIRA - 2    APUSHIST GT A</option>
-		<option value="3564893|1">0325VIRS2 - 1    APUSGOVT GT</option>
-		<option value="3398639|1">0355VIRF - 1    AP MICRO ECO</option>
-		<option value="3564870|1">0356VIRS1 - 1    AP MICRO ECO GT</option>
-		<option value="3367284|1">0467A - 25   AP PHYSICS 1 GT A</option>
-		<option value="3367285|1">0467B - 25   AP PHYSICS 1 GT B</option>
-		<option value="3371906|1">8684A - 1    APCAREER KSTART CYBER:NETW A</option>
-		<option value="3371907|1">8684B - 1    APCAREER KSTART CYBER:NETW B</option>
-		<option value="3247338|1">8685VA - 2    NETWORKING I A</option>
-		<option value="3247339|1">8685VB - 2    NETWORKING I B</option>
-
-	</select></span>
-                <span id="plnMain_spnCompetency" class="asmt-competency" style="display:none;"><select name="ctl00$plnMain$ddlCompetencies" id="plnMain_ddlCompetencies" class="sg-combobox" aria-label="Show Competency">
-		<option selected="selected" value="ALL">(All Classes)</option>
-
-	</select></span>
-                <label id="plnMain_lblOrderBy" for="ddlOrderBy">Order by</label>
-                <span class="asmt-order"><select name="ctl00$plnMain$ddlOrderBy" id="plnMain_ddlOrderBy" class="sg-combobox" aria-label="Order by">
-		<option selected="selected" value="Class">Class</option>
-		<option value="Date">Date Due</option>
-
-	</select></span>
-                   
-            </div>
-                         
-        </div>
-        <div id="dvAlerts" class="sg-content-alert-container sg-container-content">
-            <div id="plnMain_pCrsAverageAlert">
-                <input id="plnMain_chkCrsAvgAlert" type="checkbox" name="ctl00$plnMain$chkCrsAvgAlert" onclick="javascript:setTimeout(&#39;WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$plnMain$chkCrsAvgAlert&quot;, &quot;&quot;, true, &quot;AvgValidate&quot;, &quot;&quot;, false, true))&#39;, 0)" />
-                
-				
-				
-                <span id="plnMain_lblCrsAverageStart">Alert me if my student receives a course average below </span>
-                <!-- Span for SCRRK00707463 -->
-                
-                <input name="ctl00$plnMain$txtMinCrsAvgValue" type="text" onchange="javascript:setTimeout(&#39;WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$plnMain$txtMinCrsAvgValue&quot;, &quot;&quot;, true, &quot;AvgValidate&quot;, &quot;&quot;, false, true))&#39;, 0)" onkeypress="if (WebForm_TextBoxKeyHandler(event) == false) return false;" id="plnMain_txtMinCrsAvgValue" disabled="disabled" class="aspNetDisabled disabled" style="width:50px;" /> 
-                <span id="plnMain_lblCrsAverageMid">% or above</span>
-                <input name="ctl00$plnMain$txtMaxCrsAvgValue" type="text" onchange="javascript:setTimeout(&#39;WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$plnMain$txtMaxCrsAvgValue&quot;, &quot;&quot;, true, &quot;AvgValidate&quot;, &quot;&quot;, false, true))&#39;, 0)" onkeypress="if (WebForm_TextBoxKeyHandler(event) == false) return false;" id="plnMain_txtMaxCrsAvgValue" disabled="disabled" class="aspNetDisabled disabled" style="width:50px;" />
-                <span id="plnMain_lblCrsAverageEnd">%.</span>                                          
-
-                <span id="plnMain_RangeValidatorMinCrsAvg1" style="display:none;"></span> 
-                                            
-                <span id="plnMain_RangeValidatorMaxCrsAvg1" style="display:none;"></span> 
-
-                <span id="plnMain_CompareValidatorMaxCrsAvg1" style="display:none;"></span>
-            </div>
-            
-            
-            
-        </div>
-    <div id="plnMain_vsAvgValidate" style="display:none;">
-
-	</div>
-    
-    <span id="asmtEmptyDesc" class="sr-only"></span>
-    
-    
-        <div class="AssignmentClass">
-            <div class="sg-header sg-header-square">
-                 
-                 
-                    <a class="sg-header-heading" href="#" onclick="OpenClassPopUpWithMarkingPeriod('3371788',4); return false;">
-                        0020B - 136  STUDY HALL (INSTRUCT)
-                    </a>    
-                <span id="plnMain_rptAssigmnetsByCourse_lblLastUpdDate_0" class="sg-header-sub-heading"></span>
-                
-                <span id="plnMain_rptAssigmnetsByCourse_lblHdrAverage_0" class="sg-header-heading sg-right" title=""></span>    
-            </div>
-            <div class="sg-content-grid">
-                
-                <div class="sg-asp-table-group">
-                    
-                    
-                </div>
-            </div>
-        </div>           
-        
-        <div class="AssignmentClass">
-            <div class="sg-header sg-header-square">
-                <button id="plnMain_rptAssigmnetsByCourse_btnShowHide_1" type="button" class="sg-button sg-button-show-hide sg-left sg-5px-margin icon-minus" aria-label="Show/Hide" onClick="javascript:return btnShowHide_onclick(event);"></button> 
-                 
-                    <a class="sg-header-heading" href="#" onclick="OpenClassPopUpWithMarkingPeriod('3564849',4); return false;">
-                        0110VIRSB - 1    APENGLIT GT B
-                    </a>    
-                <span id="plnMain_rptAssigmnetsByCourse_lblLastUpdDate_1" class="sg-header-sub-heading"></span>
-                
-                <span id="plnMain_rptAssigmnetsByCourse_lblHdrAverage_1" class="sg-header-heading sg-right" title="">Classwork Average 0</span>    
-            </div>
-            <div class="sg-content-grid">
-                <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseAssignments_1" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td>Date Due</td><td>Date Assigned</td><td>Assignment</td><td>Category</td><td>Score</td><td>Total Points</td><td class="sg-view-quick">Weight</td><td class="sg-view-quick">Weighted Score</td><td class="sg-view-quick">Weighted Total Points</td><td class="sg-view-quick">Percentage</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/04/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 8.2.9 Apply What You Have Learned -  Imagery (Other)
-Category: Other
-Due Date: 07/04/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="8.2.9 Apply What You Have Learned -  Imagery (Other)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564849', '1', '1408408799'); return false;">
-                                    8.2.9 Apply What You Have Learned -  Imagery (Other)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/03/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 8.2.6 Apply What You Have Learned (Minor)
-Category: Minor
-Due Date: 07/03/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="8.2.6 Apply What You Have Learned (Minor)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564849', '1', '1408408399'); return false;">
-                                    8.2.6 Apply What You Have Learned (Minor)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/03/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 8.2.3 Apply What You Have Learned (Other)
-Category: Other
-Due Date: 07/03/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="8.2.3 Apply What You Have Learned (Other)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564849', '1', '1408407999'); return false;">
-                                    8.2.3 Apply What You Have Learned (Other)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 8.1.15 Apply What You&#39;ve Learned (Other)
-Category: Other
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="8.1.15 Apply What You&#39;ve Learned (Other)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564849', '1', '1408405099'); return false;">
-                                    8.1.15 Apply What You&#39;ve Learned (Other)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/01/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 8.1.10 Structure and Progression in Regular Verse (Minor)
-Category: Minor
-Due Date: 07/01/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="8.1.10 Structure and Progression in Regular Verse (Minor)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564849', '1', '1408403799'); return false;">
-                                    8.1.10 Structure and Progression in Regular Verse (Minor)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>06/30/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 8.1.8 Villanelle Analysis: Poetry Assignment Outline (Major)
-Category: Major
-Due Date: 06/30/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="8.1.8 Villanelle Analysis: Poetry Assignment Outline (Major)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564849', '1', '1408407199'); return false;">
-                                    8.1.8 Villanelle Analysis: Poetry Assignment Outline (Major)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>06/29/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 8.1.7 Evaluating Focus Statements &amp; Evidence (Other)
-Category: Other
-Due Date: 06/29/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="8.1.7 Evaluating Focus Statements &amp; Evidence (Other)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564849', '1', '1408406699'); return false;">
-                                    8.1.7 Evaluating Focus Statements &amp; Evidence (Other)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr>
-	</table>
-                <div class="sg-asp-table-group">
-                    <span id="plnMain_rptAssigmnetsByCourse_lblCategories_1" class="LabelCatogery">
-                        <div class="sg-view-quick sg-clearfix" >
-                            <div class="sg-header-group">
-                                <label id="plnMain_rptAssigmnetsByCourse_hdrCategories_1" CssClass="sg-header-heading">Categories</label>
-                            </div>
-                            <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseCategories_1" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td align="center" valign="middle">Category</td><td align="center" valign="middle">Student's<br>Points</td><td align="center" valign="middle"> / Maximum<br>Points</td><td align="center" valign="middle"> = Percent</td><td align="center" valign="middle"> * Category<br>Weight</td><td align="center" valign="middle"> = Category<br>Points</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Major</td><td>0.0000</td><td>100.00</td><td>0.000%</td><td>70.00</td><td>0.000000</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Minor</td><td>0.0000</td><td>200.00</td><td>0.000%</td><td>20.00</td><td>0.000000</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Other</td><td>0.0000</td><td>400.00</td><td>0.000%</td><td>10.00</td><td>0.000000</td>
-		</tr><tr style="color:White;background-color:#CCCCCC;border-color:#CCCCCC;">
-			<td><b>Total Points:</b></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td><b>100.00</b></td><td style="background-color:#CCCCCC;"><b>0.000000</b></td>
-		</tr>
-	</table>
-                            <br />
-                            
-                                <div style="display:inline-block;">
-                                
-                            </div>
-                            <span id="plnMain_rptAssigmnetsByCourse_lblShowAverages_1" class="sg-right">
-                                <button class="LabelCatogery sg-button"  id="btnShowAverages" onclick="btnShowAverages_onclick('3564849', '1'); return false;" title="Show all student's averages"  >Show All Averages</button>	
-                            </span>
-                        </div>
-                    </span>
-                    
-                </div>
-            </div>
-        </div>           
-        
-        <div class="AssignmentClass">
-            <div class="sg-header sg-header-square">
-                <button id="plnMain_rptAssigmnetsByCourse_btnShowHide_2" type="button" class="sg-button sg-button-show-hide sg-left sg-5px-margin icon-minus" aria-label="Show/Hide" onClick="javascript:return btnShowHide_onclick(event);"></button> 
-                 
-                    <a class="sg-header-heading" href="#" onclick="OpenClassPopUpWithMarkingPeriod('3261544',4); return false;">
-                        0230B - 6    AP PRE CALC B
-                    </a>    
-                <span id="plnMain_rptAssigmnetsByCourse_lblLastUpdDate_2" class="sg-header-sub-heading"></span>
-                
-                <span id="plnMain_rptAssigmnetsByCourse_lblHdrAverage_2" class="sg-header-heading sg-right" title="">Classwork Average 72</span>    
-            </div>
-            <div class="sg-content-grid">
-                <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseAssignments_2" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td>Date Due</td><td>Date Assigned</td><td>Assignment</td><td>Category</td><td>Score</td><td>Total Points</td><td class="sg-view-quick">Weight</td><td class="sg-view-quick">Weighted Score</td><td class="sg-view-quick">Weighted Total Points</td><td class="sg-view-quick">Percentage</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/11/2026</td><td>02/10/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #87
-Category: Other
-Due Date: 02/11/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #87"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '30'); return false;">
-                                    HW #87
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/10/2026</td><td>02/09/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #86
-Category: Other
-Due Date: 02/10/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #86"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '29'); return false;">
-                                    HW #86
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/10/2026</td><td>02/10/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: UC #15
-Category: Minor
-Due Date: 02/10/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="UC #15"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '28'); return false;">
-                                    UC #15
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                60.00
-                            </td><td>100.00</td><td class="sg-view-quick">0.34</td><td class="sg-view-quick">20.40</td><td class="sg-view-quick">34.0000</td><td class="sg-view-quick">60.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/06/2026</td><td>02/06/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Packet #8 Test
-Category: Major
-Due Date: 02/06/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Packet #8 Test"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '27'); return false;">
-                                    Packet #8 Test
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                70.00<img align="absmiddle" src="/HomeAccess/media/images/legacy/notes.png" class="comment-tooltip" style="cursor: help" title="Retest/Redo Grade Applied/Retomo Examen/Rehizo Calificación Aplicada">
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">70.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">70.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/05/2026</td><td>02/04/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #84
-Category: Other
-Due Date: 02/05/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #84"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '26'); return false;">
-                                    HW #84
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/04/2026</td><td>02/03/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #83
-Category: Other
-Due Date: 02/04/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #83"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '25'); return false;">
-                                    HW #83
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/03/2026</td><td>02/02/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #82
-Category: Other
-Due Date: 02/03/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #82"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '24'); return false;">
-                                    HW #82
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/03/2026</td><td>02/03/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: UC #14
-Category: Minor
-Due Date: 02/03/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="UC #14"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '21'); return false;">
-                                    UC #14
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                50.00
-                            </td><td>100.00</td><td class="sg-view-quick">0.33</td><td class="sg-view-quick">16.50</td><td class="sg-view-quick">33.0000</td><td class="sg-view-quick">50.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/02/2026</td><td>01/30/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #81
-Category: Other
-Due Date: 02/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #81"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '23'); return false;">
-                                    HW #81
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                51.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">51.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">51.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/30/2026</td><td>01/29/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #80
-Category: Other
-Due Date: 01/30/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #80"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '22'); return false;">
-                                    HW #80
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                51.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">51.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">51.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/30/2026</td><td>01/30/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Quiz - Conic Sections
-Category: Minor
-Due Date: 01/30/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Quiz - Conic Sections"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '20'); return false;">
-                                    Quiz - Conic Sections
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                88.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">88.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">88.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/29/2026</td><td>01/28/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #79
-Category: Other
-Due Date: 01/29/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #79"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '19'); return false;">
-                                    HW #79
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/28/2026</td><td>01/27/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #78
-Category: Other
-Due Date: 01/28/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #78"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '18'); return false;">
-                                    HW #78
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                51.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">51.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">51.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/28/2026</td><td>01/28/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: UC #13
-Category: Minor
-Due Date: 01/28/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="UC #13"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '17'); return false;">
-                                    UC #13
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                80.00
-                            </td><td>100.00</td><td class="sg-view-quick">0.33</td><td class="sg-view-quick">26.40</td><td class="sg-view-quick">33.0000</td><td class="sg-view-quick">80.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/23/2026</td><td>01/23/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Packet #7 Test
-Category: Major
-Due Date: 01/23/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Packet #7 Test"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '11'); return false;">
-                                    Packet #7 Test
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                70.00<img align="absmiddle" src="/HomeAccess/media/images/legacy/notes.png" class="comment-tooltip" style="cursor: help" title="Retest/Redo Grade Applied/Retomo Examen/Rehizo Calificación Aplicada">
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">70.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">70.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/22/2026</td><td>01/21/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #76
-Category: Other
-Due Date: 01/22/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #76"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '16'); return false;">
-                                    HW #76
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                0.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/21/2026</td><td>01/20/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #75
-Category: Other
-Due Date: 01/21/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #75"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '15'); return false;">
-                                    HW #75
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/21/2026</td><td>01/21/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: UC #12
-Category: Minor
-Due Date: 01/21/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="UC #12"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '10'); return false;">
-                                    UC #12
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                80.00
-                            </td><td>100.00</td><td class="sg-view-quick">0.34</td><td class="sg-view-quick">27.20</td><td class="sg-view-quick">34.0000</td><td class="sg-view-quick">80.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/20/2026</td><td>01/16/2026</td><td style="text-decoration: line-through;">
-                                <a title="Title: Assignment Course
-Classwork: HW #74
-Category: Other
-Due Date: 01/20/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #74"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '14'); return false;">
-                                    HW #74
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                0.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/16/2026</td><td>01/15/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #73
-Category: Other
-Due Date: 01/16/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #73"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '13'); return false;">
-                                    HW #73
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/16/2026</td><td>01/16/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: UC #11
-Category: Minor
-Due Date: 01/16/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="UC #11"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '8'); return false;">
-                                    UC #11
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                70.00
-                            </td><td>100.00</td><td class="sg-view-quick">0.33</td><td class="sg-view-quick">23.10</td><td class="sg-view-quick">33.0000</td><td class="sg-view-quick">70.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/15/2026</td><td>01/14/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #72
-Category: Other
-Due Date: 01/15/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #72"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '12'); return false;">
-                                    HW #72
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/14/2026</td><td>01/14/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Quiz 3.13 &amp; Polar Graphs
-Category: Minor
-Due Date: 01/14/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Quiz 3.13 &amp; Polar Graphs"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '9'); return false;">
-                                    Quiz 3.13 &amp; Polar Graphs
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                68.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">68.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">68.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/14/2026</td><td>01/13/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #71 (Delta Math)
-Category: Other
-Due Date: 01/14/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #71 (Delta Math)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '7'); return false;">
-                                    HW #71 (Delta Math)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/13/2026</td><td>01/12/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #70
-Category: Other
-Due Date: 01/13/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #70"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '6'); return false;">
-                                    HW #70
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/12/2026</td><td>01/09/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #69
-Category: Other
-Due Date: 01/12/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #69"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '5'); return false;">
-                                    HW #69
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/09/2026</td><td>01/09/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: UC #10
-Category: Minor
-Due Date: 01/09/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="UC #10"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '4'); return false;">
-                                    UC #10
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                80.00
-                            </td><td>100.00</td><td class="sg-view-quick">0.33</td><td class="sg-view-quick">26.40</td><td class="sg-view-quick">33.0000</td><td class="sg-view-quick">80.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/09/2026</td><td>01/08/2026</td><td style="text-decoration: line-through;">
-                                <a title="Title: Assignment Course
-Classwork: HW #68
-Category: Other
-Due Date: 01/09/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #68"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '3'); return false;">
-                                    HW #68
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                0.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/08/2026</td><td>01/07/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #67
-Category: Other
-Due Date: 01/08/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #67"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '2'); return false;">
-                                    HW #67
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/07/2026</td><td>01/06/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #66
-Category: Other
-Due Date: 01/07/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #66"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261544', '1', '1'); return false;">
-                                    HW #66
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr>
-	</table>
-                <div class="sg-asp-table-group">
-                    <span id="plnMain_rptAssigmnetsByCourse_lblCategories_2" class="LabelCatogery">
-                        <div class="sg-view-quick sg-clearfix" >
-                            <div class="sg-header-group">
-                                <label id="plnMain_rptAssigmnetsByCourse_hdrCategories_2" CssClass="sg-header-heading">Categories</label>
-                            </div>
-                            <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseCategories_2" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td align="center" valign="middle">Category</td><td align="center" valign="middle">Student's<br>Points</td><td align="center" valign="middle"> / Maximum<br>Points</td><td align="center" valign="middle"> = Percent</td><td align="center" valign="middle"> * Category<br>Weight</td><td align="center" valign="middle"> = Category<br>Points</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Major</td><td>140.0000</td><td>200.00</td><td>70.000%</td><td>70.00</td><td>49.000000</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Minor</td><td>296.0000</td><td>400.00</td><td>74.000%</td><td>20.00</td><td>14.800000</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Other</td><td>1553.0000</td><td>1800.00</td><td>86.277%</td><td>10.00</td><td>8.627800</td>
-		</tr><tr style="color:White;background-color:#CCCCCC;border-color:#CCCCCC;">
-			<td><b>Total Points:</b></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td><b>100.00</b></td><td style="background-color:#CCCCCC;"><b>72.427800</b></td>
-		</tr>
-	</table>
-                            <br />
-                            
-                                <div style="display:inline-block;">
-                                
-                            </div>
-                            <span id="plnMain_rptAssigmnetsByCourse_lblShowAverages_2" class="sg-right">
-                                <button class="LabelCatogery sg-button"  id="btnShowAverages" onclick="btnShowAverages_onclick('3261544', '1'); return false;" title="Show all student's averages"  >Show All Averages</button>	
-                            </span>
-                        </div>
-                    </span>
-                    
-                </div>
-            </div>
-        </div>           
-        
-        <div class="AssignmentClass">
-            <div class="sg-header sg-header-square">
-                <button id="plnMain_rptAssigmnetsByCourse_btnShowHide_3" type="button" class="sg-button sg-button-show-hide sg-left sg-5px-margin icon-minus" aria-label="Show/Hide" onClick="javascript:return btnShowHide_onclick(event);"></button> 
-                 
-                    <a class="sg-header-heading" href="#" onclick="OpenClassPopUpWithMarkingPeriod('3261545',4); return false;">
-                        0231B - 6    AP PRE CALC GT B
-                    </a>    
-                <span id="plnMain_rptAssigmnetsByCourse_lblLastUpdDate_3" class="sg-header-sub-heading"></span>
-                <span id="plnMain_rptAssigmnetsByCourse_lblDroppedCourse_3" class="sg-header-sub-heading DroppedCourse"> This course was dropped as of 01/08/2026</span>
-                <span id="plnMain_rptAssigmnetsByCourse_lblHdrAverage_3" class="sg-header-heading sg-right" title="">Classwork Average 100</span>    
-            </div>
-            <div class="sg-content-grid">
-                <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseAssignments_3" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td>Date Due</td><td>Date Assigned</td><td>Assignment</td><td>Category</td><td>Score</td><td>Total Points</td><td class="sg-view-quick">Weight</td><td class="sg-view-quick">Weighted Score</td><td class="sg-view-quick">Weighted Total Points</td><td class="sg-view-quick">Percentage</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/08/2026</td><td>01/07/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #67
-Category: Other
-Due Date: 01/08/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #67"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261545', '1', '2'); return false;">
-                                    HW #67
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">&nbsp;</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">&nbsp;</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/07/2026</td><td>01/06/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: HW #66
-Category: Other
-Due Date: 01/07/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="HW #66"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3261545', '1', '1'); return false;">
-                                    HW #66
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr>
-	</table>
-                <div class="sg-asp-table-group">
-                    <span id="plnMain_rptAssigmnetsByCourse_lblCategories_3" class="LabelCatogery">
-                        <div class="sg-view-quick sg-clearfix" >
-                            <div class="sg-header-group">
-                                <label id="plnMain_rptAssigmnetsByCourse_hdrCategories_3" CssClass="sg-header-heading">Categories</label>
-                            </div>
-                            <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseCategories_3" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td align="center" valign="middle">Category</td><td align="center" valign="middle">Student's<br>Points</td><td align="center" valign="middle"> / Maximum<br>Points</td><td align="center" valign="middle"> = Percent</td><td align="center" valign="middle"> * Category<br>Weight</td><td align="center" valign="middle"> = Category<br>Points</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Other</td><td>100.0000</td><td>100.00</td><td>100.000%</td><td>10.00</td><td>10.000000</td>
-		</tr><tr style="color:White;background-color:#CCCCCC;border-color:#CCCCCC;">
-			<td><b>Total Points:</b></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td><b>10.00</b></td><td style="background-color:#CCCCCC;"><b>10.000000</b></td>
-		</tr>
-	</table>
-                            <br />
-                            
-                                <div style="display:inline-block;">
-                                
-                            </div>
-                            <span id="plnMain_rptAssigmnetsByCourse_lblShowAverages_3" class="sg-right">
-                                <button class="LabelCatogery sg-button"  id="btnShowAverages" onclick="btnShowAverages_onclick('3261545', '1'); return false;" title="Show all student's averages"  >Show All Averages</button>	
-                            </span>
-                        </div>
-                    </span>
-                    
-                </div>
-            </div>
-        </div>           
-        
-        <div class="AssignmentClass">
-            <div class="sg-header sg-header-square">
-                <button id="plnMain_rptAssigmnetsByCourse_btnShowHide_4" type="button" class="sg-button sg-button-show-hide sg-left sg-5px-margin icon-minus" aria-label="Show/Hide" onClick="javascript:return btnShowHide_onclick(event);"></button> 
-                 
-                    <a class="sg-header-heading" href="#" onclick="OpenClassPopUpWithMarkingPeriod('3246730',4); return false;">
-                        0314VB - 1    APUSHIST GT B
-                    </a>    
-                <span id="plnMain_rptAssigmnetsByCourse_lblLastUpdDate_4" class="sg-header-sub-heading"></span>
-                
-                <span id="plnMain_rptAssigmnetsByCourse_lblHdrAverage_4" class="sg-header-heading sg-right" title="">Classwork Average 89</span>    
-            </div>
-            <div class="sg-content-grid">
-                <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseAssignments_4" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td>Date Due</td><td>Date Assigned</td><td>Assignment</td><td>Category</td><td>Score</td><td>Total Points</td><td class="sg-view-quick">Weight</td><td class="sg-view-quick">Weighted Score</td><td class="sg-view-quick">Weighted Total Points</td><td class="sg-view-quick">Percentage</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/06/2026</td><td>02/06/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Period 7 DBQ - Progressive Era
-Category: Major
-Due Date: 02/06/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Period 7 DBQ - Progressive Era"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '13'); return false;">
-                                    Period 7 DBQ - Progressive Era
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                75.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">75.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">75.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/04/2026</td><td>01/30/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Chapter 19 Quiz
-Category: Minor
-Due Date: 02/04/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Chapter 19 Quiz"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '12'); return false;">
-                                    Chapter 19 Quiz
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/04/2026</td><td>01/30/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Progressive Era Reform Fair Project
-Category: Major
-Due Date: 02/04/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Progressive Era Reform Fair Project"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '11'); return false;">
-                                    Progressive Era Reform Fair Project
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                93.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">93.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">93.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/29/2026</td><td>01/23/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Chapter 18 Reading Quiz
-Category: Minor
-Due Date: 01/29/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Chapter 18 Reading Quiz"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '9'); return false;">
-                                    Chapter 18 Reading Quiz
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/27/2026</td><td>01/27/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Progressive Era Introduction
-Category: Other
-Due Date: 01/27/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Progressive Era Introduction"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '10'); return false;">
-                                    Progressive Era Introduction
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                67.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">67.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">67.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/23/2026</td><td>01/23/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Period 6 Test Extra Credit
-Category: Major
-Due Date: 01/23/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: Y
-Has Attachments: N"
-                                    aria-label="Period 6 Test Extra Credit"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '5'); return false;">
-                                    Period 6 Test Extra Credit
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                8.50
-                            </td><td>N/A</td><td class="sg-view-quick">N/A</td><td class="sg-view-quick">N/A</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">8.50%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/23/2026</td><td>01/23/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Period 6 Exam
-Category: Major
-Due Date: 01/23/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Period 6 Exam"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '4'); return false;">
-                                    Period 6 Exam
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                84.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">84.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">84.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/22/2026</td><td>01/16/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Chapter 17 Reading Quiz
-Category: Minor
-Due Date: 01/22/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Chapter 17 Reading Quiz"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '8'); return false;">
-                                    Chapter 17 Reading Quiz
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/21/2026</td><td>01/20/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Gilded Age Immigration Seminar
-Category: Other
-Due Date: 01/21/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Gilded Age Immigration Seminar"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '7'); return false;">
-                                    Gilded Age Immigration Seminar
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/20/2026</td><td>01/14/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Gilded Age Packet
-Category: Other
-Due Date: 01/20/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Gilded Age Packet"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '6'); return false;">
-                                    Gilded Age Packet
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/15/2026</td><td>01/15/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: The New South
-Category: Other
-Due Date: 01/15/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="The New South"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '1'); return false;">
-                                    The New South
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/14/2026</td><td>01/14/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Populist Party
-Category: Other
-Due Date: 01/14/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Populist Party"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '2'); return false;">
-                                    Populist Party
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/13/2026</td><td>01/09/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Chapter 16 Reading Quiz
-Category: Minor
-Due Date: 01/13/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Chapter 16 Reading Quiz"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3246730', '1', '3'); return false;">
-                                    Chapter 16 Reading Quiz
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                87.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">87.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">87.00%</td>
-		</tr>
-	</table>
-                <div class="sg-asp-table-group">
-                    <span id="plnMain_rptAssigmnetsByCourse_lblCategories_4" class="LabelCatogery">
-                        <div class="sg-view-quick sg-clearfix" >
-                            <div class="sg-header-group">
-                                <label id="plnMain_rptAssigmnetsByCourse_hdrCategories_4" CssClass="sg-header-heading">Categories</label>
-                            </div>
-                            <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseCategories_4" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td align="center" valign="middle">Category</td><td align="center" valign="middle">Student's<br>Points</td><td align="center" valign="middle"> / Maximum<br>Points</td><td align="center" valign="middle"> = Percent</td><td align="center" valign="middle"> * Category<br>Weight</td><td align="center" valign="middle"> = Category<br>Points</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Major</td><td>260.5000</td><td>300.00</td><td>86.833%</td><td>70.00</td><td>60.783100</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Minor</td><td>387.0000</td><td>400.00</td><td>96.750%</td><td>20.00</td><td>19.350000</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Other</td><td>467.0000</td><td>500.00</td><td>93.400%</td><td>10.00</td><td>9.340000</td>
-		</tr><tr style="color:White;background-color:#CCCCCC;border-color:#CCCCCC;">
-			<td><b>Total Points:</b></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td><b>100.00</b></td><td style="background-color:#CCCCCC;"><b>89.473100</b></td>
-		</tr>
-	</table>
-                            <br />
-                            
-                                <div style="display:inline-block;">
-                                
-                            </div>
-                            <span id="plnMain_rptAssigmnetsByCourse_lblShowAverages_4" class="sg-right">
-                                <button class="LabelCatogery sg-button"  id="btnShowAverages" onclick="btnShowAverages_onclick('3246730', '1'); return false;" title="Show all student's averages"  >Show All Averages</button>	
-                            </span>
-                        </div>
-                    </span>
-                    
-                </div>
-            </div>
-        </div>           
-        
-        <div class="AssignmentClass">
-            <div class="sg-header sg-header-square">
-                <button id="plnMain_rptAssigmnetsByCourse_btnShowHide_5" type="button" class="sg-button sg-button-show-hide sg-left sg-5px-margin icon-minus" aria-label="Show/Hide" onClick="javascript:return btnShowHide_onclick(event);"></button> 
-                 
-                    <a class="sg-header-heading" href="#" onclick="OpenClassPopUpWithMarkingPeriod('3564893',4); return false;">
-                        0325VIRS2 - 1    APUSGOVT GT
-                    </a>    
-                <span id="plnMain_rptAssigmnetsByCourse_lblLastUpdDate_5" class="sg-header-sub-heading"></span>
-                
-                <span id="plnMain_rptAssigmnetsByCourse_lblHdrAverage_5" class="sg-header-heading sg-right" title="">Classwork Average 3</span>    
-            </div>
-            <div class="sg-content-grid">
-                <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseAssignments_5" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td>Date Due</td><td>Date Assigned</td><td>Assignment</td><td>Category</td><td>Score</td><td>Total Points</td><td class="sg-view-quick">Weight</td><td class="sg-view-quick">Weighted Score</td><td class="sg-view-quick">Weighted Total Points</td><td class="sg-view-quick">Percentage</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Review Unit 1
-Category: Minor
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Review Unit 1"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564893', '1', '1409870199'); return false;">
-                                    Review Unit 1
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Unit 1: Federalist 51 (Minor 20%)
-Category: Minor
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Unit 1: Federalist 51 (Minor 20%)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564893', '1', '1408664199'); return false;">
-                                    Unit 1: Federalist 51 (Minor 20%)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Unit 1: Federalist 10 (Minor 20%)
-Category: Minor
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Unit 1: Federalist 10 (Minor 20%)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564893', '1', '1408663399'); return false;">
-                                    Unit 1: Federalist 10 (Minor 20%)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Unit 1: Brutus 1 (Minor grade 20%)
-Category: Minor
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Unit 1: Brutus 1 (Minor grade 20%)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564893', '1', '1408662599'); return false;">
-                                    Unit 1: Brutus 1 (Minor grade 20%)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Unit 1 Part 2 Questions (Minor 20%)
-Category: Minor
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Unit 1 Part 2 Questions (Minor 20%)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564893', '1', '1408661999'); return false;">
-                                    Unit 1 Part 2 Questions (Minor 20%)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Questions - Unit 1 Part 1 (Minor 20%)
-Category: Minor
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Questions - Unit 1 Part 1 (Minor 20%)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564893', '1', '1408660099'); return false;">
-                                    Questions - Unit 1 Part 1 (Minor 20%)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Court Case Notes For McCulloch v Maryland and US v Lopez (Other 10%)
-Category: Other
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Court Case Notes For McCulloch v Maryland and US v Lopez (Other 10%)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564893', '1', '1408650299'); return false;">
-                                    Court Case Notes For McCulloch v Maryland and US v Lopez (Other 10%)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Test Foundations of Democracy &amp; Federalism (1.1 - 1.9) (Remotely Proctored)
-Category: Major
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Test Foundations of Democracy &amp; Federalism (1.1 - 1.9) (Remotely Proctored)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564893', '1', '1408602299'); return false;">
-                                    Test Foundations of Democracy &amp; Federalism (1.1 - 1.9) (Remotely Proctored)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Quiz - Unit 1 Vocabulary (Other 10%)
-Category: Other
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Quiz - Unit 1 Vocabulary (Other 10%)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564893', '1', '1408565299'); return false;">
-                                    Quiz - Unit 1 Vocabulary (Other 10%)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>07/02/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Quiz - Political Foundation (Minor 20%) (Remotely Proctored)
-Category: Minor
-Due Date: 07/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Quiz - Political Foundation (Minor 20%) (Remotely Proctored)"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3564893', '1', '1408557099'); return false;">
-                                    Quiz - Political Foundation (Minor 20%) (Remotely Proctored)
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                M     - Missing
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr>
-	</table>
-                <div class="sg-asp-table-group">
-                    <span id="plnMain_rptAssigmnetsByCourse_lblCategories_5" class="LabelCatogery">
-                        <div class="sg-view-quick sg-clearfix" >
-                            <div class="sg-header-group">
-                                <label id="plnMain_rptAssigmnetsByCourse_hdrCategories_5" CssClass="sg-header-heading">Categories</label>
-                            </div>
-                            <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseCategories_5" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td align="center" valign="middle">Category</td><td align="center" valign="middle">Student's<br>Points</td><td align="center" valign="middle"> / Maximum<br>Points</td><td align="center" valign="middle"> = Percent</td><td align="center" valign="middle"> * Category<br>Weight</td><td align="center" valign="middle"> = Category<br>Points</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Major</td><td>0.0000</td><td>100.00</td><td>0.000%</td><td>70.00</td><td>0.000000</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Minor</td><td>100.0000</td><td>700.00</td><td>14.285%</td><td>20.00</td><td>2.857200</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Other</td><td>0.0000</td><td>200.00</td><td>0.000%</td><td>10.00</td><td>0.000000</td>
-		</tr><tr style="color:White;background-color:#CCCCCC;border-color:#CCCCCC;">
-			<td><b>Total Points:</b></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td><b>100.00</b></td><td style="background-color:#CCCCCC;"><b>2.857200</b></td>
-		</tr>
-	</table>
-                            <br />
-                            
-                                <div style="display:inline-block;">
-                                
-                            </div>
-                            <span id="plnMain_rptAssigmnetsByCourse_lblShowAverages_5" class="sg-right">
-                                <button class="LabelCatogery sg-button"  id="btnShowAverages" onclick="btnShowAverages_onclick('3564893', '1'); return false;" title="Show all student's averages"  >Show All Averages</button>	
-                            </span>
-                        </div>
-                    </span>
-                    
-                </div>
-            </div>
-        </div>           
-        
-        <div class="AssignmentClass">
-            <div class="sg-header sg-header-square">
-                <button id="plnMain_rptAssigmnetsByCourse_btnShowHide_6" type="button" class="sg-button sg-button-show-hide sg-left sg-5px-margin icon-minus" aria-label="Show/Hide" onClick="javascript:return btnShowHide_onclick(event);"></button> 
-                 
-                    <a class="sg-header-heading" href="#" onclick="OpenClassPopUpWithMarkingPeriod('3367285',4); return false;">
-                        0467B - 25   AP PHYSICS 1 GT B
-                    </a>    
-                <span id="plnMain_rptAssigmnetsByCourse_lblLastUpdDate_6" class="sg-header-sub-heading"></span>
-                
-                <span id="plnMain_rptAssigmnetsByCourse_lblHdrAverage_6" class="sg-header-heading sg-right" title="">Classwork Average 89</span>    
-            </div>
-            <div class="sg-content-grid">
-                <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseAssignments_6" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td>Date Due</td><td>Date Assigned</td><td>Assignment</td><td>Category</td><td>Score</td><td>Total Points</td><td class="sg-view-quick">Weight</td><td class="sg-view-quick">Weighted Score</td><td class="sg-view-quick">Weighted Total Points</td><td class="sg-view-quick">Percentage</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/12/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Balistic Pendulum
-Category: Other
-Due Date: 02/12/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Balistic Pendulum"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '14'); return false;">
-                                    Balistic Pendulum
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/11/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Momentum Cart Lab Writeup
-Category: Minor
-Due Date: 02/11/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Momentum Cart Lab Writeup"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '15'); return false;">
-                                    Momentum Cart Lab Writeup
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/11/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Momentum and Impulse FRQ
-Category: Minor
-Due Date: 02/11/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Momentum and Impulse FRQ"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '12'); return false;">
-                                    Momentum and Impulse FRQ
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/11/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Quest 17
-Category: Other
-Due Date: 02/11/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Quest 17"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '11'); return false;">
-                                    Quest 17
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/04/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Momentum and Impulse Quiz
-Category: Minor
-Due Date: 02/04/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Momentum and Impulse Quiz"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '13'); return false;">
-                                    Momentum and Impulse Quiz
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/04/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Work Power Energy Test
-Category: Major
-Due Date: 02/04/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Work Power Energy Test"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '8'); return false;">
-                                    Work Power Energy Test
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                92.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">92.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">92.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/03/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Quest 16
-Category: Other
-Due Date: 02/03/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Quest 16"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '10'); return false;">
-                                    Quest 16
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/27/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Popper Energy Lab
-Category: Minor
-Due Date: 01/27/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Popper Energy Lab"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '7'); return false;">
-                                    Popper Energy Lab
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/27/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Work Power Energy FRQ
-Category: Minor
-Due Date: 01/27/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Work Power Energy FRQ"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '6'); return false;">
-                                    Work Power Energy FRQ
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                80.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">80.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">80.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/26/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Quest 15
-Category: Other
-Due Date: 01/26/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Quest 15"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '9'); return false;">
-                                    Quest 15
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/22/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Hooke Law Lab
-Category: Minor
-Due Date: 01/22/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Hooke Law Lab"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '5'); return false;">
-                                    Hooke Law Lab
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                90.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">90.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">90.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/22/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Circ Motion and Universal Grav Test
-Category: Major
-Due Date: 01/22/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Circ Motion and Universal Grav Test"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '4'); return false;">
-                                    Circ Motion and Universal Grav Test
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                81.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">81.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">81.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/13/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Quest 14 - Gravitation
-Category: Other
-Due Date: 01/13/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Quest 14 - Gravitation"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '3'); return false;">
-                                    Quest 14 - Gravitation
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                94.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">94.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">94.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/12/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Circular Motion FRQ
-Category: Minor
-Due Date: 01/12/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Circular Motion FRQ"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '2'); return false;">
-                                    Circular Motion FRQ
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                87.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">87.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">87.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/08/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Circular Motion Quiz Review
-Category: Other
-Due Date: 01/08/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Circular Motion Quiz Review"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3367285', '1', '1'); return false;">
-                                    Circular Motion Quiz Review
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr>
-	</table>
-                <div class="sg-asp-table-group">
-                    <span id="plnMain_rptAssigmnetsByCourse_lblCategories_6" class="LabelCatogery">
-                        <div class="sg-view-quick sg-clearfix" >
-                            <div class="sg-header-group">
-                                <label id="plnMain_rptAssigmnetsByCourse_hdrCategories_6" CssClass="sg-header-heading">Categories</label>
-                            </div>
-                            <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseCategories_6" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td align="center" valign="middle">Category</td><td align="center" valign="middle">Student's<br>Points</td><td align="center" valign="middle"> / Maximum<br>Points</td><td align="center" valign="middle"> = Percent</td><td align="center" valign="middle"> * Category<br>Weight</td><td align="center" valign="middle"> = Category<br>Points</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Major</td><td>173.0000</td><td>200.00</td><td>86.500%</td><td>70.00</td><td>60.550000</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Minor</td><td>657.0000</td><td>700.00</td><td>93.857%</td><td>20.00</td><td>18.771400</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Other</td><td>594.0000</td><td>600.00</td><td>99.000%</td><td>10.00</td><td>9.900000</td>
-		</tr><tr style="color:White;background-color:#CCCCCC;border-color:#CCCCCC;">
-			<td><b>Total Points:</b></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td><b>100.00</b></td><td style="background-color:#CCCCCC;"><b>89.221400</b></td>
-		</tr>
-	</table>
-                            <br />
-                            
-                                <div style="display:inline-block;">
-                                
-                            </div>
-                            <span id="plnMain_rptAssigmnetsByCourse_lblShowAverages_6" class="sg-right">
-                                <button class="LabelCatogery sg-button"  id="btnShowAverages" onclick="btnShowAverages_onclick('3367285', '1'); return false;" title="Show all student's averages"  >Show All Averages</button>	
-                            </span>
-                        </div>
-                    </span>
-                    
-                </div>
-            </div>
-        </div>           
-        
-        <div class="AssignmentClass">
-            <div class="sg-header sg-header-square">
-                <button id="plnMain_rptAssigmnetsByCourse_btnShowHide_7" type="button" class="sg-button sg-button-show-hide sg-left sg-5px-margin icon-minus" aria-label="Show/Hide" onClick="javascript:return btnShowHide_onclick(event);"></button> 
-                 
-                    <a class="sg-header-heading" href="#" onclick="OpenClassPopUpWithMarkingPeriod('3371907',4); return false;">
-                        8684B - 1    APCAREER KSTART CYBER:NETW B
-                    </a>    
-                <span id="plnMain_rptAssigmnetsByCourse_lblLastUpdDate_7" class="sg-header-sub-heading"></span>
-                
-                <span id="plnMain_rptAssigmnetsByCourse_lblHdrAverage_7" class="sg-header-heading sg-right" title="">Classwork Average 90</span>    
-            </div>
-            <div class="sg-content-grid">
-                <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseAssignments_7" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td>Date Due</td><td>Date Assigned</td><td>Assignment</td><td>Category</td><td>Score</td><td>Total Points</td><td class="sg-view-quick">Weight</td><td class="sg-view-quick">Weighted Score</td><td class="sg-view-quick">Weighted Total Points</td><td class="sg-view-quick">Percentage</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/13/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 Week Quiz 3
-Category: Minor
-Due Date: 02/13/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 Week Quiz 3"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '12'); return false;">
-                                    1st 6 Week Quiz 3
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">&nbsp;</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">&nbsp;</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/13/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: CompTIA section 1
-Category: Minor
-Due Date: 02/13/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="CompTIA section 1"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '11'); return false;">
-                                    CompTIA section 1
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/13/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 Weeks Weekly 6
-Category: Other
-Due Date: 02/13/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 Weeks Weekly 6"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '9'); return false;">
-                                    1st 6 Weeks Weekly 6
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/06/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 Weeks Test 2
-Category: Major
-Due Date: 02/06/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 Weeks Test 2"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '10'); return false;">
-                                    1st 6 Weeks Test 2
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/06/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 Weeks Weekly 5
-Category: Other
-Due Date: 02/06/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 Weeks Weekly 5"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '8'); return false;">
-                                    1st 6 Weeks Weekly 5
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                70.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">70.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">70.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/30/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 Weeks Quiz 2
-Category: Minor
-Due Date: 01/30/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 Weeks Quiz 2"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '7'); return false;">
-                                    1st 6 Weeks Quiz 2
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                47.37
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">47.37</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">47.37%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/30/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 Weeks Weekly 4
-Category: Other
-Due Date: 01/30/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 Weeks Weekly 4"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '6'); return false;">
-                                    1st 6 Weeks Weekly 4
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                67.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">67.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">67.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/23/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 Weeks Weekly 3
-Category: Other
-Due Date: 01/23/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 Weeks Weekly 3"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '3'); return false;">
-                                    1st 6 Weeks Weekly 3
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                0.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">0.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">0.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/21/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 Weeks Test 1
-Category: Major
-Due Date: 01/21/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 Weeks Test 1"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '5'); return false;">
-                                    1st 6 Weeks Test 1
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                97.62
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">97.62</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">97.62%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/16/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 Weeks Weekly 2
-Category: Other
-Due Date: 01/16/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 Weeks Weekly 2"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '2'); return false;">
-                                    1st 6 Weeks Weekly 2
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                40.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">40.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">40.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/13/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 weeks Quiz 1
-Category: Minor
-Due Date: 01/13/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 weeks Quiz 1"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '4'); return false;">
-                                    1st 6 weeks Quiz 1
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                85.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">85.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">85.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/09/2026</td><td>&nbsp;</td><td>
-                                <a title="Title: Assignment Course
-Classwork: 1st 6 Weeks Weekly 1
-Category: Other
-Due Date: 01/09/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="1st 6 Weeks Weekly 1"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3371907', '1', '1'); return false;">
-                                    1st 6 Weeks Weekly 1
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                60.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">60.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">60.00%</td>
-		</tr>
-	</table>
-                <div class="sg-asp-table-group">
-                    <span id="plnMain_rptAssigmnetsByCourse_lblCategories_7" class="LabelCatogery">
-                        <div class="sg-view-quick sg-clearfix" >
-                            <div class="sg-header-group">
-                                <label id="plnMain_rptAssigmnetsByCourse_hdrCategories_7" CssClass="sg-header-heading">Categories</label>
-                            </div>
-                            <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseCategories_7" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td align="center" valign="middle">Category</td><td align="center" valign="middle">Student's<br>Points</td><td align="center" valign="middle"> / Maximum<br>Points</td><td align="center" valign="middle"> = Percent</td><td align="center" valign="middle"> * Category<br>Weight</td><td align="center" valign="middle"> = Category<br>Points</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Major</td><td>197.6200</td><td>200.00</td><td>98.810%</td><td>70.00</td><td>69.167000</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Minor</td><td>232.3700</td><td>300.00</td><td>77.456%</td><td>20.00</td><td>15.491400</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Other</td><td>337.0000</td><td>600.00</td><td>56.166%</td><td>10.00</td><td>5.616700</td>
-		</tr><tr style="color:White;background-color:#CCCCCC;border-color:#CCCCCC;">
-			<td><b>Total Points:</b></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td><b>100.00</b></td><td style="background-color:#CCCCCC;"><b>90.275100</b></td>
-		</tr>
-	</table>
-                            <br />
-                            
-                                <div style="display:inline-block;">
-                                
-                            </div>
-                            <span id="plnMain_rptAssigmnetsByCourse_lblShowAverages_7" class="sg-right">
-                                <button class="LabelCatogery sg-button"  id="btnShowAverages" onclick="btnShowAverages_onclick('3371907', '1'); return false;" title="Show all student's averages"  >Show All Averages</button>	
-                            </span>
-                        </div>
-                    </span>
-                    
-                </div>
-            </div>
-        </div>           
-        
-        <div class="AssignmentClass">
-            <div class="sg-header sg-header-square">
-                <button id="plnMain_rptAssigmnetsByCourse_btnShowHide_8" type="button" class="sg-button sg-button-show-hide sg-left sg-5px-margin icon-minus" aria-label="Show/Hide" onClick="javascript:return btnShowHide_onclick(event);"></button> 
-                 
-                    <a class="sg-header-heading" href="#" onclick="OpenClassPopUpWithMarkingPeriod('3247339',4); return false;">
-                        8685VB - 2    NETWORKING I B
-                    </a>    
-                <span id="plnMain_rptAssigmnetsByCourse_lblLastUpdDate_8" class="sg-header-sub-heading"></span>
-                
-                <span id="plnMain_rptAssigmnetsByCourse_lblHdrAverage_8" class="sg-header-heading sg-right" title="">Classwork Average 98</span>    
-            </div>
-            <div class="sg-content-grid">
-                <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseAssignments_8" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td>Date Due</td><td>Date Assigned</td><td>Assignment</td><td>Category</td><td>Score</td><td>Total Points</td><td class="sg-view-quick">Weight</td><td class="sg-view-quick">Weighted Score</td><td class="sg-view-quick">Weighted Total Points</td><td class="sg-view-quick">Percentage</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/12/2026</td><td>02/11/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Networking 1 Exam Modules 1-12
-Category: Major
-Due Date: 02/12/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Networking 1 Exam Modules 1-12"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '16'); return false;">
-                                    Networking 1 Exam Modules 1-12
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/06/2026</td><td>02/05/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Module 11.10.4 Quiz
-Category: Minor
-Due Date: 02/06/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Module 11.10.4 Quiz"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '15'); return false;">
-                                    Module 11.10.4 Quiz
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/03/2026</td><td>02/03/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Module 11 Vocab Quiz
-Category: Minor
-Due Date: 02/03/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Module 11 Vocab Quiz"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '14'); return false;">
-                                    Module 11 Vocab Quiz
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>02/02/2026</td><td>01/29/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Module 11.7.5 Packet Tracer Subnetting
-Category: Other
-Due Date: 02/02/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Module 11.7.5 Packet Tracer Subnetting"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '13'); return false;">
-                                    Module 11.7.5 Packet Tracer Subnetting
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/23/2026</td><td>01/22/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Module 11.5.5 Packet Tracer IPv4 Network
-Category: Other
-Due Date: 01/23/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Module 11.5.5 Packet Tracer IPv4 Network"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '11'); return false;">
-                                    Module 11.5.5 Packet Tracer IPv4 Network
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/21/2026</td><td>01/21/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Fact or Fib Quiz
-Category: Minor
-Due Date: 01/21/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Fact or Fib Quiz"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '12'); return false;">
-                                    Fact or Fib Quiz
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/21/2026</td><td>01/20/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Module 11.4.4 Network Segmentation
-Category: Other
-Due Date: 01/21/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Module 11.4.4 Network Segmentation"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '8'); return false;">
-                                    Module 11.4.4 Network Segmentation
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/16/2026</td><td>01/15/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Module 11.3.8 Types of IPv4 Address
-Category: Other
-Due Date: 01/16/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Module 11.3.8 Types of IPv4 Address"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '7'); return false;">
-                                    Module 11.3.8 Types of IPv4 Address
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/15/2026</td><td>01/14/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Module 11.1.8 IP Address Structure
-Category: Other
-Due Date: 01/15/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Module 11.1.8 IP Address Structure"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '6'); return false;">
-                                    Module 11.1.8 IP Address Structure
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/13/2026</td><td>01/13/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Checkpoint Exam Communicating Between Networks
-Category: Major
-Due Date: 01/13/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Checkpoint Exam Communicating Between Networks"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '5'); return false;">
-                                    Checkpoint Exam Communicating Between Networks
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Major</td><td>
-                                94.00
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">94.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">94.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/09/2026</td><td>01/09/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Quiz Module 10.5.4 Router
-Category: Minor
-Due Date: 01/09/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Quiz Module 10.5.4 Router"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '4'); return false;">
-                                    Quiz Module 10.5.4 Router
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Minor</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/08/2026</td><td>01/08/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Module 10.3.5 Default Gateway Issues
-Category: Other
-Due Date: 01/08/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Module 10.3.5 Default Gateway Issues"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '3'); return false;">
-                                    Module 10.3.5 Default Gateway Issues
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/07/2026</td><td>01/07/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Module 10.3.4 Connect to a Router
-Category: Other
-Due Date: 01/07/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Module 10.3.4 Connect to a Router"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '2'); return false;">
-                                    Module 10.3.4 Connect to a Router
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>01/06/2026</td><td>01/06/2026</td><td>
-                                <a title="Title: Assignment Course
-Classwork: Module 10.1.4 Router Settings
-Category: Other
-Due Date: 01/06/2026
-Max Points: 100.00
-Can Be Dropped: Y
-Extra Credit: N
-Has Attachments: N"
-                                    aria-label="Module 10.1.4 Router Settings"
-                                    aria-describedby="asmtEmptyDesc"
-                                    href="#" onclick="OpenAssignmentPopUp('3247339', '1', '1'); return false;">
-                                    Module 10.1.4 Router Settings
-                                </a>
-                                <label style="display:none">*</label>
-                            </td><td>Other</td><td>
-                                100.0
-                            </td><td>100.00</td><td class="sg-view-quick">1.00</td><td class="sg-view-quick">100.00</td><td class="sg-view-quick">100.0000</td><td class="sg-view-quick">100.00%</td>
-		</tr>
-	</table>
-                <div class="sg-asp-table-group">
-                    <span id="plnMain_rptAssigmnetsByCourse_lblCategories_8" class="LabelCatogery">
-                        <div class="sg-view-quick sg-clearfix" >
-                            <div class="sg-header-group">
-                                <label id="plnMain_rptAssigmnetsByCourse_hdrCategories_8" CssClass="sg-header-heading">Categories</label>
-                            </div>
-                            <table class="sg-asp-table" cellspacing="0" rules="all" border="1" id="plnMain_rptAssigmnetsByCourse_dgCourseCategories_8" style="border-collapse:collapse;">
-		<tr class="sg-asp-table-header-row">
-			<td align="center" valign="middle">Category</td><td align="center" valign="middle">Student's<br>Points</td><td align="center" valign="middle"> / Maximum<br>Points</td><td align="center" valign="middle"> = Percent</td><td align="center" valign="middle"> * Category<br>Weight</td><td align="center" valign="middle"> = Category<br>Points</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Major</td><td>194.0000</td><td>200.00</td><td>97.000%</td><td>55.00</td><td>53.350000</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Minor</td><td>400.0000</td><td>400.00</td><td>100.000%</td><td>30.00</td><td>30.000000</td>
-		</tr><tr class="sg-asp-table-data-row">
-			<td>Other</td><td>800.0000</td><td>800.00</td><td>100.000%</td><td>15.00</td><td>15.000000</td>
-		</tr><tr style="color:White;background-color:#CCCCCC;border-color:#CCCCCC;">
-			<td><b>Total Points:</b></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td><b>100.00</b></td><td style="background-color:#CCCCCC;"><b>98.350000</b></td>
-		</tr>
-	</table>
-                            <br />
-                            
-                                <div style="display:inline-block;">
-                                
-                            </div>
-                            <span id="plnMain_rptAssigmnetsByCourse_lblShowAverages_8" class="sg-right">
-                                <button class="LabelCatogery sg-button"  id="btnShowAverages" onclick="btnShowAverages_onclick('3247339', '1'); return false;" title="Show all student's averages"  >Show All Averages</button>	
-                            </span>
-                        </div>
-                    </span>
-                    
-                </div>
-            </div>
-        </div>           
-            
-    
 
     
 
-    
-    
- 
-  
-</div>
-  
-
-            
-<script type="text/javascript">
-//<![CDATA[
-var Page_ValidationSummaries =  new Array(document.getElementById("plnMain_vsAvgValidate"));
-var Page_Validators =  new Array(document.getElementById("plnMain_RangeValidatorMinCrsAvg1"), document.getElementById("plnMain_RangeValidatorMaxCrsAvg1"), document.getElementById("plnMain_CompareValidatorMaxCrsAvg1"));
-//]]>
-</script>
-
-<script type="text/javascript">
-//<![CDATA[
-var plnMain_RangeValidatorMinCrsAvg1 = document.all ? document.all["plnMain_RangeValidatorMinCrsAvg1"] : document.getElementById("plnMain_RangeValidatorMinCrsAvg1");
-plnMain_RangeValidatorMinCrsAvg1.controltovalidate = "plnMain_txtMinCrsAvgValue";
-plnMain_RangeValidatorMinCrsAvg1.errormessage = "The minimum course average value must be a whole number between 0 and 150.";
-plnMain_RangeValidatorMinCrsAvg1.display = "None";
-plnMain_RangeValidatorMinCrsAvg1.validationGroup = "AvgValidate";
-plnMain_RangeValidatorMinCrsAvg1.type = "Integer";
-plnMain_RangeValidatorMinCrsAvg1.evaluationfunction = "RangeValidatorEvaluateIsValid";
-plnMain_RangeValidatorMinCrsAvg1.maximumvalue = "150";
-plnMain_RangeValidatorMinCrsAvg1.minimumvalue = "0";
-var plnMain_RangeValidatorMaxCrsAvg1 = document.all ? document.all["plnMain_RangeValidatorMaxCrsAvg1"] : document.getElementById("plnMain_RangeValidatorMaxCrsAvg1");
-plnMain_RangeValidatorMaxCrsAvg1.controltovalidate = "plnMain_txtMaxCrsAvgValue";
-plnMain_RangeValidatorMaxCrsAvg1.errormessage = "The maximum course average value must be a whole number between 0 and 150.";
-plnMain_RangeValidatorMaxCrsAvg1.display = "None";
-plnMain_RangeValidatorMaxCrsAvg1.validationGroup = "AvgValidate";
-plnMain_RangeValidatorMaxCrsAvg1.type = "Integer";
-plnMain_RangeValidatorMaxCrsAvg1.evaluationfunction = "RangeValidatorEvaluateIsValid";
-plnMain_RangeValidatorMaxCrsAvg1.maximumvalue = "150";
-plnMain_RangeValidatorMaxCrsAvg1.minimumvalue = "0";
-var plnMain_CompareValidatorMaxCrsAvg1 = document.all ? document.all["plnMain_CompareValidatorMaxCrsAvg1"] : document.getElementById("plnMain_CompareValidatorMaxCrsAvg1");
-plnMain_CompareValidatorMaxCrsAvg1.controltovalidate = "plnMain_txtMaxCrsAvgValue";
-plnMain_CompareValidatorMaxCrsAvg1.errormessage = "The maximum course average must be greater than the minimum course average.";
-plnMain_CompareValidatorMaxCrsAvg1.display = "None";
-plnMain_CompareValidatorMaxCrsAvg1.validationGroup = "AvgValidate";
-plnMain_CompareValidatorMaxCrsAvg1.type = "Integer";
-plnMain_CompareValidatorMaxCrsAvg1.evaluationfunction = "CompareValidatorEvaluateIsValid";
-plnMain_CompareValidatorMaxCrsAvg1.controltocompare = "plnMain_txtMinCrsAvgValue";
-plnMain_CompareValidatorMaxCrsAvg1.controlhookup = "plnMain_txtMinCrsAvgValue";
-plnMain_CompareValidatorMaxCrsAvg1.operator = "GreaterThanEqual";
-var plnMain_vsAvgValidate = document.all ? document.all["plnMain_vsAvgValidate"] : document.getElementById("plnMain_vsAvgValidate");
-plnMain_vsAvgValidate.headertext = "The following errors were found:";
-plnMain_vsAvgValidate.showmessagebox = "True";
-plnMain_vsAvgValidate.showsummary = "False";
-plnMain_vsAvgValidate.validationGroup = "AvgValidate";
-//]]>
-</script>
 
 
-<script type="text/javascript">
-//<![CDATA[
 
-var Page_ValidationActive = false;
-if (typeof(ValidatorOnLoad) == "function") {
-    ValidatorOnLoad();
-}
 
-function ValidatorOnSubmit() {
-    if (Page_ValidationActive) {
-        return ValidatorCommonOnSubmit();
-    }
-    else {
-        return true;
-    }
-}
-        //]]>
-</script>
-</form>
-        </div>
+
+
+
+
+
+<main class="sg-container" role="main">
+    <div class="sg-header">
+        <h1 class="sg-header-heading">
+            Option Not Enabled
+        </h1>
     </div>
-    <script>
-        $(function () {
-            // Build the jQuery UI buttons
-            $('.sg-buttonset').controlgroup();
-            $('.sg-button').button();
-            window.parent.$('.sg-legacy-iframe').height($('.sg-main-content').height()); // set the init size
-            // Increase length of smaller content windows to reduce cutoffs in dropdowns. 
-            var iframeHeight = window.parent.$('.sg-legacy-iframe').height(); 
-            if (iframeHeight < 450)
-            { window.parent.$('.sg-legacy-iframe').height($('.sg-main-content').height() + 200); }
-           
-        })
-    </script>
-</body>
+
+    <div class="sg-message sg-logon" role="alert">
+        The district&#39;s administrator has not currently enabled this option.
+    </div>
+</main>
+
+
+
+
+<input name="__RequestVerificationToken" type="hidden" value="Jl14wg3oz5b_NNy4MZcbUnh00KmlWYSYdbLIDjCl4b2H7URD-4T4fJhd5w2Hk9STUQQ8tQsK24HgjlayQJ4SmwVQf44LanF33Dkztwt1DSM1" />
+</div>
+
+
+    <footer class="sg-main-footer" role="contentinfo">
+        <span class="sg-hac-footer-logo" aria-hidden="true"></span>
+<span class="sg-hac-copyright">&copy; 2003 - 2026 PowerSchool.  All Rights Reserved.</span>
+<nav class="sg-hac-footer-links" aria-label="Footer links">
+        <a href="/HomeAccess/Frame/PrivacyPolicy" onclick="SunGard.Hac.Frame.Footer.DisplayFooterPopup('/HomeAccess/Frame/PrivacyPolicy', 'Privacy Policy'); return false;" role="button">
+            Privacy Policy
+        </a>
+
+        <a href="/HomeAccess/Frame/TermsOfUse" onclick="SunGard.Hac.Frame.Footer.DisplayFooterPopup('/HomeAccess/Frame/TermsOfUse', 'Terms of Use'); return false;" role="button">
+            Terms of Use
+        </a>
+</nav>
+
+    </footer>
+
+    
+
+
+
+        </main>
+        
+        <script nonce="6Dp/qrjgVqw8ZMe/lNF2VZNl">
+            $(function() {
+                // Build the jQuery UI buttons
+                $('.sg-buttonset').controlgroup();
+                $('.sg-button').button();
+
+                // Move focus to main content when skip link is activated
+                $('.sg-skip-link').on('click', function (e) {
+                    var target = document.getElementById('MainContent');
+                    if (target) {
+                        e.preventDefault();
+                        target.focus();
+                    }
+                });
+            })
+        </script>
+    </body>
+    
+    
+    
+
+
 </html>
