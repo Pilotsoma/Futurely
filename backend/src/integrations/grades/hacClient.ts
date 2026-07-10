@@ -1482,24 +1482,30 @@ export async function getSchedule(sessionToken: string): Promise<object[]> {
   return schedule
 }
 
-function numericToLetter(grade: string): string {
-  const n = parseInt(grade)
-  if (isNaN(n)) return ''
-  if (n >= 90) return 'A'
-  if (n >= 80) return 'B'
-  if (n >= 70) return 'C'
-  if (n >= 60) return 'D'
-  return 'F'
+
+export interface ReportCardCourse {
+  name: string
+  period: string
+  teacher: string
+  attemptedCredit: string
+  earnedCredit: string
+  sixWeeks1: string
+  sixWeeks2: string
+  sixWeeks3: string
+  exam1: string
+  semester1: string
+  sixWeeks4: string
+  sixWeeks5: string
+  sixWeeks6: string
+  exam2: string
+  semester2: string
 }
 
 export async function getReportCard(sessionToken: string, period?: string): Promise<{
   reportingPeriods: string[]
   currentPeriod: string
   message?: string
-  semesters: {
-    sem1: Array<{ name: string; period: string; numericGrade: string; letterGrade: string; credits: string; teacher: string }>
-    sem2: Array<{ name: string; period: string; numericGrade: string; letterGrade: string; credits: string; teacher: string }>
-  }
+  courses: ReportCardCourse[]
 }> {
   const stored = getSessionByToken(sessionToken)
   if (!stored) throw new AuthenticationError('School session expired — please log in again')
@@ -1574,9 +1580,28 @@ export async function getReportCard(sessionToken: string, period?: string): Prom
 
   dumpDebugHtml('reportcard', html)
 
-  type RCCourse = { name: string; period: string; numericGrade: string; letterGrade: string; credits: string; teacher: string }
-  const sem1: RCCourse[] = []
-  const sem2: RCCourse[] = []
+  const courses: ReportCardCourse[] = []
+
+  // HAC dgReportCard columns (one row per course, full school year):
+  // 0: Course  1: Description  2: Period  3: Teacher  4: Room
+  // 5: Att.Credit  6: Ern.Credit
+  // 7: 1ST  8: 2ND  9: 3RD  10: EXM1  11: SEM1
+  // 12: 4TH  13: 5TH  14: 6TH  15: EXM2  16: SEM2
+  const RC_COL_ATTEMPTED_CREDIT = 5
+  const RC_COL_EARNED_CREDIT    = 6
+  const RC_COL_6W1              = 7
+  const RC_COL_6W2              = 8
+  const RC_COL_6W3              = 9
+  const RC_COL_EXAM1            = 10
+  const RC_COL_SEM1             = 11
+  const RC_COL_6W4              = 12
+  const RC_COL_6W5              = 13
+  const RC_COL_6W6              = 14
+  const RC_COL_EXAM2            = 15
+  const RC_COL_SEM2             = 16
+
+  const cellText = (cells: ReturnType<typeof $.fn.find>, idx: number): string =>
+    cells.length > idx ? cells.eq(idx).text().trim() : ''
 
   const rowSelectors = [
     '.sg-asp-table-data-row',
@@ -1586,11 +1611,6 @@ export async function getReportCard(sessionToken: string, period?: string): Prom
     'table tr',
   ]
 
-  // HAC dgReportCard columns:
-  // 0: Course  1: Description  2: Period  3: Teacher  4: Room
-  // 5: Att.Credit  6: Ern.Credit
-  // 7: 1ST  8: 2ND  9: 3RD  10: EXM1  11: SEM1
-  // 12: 4TH  13: 5TH  14: 6TH  15: EXM2  16: SEM2
   for (const sel of rowSelectors) {
     const rows = $(sel)
     if (rows.length < 2) continue
@@ -1600,30 +1620,30 @@ export async function getReportCard(sessionToken: string, period?: string): Prom
       const courseCode = cells.eq(0).text().trim()
       const description = cells.eq(1).text().trim().replace(/\s+/g, ' ')
       if (!courseCode || /^(course|class|subject|period|name)/i.test(courseCode)) return
-      const name    = `${courseCode} — ${description}`
-      const prd     = cells.eq(2).text().trim()
-      const teacher = cells.eq(3).text().trim()
-
-      const sem1Grade = cells.length > 11 ? cells.eq(11).text().trim() : ''
-      const sem2Grade = cells.length > 16 ? cells.eq(16).text().trim() : ''
-
-      if (sem1Grade) {
-        sem1.push({ name, period: prd, numericGrade: sem1Grade, letterGrade: numericToLetter(sem1Grade), credits: '', teacher })
-      }
-      if (sem2Grade) {
-        sem2.push({ name, period: prd, numericGrade: sem2Grade, letterGrade: numericToLetter(sem2Grade), credits: '', teacher })
-      }
-      // If neither grade is populated yet (mid-year), still include the row in sem1 as a placeholder
-      if (!sem1Grade && !sem2Grade) {
-        sem1.push({ name, period: prd, numericGrade: '', letterGrade: '', credits: '', teacher })
-      }
+      courses.push({
+        name:            `${courseCode} — ${description}`,
+        period:          cellText(cells, 2),
+        teacher:         cellText(cells, 3),
+        attemptedCredit: cellText(cells, RC_COL_ATTEMPTED_CREDIT),
+        earnedCredit:    cellText(cells, RC_COL_EARNED_CREDIT),
+        sixWeeks1:       cellText(cells, RC_COL_6W1),
+        sixWeeks2:       cellText(cells, RC_COL_6W2),
+        sixWeeks3:       cellText(cells, RC_COL_6W3),
+        exam1:           cellText(cells, RC_COL_EXAM1),
+        semester1:       cellText(cells, RC_COL_SEM1),
+        sixWeeks4:       cellText(cells, RC_COL_6W4),
+        sixWeeks5:       cellText(cells, RC_COL_6W5),
+        sixWeeks6:       cellText(cells, RC_COL_6W6),
+        exam2:           cellText(cells, RC_COL_EXAM2),
+        semester2:       cellText(cells, RC_COL_SEM2),
+      })
     })
-    if (sem1.length > 0 || sem2.length > 0) break
+    if (courses.length > 0) break
   }
 
-  console.log(`[REPORT CARD] Parsed sem1=${sem1.length} sem2=${sem2.length} courses, ${reportingPeriods.length} periods`)
-  if (sem1.length === 0 && !hacMessage) console.warn('[REPORT CARD] No courses found and no HAC message — check debug_reportcard.html')
-  return { reportingPeriods, currentPeriod, ...(hacMessage ? { message: hacMessage } : {}), semesters: { sem1, sem2 } }
+  console.log(`[REPORT CARD] Parsed ${courses.length} courses, ${reportingPeriods.length} periods`)
+  if (courses.length === 0 && !hacMessage) console.warn('[REPORT CARD] No courses found and no HAC message — check debug_reportcard.html')
+  return { reportingPeriods, currentPeriod, ...(hacMessage ? { message: hacMessage } : {}), courses }
 }
 
 export async function getProgressReport(sessionToken: string, date?: string): Promise<{

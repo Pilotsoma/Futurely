@@ -49,14 +49,14 @@ interface Tile {
 const TILES: Tile[] = [
   {
     title: 'Grades',
-    description: 'Assignment-level scores',
+    description: 'View your class grades',
     Icon: ClipboardIcon,
     iconColor: colors.primary,
     screen: 'GradeViewer',
   },
   {
     title: 'Report Card',
-    description: 'Six-weeks period grades',
+    description: 'View your report card',
     Icon: GraduationCapIcon,
     iconColor: colors.purple,
     screen: 'ReportCard',

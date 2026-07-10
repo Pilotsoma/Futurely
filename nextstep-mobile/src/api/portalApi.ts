@@ -310,10 +310,24 @@ export async function getPortalClasswork(period?: string): Promise<PortalClasswo
 export interface PortalReportCardCourse {
   name: string
   period: string
-  numericGrade: string
-  letterGrade: string
-  credits: string
   teacher: string
+  attemptedCredit: string
+  earnedCredit: string
+  /** Numeric grade string (e.g. "92") or "" if not yet posted */
+  sixWeeks1: string
+  sixWeeks2: string
+  sixWeeks3: string
+  /** Semester 1 exam grade string or "" */
+  exam1: string
+  /** Semester 1 final average string or "" */
+  semester1: string
+  sixWeeks4: string
+  sixWeeks5: string
+  sixWeeks6: string
+  /** Semester 2 exam grade string or "" */
+  exam2: string
+  /** Semester 2 final average string or "" */
+  semester2: string
 }
 
 export interface PortalReportCardResult {
@@ -321,10 +335,8 @@ export interface PortalReportCardResult {
   currentPeriod: string
   /** Set when HAC has an explanatory status message (e.g. no report cards published yet). */
   message?: string
-  semesters: {
-    sem1: PortalReportCardCourse[]
-    sem2: PortalReportCardCourse[]
-  }
+  /** Flat list of courses spanning the full year, one row per course matching HAC's report card table. */
+  courses: PortalReportCardCourse[]
 }
 
 export async function getPortalReportCard(period?: string): Promise<PortalReportCardResult> {

@@ -1037,8 +1037,8 @@ router.get('/report-card', asyncHandler(async (req: AuthRequest, res: Response):
       return
     }
 
-    const { reportingPeriods, currentPeriod, message, semesters } = await getReportCard(entry.token, period)
-    const payload = { reportingPeriods, currentPeriod, semesters, ...(message ? { message } : {}) }
+    const { reportingPeriods, currentPeriod, message, courses } = await getReportCard(entry.token, period)
+    const payload = { reportingPeriods, currentPeriod, courses, ...(message ? { message } : {}) }
     void writeHacCache(req.userId!, cacheKey, payload)
     res.json({ data: payload })
   } catch (err: unknown) {

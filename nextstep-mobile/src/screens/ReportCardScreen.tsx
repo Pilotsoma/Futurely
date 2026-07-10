@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react'
 import {
+  FlatList,
   RefreshControl,
-  SectionList,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -17,17 +17,11 @@ import {
   getPortalStatus,
   getPortalReportCard,
   type PortalReportCardCourse,
-  type PortalReportCardResult,
 } from '../api/portalApi'
 import { LinkIcon } from '../components/icons'
 import type { GradePortalParamList } from '../navigation/GradePortalNavigator'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface SemesterSection {
-  title: string
-  data: PortalReportCardCourse[]
-}
 
 interface BadgeStyle {
   text: string
@@ -38,7 +32,7 @@ interface BadgeStyle {
 
 const GRADE_BADGE_STYLES: Record<string, BadgeStyle> = {
   A: { text: colors.success, bg: `${colors.success}26` },
-  B: { text: colors.info,    bg: `${colors.info}26` },
+  B: { text: colors.primary, bg: `${colors.primary}26` },
   C: { text: colors.warning, bg: `${colors.warning}26` },
   D: { text: colors.orange,  bg: `${colors.orange}26` },
   F: { text: colors.error,   bg: `${colors.error}26` },
@@ -46,23 +40,33 @@ const GRADE_BADGE_STYLES: Record<string, BadgeStyle> = {
 
 const FALLBACK_BADGE: BadgeStyle = { text: colors.textMuted, bg: colors.surface }
 
-const SKELETON_ROW_COUNT = 6
+const SKELETON_CARD_COUNT = 5
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function gradeBadge(letterGrade: string): BadgeStyle {
-  return GRADE_BADGE_STYLES[letterGrade.charAt(0).toUpperCase()] ?? FALLBACK_BADGE
+function averageToLetterGrade(average: number): string {
+  if (average >= 90) return 'A'
+  if (average >= 80) return 'B'
+  if (average >= 70) return 'C'
+  if (average >= 60) return 'D'
+  return 'F'
 }
 
-function buildSections(result: PortalReportCardResult): SemesterSection[] {
-  const sections: SemesterSection[] = []
-  if (result.semesters.sem1.length > 0) {
-    sections.push({ title: 'Semester 1', data: result.semesters.sem1 })
-  }
-  if (result.semesters.sem2.length > 0) {
-    sections.push({ title: 'Semester 2', data: result.semesters.sem2 })
-  }
-  return sections
+function gradeStringToLetter(grade: string): string | null {
+  if (grade === '') return null
+  const num = parseFloat(grade)
+  if (isNaN(num)) return null
+  return averageToLetterGrade(num)
+}
+
+function gradeColor(grade: string): string {
+  const letter = gradeStringToLetter(grade)
+  if (letter === null) return colors.textMuted
+  return (GRADE_BADGE_STYLES[letter] ?? FALLBACK_BADGE).text
+}
+
+function displayGrade(grade: string): string {
+  return grade !== '' ? grade : '—'
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -70,8 +74,8 @@ function buildSections(result: PortalReportCardResult): SemesterSection[] {
 function LoadingSkeleton(): React.JSX.Element {
   return (
     <View style={styles.skeletonContainer}>
-      {Array.from({ length: SKELETON_ROW_COUNT }, (_, i) => (
-        <Skeleton key={i} width="100%" height={60} style={{ marginBottom: 8, borderRadius: 8 }} />
+      {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
+        <Skeleton key={i} width="100%" height={148} style={{ marginBottom: 12, borderRadius: 12 }} />
       ))}
     </View>
   )
@@ -124,13 +128,14 @@ function NotConnectedView({
         Connect Your School Portal
       </Text>
       <Text variant="body" style={[styles.stateText, { color: colors.textSecondary }]}>
-        Link your HAC or PowerSchool account to see your official six-weeks grades.
+        Link your HAC or PowerSchool account to see your official report card.
       </Text>
       <TouchableOpacity
         style={styles.connectButton}
         onPress={onConnect}
         accessibilityRole="button"
         accessibilityLabel="Connect school portal"
+        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
       >
         <Text style={styles.connectButtonText}>Connect School Portal</Text>
       </TouchableOpacity>
@@ -138,32 +143,112 @@ function NotConnectedView({
   )
 }
 
-// ─── Course Row ───────────────────────────────────────────────────────────────
+// ─── Grade Cell ───────────────────────────────────────────────────────────────
 
-function CourseRow({ course }: { course: PortalReportCardCourse }): React.JSX.Element {
-  const badge = course.letterGrade !== '' ? gradeBadge(course.letterGrade) : FALLBACK_BADGE
-  const displayLetter = course.letterGrade !== '' ? course.letterGrade : '—'
+function GradeCell({ label, value }: { label: string; value: string }): React.JSX.Element {
+  const color = gradeColor(value)
+  const display = displayGrade(value)
+
+  return (
+    <View style={styles.gradeCell}>
+      <Text style={styles.gradeCellLabel}>{label}</Text>
+      <Text style={[styles.gradeCellValue, { color }]}>{display}</Text>
+    </View>
+  )
+}
+
+// ─── Course Card ──────────────────────────────────────────────────────────────
+
+function CourseCard({ course }: { course: PortalReportCardCourse }): React.JSX.Element {
+  const sem1Final = displayGrade(course.semester1)
+  const sem2Final = displayGrade(course.semester2)
+  const sem1Color = gradeColor(course.semester1)
+  const sem2Color = gradeColor(course.semester2)
+
+  const creditText =
+    course.attemptedCredit !== '' || course.earnedCredit !== ''
+      ? `Credits: ${course.attemptedCredit !== '' ? course.attemptedCredit : '—'} attempted · ${course.earnedCredit !== '' ? course.earnedCredit : '—'} earned`
+      : null
+
+  const accessLabel = [
+    course.name,
+    `Period ${course.period}`,
+    course.teacher,
+    `Semester 1 final: ${sem1Final}`,
+    `Semester 2 final: ${sem2Final}`,
+    creditText ?? '',
+  ]
+    .filter(Boolean)
+    .join(', ')
 
   return (
     <View
-      style={styles.courseRow}
+      style={styles.courseCard}
       accessibilityRole="text"
-      accessibilityLabel={`${course.name}, ${displayLetter}, ${course.credits} credits`}
+      accessibilityLabel={accessLabel}
     >
-      <View style={styles.courseLeft}>
-        <Text variant="h3" style={styles.courseName}>{course.name}</Text>
-        <Text variant="caption" color={colors.textSecondary}>
-          {course.teacher !== '' ? `${course.teacher} · ` : ''}
-          {course.credits} cr
-        </Text>
+      {/* Header */}
+      <View style={styles.cardHeader}>
+        <View style={styles.periodBadge}>
+          <Text style={styles.periodBadgeText}>P{course.period}</Text>
+        </View>
+        <View style={styles.cardHeaderText}>
+          <Text variant="h3" style={styles.courseName} numberOfLines={2}>
+            {course.name}
+          </Text>
+          {course.teacher !== '' && (
+            <Text variant="caption" style={styles.teacherName}>
+              {course.teacher}
+            </Text>
+          )}
+        </View>
       </View>
-      <View
-        style={[styles.gradeBadge, { backgroundColor: badge.bg, borderColor: badge.text }]}
-      >
-        <Text style={[styles.gradeBadgeText, { color: badge.text }]}>
-          {displayLetter}
-        </Text>
+
+      <View style={styles.divider} />
+
+      {/* Semester 1 grades */}
+      <View style={styles.semSection}>
+        <View style={styles.semLabelRow}>
+          <Text style={styles.semLabel}>Semester 1</Text>
+          <View style={styles.semFinalBadge}>
+            <Text style={[styles.semFinalText, { color: sem1Color }]}>{sem1Final}</Text>
+          </View>
+        </View>
+        <View style={styles.gradeRow}>
+          <GradeCell label="1st" value={course.sixWeeks1} />
+          <GradeCell label="2nd" value={course.sixWeeks2} />
+          <GradeCell label="3rd" value={course.sixWeeks3} />
+          <GradeCell label="Exam" value={course.exam1} />
+        </View>
       </View>
+
+      <View style={styles.divider} />
+
+      {/* Semester 2 grades */}
+      <View style={styles.semSection}>
+        <View style={styles.semLabelRow}>
+          <Text style={styles.semLabel}>Semester 2</Text>
+          <View style={styles.semFinalBadge}>
+            <Text style={[styles.semFinalText, { color: sem2Color }]}>{sem2Final}</Text>
+          </View>
+        </View>
+        <View style={styles.gradeRow}>
+          <GradeCell label="4th" value={course.sixWeeks4} />
+          <GradeCell label="5th" value={course.sixWeeks5} />
+          <GradeCell label="6th" value={course.sixWeeks6} />
+          <GradeCell label="Exam" value={course.exam2} />
+        </View>
+      </View>
+
+      {/* Credits footer */}
+      {creditText !== null && (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.creditsRow}>
+            <Text style={styles.creditsText}>{creditText}</Text>
+          </View>
+        </>
+      )}
     </View>
   )
 }
@@ -177,7 +262,7 @@ export default function ReportCardScreen(): React.JSX.Element {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const [sections, setSections] = useState<SemesterSection[]>([])
+  const [courses, setCourses] = useState<PortalReportCardCourse[]>([])
   const [emptyMessage, setEmptyMessage] = useState<string | null>(null)
 
   const load = useCallback(async (refresh: boolean = false): Promise<void> => {
@@ -194,20 +279,20 @@ export default function ReportCardScreen(): React.JSX.Element {
       setIsConnected(status.connected)
 
       if (!status.connected) {
-        setSections([])
+        setCourses([])
         return
       }
 
       const result = await getPortalReportCard()
-      const built = buildSections(result)
+      const fetched = result.courses ?? []
 
-      if (built.length === 0) {
-        setSections([])
+      if (fetched.length === 0) {
+        setCourses([])
         setEmptyMessage(
           result.message ?? 'No report card data is available for the current grading period.',
         )
       } else {
-        setSections(built)
+        setCourses(fetched)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load report card.')
@@ -253,15 +338,10 @@ export default function ReportCardScreen(): React.JSX.Element {
   return (
     <View style={styles.root}>
       <ScreenHeader title="Report Card" />
-      <SectionList<PortalReportCardCourse, SemesterSection>
-        sections={sections}
+      <FlatList<PortalReportCardCourse>
+        data={courses}
         keyExtractor={(item, index) => `${item.name}-${item.period}-${index}`}
-        renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            <Text variant="h3">{section.title}</Text>
-          </View>
-        )}
-        renderItem={({ item }) => <CourseRow course={item} />}
+        renderItem={({ item }) => <CourseCard course={item} />}
         ListEmptyComponent={
           emptyMessage !== null ? <EmptyView message={emptyMessage} /> : null
         }
@@ -273,7 +353,7 @@ export default function ReportCardScreen(): React.JSX.Element {
             colors={[colors.primary]}
           />
         }
-        contentContainerStyle={sections.length === 0 ? styles.emptyContainer : styles.listContent}
+        contentContainerStyle={courses.length === 0 ? styles.emptyContainer : styles.listContent}
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -290,48 +370,127 @@ const styles = StyleSheet.create({
   skeletonContainer: {
     padding: 20,
   },
-  sectionHeader: {
+
+  // ── Course card ──
+  courseCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
     backgroundColor: colors.surface,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
   },
-  courseRow: {
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    alignItems: 'flex-start',
+    padding: 14,
+    gap: 10,
   },
-  courseLeft: {
+  periodBadge: {
+    backgroundColor: `${colors.primary}1A`,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    minWidth: 32,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  periodBadgeText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  cardHeaderText: {
     flex: 1,
-    marginRight: 12,
   },
   courseName: {
-    marginBottom: 4,
+    color: colors.textPrimary,
+    lineHeight: 22,
+    marginBottom: 2,
   },
-  gradeBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 10,
-    borderWidth: 1.5,
+  teacherName: {
+    color: colors.textSecondary,
+  },
+
+  // ── Divider ──
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+  },
+
+  // ── Semester section ──
+  semSection: {
+    padding: 12,
+  },
+  semLabelRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  gradeBadgeText: {
+  semLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  semFinalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  semFinalText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  // ── Grade row & cell ──
+  gradeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  gradeCell: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
+  },
+  gradeCellLabel: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: '500',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  gradeCellValue: {
     fontSize: 15,
     fontWeight: '700',
-    letterSpacing: -0.3,
-    lineHeight: 20,
+    letterSpacing: -0.2,
   },
+
+  // ── Credits footer ──
+  creditsRow: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  creditsText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '400',
+  },
+
+  // ── List ──
   listContent: {
+    paddingTop: 16,
     paddingBottom: 40,
   },
   emptyContainer: {
     flexGrow: 1,
   },
+
+  // ── States ──
   centerState: {
     flex: 1,
     justifyContent: 'center',
@@ -357,7 +516,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   connectButtonText: {
-    color: '#000',
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
   },
