@@ -4,7 +4,7 @@ AI-powered academic companion for high school students.
 
 ## Quick Start
 
-### Prerequisites
+### Prerequisitess
 - Node.js 18+
 - Expo Go app on your phone
 
