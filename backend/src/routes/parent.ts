@@ -8,6 +8,7 @@ import { loginHAC, getGrades, getStudentInfo, getTranscript } from '../integrati
 import { normalizeHacGrades } from '../integrations/grades/normalizeGrades'
 import { encryptPassword, decryptPassword } from '../integrations/grades/credentialCrypto'
 import { deleteSessionByUserId } from '../integrations/grades/sessionStore'
+import { getAiClient, getAiModel } from '../lib/aiClient'
 
 const router = Router()
 router.use(requireAuth)
@@ -617,12 +618,6 @@ router.post('/students/:studentId/chat', parentChatLimiter, async (req: AuthRequ
       .join(', ')
     const pendingCount = courses.reduce((sum, c) => sum + (c.upcomingAssignments?.length ?? 0), 0)
 
-    const OpenAI = (await import('openai')).default
-    const openrouter = new OpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY ?? '',
-      baseURL: 'https://openrouter.ai/api/v1',
-    })
-
     const systemPrompt = `You are NextStep AI, an academic advisor assistant for parents.
 You are helping a parent review their student's academic performance.
 Student: ${conn.studentName ?? 'Unknown'}
@@ -633,8 +628,8 @@ Current courses: ${coursesSummary || 'none on file'}
 Pending assignments: ${pendingCount}
 Answer the parent's question clearly and helpfully. Be concise.`
 
-    const response = await openrouter.chat.completions.create({
-      model: process.env.AI_MODEL ?? 'openrouter/free',
+    const response = await getAiClient().chat.completions.create({
+      model: getAiModel(),
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: message.trim() },

@@ -6,17 +6,15 @@
 // may appear in the prompt. Only derived/positional fields are used.
 // See COMPLIANCE.md for the full data-handling policy.
 
-import OpenAI from 'openai'
 import { z } from 'zod'
 import { logger } from '../../common/logger'
+import { getAiClient, getAiModel } from '../../lib/aiClient'
 import type {
   CollegeInsightsPayload,
   CollegeInsightsPromptInput,
   GpaPosition,
   SatPosition,
 } from '../../types/collegeInsights'
-
-const MODEL = process.env.AI_MODEL ?? 'openrouter/free'
 
 // Strip markdown code fences and extract raw JSON — mirrors the pattern used
 // by the other AI routes in this codebase (see routes/ai.ts extractJson).
@@ -189,23 +187,6 @@ function buildStepGuidance(input: CollegeInsightsPromptInput): string {
   return parts.length > 0 ? parts.join(' ') : 'Balance across essay, strategy, and any relevant academic areas.'
 }
 
-// ── Lazy singleton SDK client ─────────────────────────────────────────────────
-
-let _client: OpenAI | null = null
-
-function getClient(): OpenAI {
-  if (_client === null) {
-    const apiKey = process.env.OPENROUTER_API_KEY
-    if (!apiKey) {
-      throw new CollegeInsightsGenerationError(
-        'OPENROUTER_API_KEY is not set — cannot call the LLM'
-      )
-    }
-    _client = new OpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1' })
-  }
-  return _client
-}
-
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -258,10 +239,10 @@ async function generateCollegeInsightsOnce(
 
   let raw: string
   try {
-    const client = getClient()
+    const client = getAiClient()
 
     const response = await client.chat.completions.create({
-      model: MODEL,
+      model: getAiModel(),
       max_tokens: 600,
       messages: [
         { role: 'system', content: buildSystemPrompt() },

@@ -1,11 +1,9 @@
 import { Router, Response } from 'express'
-import OpenAI from 'openai'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
+import { getAiClient, getAiModel } from '../lib/aiClient'
 
 const router = Router()
-
-const FREE_MODEL = process.env.AI_MODEL ?? 'openrouter/free'
 
 function deriveGradeLevel(graduationYear: number | null, stored: number | null): number | null {
   if (graduationYear) {
@@ -21,13 +19,6 @@ function deriveGradeLevel(graduationYear: number | null, stored: number | null):
 function extractJson(raw: string): string {
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
   return fenced ? fenced[1].trim() : raw.trim()
-}
-
-function getOpenRouter(): OpenAI {
-  return new OpenAI({
-    apiKey: process.env.OPENROUTER_API_KEY ?? '',
-    baseURL: 'https://openrouter.ai/api/v1',
-  })
 }
 
 // Read all available portal data from the HAC/PowerSchool cache
@@ -147,8 +138,8 @@ College goal: ${profile?.futureDecision ?? 'not specified'}
 
 When asked about weakest/strongest class, best/worst grade, or any course comparison — always use "Current semester courses & grades" above, never guess.`
 
-    const response = await getOpenRouter().chat.completions.create({
-      model: FREE_MODEL,
+    const response = await getAiClient().chat.completions.create({
+      model: getAiModel(),
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
@@ -220,8 +211,8 @@ Respond with ONLY a JSON object in exactly this shape (no markdown, no extra tex
   ]
 }`
 
-    const response = await getOpenRouter().chat.completions.create({
-      model: FREE_MODEL,
+    const response = await getAiClient().chat.completions.create({
+      model: getAiModel(),
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 2048,
     })
