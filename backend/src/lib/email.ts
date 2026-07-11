@@ -37,7 +37,7 @@ async function sendViaSMTP(opts: MailOptions): Promise<void> {
       : undefined,
   })
   await transporter.sendMail({
-    from: process.env.SMTP_FROM ?? '"myFuturely" <noreply@futurely.app>',
+    from: process.env.SMTP_FROM ?? '"myFuturely" <noreply@myfuturely.ai>',
     ...opts,
   })
 }

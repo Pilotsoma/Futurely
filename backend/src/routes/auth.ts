@@ -130,7 +130,7 @@ async function issueRefreshToken(userId: number): Promise<string> {
 }
 
 async function sendVerificationEmail(email: string, token: string): Promise<void> {
-  const appUrl = process.env.APP_URL ?? 'https://futurely.app'
+  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
   const link = `${appUrl}/verify-email?token=${token}`
   await sendEmail({
     to: email,
@@ -161,7 +161,7 @@ async function hasValidMailDomain(email: string): Promise<boolean> {
 }
 
 async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
-  const appUrl = process.env.APP_URL ?? 'https://futurely.app'
+  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
   const link = `${appUrl}/reset-password?token=${token}`
   await sendEmail({
     to: email,

@@ -1,7 +1,7 @@
 /**
  * MainTabNavigator — primary bottom tab bar for myFuturely mobile.
  *
- * Tabs: Home (Dashboard) · Grades (GradePortal) · Planner · Colleges · Settings
+ * Tabs: Home (Dashboard) · Grades (GradePortal) · Planner · Colleges · AI · Settings
  *
  * Uses the custom SVG stroke icon system exclusively — no Ionicons.
  * Active state uses the brand gradient prop; inactive uses colors.textMuted.
@@ -13,12 +13,14 @@ import DashboardScreen from '../screens/DashboardScreen'
 import GradePortalNavigator from './GradePortalNavigator'
 import PlanningNavigator from './PlanningNavigator'
 import CollegeHelpNavigator from './CollegeHelpNavigator'
+import MainAIScreen from '../screens/MainAIScreen'
 import SettingsScreen from '../screens/SettingsScreen'
 import {
   GridIcon,
   SchoolBuildingIcon,
   CalendarIcon,
   GraduationCapIcon,
+  SparklesIcon,
   SettingsIcon,
 } from '../components/icons'
 import type { IconProps } from '../components/icons'
@@ -29,6 +31,7 @@ export type MainTabParamList = {
   Grades: undefined
   Planner: undefined
   Colleges: undefined
+  AIChat: undefined
   Settings: undefined
 }
 
@@ -41,6 +44,7 @@ const TAB_ICONS: Record<keyof MainTabParamList, TabIconConfig> = {
   Grades:  { component: SchoolBuildingIcon },
   Planner: { component: CalendarIcon },
   Colleges: { component: GraduationCapIcon },
+  AIChat:  { component: SparklesIcon },
   Settings: { component: SettingsIcon },
 }
 
@@ -88,6 +92,11 @@ export default function MainTabNavigator(): React.JSX.Element {
         name="Colleges"
         component={CollegeHelpNavigator}
         options={{ tabBarLabel: 'Colleges' }}
+      />
+      <Tab.Screen
+        name="AIChat"
+        component={MainAIScreen}
+        options={{ tabBarLabel: 'AI' }}
       />
       <Tab.Screen
         name="Settings"

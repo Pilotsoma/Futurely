@@ -11,6 +11,8 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import type { CompositeNavigationProp } from '@react-navigation/native'
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import Text from '../components/ui/Text'
 import { colors } from '../constants/colors'
@@ -27,11 +29,13 @@ import {
   CalendarIcon,
   ChevronRightIcon,
   ArrowLeftIcon,
-  SettingsIcon,
   SendIcon,
 } from '../components/icons'
 
-type NavProp = NativeStackNavigationProp<AppParamList>
+type NavProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'AIChat'>,
+  NativeStackNavigationProp<AppParamList>
+>
 
 interface ChatMessage {
   id: string
@@ -122,33 +126,23 @@ export default function MainAIScreen(): React.JSX.Element {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        {/* Top bar */}
-        <View style={styles.topBar}>
-          <TouchableOpacity
-            style={styles.topBtn}
-            onPress={() => {
-              if (showChat) {
-                setShowChat(false)
-              } else {
-                navigation.goBack()
-              }
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={showChat ? 'Back to home' : 'Back'}
-            activeOpacity={0.7}
-          >
-            <ArrowLeftIcon size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.topBtn}
-            onPress={() => navigation.navigate('MainTabs', { screen: 'Settings' })}
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <SettingsIcon size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        </View>
+        {/* Top bar — only shown in chat mode, to return to the AI home view.
+            AIChat is a tab root with no stack history, so there's nothing to
+            "go back" to otherwise (matches the pattern used for other tab
+            roots like Planner/Settings — no back button when at rest). */}
+        {showChat && (
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              style={styles.topBtn}
+              onPress={() => setShowChat(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Back to home"
+              activeOpacity={0.7}
+            >
+              <ArrowLeftIcon size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {showChat ? (
           <FlatList

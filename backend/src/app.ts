@@ -99,6 +99,14 @@ const DEV_ORIGINS = [
 const ACTIVE_ORIGINS = ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : DEV_ORIGINS
 console.log(`[CORS] Active origins:`, ACTIVE_ORIGINS.join(', ') || '(none — all non-browser requests allowed)')
 
+// Dev-only convenience: when testing the Expo web preview from a phone on the
+// same WiFi (e.g. Safari at http://192.168.x.x:8081), the Origin header is the
+// LAN IP, not localhost — which the fixed DEV_ORIGINS list above can't predict
+// since it changes per network. This pattern only applies when ALLOWED_ORIGINS
+// isn't explicitly set (i.e. never in production, where it's always set).
+const isDevFallback = ALLOWED_ORIGINS.length === 0
+const LAN_ORIGIN_PATTERN = /^http:\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}):(3000|8081|19006)$/
+
 const CORS_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization']
 // Expose rate-limit headers so clients can read their quota without guessing.
@@ -110,6 +118,8 @@ app.use(cors({
     if (!origin) return cb(null, true)
 
     if (ACTIVE_ORIGINS.includes(origin)) return cb(null, true)
+
+    if (isDevFallback && LAN_ORIGIN_PATTERN.test(origin)) return cb(null, true)
 
     const allowedStr = ACTIVE_ORIGINS.length > 0 ? ACTIVE_ORIGINS.join(', ') : '(none)'
     cb(new Error(`CORS: origin '${origin}' is not allowed. Allowed origins: ${allowedStr}`))
