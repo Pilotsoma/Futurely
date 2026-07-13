@@ -58,8 +58,11 @@ function groupAssignments(items: PlannerItem[]): Group[] {
 function formatDueDate(item: PlannerItem): string {
   const date = new Date(item.dueDate)
   const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  if (item.dueTime) return `${dateStr} at ${item.dueTime}`
-  return dateStr
+  // dueDate's time component always reflects the real due time — set explicitly on
+  // manual creation, defaulted to end of day otherwise, or synced from Canvas —
+  // so deriving from it keeps the format consistent across all assignment sources.
+  const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return `${dateStr} at ${timeStr}`
 }
 
 function formatRelativeTime(isoString: string | null): string {

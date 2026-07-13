@@ -251,7 +251,9 @@ Respond with ONLY a JSON object in exactly this shape (no markdown, no extra tex
           for (const session of day.sessions) {
             const actualDueDate = dueDateById.get(session?.assignmentId)
             if (actualDueDate) {
-              session.dueDate = actualDueDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+              const dateStr = actualDueDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+              const timeStr = actualDueDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+              session.dueDate = `${dateStr} at ${timeStr}`
             }
           }
         }
