@@ -35,7 +35,11 @@ export function getAiClient(): OpenAI {
   if (!apiKey) {
     throw new Error(`${provider.apiKeyEnv} is not set — cannot call the LLM`)
   }
-  return new OpenAI({ apiKey, baseURL: provider.baseURL })
+  // Without a timeout the SDK defaults to 10 minutes — a slow/degraded provider
+  // would hang the request well past any client-side fetch timeout, surfacing
+  // as an aborted/reset connection instead of a clean error. maxRetries: 0 keeps
+  // the worst case at one timeout window, not a multiple of it.
+  return new OpenAI({ apiKey, baseURL: provider.baseURL, timeout: 20000, maxRetries: 0 })
 }
 
 export function getAiModel(): string {

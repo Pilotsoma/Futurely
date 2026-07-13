@@ -50,10 +50,10 @@ async function silentRefresh(): Promise<boolean> {
   return _refreshPromise
 }
 
-async function request<T>(path: string, options?: RequestInit, _retried = false): Promise<T> {
+async function request<T>(path: string, options?: RequestInit, _retried = false, timeoutMs = 30000): Promise<T> {
   const token = _apiToken
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 30000)
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
   let res: Response
   try {
     res = await fetch(`${BASE}${path}`, {
@@ -72,7 +72,7 @@ async function request<T>(path: string, options?: RequestInit, _retried = false)
   // On 401, attempt a silent token refresh and retry once.
   if (res.status === 401 && !_retried) {
     const refreshed = await silentRefresh()
-    if (refreshed) return request<T>(path, options, true)
+    if (refreshed) return request<T>(path, options, true, timeoutMs)
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }
@@ -213,11 +213,13 @@ export const api = {
     unweightedGpa: number
     futureDecision: string | null
   }>('/api/roadmap'),
+  // LLM-backed endpoints get a longer timeout than the 30s default — generation
+  // latency is inherently more variable than a typical CRUD call.
   chat: (message: string) =>
     request<{ reply: string }>('/api/ai/chat', {
       method: 'POST',
       body: JSON.stringify({ message }),
-    }),
+    }, false, 60000),
   studyPlan: () => request<{
     overview: string
     days: Array<{
@@ -232,7 +234,7 @@ export const api = {
         notes: string
       }>
     }>
-  }>('/api/ai/study-plan'),
+  }>('/api/ai/study-plan', undefined, false, 60000),
 
   // ── School Portal Integration ──────────────────────────────────────────────
 
