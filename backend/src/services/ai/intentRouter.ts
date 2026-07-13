@@ -55,10 +55,14 @@ const DEFAULT_REFUSAL =
 // Obvious homework/off-topic phrasing gets rejected without spending an LLM
 // call at all — this is the "free" tier of the gate. Ambiguous messages fall
 // through to the classifier model below.
+// Each pattern requires the "answer/solve" language to be paired with a
+// homework-shaped noun (problem, equation, assignment...) — a bare "what's
+// the answer to <anything>" used to match unconditionally and false-blocked
+// ordinary advice questions like "what's the answer to reducing my stress".
 const FAST_BLOCK_PATTERNS: RegExp[] = [
   /\b(write|do|finish|complete)\s+(my|this|the)\s+(essay|homework|assignment|paper|report|lab report)\b/i,
-  /\b(solve|answer|give me the answer to)\s+(this|these|the)?\s*(problem|equation|question|proof)s?\b/i,
-  /\bwhat('s| is) the answer to\b/i,
+  /\b(solve|answer)\s+(this|these|that|the)\s+(problem|equation|question|proof)s?\b/i,
+  /\b(what'?s|what is|give me|tell me)\s+the\s+answer\s+to\s+(this|these|the)?\s*(problem|equation|question|assignment|homework|worksheet|exam|quiz|proof)s?\b/i,
   /\bdo my (homework|assignment|test|exam|quiz)\b/i,
   /\bwrite (an?|my) (essay|paper|story|poem)\s+(about|on|for)\b/i,
 ]
@@ -82,16 +86,19 @@ NextStep's in-scope purpose: helping students understand their grades/GPA, plan 
 Classify the message below and respond with ONLY a JSON object in exactly this shape (no markdown, no extra text):
 { "allowed": <boolean>, "intent": "surface" | "personalized" }
 
-Set "allowed" to false ONLY when the message clearly asks the assistant to:
-- Produce a submittable answer/text for the student's own homework, assignment, essay, or exam (e.g. "write my essay", "do my homework", "what's the answer to this problem" about work that is due/being turned in)
-- Do something with no plausible connection to school, academics, or this app (e.g. unrelated trivia, coding help, health/relationship advice)
+Set "allowed" to false when the message clearly falls into one of these two buckets:
+
+1. Homework-solving: it names or quotes a SPECIFIC homework/exam/essay prompt, problem, or equation and asks the assistant to produce the submittable answer/text for it (e.g. "write my essay about X", "do my homework", "solve this equation: 2x+5=17", "what's the answer to problem #4"). The word "answer" alone is NOT enough to trigger this — "what's the answer to reducing my stress" or "what's the answer to staying motivated" are general advice questions, not a homework problem, and must be allowed.
+
+2. Off-topic: it has no plausible connection to school, academics, college/career, or this app, AND is not a greeting/pleasantry. This includes general-knowledge trivia (capital cities, historical facts not tied to a school topic, sports scores, weather), entertainment recommendations (movies, shows, music), coding help unrelated to a class, and health/relationship advice. Be confident and direct about blocking clear-cut cases like these — do not default to allowing them.
 
 Set "allowed" to true for everything else, including:
 - Greetings, small talk, thanks, or check-ins (e.g. "hi", "how's it going", "thank you!") — these are always allowed, intent "surface"
+- General advice questions, even ones phrased with "answer" or "solve", as long as they're not a specific homework/exam prompt (e.g. "what's the answer to reducing my stress before finals", "how do I solve my time-management problem")
 - Requests for practice questions, quizzes, or test prep (e.g. "give me a hard SAT question") — generating practice material is a supported feature, not "doing homework for them"
 - A student answering, correcting, or clarifying their answer to a question the ASSISTANT itself just asked in the conversation above (e.g. replying "C" or "I said C, not B" to a quiz question you posed) — this is the student engaging with practice material, never treat it as "solve this for me"
 
-When genuinely uncertain, default to "allowed": true — a false block is worse than an occasional off-topic reply.
+Only apply a default-to-allowed bias to genuinely ambiguous homework-vs-advice phrasing (bucket 1). For bucket 2 (off-topic), a message that is clearly unrelated trivia or entertainment should be blocked confidently, not waved through as "uncertain."
 
 Set "intent" to:
 - "personalized" if answering well requires the student's own data (their GPA, grades, specific assignments, attendance, or comparing their classes)
