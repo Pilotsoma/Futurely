@@ -7,7 +7,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion, AnimatePresence, type Transition } from 'framer-motion'
-import { api, getApiToken } from '../../lib/api'
+import { api } from '../../lib/api'
 import { BanIcon } from '@/components/icons'
 import { initWebAuth, clearWebAuth } from '../../lib/authState'
 import { startStudentPrefetch } from '../../lib/prefetch'
@@ -118,19 +118,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       const ok = await initWebAuth()
       if (!ok) { router.replace('/login'); return }
 
-      // 2. Decode role directly from the JWT payload — no extra network call required.
-      try {
-        const token = getApiToken()
-        if (token) {
-          const payload = JSON.parse(atob(token.split('.')[1]!)) as { role?: string }
-          if (payload.role === 'DEV' || payload.role === 'ADMIN') setIsAdmin(true)
-          if (payload.role === 'DEV') setIsDev(true)
-        }
-      } catch { /* malformed token — fall through to authMe */ }
-
       startStudentPrefetch()
 
-      // 3. Fetch live user data to get name and keep ns_user current.
+      // 2. Fetch live user data to get name and keep ns_user current — the
+      // only authoritative source for role now that web holds no raw JWT.
       const freshUser = await api.authMe().catch(() => null)
       const role = freshUser?.role ?? cachedUser?.role
       const name = freshUser?.name ?? cachedUser?.name

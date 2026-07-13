@@ -6,7 +6,7 @@ import { ArrowLeftIcon } from '@/components/icons'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PageLoader from '../../../../components/ui/PageLoader'
-import { api, getApiToken } from '../../../../lib/api'
+import { api } from '../../../../lib/api'
 
 // ── Official Katy ISD GPA Scale ───────────────────────────────────────────────
 // Regular:     A=4.0  B=3.0  C=2.0  F=0.0
@@ -81,10 +81,8 @@ const LEVEL_COLORS: Record<CourseLevel, { bg: string; color: string; border: str
 }
 
 async function apiFetch<T>(path: string): Promise<T> {
-  const token = typeof window !== 'undefined' ? getApiToken() : null
   const res = await fetch(path, {
     credentials: 'include',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) {
@@ -136,7 +134,6 @@ export default function WhatIfGpaPage() {
         // grade rather than seeing a previous grading period's number.
         const classworkRes = await fetch('/api/integrations/grades/classwork', {
           credentials: 'include',
-          headers: { Authorization: `Bearer ${typeof window !== 'undefined' ? getApiToken() : null}` },
         })
         const classworkJson = await classworkRes.json()
         const raw = classworkJson.data?.classes ?? []

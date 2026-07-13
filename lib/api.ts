@@ -1,12 +1,21 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
-// Access token stored in module memory only — never persisted to localStorage.
-// Set by authState.setWebLogin() after login/register; cleared on logout.
-// httpOnly cookies carry the refresh token; the backend also reads access_token cookie.
-let _apiToken: string | null = null
-export function setApiToken(token: string | null): void { _apiToken = token }
-export function getApiToken(): string | null { return _apiToken }
-export function clearApiToken(): void { _apiToken = null }
+// Web never holds the raw JWT at all — auth is entirely via the httpOnly
+// access_token/refresh_token cookies the backend sets and reads automatically
+// (including on the WebSocket handshake). The backend also omits the token from
+// login/register/refresh response bodies for web (see X-Client-Platform below),
+// so there's nothing sensitive in this module's memory to steal via XSS or to
+// find in a network trace.
+//
+// We still track a local "authenticated until" timestamp — not for auth, only
+// so callers can cheaply avoid an extra refresh round-trip when we already know
+// the 15-minute access token is still fresh.
+const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000
+const SAFETY_MARGIN_MS = 60 * 1000
+let _authedUntil = 0
+export function markWebAuthed(): void { _authedUntil = Date.now() + ACCESS_TOKEN_TTL_MS - SAFETY_MARGIN_MS }
+export function clearWebAuthed(): void { _authedUntil = 0 }
+export function isWebAuthed(): boolean { return Date.now() < _authedUntil }
 
 export class ApiError extends Error {
   code?: string
@@ -33,14 +42,13 @@ async function silentRefresh(): Promise<boolean> {
         method: 'POST',
         signal: controller.signal,
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Client-Platform': 'web' },
       })
-      if (!res.ok) { _apiToken = null; return false }
-      const { data } = (await res.json()) as { data: { token: string } }
-      _apiToken = data.token
+      if (!res.ok) { clearWebAuthed(); return false }
+      markWebAuthed()
       return true
     } catch {
-      _apiToken = null
+      clearWebAuthed()
       return false
     } finally {
       clearTimeout(timeout)
@@ -51,7 +59,6 @@ async function silentRefresh(): Promise<boolean> {
 }
 
 async function request<T>(path: string, options?: RequestInit, _retried = false, timeoutMs = 30000): Promise<T> {
-  const token = _apiToken
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
   let res: Response
@@ -62,7 +69,7 @@ async function request<T>(path: string, options?: RequestInit, _retried = false,
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'X-Client-Platform': 'web',
         ...options?.headers,
       },
     })
@@ -90,7 +97,9 @@ async function request<T>(path: string, options?: RequestInit, _retried = false,
 }
 
 interface LoginResult {
-  token: string
+  // Omitted by the backend for web clients (see X-Client-Platform) — auth
+  // cookies are set instead. Still present for mobile, which has no cookie jar.
+  token?: string
   user: { id: number; name: string | null; role: string }
 }
 

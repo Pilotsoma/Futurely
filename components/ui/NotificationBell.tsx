@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, AppNotification, getApiToken } from '../../lib/api'
+import { api, AppNotification } from '../../lib/api'
 import UserProfileModal from './UserProfileModal'
 import {
   UserIcon, HeartFilledIcon, PartyPopperIcon, TagIcon, TradeArrowsIcon, BooksIcon,
@@ -62,17 +62,16 @@ export default function NotificationBell({ showToasts = false, collapsed = false
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 6000)
   }, [showToasts])
 
-  // WebSocket for real-time notifications
+  // WebSocket for real-time notifications — auth happens server-side via the
+  // httpOnly access_token cookie sent automatically on the handshake, so the
+  // client never holds or transmits the raw token.
   useEffect(() => {
-    const token = getApiToken()
-    if (!token) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws')
     let ws: WebSocket, dead = false
     function connect() {
       if (dead) return
       ws = new WebSocket(wsBase)
-      ws.onopen = () => ws.send(JSON.stringify({ type: 'AUTH', token }))
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data as string) as { event: string; data: AppNotification }

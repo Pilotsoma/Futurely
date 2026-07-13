@@ -108,7 +108,7 @@ const isDevFallback = ALLOWED_ORIGINS.length === 0
 const LAN_ORIGIN_PATTERN = /^http:\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}):(3000|8081|19006)$/
 
 const CORS_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization']
+const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Client-Platform']
 // Expose rate-limit headers so clients can read their quota without guessing.
 const CORS_EXPOSED_HEADERS = ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'RateLimit-Policy']
 

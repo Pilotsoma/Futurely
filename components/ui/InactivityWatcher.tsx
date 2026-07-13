@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, getApiToken } from '@/lib/api'
+import { api, isWebAuthed } from '@/lib/api'
 import { clearWebAuth } from '@/lib/authState'
 
 const IDLE_MS = 30 * 60 * 1000  // 30 minutes before warning
@@ -67,7 +67,7 @@ export default function InactivityWatcher() {
   }
 
   useEffect(() => {
-    if (!getApiToken()) return
+    if (!isWebAuthed()) return
     resetIdleTimer()
     const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'] as const
     events.forEach(ev => window.addEventListener(ev, onActivity, { passive: true }))

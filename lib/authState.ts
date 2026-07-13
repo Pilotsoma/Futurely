@@ -1,12 +1,16 @@
 /**
- * Web auth state — access token lives in module memory only (never localStorage).
- * Refresh token is persisted as an httpOnly cookie set by the backend.
+ * Web auth state — the raw JWT is never held in JS at all. Auth is entirely
+ * via the httpOnly access_token/refresh_token cookies the backend sets; the
+ * backend also omits the token from response bodies for web (X-Client-Platform
+ * header), so there's nothing here for XSS, a browser extension, or a network
+ * trace to pick up.
  *
- * On page load call initWebAuth() to rehydrate the access token from the cookie.
- * Mobile clients use a separate path (AsyncStorage + Authorization header).
+ * On page load call initWebAuth() to confirm/refresh the cookie session.
+ * Mobile clients use a separate path (AsyncStorage + Authorization header) and
+ * are unaffected by any of this.
  */
 
-import { setApiToken, clearApiToken, getApiToken } from './api'
+import { markWebAuthed, clearWebAuthed, isWebAuthed } from './api'
 
 const BASE = () => process.env.NEXT_PUBLIC_API_URL ?? ''
 
@@ -17,16 +21,7 @@ const authChannel = typeof BroadcastChannel !== 'undefined'
 
 /** Call once on app boot. Returns true if a valid session was found. */
 export async function initWebAuth(): Promise<boolean> {
-  const current = getApiToken()
-  if (current) {
-    // Verify the in-memory token hasn't expired before trusting it.
-    try {
-      const payload = JSON.parse(atob(current.split('.')[1]!)) as { exp?: number; role?: string }
-      // Only skip refresh if token is valid AND already has role embedded.
-      // Tokens issued before the role-in-JWT change lack `role` — fall through to refresh.
-      if (payload.exp && payload.exp * 1000 > Date.now() + 10000 && payload.role) return true
-    } catch { /* malformed — fall through to refresh */ }
-  }
+  if (isWebAuthed()) return true
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30000)
@@ -35,12 +30,11 @@ export async function initWebAuth(): Promise<boolean> {
       method: 'POST',
       signal: controller.signal,
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Client-Platform': 'web' },
     })
     if (!res.ok) return false
 
-    const { data } = (await res.json()) as { data: { token: string } }
-    setApiToken(data.token)
+    markWebAuthed()
     return true
   } catch {
     return false
@@ -49,14 +43,14 @@ export async function initWebAuth(): Promise<boolean> {
   }
 }
 
-/** Store access token in memory after a successful login / register. */
-export function setWebLogin(token: string): void {
-  setApiToken(token)
+/** Mark the session authenticated after a successful login / register. */
+export function setWebLogin(): void {
+  markWebAuthed()
 }
 
-/** Clear access token from memory and signal other tabs to do the same. */
+/** Clear auth state and signal other tabs to do the same. */
 export function clearWebAuth(): void {
-  clearApiToken()
+  clearWebAuthed()
   authChannel?.postMessage({ type: 'LOGOUT' })
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getApiToken, clearApiToken } from '../../lib/api'
+import { isWebAuthed, clearWebAuthed } from '../../lib/api'
 import { onCrossTabLogout } from '../../lib/authState'
 
 export default function ForcedLogoutWatcher() {
@@ -15,27 +15,26 @@ export default function ForcedLogoutWatcher() {
     fired.current = true
     setShow(true)
     setTimeout(() => {
-      clearApiToken()
+      clearWebAuthed()
       localStorage.removeItem('ns_user')
       router.replace('/login')
     }, 2000)
   }
 
-  // WebSocket — catches cross-device logout (FORCE_LOGOUT server event)
+  // WebSocket — catches cross-device logout (FORCE_LOGOUT server event). Auth
+  // happens server-side via the httpOnly cookie sent automatically on the
+  // handshake, so there's no token for this client to hold or transmit.
   useEffect(() => {
-    const token = getApiToken()
-    if (!token) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws')
     let ws: WebSocket, dead = false
     function connect() {
       if (dead) return
       ws = new WebSocket(wsBase)
-      ws.onopen = () => ws.send(JSON.stringify({ type: 'AUTH', token }))
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data as string) as { event: string }
-          if (msg.event === 'FORCE_LOGOUT' && getApiToken()) {
+          if (msg.event === 'FORCE_LOGOUT' && isWebAuthed()) {
             trigger()
           }
         } catch { /* ignore */ }

@@ -7,7 +7,6 @@ import { createClient } from '@supabase/supabase-js'
 import { WarningIcon } from '@/components/icons'
 import {
   api,
-  getApiToken,
   type StudentCounselorPortal,
   type StudentActionItem,
   type CounselorChatMessage,
@@ -27,10 +26,7 @@ export default function MyCounselorPage() {
   const [myId, setMyId]         = useState<number | null>(null)
 
   useEffect(() => {
-    try {
-      const token = getApiToken()
-      if (token) setMyId(Number(JSON.parse(atob(token.split('.')[1])).sub))
-    } catch { /* ignore */ }
+    api.authMe().then(me => setMyId(me.id)).catch(() => {})
     void loadPortal()
   }, [counselorId])
 

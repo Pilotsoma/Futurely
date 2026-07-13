@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
-import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification, getApiToken } from '@/lib/api'
+import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification } from '@/lib/api'
 import CoinIcon from '@/components/ui/CoinIcon'
 import VerifiedBadge from '@/components/ui/VerifiedBadge'
 import { DevAdminPanel, ModPanel } from '@/components/ui/DevAdminPanel'
@@ -1229,14 +1229,12 @@ export default function StudyFeedPage() {
   }, [])
 
   useEffect(() => {
-    try {
-      const token = getApiToken()
-      if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        const uid = payload.sub || 0
+    api.authMe()
+      .then(me => {
+        const uid = me.id || 0
         setCurrentUserId(uid)
         if (uid) {
-          api.feedUserProfile(uid).then(p => {
+          return api.feedUserProfile(uid).then(p => {
             setIsDevUser(p.role === 'ADMIN' || p.tag === 'DEV')
             setIsModUser((p.allTags ?? []).some(t => t.tag === 'MOD'))
             setIsBanned(p.chatBanned)
@@ -1245,28 +1243,23 @@ export default function StudyFeedPage() {
             setMutedUntil(p.chatMutedUntil)
             if (p.isdCode) { setIsdCode(p.isdCode); setIsdDisplayName(p.isdDisplayName ?? null) }
             setStatusLoaded(true)
-          }).catch(() => { setStatusLoaded(true) })
-        } else {
-          setStatusLoaded(true)
+          })
         }
-      } else {
         setStatusLoaded(true)
-      }
-    } catch { setStatusLoaded(true) }
+      })
+      .catch(() => setStatusLoaded(true))
     loadPosts(1)
   }, [loadPosts])
 
-  // WebSocket — NEW_POST events only (notifications handled globally by NotificationBell in layout)
+  // WebSocket — NEW_POST events only (notifications handled globally by NotificationBell in layout).
+  // Auth happens server-side via the httpOnly cookie sent on the handshake.
   useEffect(() => {
-    const token = getApiToken()
-    if (!token) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws')
     let ws: WebSocket, dead = false
     function connect() {
       if (dead) return
       ws = new WebSocket(wsBase)
-      ws.onopen = () => ws.send(JSON.stringify({ type: 'AUTH', token }))
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data as string) as { event: string; data: FeedPost }

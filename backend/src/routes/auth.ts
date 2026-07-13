@@ -106,6 +106,13 @@ function issueAccessToken(userId: number, role = 'STUDENT'): string {
   return jwt.sign({ sub: userId, role }, process.env.JWT_SECRET!, { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_EXPIRY })
 }
 
+// Web sends this header (see lib/api.ts) and relies entirely on the httpOnly
+// cookies set alongside this response — so the raw token never needs to appear
+// in a web response body at all. Mobile has no cookie jar and still needs it.
+function isWebClient(req: Request): boolean {
+  return req.headers['x-client-platform'] === 'web'
+}
+
 const IS_PROD = process.env.NODE_ENV === 'production'
 
 function setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
@@ -369,8 +376,7 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
 
     res.status(201).json({
       data: {
-        token,
-        refreshToken,
+        ...(isWebClient(req) ? {} : { token, refreshToken }),
         user: { id: user.id, email: user.email, name: user.name, role: user.role, emailVerified: false },
       },
     })
@@ -476,8 +482,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
 
     res.json({
       data: {
-        token,
-        refreshToken,
+        ...(isWebClient(req) ? {} : { token, refreshToken }),
         user: {
           id: user.id,
           email: user.email,
@@ -538,7 +543,7 @@ router.post('/refresh', refreshTokenLimiter, async (req: Request, res: Response)
     logger.info('auth.token_refreshed', { userId: stored.userId })
 
     res.json({
-      data: { token: newAccessToken, refreshToken: newRefreshToken },
+      data: isWebClient(req) ? {} : { token: newAccessToken, refreshToken: newRefreshToken },
     })
   } catch (e) {
     logger.error('auth.error', { event: 'refresh', error: e instanceof Error ? e.message : String(e) })

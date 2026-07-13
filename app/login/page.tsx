@@ -185,7 +185,7 @@ function LoginPageInner() {
   async function doRegisterOrLogin() {
     setIsLoading(true)
     try {
-      let result: { token: string; user: { id: number; name: string | null; role: string } }
+      let result: { user: { id: number; name: string | null; role: string } }
       if (mode === 'login') {
         result = await api.login(email, password)
       } else if (mode === 'register-student') {
@@ -195,7 +195,7 @@ function LoginPageInner() {
       } else {
         result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'PARENT', agreedTos, agreedPrivacy, agreedAge)
       }
-      setWebLogin(result.token)
+      setWebLogin()
       localStorage.setItem('ns_user', JSON.stringify(result.user))
       if (mode === 'register-teacher') {
         const requestedRole = applyAsCounselor ? 'COUNSELOR' : 'TEACHER'

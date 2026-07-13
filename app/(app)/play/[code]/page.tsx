@@ -6,7 +6,6 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeftIcon, GoldMedalIcon, SilverMedalIcon, BronzeMedalIcon, CheckIcon, XMarkIcon, ChevronRightIcon, TrophyIcon } from '@/components/icons'
 import { api, GameSession, GameParticipant } from '../../../../lib/api'
-import { getApiToken } from '../../../../lib/api'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface LiveQuestion {
@@ -245,15 +244,12 @@ export default function GameRoomPage() {
   }, [])
 
   useEffect(() => {
-    const token = getApiToken()
-    if (!token) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     const wsBase = (process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws'))
     let ws: WebSocket, dead = false
     function connect() {
       if (dead) return
       ws = new WebSocket(wsBase)
-      ws.onopen = () => ws.send(JSON.stringify({ type: 'AUTH', token }))
       ws.onmessage = handleWsMessage
       ws.onclose = () => { if (!dead) setTimeout(connect, 3000) }
     }

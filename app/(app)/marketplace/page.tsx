@@ -8,7 +8,7 @@ import { DevAdminPanel, ModPanel } from '../../../components/ui/DevAdminPanel'
 import {
   api, ApiError, InventoryData, BoxResult, MarketplaceItem, TagInventoryItem,
   MarketplaceListing, TradeOffer, TradeItem, UserPublicInventory, FeedUserProfile,
-  getApiToken, ItemSalePoint, ItemOwner, LeaderboardData, LeaderboardEntry,
+  ItemSalePoint, ItemOwner, LeaderboardData, LeaderboardEntry,
   FeedPost, SpinStats,
 } from '../../../lib/api'
 
@@ -1782,17 +1782,10 @@ export default function MarketplacePage() {
       try { localStorage.setItem(CATALOG_KEY, JSON.stringify(r)) } catch {}
     }).catch(() => {})
 
-    try {
-      const token = getApiToken()
-      if (token) {
-        const uid = JSON.parse(atob(token.split('.')[1])).sub
-        if (uid) {
-          api.feedUserProfile(uid)
-            .then(p => setIsDevUser(p.role === 'DEV' || p.role === 'ADMIN' || p.tag === 'DEV' || (p.allTags ?? []).some(t => t.tag === 'DEV')))
-            .catch(() => {})
-        }
-      }
-    } catch { /* ignore */ }
+    api.authMe()
+      .then(me => api.feedUserProfile(me.id))
+      .then(p => setIsDevUser(p.role === 'DEV' || p.role === 'ADMIN' || p.tag === 'DEV' || (p.allTags ?? []).some(t => t.tag === 'DEV')))
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -1825,17 +1818,9 @@ export default function MarketplacePage() {
   }, [])
 
   const fetchMyActiveListings = useCallback(() => {
-    api.marketplaceGetListings()
-      .then(all => {
-        try {
-          const token = getApiToken()
-          if (token) {
-            const uid = Number(JSON.parse(atob(token.split('.')[1])).sub)
-            setMyActiveListings(all.filter(l => l.sellerId === uid))
-          }
-        } catch { setMyActiveListings([]) }
-      })
-      .catch(() => {})
+    Promise.all([api.marketplaceGetListings(), api.authMe()])
+      .then(([all, me]) => setMyActiveListings(all.filter(l => l.sellerId === me.id)))
+      .catch(() => setMyActiveListings([]))
   }, [])
 
   const fetchTrades = useCallback(() => {

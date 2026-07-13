@@ -14,12 +14,43 @@ const JWT_SECRET = process.env.JWT_SECRET
 const server = http.createServer(app)
 const wss = new WebSocketServer({ server })
 
-wss.on('connection', (ws) => {
+// Minimal cookie-header parser — avoids pulling in a new dependency for one field.
+function parseCookieHeader(header: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {}
+  if (!header) return out
+  for (const part of header.split(';')) {
+    const idx = part.indexOf('=')
+    if (idx === -1) continue
+    const key = part.slice(0, idx).trim()
+    const value = part.slice(idx + 1).trim()
+    if (key) out[key] = decodeURIComponent(value)
+  }
+  return out
+}
+
+wss.on('connection', (ws, req) => {
   clients.add(ws)
   let authedUserId: number | null = null
   // Cache the battle code on this WS connection so BATTLE_* messages work
   // even if playerSessions hasn't been populated yet (race with BATTLE_READY).
   let connBattleCode: string | null = null
+
+  // Auth happens once, at the handshake, from the same httpOnly access_token
+  // cookie requireAuth uses for regular API calls — the client never sees or
+  // transmits the raw JWT for this connection.
+  const cookies = parseCookieHeader(req.headers.cookie)
+  if (cookies.access_token && JWT_SECRET) {
+    try {
+      const payload = jwt.verify(cookies.access_token, JWT_SECRET, { algorithms: ['HS256'] }) as { sub?: string | number }
+      const userId = typeof payload.sub === 'number' ? payload.sub : parseInt(String(payload.sub ?? ''), 10)
+      if (!isNaN(userId)) {
+        authedUserId = userId
+        if (!userClients.has(userId)) userClients.set(userId, new Set())
+        userClients.get(userId)!.add(ws)
+        ws.send(JSON.stringify({ event: 'AUTH_OK', data: { userId } }))
+      }
+    } catch { /* invalid/expired cookie — connection stays unauthenticated */ }
+  }
 
   async function ensureRegistered(code: string) {
     if (playerSessions.has(authedUserId!)) return
@@ -35,17 +66,6 @@ wss.on('connection', (ws) => {
   ws.on('message', async (raw) => {
     try {
       const msg = JSON.parse(raw.toString()) as Record<string, unknown>
-      if (msg.type === 'AUTH' && typeof msg.token === 'string' && JWT_SECRET) {
-        const payload = jwt.verify(msg.token, JWT_SECRET, { algorithms: ['HS256'] }) as { sub?: string | number }
-        const userId = typeof payload.sub === 'number' ? payload.sub : parseInt(String(payload.sub ?? ''), 10)
-        if (!isNaN(userId)) {
-          authedUserId = userId
-          if (!userClients.has(userId)) userClients.set(userId, new Set())
-          userClients.get(userId)!.add(ws)
-          ws.send(JSON.stringify({ event: 'AUTH_OK', data: { userId } }))
-        }
-        return
-      }
 
       if (!authedUserId) return
 
