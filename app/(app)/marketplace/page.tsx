@@ -2506,7 +2506,7 @@ export default function MarketplacePage() {
           <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 360 }}>
             Your access to the Marketplace has been revoked by a moderator.
             If you believe this is a mistake, please contact{' '}
-            <a href="mailto:sumodhprabhu2008@gmail.com" style={{ color: 'var(--primary)', fontWeight: 600 }}>sumodhprabhu2008@gmail.com</a>.
+            <a href="mailto:support@myfuturely.ai" style={{ color: 'var(--primary)', fontWeight: 600 }}>support@myfuturely.ai</a>.
           </div>
         </div>
       </div>

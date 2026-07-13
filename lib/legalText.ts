@@ -40,7 +40,7 @@ export const TOS_SECTIONS: ReadonlyArray<LegalSection> = [
     heading: '3. Account Responsibility',
     body:
       'You are responsible for maintaining the confidentiality of your account credentials. ' +
-      'You agree to notify us immediately at support@futurely.app if you suspect unauthorized ' +
+      'You agree to notify us immediately at support@myfuturely.ai if you suspect unauthorized ' +
       'use of your account. myFuturely is not liable for losses resulting from unauthorized ' +
       'access caused by your failure to keep credentials secure.',
   },
@@ -141,7 +141,7 @@ export const PRIVACY_SECTIONS: ReadonlyArray<LegalSection> = [
     heading: '7. Your Rights',
     body:
       'You may request access to, correction of, or deletion of your personal data at any time ' +
-      'by visiting Settings → Account or contacting us at support@futurely.app. Account ' +
+      'by visiting Settings → Account or contacting us at support@myfuturely.ai. Account ' +
       'deletion permanently removes all your data from our systems within 30 days.',
   },
   {
@@ -153,6 +153,6 @@ export const PRIVACY_SECTIONS: ReadonlyArray<LegalSection> = [
   },
   {
     heading: '9. Contact Us',
-    body: 'Questions or concerns? Reach us at support@futurely.app.',
+    body: 'Questions or concerns? Reach us at support@myfuturely.ai.',
   },
 ]

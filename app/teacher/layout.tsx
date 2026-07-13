@@ -76,7 +76,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>Awaiting Approval</h1>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 28 }}>
-            Your {requestedRole === 'COUNSELOR' ? 'counselor' : 'teacher'} account is pending review by an admin. You&apos;ll have full access once approved. This usually takes less than 24 hours. For a faster approval, contact <a href="mailto:sumodhprabhu2008@gmail.com" style={{ color: 'var(--primary)', textDecoration: 'none' }}>sumodhprabhu2008@gmail.com</a>.
+            Your {requestedRole === 'COUNSELOR' ? 'counselor' : 'teacher'} account is pending review by an admin. You&apos;ll have full access once approved. This usually takes less than 24 hours. For a faster approval, contact <a href="mailto:support@myfuturely.ai" style={{ color: 'var(--primary)', textDecoration: 'none' }}>support@myfuturely.ai</a>.
           </p>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 20px', marginBottom: 24, textAlign: 'left' }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>What you get after approval</p>

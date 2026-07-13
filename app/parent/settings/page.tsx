@@ -120,7 +120,7 @@ export default function ParentSettingsPage() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="ns-card" style={S.card}>
             <p style={S.cardLabel}>Support</p>
-            <InfoRow label="Contact" value="support@nextstep.ai" />
+            <InfoRow label="Contact" value="support@myfuturely.ai" />
             <InfoRow label="Version" value="v1.0 MVP" />
           </div>
 
