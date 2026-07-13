@@ -55,6 +55,10 @@ function groupAssignments(items: PlannerItem[]): Group[] {
   return ORDER.filter(k => groups[k].length > 0).map(k => ({ key: k, items: groups[k] }))
 }
 
+function isLate(item: PlannerItem): boolean {
+  return !item.completed && new Date(item.dueDate).getTime() < Date.now()
+}
+
 function formatDueDate(item: PlannerItem): string {
   const date = new Date(item.dueDate)
   const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -679,6 +683,11 @@ export default function PlannerPage() {
                       {item.source === 'CANVAS' && (
                         <span style={{ background: 'rgba(229,57,53,0.12)', color: '#E53935', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
                           Canvas
+                        </span>
+                      )}
+                      {isLate(item) && (
+                        <span style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
+                          Late
                         </span>
                       )}
                       <span>Due {formatDueDate(item)}</span>
