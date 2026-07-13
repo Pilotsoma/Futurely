@@ -215,10 +215,10 @@ export const api = {
   }>('/api/roadmap'),
   // LLM-backed endpoints get a longer timeout than the 30s default — generation
   // latency is inherently more variable than a typical CRUD call.
-  chat: (message: string) =>
+  chat: (message: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []) =>
     request<{ reply: string }>('/api/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, history }),
     }, false, 60000),
   studyPlan: () => request<{
     overview: string

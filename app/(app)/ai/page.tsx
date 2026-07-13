@@ -199,7 +199,8 @@ function AIChatInner() {
     }
 
     try {
-      const { reply } = await api.chat(msg)
+      const history = messages.slice(-10).map(m => ({ role: m.role === 'ai' ? 'assistant' as const : 'user' as const, content: m.text }))
+      const { reply } = await api.chat(msg, history)
       const aiMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: reply }
       const finalMsgs = [...withUser, aiMsg]
       setMessages(finalMsgs)

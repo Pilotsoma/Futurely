@@ -94,7 +94,19 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
     return
   }
   try {
-    const { message: userMessage } = req.body as { message: string }
+    const { message: userMessage, history } = req.body as {
+      message: string
+      history?: Array<{ role: 'user' | 'assistant'; content: string }>
+    }
+
+    // Cap to the last few turns so token cost/latency stay bounded — a study
+    // companion needs recent context, not the entire chat history verbatim.
+    const recentHistory = Array.isArray(history)
+      ? history
+          .filter((m): m is { role: 'user' | 'assistant'; content: string } =>
+            (m?.role === 'user' || m?.role === 'assistant') && typeof m?.content === 'string')
+          .slice(-10)
+      : []
 
     const [profile, user, assignments, portalData] = await Promise.all([
       prisma.profile.findUnique({ where: { userId: req.userId } }),
@@ -142,6 +154,7 @@ When asked about weakest/strongest class, best/worst grade, or any course compar
       model: getAiModel(),
       messages: [
         { role: 'system', content: systemPrompt },
+        ...recentHistory,
         { role: 'user', content: userMessage },
       ],
       max_tokens: 300,
