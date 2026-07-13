@@ -20,7 +20,11 @@ const PROVIDERS: Record<'openrouter' | 'nvidia', ProviderConfig> = {
     baseURL: 'https://integrate.api.nvidia.com/v1',
     apiKeyEnv: 'NVIDIA_API_KEY',
     modelEnv: 'NVIDIA_MODEL',
-    defaultModel: 'deepseek-ai/deepseek-v4-pro',
+    // deepseek-v4-pro (and other newer/trendier NIM models) are frequently
+    // capacity-overloaded on the free tier; llama-3.1-70b-instruct has
+    // reliably stayed available while still producing good instruction
+    // following and tutoring-quality output.
+    defaultModel: 'meta/llama-3.1-70b-instruct',
   },
 }
 
@@ -39,7 +43,7 @@ export function getAiClient(): OpenAI {
   // would hang the request well past any client-side fetch timeout, surfacing
   // as an aborted/reset connection instead of a clean error. maxRetries: 0 keeps
   // the worst case at one timeout window, not a multiple of it.
-  return new OpenAI({ apiKey, baseURL: provider.baseURL, timeout: 20000, maxRetries: 0 })
+  return new OpenAI({ apiKey, baseURL: provider.baseURL, timeout: 30000, maxRetries: 0 })
 }
 
 export function getAiModel(): string {

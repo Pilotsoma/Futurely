@@ -200,7 +200,7 @@ ${JSON.stringify(assignmentList, null, 2)}
 
 Each assignment already includes ground-truth "daysUntilDue" and "isPastDue" fields — treat them as authoritative. Do not recompute due-date status yourself, and never describe an assignment as "past due" or "overdue" unless its isPastDue is true.
 
-Rules: max 120 min/day, prioritize soonest due dates, split large tasks across days, only include days with work.
+Rules: max 120 min/day, prioritize soonest due dates, split large tasks across days, only include days with work. Each calendar date must appear as exactly one entry in "days" — put all of that day's sessions in a single "sessions" array, never create two day entries with the same "date".
 
 Respond with ONLY a JSON object in exactly this shape (no markdown, no extra text):
 {
@@ -258,6 +258,19 @@ Respond with ONLY a JSON object in exactly this shape (no markdown, no extra tex
           }
         }
       }
+      // Some models split one date across multiple day entries despite the prompt
+      // instruction — merge them so the frontend never renders duplicate day sections.
+      const byDate = new Map<string, { label: string; date: string; sessions: unknown[] }>()
+      for (const day of data.days) {
+        const key = typeof day?.date === 'string' ? day.date : JSON.stringify(day)
+        const existing = byDate.get(key)
+        if (existing) {
+          existing.sessions.push(...(Array.isArray(day?.sessions) ? day.sessions : []))
+        } else {
+          byDate.set(key, { label: day.label, date: day.date, sessions: Array.isArray(day?.sessions) ? day.sessions : [] })
+        }
+      }
+      data.days = Array.from(byDate.values())
     }
 
     res.json({ data })
