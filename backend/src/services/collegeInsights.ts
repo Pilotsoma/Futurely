@@ -5,6 +5,7 @@ import { logger } from '../common/logger'
 import { writeAuditLog } from '../lib/auditLog'
 import { computeLikelihoodScore, type ScoringInput } from './collegeScoring'
 import { generateCollegeInsights } from './ai/collegeInsightsPrompt'
+import { getPortalData, deriveGradeLevel, countRigorousCourses } from '../lib/studentContext'
 import type {
   ActionableStep,
   CollegeInsightsPromptInput,
@@ -55,6 +56,9 @@ function buildInputHash(params: {
   sat25th: number | null
   sat75th: number | null
   satScore: number | null
+  courseList: string[]
+  classRank: string | null
+  attendanceSummary: string | null
 }): string {
   const canonical = JSON.stringify(
     {
@@ -63,6 +67,9 @@ function buildInputHash(params: {
       sat25th: params.sat25th ?? 'null',
       sat75th: params.sat75th ?? 'null',
       satScore: params.satScore ?? 'null',
+      courseList: params.courseList,
+      classRank: params.classRank ?? 'null',
+      attendanceSummary: params.attendanceSummary ?? 'null',
     },
     Object.keys({
       admissionRate: true,
@@ -70,6 +77,9 @@ function buildInputHash(params: {
       sat25th: true,
       sat75th: true,
       satScore: true,
+      courseList: true,
+      classRank: true,
+      attendanceSummary: true,
     }).sort()
   )
   return crypto.createHash('sha256').update(canonical).digest('hex')
@@ -159,12 +169,24 @@ export async function getOrGenerateInsights(
     ipAddress,
   })
 
+  const [profile, portalData] = await Promise.all([
+    prisma.profile.findUnique({ where: { userId } }),
+    getPortalData(userId),
+  ])
+  const courseList = portalData?.courseList ?? []
+  const classRank = portalData?.classRank ?? null
+  const attendanceSummary = portalData?.attendanceSummary || null
+  const gradeLevel = deriveGradeLevel(profile?.graduationYear ?? null, profile?.gradeLevel ?? null)
+
   const inputHash = buildInputHash({
     admissionRate,
     gpa: scoringInput.studentGPA,
     sat25th: scoringInput.college.sat25th,
     sat75th: scoringInput.college.sat75th,
     satScore: scoringInput.studentSAT,
+    courseList,
+    classRank,
+    attendanceSummary,
   })
 
   try {
@@ -215,6 +237,11 @@ export async function getOrGenerateInsights(
       satDeltaFrom25th,
       gpaPosition,
       gpaZScore,
+      gradeLevel,
+      courseList,
+      rigorousCourseCount: countRigorousCourses(courseList),
+      classRank,
+      attendanceSummary,
     }
 
     let payload

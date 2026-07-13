@@ -1,9 +1,14 @@
-// prompt-version: 1.0
-// last-updated: 2026-07-06
+// prompt-version: 2.0
+// last-updated: 2026-07-13
 // author: ai-engineer
 //
 // PII policy: NO student names, emails, IDs, raw SAT scores, or raw GPA values
-// may appear in the prompt. Only derived/positional fields are used.
+// may appear in the prompt — those stay reduced to derived/positional fields
+// (satPosition, gpaPosition). Real course names/grades, class rank, and
+// attendance ARE included as of v2.0 so the model can give course-specific,
+// non-generic advice — this mirrors what the AI chat's personalized handler
+// (routes/ai.ts) already sends to the same LLM provider under the same
+// consent gate (requireConsent), so this isn't a new category of exposure.
 // See COMPLIANCE.md for the full data-handling policy.
 
 import { z } from 'zod'
@@ -112,6 +117,8 @@ function buildSystemPrompt(): string {
 
 Your tone is warm, supportive, and realistic — never discouraging, but never falsely optimistic. You use plain English; no jargon, no percentages in the narrative, no raw test scores. You help students feel capable and motivated.
 
+When the student's actual courses, class rank, or attendance are provided below, ground your narrative and steps in that real data — name specific courses, note gaps in rigor, or flag attendance if it's relevant. Never fall back to generic advice like "just study more" when specific data is available to reference instead.
+
 Respond with ONLY a JSON object in exactly this shape (no markdown, no extra text):
 {
   "narrativeSummary": "<150-250 word string>",
@@ -132,6 +139,12 @@ function buildUserPrompt(input: CollegeInsightsPromptInput): string {
     input.gpaPosition !== 'not_provided'
       ? `GPA position: ${describeGpaPosition(input.gpaPosition)}`
       : null
+  const gradeLevelSection = input.gradeLevel !== null ? `Grade level: ${input.gradeLevel}` : null
+  const courseSection = input.courseList.length > 0
+    ? `Current courses: ${input.courseList.join(', ')}\nRigorous (AP/IB/Honors/dual-enrollment) course count: ${input.rigorousCourseCount}`
+    : null
+  const classRankSection = input.classRank ? `Class rank: ${input.classRank}` : null
+  const attendanceSection = input.attendanceSummary ? `Attendance: ${input.attendanceSummary}` : null
 
   const profileLines = [
     `College: ${input.collegeName}`,
@@ -141,6 +154,11 @@ function buildUserPrompt(input: CollegeInsightsPromptInput): string {
     gpaSection,
     satSection === null ? 'SAT data: not provided — do not give SAT-specific advice' : null,
     gpaSection === null ? 'GPA data: not provided — do not give GPA-specific advice' : null,
+    gradeLevelSection,
+    courseSection,
+    classRankSection,
+    attendanceSection,
+    courseSection === null ? 'Course data: not provided — do not reference specific classes' : null,
   ]
     .filter(Boolean)
     .join('\n')
@@ -174,17 +192,26 @@ function buildStepGuidance(input: CollegeInsightsPromptInput): string {
   if (input.label === 'Far Reach') {
     parts.push('Include a "strategy" step about balancing this aspiration with a realistic college list.')
   }
+  if (input.label === 'Reach') {
+    parts.push('Include a "strategy" step naming what specifically would move this from a reach toward a solid match — reference their actual course rigor or class rank below if provided, not generic effort.')
+  }
   if (input.satPosition === 'well_below_25th' || input.satPosition === 'below_25th') {
     parts.push('Include a high-priority "test" step about SAT preparation.')
   }
   if (input.gpaPosition === 'well_below_mean' || input.gpaPosition === 'below_mean') {
-    parts.push('Include a high-priority "gpa" step about academic improvement.')
+    parts.push('Include a high-priority "gpa" step about academic improvement — if specific current courses are listed below, name the ones most worth prioritizing rather than saying "study more."')
   }
   if (input.label === 'Likely' || input.label === 'Possible') {
     parts.push('Emphasize "essay" and "extracurricular" steps since those become the differentiators at this fit level.')
   }
+  if (input.courseList.length > 0 && input.rigorousCourseCount === 0 && (input.label === 'Reach' || input.label === 'Far Reach')) {
+    parts.push('Include a "gpa" or "strategy" step recommending specific next-semester course rigor (AP/IB/Honors/dual-enrollment) given none of their current courses are advanced-level.')
+  }
+  if (input.classRank) {
+    parts.push('Weave the class rank context into the narrative or a "strategy" step where relevant, instead of ignoring it.')
+  }
 
-  return parts.length > 0 ? parts.join(' ') : 'Balance across essay, strategy, and any relevant academic areas.'
+  return parts.length > 0 ? parts.join(' ') : 'Balance across essay, strategy, and any relevant academic areas, referencing their actual courses and class rank below if provided instead of generic advice.'
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────

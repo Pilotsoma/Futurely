@@ -28,4 +28,14 @@ export interface CollegeInsightsPromptInput {
   satDeltaFrom25th: number | null
   gpaPosition: GpaPosition
   gpaZScore: number | null
+  /** Grade level (9-12), when known — shapes how much runway advice assumes. */
+  gradeLevel: number | null
+  /** Real current-semester course names + grades, e.g. "AP Calculus BC: A (94%)". */
+  courseList: string[]
+  /** Count of courses in courseList that look AP/IB/Honors/dual-enrollment. */
+  rigorousCourseCount: number
+  /** Human-readable class rank string, e.g. "45/320 (Top quartile)". */
+  classRank: string | null
+  /** Human-readable attendance summary for the current month. */
+  attendanceSummary: string | null
 }
