@@ -24,6 +24,7 @@ import { writeAuditLog } from '../../lib/auditLog'
 import { APIError, AuthenticationError } from './errors'
 import { normalizeHacGrades, normalizePsGrades } from './normalizeGrades'
 import { encryptPassword, decryptPassword } from './credentialCrypto'
+import { assertPublicHttpUrl } from '../../lib/ssrfGuard'
 
 const router = Router()
 
@@ -544,6 +545,19 @@ router.post('/hac/login', asyncHandler(async (req: AuthRequest, res: Response): 
       resolvedBaseUrl = cl.districtUrl
     }
 
+    // SSRF guard: baseUrl (and any URL derived from the ClassLink cookie) is
+    // fully attacker-controlled — reject anything that isn't a public http(s) host
+    // before the server makes an outbound request to it.
+    try {
+      await assertPublicHttpUrl(resolvedBaseUrl)
+    } catch (e) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'VALIDATION_ERROR', message: e instanceof Error ? e.message : 'Invalid baseUrl' },
+      })
+      return
+    }
+
     console.log('[GRADES ROUTER] Calling loginHAC:', {
       resolvedBaseUrl,
       userId,
@@ -673,6 +687,16 @@ router.post('/powerschool/login', asyncHandler(async (req: AuthRequest, res: Res
     usernameExists: Boolean(username),
     passwordExists: Boolean(password),
   })
+
+  try {
+    await assertPublicHttpUrl(baseUrl)
+  } catch (e) {
+    res.status(400).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: e instanceof Error ? e.message : 'Invalid baseUrl' },
+    })
+    return
+  }
 
   try {
     const sessionToken = await loginPowerSchool(baseUrl, username, password, userId)

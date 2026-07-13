@@ -282,6 +282,14 @@ app.use('/grades', requireAuth, requireConsent, gradesRoutes)
 const ENABLE_DEV_INTEGRATION_AUTH_BYPASS =
   process.env.ENABLE_DEV_INTEGRATION_AUTH_BYPASS === 'true'
 
+// Hard safety net: this flag defaults every protected route (including /admin)
+// to userId=1 with zero authentication. It must never be reachable in
+// production — crash immediately rather than silently exposing everything.
+if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS && isProd) {
+  console.error('FATAL: ENABLE_DEV_INTEGRATION_AUTH_BYPASS=true with NODE_ENV=production. Refusing to start — this would disable authentication on every protected route.')
+  process.exit(1)
+}
+
 function devBypass(req: any, _res: any, next: any): void {
   const authHeader = req.headers?.authorization as string | undefined
   if (authHeader?.startsWith('Bearer ')) {

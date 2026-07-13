@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { broadcast, sendToUser } from '../lib/websocket';
 import { filterContent, recordViolation } from '../lib/contentFilter';
@@ -9,7 +9,10 @@ import { requireAdmin, requireMod, hasDevPowers } from '../middleware/requireAdm
 import { checkDevCoinLimit } from '../lib/devCoinLimit';
 
 // Keyed by authenticated userId so shared NAT IPs don't block other users.
-const userKey = (req: Request): string => String((req as AuthRequest).userId ?? req.ip ?? 'anon')
+const userKey = (req: Request): string => {
+  const userId = (req as AuthRequest).userId
+  return userId !== undefined ? String(userId) : ipKeyGenerator(req.ip ?? 'anon')
+}
 
 const postCreateLimiter = rateLimit({
   windowMs: 60 * 1000,
