@@ -173,20 +173,32 @@ router.get('/study-plan', requireAuth, async (req: AuthRequest, res: Response): 
     }
 
     const today = new Date()
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
     const todayStr = today.toLocaleDateString('en-US', {
       weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
     })
 
-    const assignmentList = assignments.map(a => ({
-      id: a.id,
-      title: a.title,
-      subject: a.subject,
-      dueDate: new Date(a.dueDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-    }))
+    const dueDateById = new Map(assignments.map(a => [a.id, new Date(a.dueDate)]))
+
+    const assignmentList = assignments.map(a => {
+      const dueDate = new Date(a.dueDate)
+      const dueDateStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+      const daysUntilDue = Math.round((dueDateStart.getTime() - todayStart.getTime()) / 86400000)
+      return {
+        id: a.id,
+        title: a.title,
+        subject: a.subject,
+        dueDate: dueDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+        daysUntilDue,
+        isPastDue: daysUntilDue < 0,
+      }
+    })
 
     const prompt = `Today is ${todayStr}. Create a realistic study plan for these assignments:
 
 ${JSON.stringify(assignmentList, null, 2)}
+
+Each assignment already includes ground-truth "daysUntilDue" and "isPastDue" fields — treat them as authoritative. Do not recompute due-date status yourself, and never describe an assignment as "past due" or "overdue" unless its isPastDue is true.
 
 Rules: max 120 min/day, prioritize soonest due dates, split large tasks across days, only include days with work.
 
@@ -219,6 +231,33 @@ Respond with ONLY a JSON object in exactly this shape (no markdown, no extra tex
 
     const raw = response.choices[0]?.message?.content ?? '{}'
     const data = JSON.parse(extractJson(raw))
+
+    // Override the LLM's day label and per-session due date with deterministic,
+    // ground-truth values so the plan can never contradict the assignment's real due date.
+    if (Array.isArray(data?.days)) {
+      for (const day of data.days) {
+        if (typeof day?.date === 'string') {
+          const [y, m, d] = day.date.split('-').map(Number)
+          if (y && m && d) {
+            const dayDate = new Date(y, m - 1, d)
+            const diff = Math.round((dayDate.getTime() - todayStart.getTime()) / 86400000)
+            day.label = diff === 0 ? 'Today'
+              : diff === 1 ? 'Tomorrow'
+              : diff < 0 ? `Overdue — ${dayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`
+              : dayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+          }
+        }
+        if (Array.isArray(day?.sessions)) {
+          for (const session of day.sessions) {
+            const actualDueDate = dueDateById.get(session?.assignmentId)
+            if (actualDueDate) {
+              session.dueDate = actualDueDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+            }
+          }
+        }
+      }
+    }
+
     res.json({ data })
   } catch (err) {
     console.error('[AI STUDY PLAN]', err)

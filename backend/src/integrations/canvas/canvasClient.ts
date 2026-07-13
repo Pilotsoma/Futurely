@@ -242,6 +242,7 @@ export interface CanvasAssignment {
   course_id: number
   points_possible: number | null
   html_url: string
+  submission?: CanvasSubmission | null
 }
 
 export interface CanvasCourseWithGrade {
@@ -371,7 +372,7 @@ async function fetchAssignmentsFromCourses(
 
   for (const courseId of courseIds) {
     try {
-      const url = `${base}/api/v1/courses/${courseId}/assignments?bucket=upcoming&per_page=50&order_by=due_at`
+      const url = `${base}/api/v1/courses/${courseId}/assignments?bucket=upcoming&include[]=submission&per_page=50&order_by=due_at`
       const res = await axios.get<CanvasAssignment[]>(url, { headers, timeout: 15_000 })
       assignments.push(...res.data)
     } catch {
@@ -399,7 +400,7 @@ export async function fetchCanvasOverdueAssignments(
 
   for (const courseId of courseIds) {
     try {
-      const url = `${base}/api/v1/courses/${courseId}/assignments?bucket=past&per_page=50&order_by=due_at`
+      const url = `${base}/api/v1/courses/${courseId}/assignments?bucket=past&include[]=submission&per_page=50&order_by=due_at`
       const res = await axios.get<CanvasAssignment[]>(url, { headers, timeout: 15_000 })
       for (const a of res.data) {
         if (a.due_at && new Date(a.due_at) >= threeMonthsAgo) {
@@ -809,7 +810,7 @@ export async function fetchCanvasUpcomingAssignments(
   token: string,
   courseIds: number[],
 ): Promise<CanvasAssignment[]> {
-  const url = `${buildBaseUrl(instanceUrl)}/api/v1/users/self/upcoming_assignments`
+  const url = `${buildBaseUrl(instanceUrl)}/api/v1/users/self/upcoming_assignments?include[]=submission`
 
   logger.info('Fetching Canvas upcoming assignments', { instanceUrl })
 

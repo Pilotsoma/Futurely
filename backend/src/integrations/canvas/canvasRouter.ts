@@ -335,6 +335,13 @@ router.post(
 
       const SEVEN_DAYS_MS = 7 * 86400000
 
+      const isSubmitted = (submission?: typeof allAssignments[number]['submission']): boolean => {
+        if (!submission) return false
+        return submission.submitted_at !== null
+          || submission.workflow_state === 'submitted'
+          || submission.workflow_state === 'graded'
+      }
+
       const upsertPayloads = allAssignments.map(assignment => ({
         userId,
         title: assignment.name.slice(0, 500),
@@ -343,6 +350,8 @@ router.post(
           ? new Date(assignment.due_at)
           : new Date(Date.now() + SEVEN_DAYS_MS),
         source: ASSIGNMENT_SOURCE.CANVAS,
+        completed: isSubmitted(assignment.submission),
+        completedAt: assignment.submission?.submitted_at ? new Date(assignment.submission.submitted_at) : null,
       }))
 
       // Track which assignments are genuinely new (not just updates)
@@ -359,9 +368,17 @@ router.post(
           select: { id: true },
         })
         if (existing) {
-          await prisma.assignment.update({ where: { id: existing.id }, data: { dueDate: payload.dueDate } })
+          // Canvas can confirm an assignment is done (submitted), but its absence
+          // of submission data should never override a user's manual completion.
+          await prisma.assignment.update({
+            where: { id: existing.id },
+            data: {
+              dueDate: payload.dueDate,
+              ...(payload.completed && { completed: true, completedAt: payload.completedAt ?? new Date() }),
+            },
+          })
         } else {
-          await prisma.assignment.create({ data: { ...payload, completed: false } })
+          await prisma.assignment.create({ data: payload })
         }
       }
 
