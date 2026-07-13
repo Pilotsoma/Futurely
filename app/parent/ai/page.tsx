@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../../../lib/api'
+import { renderChatMarkdown } from '../../../lib/chatMarkdown'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
 
@@ -193,9 +194,11 @@ export default function ParentAIChatPage() {
             </div>
           )}
           {messages.map(m => (
-            <div key={m.id} style={m.role === 'user' ? S.bubbleUser : S.bubbleAi}>
-              {m.text}
-            </div>
+            m.role === 'ai' ? (
+              <div key={m.id} style={S.bubbleAi} dangerouslySetInnerHTML={{ __html: renderChatMarkdown(m.text) }} />
+            ) : (
+              <div key={m.id} style={S.bubbleUser}>{m.text}</div>
+            )
           ))}
           {sending && (
             <div style={{ ...S.bubbleAi, display: 'flex', gap: 6, alignItems: 'center', padding: '14px 18px' }}>

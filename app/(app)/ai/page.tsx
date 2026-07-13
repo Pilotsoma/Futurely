@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
 import Image from 'next/image'
 import { motion, useReducedMotion } from 'framer-motion'
 import { api } from '../../../lib/api'
+import { renderChatMarkdown } from '../../../lib/chatMarkdown'
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
 
@@ -302,7 +303,11 @@ function AIChatInner() {
               style={{ animationDelay: `${Math.min(i, 6) * 30}ms` }}
             >
               {m.role === 'ai' && <div className="aic-avatar" aria-hidden="true"><AiSparkIcon size={14} /></div>}
-              <div className={m.role === 'user' ? 'aic-bubble-user' : 'aic-bubble-ai'}>{m.text}</div>
+              {m.role === 'ai' ? (
+                <div className="aic-bubble-ai" dangerouslySetInnerHTML={{ __html: renderChatMarkdown(m.text) }} />
+              ) : (
+                <div className="aic-bubble-user">{m.text}</div>
+              )}
             </div>
           ))}
 

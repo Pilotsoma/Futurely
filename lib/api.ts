@@ -227,7 +227,7 @@ export const api = {
   chat: (message: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []) =>
     request<{ reply: string }>('/api/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ message, history }),
+      body: JSON.stringify({ message, history, renderMarkdown: true }),
     }, false, 60000),
   studyPlan: () => request<{
     overview: string
