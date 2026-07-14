@@ -55,20 +55,42 @@ export function getAiModel(): string {
 
 const NVIDIA_RELIABLE_FALLBACK_MODEL = PROVIDERS.nvidia.defaultModel // meta/llama-3.1-70b-instruct
 
+// ── Circuit breaker for the configured NVIDIA model ────────────────────────
+//
+// Once the primary model fails, skip straight to the reliable fallback for a
+// cooldown window instead of eating another timeout on every subsequent call
+// — e.g. deepseek-v4-pro being capacity-overloaded doesn't clear up between
+// one request and the next a few seconds later.
+//
+// NOTE: this is in-memory, scoped to a single warm serverless instance (this
+// backend runs as a Vercel function, not a persistent server) — it resets on
+// cold start and isn't shared across concurrently-running instances. Still a
+// meaningful win in practice since Vercel reuses a warm instance across
+// requests that land close together in time (e.g. the messages in one chat
+// conversation). A fully consistent version would need a shared store
+// (Redis/DB row) — not worth that infra for this stage.
+const CIRCUIT_COOLDOWN_MS = 3 * 60 * 1000 // 3 minutes
+let circuitOpenUntil = 0
+
+function isCircuitOpen(): boolean {
+  return Date.now() < circuitOpenUntil
+}
+
 /**
  * Drop-in replacement for `getAiClient().chat.completions.create({ model: getAiModel(), ... })`.
  * If the configured NVIDIA model fails (newer/trendier NIM models like
  * deepseek-v4-pro are frequently capacity-overloaded on the free tier — see
- * PROVIDERS.nvidia above), automatically retries once against the
- * known-reliable llama-3.1-70b-instruct model before giving up, so a bad
- * NVIDIA_MODEL override degrades gracefully instead of failing every call.
- * OpenRouter calls are unaffected — no equivalent documented failure mode
- * to fall back from.
+ * PROVIDERS.nvidia above), automatically falls back to the known-reliable
+ * llama-3.1-70b-instruct model, and remembers the failure for a cooldown
+ * window so subsequent calls skip the bad model entirely rather than paying
+ * for another timeout first. OpenRouter calls are unaffected — no equivalent
+ * documented failure mode to fall back from.
  *
  * Pass `retryOnFailure: false` for latency-sensitive calls that already have
  * their own fast, safe failure handling (e.g. a classifier that fails open) —
- * the retry doubles worst-case latency (up to another full timeout window),
- * which isn't worth it when the caller doesn't need the extra reliability.
+ * such a call still benefits from an already-open circuit (skips the bad
+ * model preemptively) and still contributes to opening the circuit on
+ * failure, it just won't itself retry-in-place after a fresh failure.
  */
 export async function createChatCompletion(
   params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'> & { model?: string },
@@ -78,16 +100,28 @@ export async function createChatCompletion(
   const client = getAiClient()
   const { model: modelOverride, ...rest } = params
   const primaryModel = modelOverride ?? getAiModel()
+  const isNvidia = process.env.AI_PROVIDER === 'nvidia'
+  const hasFallback = isNvidia && primaryModel !== NVIDIA_RELIABLE_FALLBACK_MODEL
+
+  if (hasFallback && isCircuitOpen()) {
+    return await client.chat.completions.create({ ...rest, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
+  }
 
   try {
-    return await client.chat.completions.create({ ...rest, model: primaryModel })
+    const result = await client.chat.completions.create({ ...rest, model: primaryModel })
+    if (hasFallback) circuitOpenUntil = 0 // primary recovered — close the circuit
+    return result
   } catch (err) {
-    const isNvidia = process.env.AI_PROVIDER === 'nvidia'
-    if (retryOnFailure && isNvidia && primaryModel !== NVIDIA_RELIABLE_FALLBACK_MODEL) {
-      logger.warn('AI call failed on configured NVIDIA model, retrying with reliable fallback', {
+    if (hasFallback) {
+      circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS
+      logger.warn('AI call failed on configured NVIDIA model, opening circuit breaker', {
         errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
+        retrying: retryOnFailure,
+        cooldownMs: CIRCUIT_COOLDOWN_MS,
       })
-      return await client.chat.completions.create({ ...rest, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
+      if (retryOnFailure) {
+        return await client.chat.completions.create({ ...rest, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
+      }
     }
     throw err
   }
