@@ -168,9 +168,8 @@ export default function PlannerPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    if (!title.trim() || !dueDate) return
-
     const finalSubject = subject === OTHER_CLASS ? customSubject.trim() : subject
+    if (!title.trim() || !dueDate || !finalSubject) return
 
     setSubmitting(true)
     setFormError(null)
@@ -543,8 +542,8 @@ export default function PlannerPage() {
               onChange={e => setTitle(e.target.value)} required style={{ ...S.input, flex: 2 }} />
           </div>
           <div style={S.formRow}>
-            <select value={subject} onChange={e => setSubject(e.target.value)} style={{ ...S.input, flex: 1, cursor: 'pointer' }}>
-              <option value="">Class (optional)</option>
+            <select value={subject} onChange={e => setSubject(e.target.value)} required style={{ ...S.input, flex: 1, cursor: 'pointer' }}>
+              <option value="" disabled>Select a class</option>
               {classOptions.map(name => (
                 <option key={name} value={name}>{name}</option>
               ))}
@@ -554,7 +553,7 @@ export default function PlannerPage() {
           {subject === OTHER_CLASS && (
             <div style={S.formRow}>
               <input type="text" placeholder="Enter class name" value={customSubject}
-                onChange={e => setCustomSubject(e.target.value)} style={{ ...S.input, flex: 1 }} />
+                onChange={e => setCustomSubject(e.target.value)} required style={{ ...S.input, flex: 1 }} />
             </div>
           )}
           <div style={S.formRow}>
@@ -562,8 +561,8 @@ export default function PlannerPage() {
             <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} style={{ ...S.input, flex: 1 }} />
           </div>
           {formError && <div style={{ color: '#EF4444', fontSize: 12, marginBottom: 8 }}>{formError}</div>}
-          <button type="submit" disabled={submitting || !title.trim() || !dueDate}
-            style={{ ...S.button, opacity: submitting || !title.trim() || !dueDate ? 0.5 : 1 }}>
+          <button type="submit" disabled={submitting || !title.trim() || !dueDate || (subject === OTHER_CLASS ? !customSubject.trim() : !subject)}
+            style={{ ...S.button, opacity: submitting || !title.trim() || !dueDate || (subject === OTHER_CLASS ? !customSubject.trim() : !subject) ? 0.5 : 1 }}>
             {submitting ? 'Adding…' : 'Add Task'}
           </button>
         </form>
