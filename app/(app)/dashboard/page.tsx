@@ -371,6 +371,13 @@ export default function DashboardPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={S.dateChip}>{formatDate()}</span>
+          <button
+            className="ns-btn-ghost"
+            style={{ fontSize: 12, height: 32, padding: '0 12px' }}
+            onClick={() => window.dispatchEvent(new Event('ns:test-idle-overlay'))}
+          >
+            Play idle animation
+          </button>
           <NotificationBell />
         </div>
       </div>
