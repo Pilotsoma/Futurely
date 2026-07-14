@@ -9,6 +9,7 @@ import { LEGAL_EFFECTIVE_DATE, TOS_INTRO, TOS_SECTIONS, PRIVACY_INTRO, PRIVACY_S
 import { api, ApiError } from '../../lib/api'
 import { setWebLogin } from '../../lib/authState'
 import { SORTED_ISD_LIST, type ISDEntry } from '../../lib/isds'
+import CosmicScene from './CosmicScene'
 
 type Mode = 'login' | 'register-student' | 'register-parent' | 'register-teacher'
 type RegisterStep = 'form' | 'otp'
@@ -66,6 +67,16 @@ function LoginPageInner() {
   const [otpCode, setOtpCode]       = useState('')
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpError, setOtpError]     = useState<string | null>(null)
+
+  // Cosmic background is desktop-only — mobile keeps the original plain login screen.
+  const [isDesktop, setIsDesktop] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    setIsDesktop(mq.matches)
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   useEffect(() => {
     function onOutsideClick(e: MouseEvent) {
@@ -290,8 +301,9 @@ function LoginPageInner() {
   const isdDisplayLabel = useCustomUrl ? 'Other / Not Listed' : selectedIsd ? `${selectedIsd.name} (${selectedIsd.state})` : ''
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
+    <div style={isDesktop ? styles.pageCosmic : styles.page}>
+      {isDesktop && <CosmicScene />}
+      <div style={isDesktop ? styles.cardCosmic : styles.card}>
         {/* Logo — icon + live text wordmark (logo2.png has "Futurely" baked into the pixels) */}
         <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <Image src="/logo.png" alt="" width={64} height={64} style={{ objectFit: 'contain' }} />
@@ -721,6 +733,8 @@ function LoginPageInner() {
 const styles: Record<string, React.CSSProperties> = {
   page:            { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 20 },
   card:            { width: '100%', maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 40px rgba(26,21,14,0.08), 0 2px 10px rgba(26,21,14,0.05)' },
+  pageCosmic:      { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#04040e', padding: 20, position: 'relative', overflow: 'hidden' },
+  cardCosmic:      { position: 'relative', zIndex: 2, width: '100%', maxWidth: 440, background: 'rgba(18,16,32,0.72)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(180,160,255,0.16)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(180,160,255,0.05)' },
   heading:         { fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 600, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 6 },
   subheading:      { color: 'var(--text-secondary)', marginBottom: 28, textAlign: 'center', fontSize: 14 },
   form:            { width: '100%', display: 'flex', flexDirection: 'column', gap: 14 },
