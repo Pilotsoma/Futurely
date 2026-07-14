@@ -64,7 +64,7 @@ const FAST_BLOCK_PATTERNS: RegExp[] = [
   /\b(solve|answer)\s+(this|these|that|the)\s+(problem|equation|question|proof)s?\b/i,
   /\b(what'?s|what is|give me|tell me)\s+the\s+answer\s+to\s+(this|these|the)?\s*(problem|equation|question|assignment|homework|worksheet|exam|quiz|proof)s?\b/i,
   /\bdo my (homework|assignment|test|exam|quiz)\b/i,
-  /\bwrite (an?|my) (essay|paper|story|poem)\s+(about|on|for)\b/i,
+  /\bwrite (me |us )?(an?|my) (essay|paper|story|poem)\b/i,
   // "for my X" framing means the output is meant for submission, regardless
   // of how the request itself is phrased (summarize/write/explain/etc.).
   /\bfor my (book report|essay|lab report|homework|assignment|project)\b/i,
@@ -75,6 +75,13 @@ const FAST_BLOCK_PATTERNS: RegExp[] = [
   // in disguise, distinct from a math-concept question like "how do
   // percentages work".
   /\bwhat'?s? (is )?\d+(\.\d+)?%?\s*(of|times|plus|minus|divided by|multiplied by)\s*\d+/i,
+  // Pure entertainment/lifestyle requests — no educational value, unlike a
+  // trivia/fact question (which stays allowed). Kept as regexes rather than
+  // leaving this to the classifier because these are unambiguous and the
+  // classifier's permissive default was letting them slip through.
+  /\brecommend (a |me a |some )?(good |great )?(movie|show|tv show|series|song|album)\b/i,
+  /\b(workout|exercise) routine\b/i,
+  /\bplan (a|my) (birthday )?party\b/i,
 ]
 
 function fastPathBlock(message: string): boolean {
@@ -106,15 +113,18 @@ Set "allowed" to false when the message clearly falls into one of these two buck
    - Translating a specific sentence/passage on request (e.g. "translate this sentence to Spanish") — this is language-homework, not general language learning advice
    The word "answer" or "solve" alone is NOT enough to trigger this — "what's the answer to reducing my stress" or "how do I solve my time-management problem" are general advice questions, not a homework problem, and must be allowed.
 
-2. Off-topic: it has no plausible connection to school, academics, college/career, or this app, AND is not a greeting or a question about the assistant itself. This includes bare factual-recall trivia (capital cities, historical dates, chemical symbols, "fun facts") even when the topic sounds school-adjacent — if the student wants to study a topic, the supported path is asking for a quiz/practice question, not a one-off trivia lookup. Also includes entertainment/creative requests with no academic tie-in (movies, jokes, poems about non-academic topics, "fun facts"), lifestyle requests (party planning, workout routines), and health/relationship advice. Be confident and direct about blocking clear-cut cases like these — do not default to allowing them just because the topic sounds educational.
+2. Off-topic: it has no plausible connection to school, academics, or general knowledge/curiosity a student might reasonably ask a study companion, AND is not a greeting or a question about the assistant itself. This is a NARROW category — don't reach for it. It covers things with no educational value at all: entertainment recommendations (movies, shows, music), creative writing with no academic tie-in (a poem about love, a joke), lifestyle requests (party planning, workout routines), coding help, and health/relationship advice.
+
+Simple factual/trivia questions (capital cities, historical dates, chemical symbols, "fun facts") are NOT off-topic — answering a curious question is exactly what a friendly study companion should do, and refusing it feels punitive for something harmless. Allow these.
 
 Set "allowed" to true for everything else, including:
 - Greetings, small talk, thanks, check-ins, or questions about the assistant itself (e.g. "hi", "how's it going", "thank you!", "who made you", "what can you help me with") — these are always allowed, intent "surface"
+- Simple factual/trivia questions, even ones unrelated to a specific class (e.g. "what's the capital of France", "who was the first president", "tell me a fun fact about space") — harmless curiosity, always allow
 - General advice questions, even ones phrased with "answer" or "solve", as long as they're not a specific homework/exam prompt or bare computation (e.g. "what's the answer to reducing my stress before finals", "how do I solve my time-management problem")
-- Requests for practice questions, quizzes, or test prep (e.g. "give me a hard SAT question", "quiz me on US history") — generating practice material is a supported feature, not "doing homework for them". This is different from a bare trivia lookup: the student is asking to be tested, not asking for a fact.
+- Requests for practice questions, quizzes, or test prep (e.g. "give me a hard SAT question", "quiz me on US history") — generating practice material is a supported feature, not "doing homework for them"
 - A student answering, correcting, or clarifying their answer to a question the ASSISTANT itself just asked in the conversation above (e.g. replying "C" or "I said C, not B" to a quiz question you posed) — this is the student engaging with practice material, never treat it as "solve this for me"
 
-Only apply a default-to-allowed bias to genuinely ambiguous homework-vs-advice phrasing. For anything matching the concrete patterns listed in buckets 1 and 2 above, block confidently rather than waving it through as "uncertain."
+For anything matching one of the concrete examples listed in buckets 1 or 2, block it confidently — don't second-guess an explicit match. Only default to "allowed": true when a message is genuinely ambiguous and doesn't clearly match either bucket's examples — err toward being a helpful, friendly companion for everything else, not a strict gatekeeper. The two buckets exist to stop actual homework-cheating and clearly unrelated misuse, not to minimize what the assistant will engage with.
 
 Set "intent" to:
 - "personalized" if answering well requires the student's own data (their GPA, grades, specific assignments, attendance, or comparing their classes)
