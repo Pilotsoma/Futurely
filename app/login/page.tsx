@@ -555,10 +555,8 @@ function LoginPageInner() {
               Parent or guardian?{' '}
               <button type="button" onClick={() => { setMode('register-parent'); fullReset() }} style={styles.switchLink}>Create a parent account</button>
             </p>
-            <p style={{ ...styles.switchText, marginTop: 4 }}>
-              Teacher or counselor?{' '}
-              <button type="button" onClick={() => { setMode('register-teacher'); fullReset() }} style={styles.switchLink}>Create a teacher account</button>
-            </p>
+            {/* Teacher/counselor signup entry point hidden from the UI for now — mode, form fields,
+                and API wiring below are untouched so it can be re-enabled by restoring this link. */}
           </>
         )}
 

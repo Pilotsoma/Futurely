@@ -4,8 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import {
   ArrowRightIcon, LightningBoltIcon, LockIcon, RobotIcon, GraduationCapIcon,
-  FlameIcon, GiftIcon, TrophyIcon, CoinIcon, HandshakeIcon, PartyPopperIcon,
-  SparklesIcon, TagIcon, StarIcon, CheckIcon,
+  CheckIcon,
 } from '@/components/icons'
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView, useScroll, useTransform } from 'framer-motion'
@@ -52,16 +51,6 @@ const ICON_SIM = (
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
   </svg>
 )
-const ICON_STREAK = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-  </svg>
-)
-const ICON_SOCIAL = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-  </svg>
-)
 const ICON_LOCK = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
     <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
@@ -92,17 +81,6 @@ const ICON_CHECK = (
 const ICON_X = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-)
-const ICON_COINS = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-    <circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1110.34 18"/><path d="M7 6h1v4"/>
-  </svg>
-)
-const ICON_STORE = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
-    <path d="M16 10a4 4 0 01-8 0"/>
   </svg>
 )
 const ICON_FIRE = (
@@ -385,7 +363,7 @@ export default function LandingPage() {
         </div>
 
         {/* Row 2 */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <Reveal delay={0.06}>
             <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
               <BentoCard accent="#8A6E2D" icon={ICON_PLANNER} label="Smart Planner"
@@ -396,33 +374,6 @@ export default function LandingPage() {
             <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
               <BentoCard accent="#6A5A8A" icon={ICON_SIM} label="GPA Simulator"
                 desc="Drop a grade in and watch your GPA recalculate live. Know exactly what you need on that final before you sit down to take it." />
-            </BorderGlow>
-          </Reveal>
-          <Reveal delay={0.18}>
-            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
-              <BentoCard accent="#C45A1A" icon={ICON_STREAK} label="Daily Streaks"
-                desc="Show up every day. Build your streak. Earn coins and unlock exclusive tags — because consistency is how grades actually move." />
-            </BorderGlow>
-          </Reveal>
-        </div>
-
-        {/* Row 3 */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14 }}>
-          <Reveal delay={0.08}>
-            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
-              <BentoCard accent="#3A6B8A" icon={ICON_SOCIAL} label="Student Feed"
-                desc="Post wins, follow peers, react to moments. A social layer built for students — not another dopamine trap." />
-            </BorderGlow>
-          </Reveal>
-          <Reveal delay={0.14}>
-            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
-              <BentoCard accent="#2D6A4F" icon={
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
-                </svg>
-              } label="Reward Shop"
-                desc="Earn coins from daily streaks and use them to unlock exclusive profile effects, name colors, and cosmetic gear — the more you show up, the more you can earn."
-                large />
             </BorderGlow>
           </Reveal>
         </div>
@@ -567,15 +518,13 @@ export default function LandingPage() {
                 { feature: 'AI advisor trained on your own grades',   vals: [true, false, false, false, false] },
                 { feature: 'GPA simulator & what-if scenarios',       vals: [true, false, false, false, false] },
                 { feature: 'Student-owned account (not school-controlled)', vals: [true, false, false, false, false] },
-                { feature: 'Gamification — coins, streaks, marketplace',    vals: [true, false, false, false, false] },
-                { feature: 'Student social feed & community',         vals: [true, false, false, false, false] },
                 { feature: 'Privacy-first, no data selling',          vals: [true, '?', false, '?', '?'] },
                 { feature: 'Free for students',                       vals: [true, true, true, true, false] },
               ].map((row, ri) => (
                 <div key={ri} style={{
                   display: 'grid',
                   gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr 1fr',
-                  borderBottom: ri < 7 ? '1px solid var(--border)' : 'none',
+                  borderBottom: ri < 5 ? '1px solid var(--border)' : 'none',
                   background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
                 }}>
                   <div style={{ padding: '15px 24px', fontSize: 13.5, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>{row.feature}</div>
@@ -638,107 +587,6 @@ export default function LandingPage() {
                 </div>
               </Reveal>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Gamification ─────────────────────────────────────────────────── */}
-      <section style={{ borderTop: '1px solid var(--border)', padding: '100px 28px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
-          <Reveal>
-            <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#F59E0B', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: 16 }}>
-              The fun part
-            </p>
-            <h2 style={{ fontFamily: 'var(--font-display)', textAlign: 'center', fontSize: 'clamp(30px, 4.5vw, 54px)', fontWeight: 600, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 16 }}>
-              Finally, a reason to open<br />
-              <span style={{ color: '#F59E0B' }}>a school app every day.</span>
-            </h2>
-            <p style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto 72px', lineHeight: 1.75 }}>
-              Showing up consistently is how academics actually improve. myFuturely rewards you for it.
-            </p>
-          </Reveal>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-            <Reveal delay={0.04}>
-              <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#fbbf24', '#f59e0b', '#d97706']}>
-                <div style={{ background: 'var(--surface)', borderRadius: 19, padding: '32px 28px', height: '100%', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, background: 'radial-gradient(circle, rgba(245,158,11,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', top: 0, left: '25%', right: '25%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(245,158,11,0.35), transparent)' }} />
-                  <div style={{ width: 46, height: 46, borderRadius: 12, background: 'rgba(245,158,11,0.09)', border: '1px solid rgba(245,158,11,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F59E0B', marginBottom: 20 }}>
-                    {ICON_STREAK}
-                  </div>
-                  <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.25 }}>Daily Login Streaks</h3>
-                  <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 16 }}>
-                    Every day you open myFuturely, your streak grows. Miss one day and it resets. Keep it alive and earn bonus coins, exclusive drop chances, and eventually a Marketplace key.
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {([
-                      { Icon: FlameIcon,      text: 'Streak bonus coins' },
-                      { Icon: GiftIcon,       text: 'Random item drops' },
-                      { Icon: TrophyIcon,     text: 'Streak milestones' },
-                    ] as const).map(({ Icon, text }) => (
-                      <span key={text} style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Icon size={11}/>{text}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </BorderGlow>
-            </Reveal>
-
-            <Reveal delay={0.1}>
-              <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#a855f7', '#7c3aed']}>
-                <div style={{ background: 'var(--surface)', borderRadius: 19, padding: '32px 28px', height: '100%', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, background: 'radial-gradient(circle, rgba(168,85,247,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', top: 0, left: '25%', right: '25%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(168,85,247,0.35), transparent)' }} />
-                  <div style={{ width: 46, height: 46, borderRadius: 12, background: 'rgba(168,85,247,0.09)', border: '1px solid rgba(168,85,247,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A855F7', marginBottom: 20 }}>
-                    {ICON_COINS}
-                  </div>
-                  <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.25 }}>Coin Economy</h3>
-                  <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 16 }}>
-                    Earn coins by logging in, maintaining streaks, participating in giveaways, and winning trades. Coins are the currency of myFuturely — and they&apos;re earned, not bought.
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {([
-                      { Icon: CoinIcon,        text: 'Daily login coins' },
-                      { Icon: HandshakeIcon,   text: 'Trade rewards' },
-                      { Icon: PartyPopperIcon, text: 'Giveaway winnings' },
-                    ] as const).map(({ Icon, text }) => (
-                      <span key={text} style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Icon size={11}/>{text}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </BorderGlow>
-            </Reveal>
-
-            <Reveal delay={0.16}>
-              <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#34d399', '#10b981', '#059669']}>
-                <div style={{ background: 'var(--surface)', borderRadius: 19, padding: '32px 28px', height: '100%', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, background: 'radial-gradient(circle, rgba(16,185,129,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', top: 0, left: '25%', right: '25%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(16,185,129,0.35), transparent)' }} />
-                  <div style={{ width: 46, height: 46, borderRadius: 12, background: 'rgba(16,185,129,0.09)', border: '1px solid rgba(16,185,129,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10B981', marginBottom: 20 }}>
-                    {ICON_STORE}
-                  </div>
-                  <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.25 }}>The Marketplace</h3>
-                  <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 16 }}>
-                    Unlock at a 3-day streak. Buy, sell, and trade avatar effects, animated profile frames, rare name colors, and exclusive tags. The rarest items go to the most consistent students.
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {([
-                      { Icon: SparklesIcon, text: 'Avatar effects' },
-                      { Icon: TagIcon,      text: 'Rare name colors' },
-                      { Icon: StarIcon,     text: 'Exclusive tags' },
-                    ] as const).map(({ Icon, text }) => (
-                      <span key={text} style={{ fontSize: 11.5, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Icon size={11}/>{text}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </BorderGlow>
-            </Reveal>
           </div>
         </div>
       </section>
