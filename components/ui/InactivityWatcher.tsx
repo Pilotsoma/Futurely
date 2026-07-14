@@ -8,7 +8,7 @@ import { clearWebAuth } from '@/lib/authState'
 
 const IDLE_MS         = 5 * 60 * 1000   // 5 minutes idle before the animation appears
 const LOGOUT_AFTER_MS = 3 * 60 * 1000   // clicking the animation logs out once it's been up this long
-const SLIDE_MS        = 4500
+const SLIDE_MS        = 7500
 
 const SLIDES = [
   { id: 'grades',  label: 'Grade Viewer',       color: '#2979FF', glow2: '#7C3AED' },
@@ -33,13 +33,13 @@ function GradeViewerMockup({ reduced }: { reduced: boolean }) {
   return (
     <div>
       {/* Header row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: '#52698A' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 26 }}>
+        <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#52698A' }}>
           Grade Viewer
         </span>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-          <span style={{ fontSize: 28, fontWeight: 800, color: '#2979FF', lineHeight: 1, letterSpacing: '-1px' }}>3.87</span>
-          <span style={{ fontSize: 11, color: '#52698A', fontWeight: 600 }}>GPA</span>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+          <span style={{ fontSize: 40, fontWeight: 800, color: '#2979FF', lineHeight: 1, letterSpacing: '-1.5px' }}>3.87</span>
+          <span style={{ fontSize: 14, color: '#52698A', fontWeight: 600 }}>GPA</span>
         </div>
       </div>
 
@@ -53,25 +53,25 @@ function GradeViewerMockup({ reduced }: { reduced: boolean }) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
-            padding: '9px 0',
+            gap: 14,
+            padding: '15px 0',
             borderBottom: i < subjects.length - 1 ? '1px solid #1C2D47' : 'none',
           }}
         >
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 13, color: '#96AACC', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ width: 9, height: 9, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: 18, color: '#96AACC', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {s.name}
           </span>
-          <span style={{ fontSize: 11, color: trendColor(s.trend), fontWeight: 700, minWidth: 28, textAlign: 'right' }}>
+          <span style={{ fontSize: 15, color: trendColor(s.trend), fontWeight: 700, minWidth: 38, textAlign: 'right' }}>
             {s.trend}{s.delta}
           </span>
-          <span style={{ fontSize: 12, color: '#52698A' }}>{s.pct}%</span>
+          <span style={{ fontSize: 16, color: '#52698A' }}>{s.pct}%</span>
           <span style={{
             background: s.color + '22', color: s.color,
-            borderRadius: 7, padding: '3px 10px',
-            fontWeight: 800, fontSize: 13,
+            borderRadius: 10, padding: '7px 16px',
+            fontWeight: 800, fontSize: 19,
             border: `1px solid ${s.color}44`,
-            minWidth: 30, textAlign: 'center',
+            minWidth: 42, textAlign: 'center',
           }}>
             {s.grade}
           </span>
@@ -91,7 +91,7 @@ function GPASimulatorMockup({ reduced }: { reduced: boolean }) {
 
   return (
     <div>
-      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: '#52698A' }}>
+      <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#52698A' }}>
         GPA Simulator
       </span>
 
@@ -100,12 +100,12 @@ function GPASimulatorMockup({ reduced }: { reduced: boolean }) {
         initial={reduced ? false : { opacity: 0, scale: 0.82 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.05, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        style={{ textAlign: 'center', margin: '20px 0 22px' }}
+        style={{ textAlign: 'center', margin: '28px 0 30px' }}
       >
-        <div style={{ fontSize: 68, fontWeight: 800, lineHeight: 1, color: '#00E5FF', letterSpacing: '-3px' }}>
+        <div style={{ fontSize: 96, fontWeight: 800, lineHeight: 1, color: '#00E5FF', letterSpacing: '-4px' }}>
           {projectedGpa.toFixed(2)}
         </div>
-        <div style={{ fontSize: 12, color: '#52698A', marginTop: 6, fontWeight: 600 }}>Projected GPA</div>
+        <div style={{ fontSize: 15, color: '#52698A', marginTop: 10, fontWeight: 600 }}>Projected GPA</div>
       </motion.div>
 
       {/* Current vs Projected cards */}
@@ -113,24 +113,24 @@ function GPASimulatorMockup({ reduced }: { reduced: boolean }) {
         initial={reduced ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.22, duration: 0.4 }}
-        style={{ display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center' }}
+        style={{ display: 'flex', gap: 14, marginBottom: 28, alignItems: 'center' }}
       >
         <div style={{
           flex: 1, background: '#1C2D47', border: '1px solid #273D5E',
-          borderRadius: 12, padding: '12px 14px', textAlign: 'center',
+          borderRadius: 14, padding: '18px 20px', textAlign: 'center',
         }}>
-          <div style={{ fontSize: 11, color: '#52698A', marginBottom: 5, fontWeight: 600 }}>Current</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#E8EEFF' }}>{currentGpa.toFixed(2)}</div>
+          <div style={{ fontSize: 13, color: '#52698A', marginBottom: 7, fontWeight: 600 }}>Current</div>
+          <div style={{ fontSize: 30, fontWeight: 800, color: '#E8EEFF' }}>{currentGpa.toFixed(2)}</div>
         </div>
 
-        <div style={{ color: '#00E5FF', fontSize: 20, fontWeight: 300, flexShrink: 0 }}>→</div>
+        <div style={{ color: '#00E5FF', fontSize: 26, fontWeight: 300, flexShrink: 0 }}>→</div>
 
         <div style={{
           flex: 1, background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.28)',
-          borderRadius: 12, padding: '12px 14px', textAlign: 'center',
+          borderRadius: 14, padding: '18px 20px', textAlign: 'center',
         }}>
-          <div style={{ fontSize: 11, color: '#00BCD4', marginBottom: 5, fontWeight: 600 }}>Projected</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#00E5FF' }}>{projectedGpa.toFixed(2)}</div>
+          <div style={{ fontSize: 13, color: '#00BCD4', marginBottom: 7, fontWeight: 600 }}>Projected</div>
+          <div style={{ fontSize: 30, fontWeight: 800, color: '#00E5FF' }}>{projectedGpa.toFixed(2)}</div>
         </div>
       </motion.div>
 
@@ -140,16 +140,16 @@ function GPASimulatorMockup({ reduced }: { reduced: boolean }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.34, duration: 0.4 }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#52698A', marginBottom: 8, fontWeight: 600 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#52698A', marginBottom: 10, fontWeight: 600 }}>
           <span>Toward {targetGpa.toFixed(1)} target</span>
           <span style={{ color: '#00E5FF' }}>{progressPct.toFixed(0)}%</span>
         </div>
-        <div style={{ background: '#1C2D47', borderRadius: 6, height: 8, overflow: 'hidden' }}>
+        <div style={{ background: '#1C2D47', borderRadius: 7, height: 12, overflow: 'hidden' }}>
           <motion.div
             initial={reduced ? false : { width: 0 }}
             animate={{ width: `${progressPct}%` }}
             transition={{ delay: 0.5, duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
-            style={{ height: '100%', borderRadius: 6, background: 'linear-gradient(90deg, #00BCD4, #00E5FF)' }}
+            style={{ height: '100%', borderRadius: 7, background: 'linear-gradient(90deg, #00BCD4, #00E5FF)' }}
           />
         </div>
       </motion.div>
@@ -185,20 +185,20 @@ function SmartPlannerMockup({ reduced }: { reduced: boolean }) {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: '#52698A' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#52698A' }}>
           Smart Planner
         </span>
         <span style={{
-          fontSize: 11, background: 'rgba(124,58,237,0.15)', color: '#A78BFA',
-          border: '1px solid rgba(124,58,237,0.35)', borderRadius: 20, padding: '3px 10px', fontWeight: 700,
+          fontSize: 13, background: 'rgba(124,58,237,0.15)', color: '#A78BFA',
+          border: '1px solid rgba(124,58,237,0.35)', borderRadius: 20, padding: '6px 15px', fontWeight: 700,
         }}>
           ✦ AI Sorted
         </span>
       </div>
 
       {/* Assignment cards */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {assignments.map((a, i) => (
           <motion.div
             key={a.title}
@@ -208,28 +208,28 @@ function SmartPlannerMockup({ reduced }: { reduced: boolean }) {
             style={{
               background: '#1C2D47',
               border: '1px solid #273D5E',
-              borderLeft: `3px solid ${a.subjectColor}`,
-              borderRadius: 10,
-              padding: '11px 13px',
+              borderLeft: `4px solid ${a.subjectColor}`,
+              borderRadius: 12,
+              padding: '16px 19px',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: a.subjectColor, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: a.subjectColor, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.7px' }}>
                   {a.subject}
                 </div>
-                <div style={{ fontSize: 13, color: '#E8EEFF', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 18, color: '#E8EEFF', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {a.title}
                 </div>
-                <div style={{ fontSize: 11, color: dueColor(a.status), marginTop: 4, fontWeight: 600 }}>
+                <div style={{ fontSize: 14, color: dueColor(a.status), marginTop: 6, fontWeight: 600 }}>
                   {a.due}
                 </div>
               </div>
               <span style={{
-                flexShrink: 0, fontSize: 10, fontWeight: 700,
+                flexShrink: 0, fontSize: 12, fontWeight: 700,
                 background: a.priorityBg, color: a.priorityColor,
                 border: `1px solid ${a.priorityColor}44`,
-                borderRadius: 20, padding: '3px 9px', whiteSpace: 'nowrap',
+                borderRadius: 20, padding: '6px 13px', whiteSpace: 'nowrap',
               }}>
                 {a.priority}
               </span>
@@ -257,7 +257,7 @@ function RoadmapMockup({ reduced }: { reduced: boolean }) {
 
   return (
     <div>
-      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: '#52698A' }}>
+      <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#52698A' }}>
         High School Roadmap
       </span>
 
@@ -266,14 +266,14 @@ function RoadmapMockup({ reduced }: { reduced: boolean }) {
         initial={reduced ? false : { opacity: 0, scale: 0.78 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.06, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        style={{ display: 'flex', justifyContent: 'center', margin: '18px 0 22px' }}
+        style={{ display: 'flex', justifyContent: 'center', margin: '26px 0 30px' }}
       >
-        <div style={{ position: 'relative', width: 90, height: 90 }}>
-          <svg width={90} height={90} style={{ transform: 'rotate(-90deg)' }} aria-hidden="true">
-            <circle cx={45} cy={45} r={36} fill="none" stroke="#1C2D47" strokeWidth={8} />
+        <div style={{ position: 'relative', width: 130, height: 130 }}>
+          <svg width={130} height={130} style={{ transform: 'rotate(-90deg)' }} aria-hidden="true">
+            <circle cx={65} cy={65} r={52} fill="none" stroke="#1C2D47" strokeWidth={11} />
             <motion.circle
-              cx={45} cy={45} r={36} fill="none"
-              stroke="#A855F7" strokeWidth={8} strokeLinecap="round"
+              cx={65} cy={65} r={52} fill="none"
+              stroke="#A855F7" strokeWidth={11} strokeLinecap="round"
               strokeDasharray={CIRCUMFERENCE}
               initial={reduced ? false : { strokeDashoffset: CIRCUMFERENCE }}
               animate={{ strokeDashoffset: dashOffset }}
@@ -285,14 +285,14 @@ function RoadmapMockup({ reduced }: { reduced: boolean }) {
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
           }}>
-            <span style={{ fontSize: 22, fontWeight: 800, color: '#A855F7', lineHeight: 1 }}>68%</span>
-            <span style={{ fontSize: 9, color: '#52698A', fontWeight: 600, marginTop: 3 }}>Complete</span>
+            <span style={{ fontSize: 32, fontWeight: 800, color: '#A855F7', lineHeight: 1 }}>68%</span>
+            <span style={{ fontSize: 12, color: '#52698A', fontWeight: 600, marginTop: 5 }}>Complete</span>
           </div>
         </div>
       </motion.div>
 
       {/* Grade-year timeline */}
-      <div style={{ display: 'flex', gap: 7 }}>
+      <div style={{ display: 'flex', gap: 10 }}>
         {years.map((y, i) => (
           <motion.div
             key={y.label}
@@ -303,26 +303,26 @@ function RoadmapMockup({ reduced }: { reduced: boolean }) {
               flex: 1,
               background: y.current ? 'rgba(168,85,247,0.10)' : '#1C2D47',
               border: `1px solid ${y.current ? 'rgba(168,85,247,0.45)' : '#273D5E'}`,
-              borderRadius: 10,
-              padding: '10px 7px',
+              borderRadius: 12,
+              padding: '14px 9px',
               textAlign: 'center',
             }}
           >
             <div style={{
-              fontSize: 12, fontWeight: 800, marginBottom: 8,
+              fontSize: 15, fontWeight: 800, marginBottom: 10,
               color: y.done ? '#A855F7' : y.current ? '#C084FC' : '#52698A',
             }}>
               {y.done ? '✓' : y.current ? '→' : '·'}&nbsp;{y.label}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {y.courses.map(c => (
                 <div
                   key={c}
                   style={{
-                    fontSize: 9, fontWeight: 600,
+                    fontSize: 11.5, fontWeight: 600,
                     background: y.done ? 'rgba(168,85,247,0.18)' : '#162235',
                     color: y.done ? '#C084FC' : '#52698A',
-                    borderRadius: 4, padding: '2px 5px',
+                    borderRadius: 5, padding: '4px 6px',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}
                 >
@@ -469,24 +469,10 @@ export default function InactivityWatcher() {
         </AnimatePresence>
       </div>
 
-      {/* Slide nav dots + hint */}
-      <div className="ns-footer">
-        <div className="ns-dots">
-          {SLIDES.map((s, i) => (
-            <div
-              key={s.id}
-              className="ns-dot"
-              style={{
-                background: i === slideIndex ? s.color : '#273D5E',
-                width:      i === slideIndex ? 22 : 7,
-              }}
-            />
-          ))}
-        </div>
-        <p className="ns-hint" style={{ opacity: readyToLogout ? 1 : 0.5 }}>
-          {readyToLogout ? 'Tap anywhere to log out' : 'Tap anywhere to jump back in'}
-        </p>
-      </div>
+      {/* Hint */}
+      <p className="ns-hint" style={{ opacity: readyToLogout ? 1 : 0.5 }}>
+        {readyToLogout ? 'Tap anywhere to log out' : 'Tap anywhere to jump back in'}
+      </p>
 
       <style jsx>{`
         .ns-idle-overlay {
@@ -563,9 +549,9 @@ export default function InactivityWatcher() {
 
         .ns-stage {
           position: relative;
-          width: min(420px, calc(100vw - 48px));
+          width: min(600px, calc(100vw - 48px));
           /* Fixed height prevents layout shift during card transitions */
-          min-height: 280px;
+          min-height: 420px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -575,8 +561,8 @@ export default function InactivityWatcher() {
           width: 100%;
           background: #162235;
           border: 1px solid #273D5E;
-          border-radius: 20px;
-          padding: 24px;
+          border-radius: 26px;
+          padding: 40px 44px;
           /* Layered shadow for depth/elevation */
           box-shadow:
             0 0 0 1px rgba(255,255,255,0.04),
@@ -585,25 +571,9 @@ export default function InactivityWatcher() {
             0 20px 56px rgba(0,0,0,0.35);
         }
 
-        .ns-footer {
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 14px;
-        }
-        .ns-dots {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .ns-dot {
-          height: 7px;
-          border-radius: 4px;
-          transition: width 0.4s cubic-bezier(0.22,1,0.36,1), background 0.4s ease;
-        }
         .ns-hint {
-          font-size: 13px;
+          position: relative;
+          font-size: 14px;
           color: #52698A;
           margin: 0;
           transition: opacity 0.4s ease;
