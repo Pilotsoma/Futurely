@@ -73,16 +73,6 @@ const ICON_TRASH = (
     <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
   </svg>
 )
-const ICON_CHECK = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <polyline points="20 6 9 17 4 12"/>
-  </svg>
-)
-const ICON_X = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-)
 const ICON_FIRE = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
     <path d="M8.5 14.5A2.5 2.5 0 0011 17h2a2.5 2.5 0 002.5-2.5c0-1.5-.5-2-1-3-1 .5-1.5 1.5-2 3-.5-2-1-4-3-5.5 0 2-2 3-2 5z"/>
@@ -467,7 +457,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Why myFuturely: Competitor comparison ──────────────────────────── */}
+      {/* ── Why myFuturely ───────────────────────────────────────────────── */}
       <section id="compare" style={{ borderTop: '1px solid var(--border)', padding: '100px 28px' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <Reveal>
@@ -475,116 +465,64 @@ export default function LandingPage() {
               Why myFuturely
             </p>
             <h2 style={{ fontFamily: 'var(--font-display)', textAlign: 'center', fontSize: 'clamp(30px, 4.5vw, 54px)', fontWeight: 600, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 16 }}>
-              Other tools track homework.{' '}
-              <span style={{ color: '#F59E0B' }}>We track your future.</span>
+              Everything, built{' '}
+              <span style={{ color: '#F59E0B' }}>around your future.</span>
             </h2>
             <p style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--text-secondary)', maxWidth: 520, margin: '0 auto 64px', lineHeight: 1.75 }}>
-              Every student uses some app. Most are built for administrators, not the person
-              sitting in the classroom every day.
+              myFuturely isn&apos;t a grade portal or a homework tracker. It&apos;s the one place where
+              your grades, your AI advisor, and your plan for what&apos;s next all live together.
             </p>
           </Reveal>
 
-          {/* Comparison table */}
-          <Reveal delay={0.1}>
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 20,
-              overflow: 'hidden',
-            }}>
-              {/* Header row */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr 1fr',
-                background: 'rgba(255,255,255,0.025)',
-                borderBottom: '1px solid var(--border)',
-                padding: '0',
-              }}>
-                <div style={{ padding: '18px 24px', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Feature</div>
-                {['myFuturely', 'Grade Way', 'Google Classroom', 'Home Access Center', 'Schoology'].map((col, i) => (
-                  <div key={col} style={{
-                    padding: '18px 12px', textAlign: 'center',
-                    fontSize: 12, fontWeight: 700,
-                    color: i === 0 ? 'var(--primary)' : 'var(--text-muted)',
-                    background: i === 0 ? 'rgba(45,106,79,0.06)' : 'transparent',
-                    borderLeft: '1px solid var(--border)',
-                  }}>{col}</div>
-                ))}
-              </div>
-
-              {/* Data rows */}
-              {[
-                { feature: 'Real-time grade sync from school portal', vals: [true, true, false, true, false] },
-                { feature: 'AI advisor trained on your own grades',   vals: [true, false, false, false, false] },
-                { feature: 'GPA simulator & what-if scenarios',       vals: [true, false, false, false, false] },
-                { feature: 'Student-owned account (not school-controlled)', vals: [true, false, false, false, false] },
-                { feature: 'Privacy-first, no data selling',          vals: [true, '?', false, '?', '?'] },
-                { feature: 'Free for students',                       vals: [true, true, true, true, false] },
-              ].map((row, ri) => (
-                <div key={ri} style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1.2fr 1fr 1fr 1fr 1fr',
-                  borderBottom: ri < 5 ? '1px solid var(--border)' : 'none',
-                  background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
-                }}>
-                  <div style={{ padding: '15px 24px', fontSize: 13.5, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>{row.feature}</div>
-                  {row.vals.map((v, vi) => (
-                    <div key={vi} style={{
-                      padding: '15px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      borderLeft: '1px solid var(--border)',
-                      background: vi === 0 ? 'rgba(45,106,79,0.04)' : 'transparent',
-                    }}>
-                      {v === true ? (
-                        <span style={{ color: '#22C55E', display: 'flex' }}>{ICON_CHECK}</span>
-                      ) : v === false ? (
-                        <span style={{ color: 'rgba(255,255,255,0.15)', display: 'flex' }}>{ICON_X}</span>
-                      ) : (
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>unclear</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </Reveal>
-
-          {/* Callout cards below table */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginTop: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {[
               {
-                color: '#F59E0B',
-                title: 'Grade Way just shows your grades.',
-                body: "It displays what your teacher entered. myFuturely tells you what those grades mean — for your GPA, your college odds, and exactly what to fix.",
+                color: '#2D6A4F', icon: ICON_GRADES,
+                title: 'Real-time grade sync',
+                body: 'Connect your school portal once. Every grade, GPA trend, and attendance record updates automatically — the moment your teacher posts it.',
               },
               {
-                color: '#60A5FA',
-                title: 'Google Classroom is a homework box.',
-                body: "It helps teachers assign work. It doesn't help you understand your academic trajectory, simulate your GPA, or plan what comes next.",
+                color: '#2B4A8E', icon: ICON_AI,
+                title: 'AI that knows your transcript',
+                body: 'Ask "can I still get an A?" and get a real answer, because our AI has actually read your grades — not generic study tips.',
               },
               {
-                color: '#A78BFA',
-                title: 'Home Access Center is school-controlled.',
-                body: "Your school owns it, admins control it, and it disappears when you graduate. myFuturely belongs to you — and follows your journey.",
+                color: '#6A5A8A', icon: ICON_SIM,
+                title: 'GPA simulator',
+                body: 'Drop a hypothetical grade in and watch your GPA recalculate live. Know exactly what you need before you sit down to take that final.',
               },
               {
-                color: '#34D399',
-                title: 'Schoology is built for teachers, not students.',
-                body: "It manages assignments and submissions. myFuturely puts the student first — with AI coaching, progress insights, and tools you actually want to use.",
+                color: '#F59E0B', icon: <GraduationCapIcon size={22}/>,
+                title: 'Your account, your data',
+                body: 'myFuturely belongs to you, not your school. It follows your academic journey and stays with you after you graduate.',
+              },
+              {
+                color: '#22C55E', icon: ICON_SHIELD,
+                title: 'Privacy-first, always',
+                body: 'We will never sell your data. No ad trackers, no data brokers, no exceptions.',
+              },
+              {
+                color: '#38bdf8', icon: <LightningBoltIcon size={22}/>,
+                title: 'Free for students',
+                body: 'No credit card, no trial period, no paywall. The core of myFuturely is free — forever.',
               },
             ].map((card, i) => (
-              <Reveal key={i} delay={i * 0.09}>
-                <div style={{
-                  background: 'var(--surface)',
-                  border: `1px solid rgba(${hexToRgbStr(card.color)},0.18)`,
-                  borderRadius: 16, padding: '24px 22px',
-                }}>
-                  <div style={{
-                    width: 6, height: 6, borderRadius: '50%',
-                    background: card.color, marginBottom: 16,
-                  }} />
-                  <p style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text)', marginBottom: 10, lineHeight: 1.35 }}>{card.title}</p>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.75, margin: 0 }}>{card.body}</p>
-                </div>
+              <Reveal key={card.title} delay={i * 0.06}>
+                <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
+                  <div style={{ background: 'var(--surface)', borderRadius: 19, padding: '28px 24px', height: '100%' }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 12,
+                      background: `rgba(${hexToRgbStr(card.color)},0.09)`,
+                      border: `1px solid rgba(${hexToRgbStr(card.color)},0.18)`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: card.color, marginBottom: 18,
+                    }}>
+                      {card.icon}
+                    </div>
+                    <p style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--text)', marginBottom: 8, lineHeight: 1.3 }}>{card.title}</p>
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.75, margin: 0 }}>{card.body}</p>
+                  </div>
+                </BorderGlow>
               </Reveal>
             ))}
           </div>
