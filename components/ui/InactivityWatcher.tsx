@@ -8,7 +8,7 @@ import { clearWebAuth } from '@/lib/authState'
 
 const IDLE_MS         = 5 * 60 * 1000   // 5 minutes idle before the animation appears
 const LOGOUT_AFTER_MS = 3 * 60 * 1000   // clicking the animation logs out once it's been up this long
-const SLIDE_MS        = 7500
+const SLIDE_MS        = 12500
 
 const SLIDES = [
   { id: 'grades',  label: 'Grade Viewer',       color: '#2979FF', glow2: '#7C3AED' },
@@ -461,10 +461,17 @@ export default function InactivityWatcher() {
             transition={{ duration: reduced ? 0.15 : 0.42, ease: [0.22, 1, 0.36, 1] }}
             className="ns-widget-card"
           >
-            {slideIndex === 0 && <GradeViewerMockup   reduced={reduced} />}
-            {slideIndex === 1 && <GPASimulatorMockup   reduced={reduced} />}
-            {slideIndex === 2 && <SmartPlannerMockup   reduced={reduced} />}
-            {slideIndex === 3 && <RoadmapMockup         reduced={reduced} />}
+            {/* Slow, continuous zoom while the slide is on screen — reads as premium, not the crossfade's snap */}
+            <motion.div
+              initial={{ scale: 1 }}
+              animate={{ scale: reduced ? 1 : 1.035 }}
+              transition={{ duration: SLIDE_MS / 1000, ease: 'easeOut' }}
+            >
+              {slideIndex === 0 && <GradeViewerMockup   reduced={reduced} />}
+              {slideIndex === 1 && <GPASimulatorMockup   reduced={reduced} />}
+              {slideIndex === 2 && <SmartPlannerMockup   reduced={reduced} />}
+              {slideIndex === 3 && <RoadmapMockup         reduced={reduced} />}
+            </motion.div>
           </motion.div>
         </AnimatePresence>
       </div>
@@ -563,6 +570,7 @@ export default function InactivityWatcher() {
           border: 1px solid #273D5E;
           border-radius: 26px;
           padding: 40px 44px;
+          overflow: hidden;
           /* Layered shadow for depth/elevation */
           box-shadow:
             0 0 0 1px rgba(255,255,255,0.04),
