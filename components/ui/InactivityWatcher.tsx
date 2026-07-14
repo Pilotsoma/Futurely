@@ -444,12 +444,6 @@ export default function InactivityWatcher() {
       <div className="ns-glow-b" style={{ background: slide.glow2 }} />
       <div className="ns-glow-c" style={{ background: slide.color }} />
 
-      {/* Brand wordmark */}
-      <div className="ns-brand">
-        <div className="ns-brand-pip" style={{ background: slide.color }} />
-        myFuturely
-      </div>
-
       {/* Widget card — AnimatePresence handles crossfade + depth transition */}
       <div className="ns-stage">
         <AnimatePresence mode="wait">
@@ -464,7 +458,7 @@ export default function InactivityWatcher() {
             {/* Slow, continuous zoom while the slide is on screen — reads as premium, not the crossfade's snap */}
             <motion.div
               initial={{ scale: 1 }}
-              animate={{ scale: reduced ? 1 : 1.035 }}
+              animate={{ scale: reduced ? 1 : 1.12 }}
               transition={{ duration: SLIDE_MS / 1000, ease: 'easeOut' }}
             >
               {slideIndex === 0 && <GradeViewerMockup   reduced={reduced} />}
@@ -534,24 +528,6 @@ export default function InactivityWatcher() {
           left: 55%;
           transition: background 1s ease;
           animation: nsKb3 20s ease-in-out infinite;
-        }
-
-        .ns-brand {
-          position: relative;
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 2px;
-          text-transform: uppercase;
-          color: #52698A;
-        }
-        .ns-brand-pip {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          transition: background 1.2s ease;
         }
 
         .ns-stage {
