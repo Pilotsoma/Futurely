@@ -114,10 +114,24 @@ export default function PlannerPage() {
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [subject, setSubject] = useState('')
+  const [customSubject, setCustomSubject] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+
+  // Classes pulled from the student's real HAC data, for the "Class" dropdown
+  const [classOptions, setClassOptions] = useState<string[]>([])
+  const OTHER_CLASS = '__other__'
+
+  useEffect(() => {
+    api.portalGrades()
+      .then(({ grades }) => {
+        const names = Array.from(new Set(grades.map(g => g.name.trim()).filter(Boolean)))
+        setClassOptions(names)
+      })
+      .catch(() => setClassOptions([])) // no portal linked / fetch failed — dropdown just falls back to "Other"
+  }, [])
 
   const fetchData = useCallback(async () => {
     try {
@@ -156,18 +170,21 @@ export default function PlannerPage() {
     e.preventDefault()
     if (!title.trim() || !dueDate) return
 
+    const finalSubject = subject === OTHER_CLASS ? customSubject.trim() : subject
+
     setSubmitting(true)
     setFormError(null)
     try {
       const created = await api.plannerCreate({
         title: title.trim(),
-        subject: subject || undefined,
+        subject: finalSubject || undefined,
         dueDate,
         dueTime: dueTime || undefined,
       })
       setItems(prev => [...prev, created])
       setTitle('')
       setSubject('')
+      setCustomSubject('')
       setDueDate('')
       setDueTime('')
       setShowForm(false)
@@ -526,9 +543,20 @@ export default function PlannerPage() {
               onChange={e => setTitle(e.target.value)} required style={{ ...S.input, flex: 2 }} />
           </div>
           <div style={S.formRow}>
-            <input type="text" placeholder="Class (e.g. AP Calculus, English)" value={subject}
-              onChange={e => setSubject(e.target.value)} style={{ ...S.input, flex: 1 }} />
+            <select value={subject} onChange={e => setSubject(e.target.value)} style={{ ...S.input, flex: 1, cursor: 'pointer' }}>
+              <option value="">Class (optional)</option>
+              {classOptions.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+              <option value={OTHER_CLASS}>Other…</option>
+            </select>
           </div>
+          {subject === OTHER_CLASS && (
+            <div style={S.formRow}>
+              <input type="text" placeholder="Enter class name" value={customSubject}
+                onChange={e => setCustomSubject(e.target.value)} style={{ ...S.input, flex: 1 }} />
+            </div>
+          )}
           <div style={S.formRow}>
             <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required style={{ ...S.input, flex: 1 }} />
             <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} style={{ ...S.input, flex: 1 }} />
