@@ -303,6 +303,12 @@ function LoginPageInner() {
   return (
     <div style={isDesktop ? styles.pageCosmic : styles.page}>
       {isDesktop && <CosmicScene />}
+      {isDesktop && (
+        <a href="https://storyset.com/astronaut" target="_blank" rel="noopener noreferrer"
+          style={{ position: 'absolute', bottom: 8, right: 12, zIndex: 2, fontSize: 10, color: 'rgba(255,255,255,0.28)', textDecoration: 'none' }}>
+          Illustration by Storyset
+        </a>
+      )}
       <div style={isDesktop ? styles.cardCosmic : styles.card}>
         {/* Logo — icon + live text wordmark (logo2.png has "Futurely" baked into the pixels) */}
         <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>

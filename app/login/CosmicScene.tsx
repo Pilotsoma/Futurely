@@ -5,8 +5,8 @@ import { motion } from 'framer-motion'
 import Particles from '../Particles'
 
 /** Fixed cosmic backdrop for the login/register screen — a dense, layered starfield
- *  with a soft Milky Way band, naturalistic textured planets, and an illustrated boy
- *  standing on a small world looking up at the sky. Desktop only (mounted by caller). */
+ *  with a soft Milky Way band, naturalistic textured planets, and an astronaut
+ *  reaching toward the stars. Desktop only (mounted by caller). */
 export default function CosmicScene() {
   const [reduceMotion, setReduceMotion] = useState(false)
 
@@ -111,12 +111,12 @@ export default function CosmicScene() {
         <MoonPlanet />
       </motion.div>
 
-      {/* Boy standing on a small world, looking up at his future */}
+      {/* Astronaut drifting near a small asteroid, reaching toward his future */}
       <motion.div
-        animate={reduceMotion ? {} : { y: [0, -10, 0] }}
+        animate={reduceMotion ? {} : { y: [0, -12, 0] }}
         transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
         className="cosmic-boy"
-        style={{ position: 'absolute', bottom: '-3%', left: '2%', width: 300 }}
+        style={{ position: 'absolute', bottom: '2%', left: '2%', width: 300 }}
       >
         <StargazerOnRock />
       </motion.div>
@@ -289,16 +289,17 @@ function MoonPlanet() {
   )
 }
 
-/** A small cratered world with a standing figure silhouette gazing up toward the
- *  top-right sky. The figure is a public-domain (CC0) illustration from freesvg.org
- *  — hand-coded SVG couldn't reach a convincing human likeness, so this uses a real
- *  illustration instead, recolored to sit naturally in the scene. */
+/** A small drifting asteroid alongside an astronaut character reaching toward the
+ *  stars. The figure is a real, professionally-drawn illustration (Storyset by
+ *  Freepik, free license with attribution — see the credit link in the page footer)
+ *  — hand-coded SVG couldn't reach a convincing, colored human likeness, so this
+ *  uses a licensed illustration instead of a from-scratch attempt. */
 function StargazerOnRock() {
   return (
-    <div style={{ position: 'relative', width: 300, height: 240 }}>
-      <svg viewBox="0 0 300 240" width="300" height="240" style={{ position: 'absolute', inset: 0, overflow: 'visible' }} fill="none">
+    <div style={{ position: 'relative', width: 300, height: 260 }}>
+      <svg viewBox="0 0 300 260" width="300" height="260" style={{ position: 'absolute', inset: 0, overflow: 'visible' }} fill="none">
         <defs>
-          <radialGradient id="sg-rock" cx="30%" cy="14%" r="82%">
+          <radialGradient id="sg-rock" cx="30%" cy="18%" r="85%">
             <stop offset="0%" stopColor="#40335c" />
             <stop offset="50%" stopColor="#221b38" />
             <stop offset="100%" stopColor="#0a0816" />
@@ -309,23 +310,19 @@ function StargazerOnRock() {
             <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
           </radialGradient>
         </defs>
-        {/* the small world he's standing on */}
-        <ellipse cx="150" cy="360" rx="240" ry="240" fill="url(#sg-rock)" stroke="rgba(180,160,255,0.16)" strokeWidth="1.5" />
-        <path d="M -50 122 Q 150 82 350 122" fill="none" stroke="rgba(190,175,255,0.22)" strokeWidth="1.5" />
-        <circle cx="60" cy="128" r="9" fill="url(#sg-crater)" />
-        <circle cx="220" cy="132" r="12" fill="url(#sg-crater)" />
-        <circle cx="145" cy="146" r="6" fill="url(#sg-crater)" />
-        {/* contact shadow under his feet */}
-        <ellipse cx="158" cy="128" rx="26" ry="6" fill="rgba(0,0,0,0.4)" />
+        {/* a small asteroid drifting nearby */}
+        <ellipse cx="52" cy="232" rx="46" ry="30" fill="url(#sg-rock)" stroke="rgba(180,160,255,0.16)" strokeWidth="1.5" />
+        <circle cx="34" cy="222" r="6" fill="url(#sg-crater)" />
+        <circle cx="66" cy="230" r="4" fill="url(#sg-crater)" />
       </svg>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/login/stargazer-silhouette.png"
+        src="/login/stargazer-astronaut.svg"
         alt=""
         style={{
-          position: 'absolute', left: 118, bottom: 108, height: 190, width: 'auto',
+          position: 'absolute', right: 8, top: 0, height: 230, width: 'auto',
           transform: 'scaleX(-1)',
-          filter: 'drop-shadow(2px -3px 6px rgba(180,165,255,0.35)) brightness(0.9)',
+          filter: 'drop-shadow(1px -2px 10px rgba(180,165,255,0.3))',
         }}
       />
     </div>
