@@ -4,7 +4,8 @@ import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { logger } from '../common/logger'
 import { ASSIGNMENT_SOURCE } from '../constants/assignmentSource'
-import { sendToUser } from '../lib/websocket'
+import { createAndSendNotification } from '../lib/notifications'
+import { scoreSingleAssignmentPriority } from '../services/assignmentPriorityScorer'
 
 const router = Router()
 
@@ -123,20 +124,22 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
       },
     })
 
-    // Notify the user of their new assignment
-    try {
-      const due = parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      const notif = await prisma.notification.create({
-        data: {
-          userId: req.userId,
-          fromUserId: req.userId,
-          type: 'ASSIGNMENT_CREATED',
-          preview: `${title.trim()} — due ${due}`,
-        },
-        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
-      })
-      sendToUser(req.userId, 'NOTIFICATION', notif)
-    } catch { /* non-critical */ }
+    // Notify the user of their new assignment (fire-and-forget; createAndSendNotification never throws)
+    const due = parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    createAndSendNotification({
+      userId: req.userId,
+      fromUserId: req.userId,
+      type: 'ASSIGNMENT_CREATED',
+      preview: `${title.trim()} — due ${due}`,
+    })
+
+    // Kick off AI priority scoring without blocking the 201 response
+    scoreSingleAssignmentPriority(assignment.id, req.userId, {
+      title: assignment.title,
+      subject: assignment.subject ?? '',
+      dueDate: assignment.dueDate,
+      estimatedMinutes: assignment.estimatedMinutes,
+    }).catch(err => logger.warn('priority_scoring_failed', { err }))
 
     res.status(201).json({ data: assignment })
   } catch (err) {
@@ -238,6 +241,49 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response): Prom
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Failed to delete assignment' },
+    })
+  }
+})
+
+// POST /api/assignments/score-priorities
+// Finds all unscored incomplete assignments for the authenticated user (up to 50)
+// and runs AI priority scoring on them concurrently. Returns the count that settled
+// as fulfilled. Individual scoring failures are handled inside scoreSingleAssignmentPriority
+// (falls back to MEDIUM, never throws), so this endpoint essentially always succeeds.
+router.post('/score-priorities', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.userId === undefined) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED' } })
+    return
+  }
+
+  const userId = req.userId
+
+  try {
+    const unscored = await prisma.assignment.findMany({
+      where: { userId, priority: null, completed: false },
+      orderBy: { dueDate: 'asc' },
+      take: 50,
+    })
+
+    const results = await Promise.allSettled(
+      unscored.map(a =>
+        scoreSingleAssignmentPriority(a.id, userId, {
+          title: a.title,
+          subject: a.subject ?? '',
+          dueDate: a.dueDate,
+          estimatedMinutes: a.estimatedMinutes,
+        })
+      )
+    )
+
+    const scored = results.filter(r => r.status === 'fulfilled').length
+
+    res.status(200).json({ data: { scored } })
+  } catch (err) {
+    logger.error('Failed to score assignment priorities', { userId, err })
+    res.status(500).json({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to score assignment priorities' },
     })
   }
 })

@@ -109,6 +109,7 @@ export default function PlannerPage() {
   const [showStudyPlan, setShowStudyPlan] = useState(false)
 
   const [showCompleted, setShowCompleted] = useState(false)
+  const [aiSorting, setAiSorting] = useState(false)
 
   // Form state
   const [showForm, setShowForm] = useState(false)
@@ -287,6 +288,18 @@ export default function PlannerPage() {
     }
   }
 
+  async function handleAiSort() {
+    setAiSorting(true)
+    try {
+      await api.plannerScorePriorities()
+      await fetchData()
+    } catch {
+      // Silent — priorities are best-effort; don't block the user
+    } finally {
+      setAiSorting(false)
+    }
+  }
+
   async function handleGenerateStudyPlan() {
     setStudyPlanLoading(true)
     setStudyPlanError(null)
@@ -328,7 +341,29 @@ export default function PlannerPage() {
     <div className="fade-up" style={{ maxWidth: 680, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px' }}>Planner</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px' }}>Planner</h1>
+          <button
+            onClick={() => void handleAiSort()}
+            disabled={aiSorting}
+            title="Score and sort assignments by AI priority"
+            style={{
+              fontSize: 13,
+              background: 'rgba(124,58,237,0.15)',
+              color: '#A78BFA',
+              border: '1px solid rgba(124,58,237,0.35)',
+              borderRadius: 20,
+              padding: '6px 14px',
+              fontWeight: 700,
+              cursor: aiSorting ? 'not-allowed' : 'pointer',
+              opacity: aiSorting ? 0.7 : 1,
+              transition: 'opacity 0.15s',
+              whiteSpace: 'nowrap' as const,
+            }}
+          >
+            {aiSorting ? 'Scoring…' : '✦ AI Sorted'}
+          </button>
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
           style={{
@@ -674,6 +709,9 @@ export default function PlannerPage() {
         const completedGroup = groups.find(g => g.key === 'Completed')
 
         function AssignmentCard({ item }: { item: PlannerItem }) {
+          const priority = item.priority?.toUpperCase() as 'HIGH' | 'MEDIUM' | 'LOW' | undefined
+          const priorityStyle = priority ? PRIORITY_BADGE[priority] : null
+
           return (
             <div key={item.id} className="ns-card" style={{ padding: '13px 14px', marginBottom: 8, opacity: item.completed ? 0.6 : 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -717,6 +755,21 @@ export default function PlannerPage() {
                     </div>
                   </div>
                 </label>
+                {priorityStyle && (
+                  <span style={{
+                    flexShrink: 0,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background: priorityStyle.bg,
+                    color: priorityStyle.color,
+                    border: `1px solid ${priorityStyle.border}`,
+                    borderRadius: 20,
+                    padding: '3px 9px',
+                    whiteSpace: 'nowrap' as const,
+                  }}>
+                    {priority!.charAt(0) + priority!.slice(1).toLowerCase()}
+                  </span>
+                )}
                 <button onClick={() => void handleDelete(item.id)} title="Delete task" style={{
                   background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
                   fontSize: 16, padding: 4, opacity: 0.5, transition: 'opacity 0.15s', flexShrink: 0,
@@ -791,6 +844,12 @@ export default function PlannerPage() {
       })()}
     </div>
   )
+}
+
+const PRIORITY_BADGE: Record<'HIGH' | 'MEDIUM' | 'LOW', { color: string; bg: string; border: string }> = {
+  HIGH:   { color: '#EF4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.3)'   },
+  MEDIUM: { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)'  },
+  LOW:    { color: 'var(--text-muted)', bg: 'var(--surface-2)', border: 'var(--border)' },
 }
 
 const S: Record<string, React.CSSProperties> = {

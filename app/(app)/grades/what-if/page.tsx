@@ -195,6 +195,8 @@ export default function WhatIfGpaPage() {
   const simGPA      = calcSimulatedGpa(gpaType)
   const delta       = simGPA - baselineGpa
   const isEdited     = simCourses.some(c => c.average > 0)
+  const gpaMax        = gpaType === 'weighted' ? 5.0 : 4.0
+  const progressColor = !isEdited ? 'var(--primary)' : delta > 0 ? '#10B981' : delta < 0 ? '#EF4444' : 'var(--primary)'
 
   const updateSimCourse = (id: string, field: 'average' | 'level', value: string) =>
     setSimCourses(prev => prev.map(c => c.id === id ? {
@@ -262,6 +264,21 @@ export default function WhatIfGpaPage() {
               {delta >= 0 ? '+' : ''}{delta.toFixed(3)}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Progress toward max GPA — 5.0 on the weighted scale (AP/Pre-AP ceiling), 4.0 unweighted */}
+      <div className="ns-card" style={{ padding: '16px 20px', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>
+          <span>Progress toward {gpaMax.toFixed(1)} GPA</span>
+          <span style={{ color: progressColor }}>{simGPA.toFixed(3)} / {gpaMax.toFixed(1)}</span>
+        </div>
+        <div style={{ background: 'var(--surface-2)', borderRadius: 6, height: 10, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', borderRadius: 6, background: progressColor,
+            width: `${Math.min(Math.max((simGPA / gpaMax) * 100, 0), 100)}%`,
+            transition: 'width 0.4s ease, background 0.4s ease',
+          }} />
         </div>
       </div>
 

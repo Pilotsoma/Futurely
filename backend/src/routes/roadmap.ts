@@ -1,6 +1,7 @@
 import { Router, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
+import { writeAuditLog } from '../lib/auditLog'
 
 const router = Router()
 
@@ -35,6 +36,15 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<vo
     return
   }
   try {
+    // FERPA: Course and Grade data are education records — audit every read.
+    await writeAuditLog({
+      userId: req.userId,
+      resourceType: 'COURSE',
+      resourceId: String(req.userId),
+      action: 'READ_ROADMAP',
+      ipAddress: req.ip ?? 'unknown',
+    })
+
     const profile = await prisma.profile.findUnique({ where: { userId: req.userId } })
     const courses = await prisma.course.findMany({
       where: { userId: req.userId },

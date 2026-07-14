@@ -204,6 +204,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                   n.type === 'TRADE_DECLINED' ? { icon: <TradeArrowsIcon size={15}/>, iconColor: '#EF4444' } :
                   n.type.startsWith('TRADE') ? { icon: <TradeArrowsIcon size={15}/>, iconColor: '#8B5CF6' } :
                   n.type === 'ASSIGNMENT_CREATED' ? { icon: <BooksIcon size={15}/>, iconColor: '#6366F1' } :
+                  n.type === 'ASSIGNMENT_DUE_SOON' ? { icon: <BooksIcon size={15}/>, iconColor: '#F59E0B' } :
                   n.type === 'TEACHER_ASSIGNMENT' ? { icon: <ClipboardIcon size={15}/>, iconColor: '#6366F1' } :
                   n.type === 'CLASSROOM_JOINED' ? { icon: <SchoolBuildingIcon size={15}/>, iconColor: '#10B981' } :
                   n.type === 'COUNSELOR_LINKED' ? { icon: <HandshakeIcon size={15}/>, iconColor: '#3B82F6' } :
@@ -220,9 +221,8 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                     router.push('/marketplace')
                   } else if (n.type === 'COIN_RECEIVED') {
                     router.push('/marketplace')
-                  } else if (n.type === 'ASSIGNMENT_CREATED') {
-                    const isCanvas = n.preview?.includes('Canvas assignment') || n.preview?.includes('Canvas assignments')
-                    router.push(isCanvas ? '/grades/canvas' : '/grades/classwork')
+                  } else if (n.type === 'ASSIGNMENT_CREATED' || n.type === 'ASSIGNMENT_DUE_SOON') {
+                    router.push('/planner')
                   } else if (n.type === 'TEACHER_ASSIGNMENT' || n.type === 'CLASSROOM_JOINED') {
                     router.push('/grades/classwork')
                   } else if (n.type === 'COUNSELOR_LINKED' || n.type === 'COUNSELOR_NOTE_ADDED' || n.type === 'COUNSELOR_RECOMMENDATION_ADDED' || n.type === 'ACTION_ITEM_CREATED') {
@@ -252,6 +252,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 else if (n.type === 'TRADE_DECLINED')    body = <>{link(name)} declined your trade</>
                 else if (n.type === 'COIN_RECEIVED') body = <>{link(name)} sent you {n.preview ?? 'coins'}!</>
                 else if (n.type === 'ASSIGNMENT_CREATED') body = n.preview ?? 'New assignment added'
+                else if (n.type === 'ASSIGNMENT_DUE_SOON') body = n.preview ?? 'An assignment is due soon'
                 else if (n.type === 'TEACHER_ASSIGNMENT') body = <>{link(name)} posted an assignment{n.preview ? <> — {n.preview}</> : null}</>
                 else if (n.type === 'CLASSROOM_JOINED') body = <>You joined <b>{n.preview ?? 'a classroom'}</b></>
                 else if (n.type === 'COUNSELOR_LINKED') body = <>{link(name)} is now your counselor</>
@@ -291,6 +292,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 case 'LISTING_SOLD':        return { icon: <CoinIcon size={20}/>, accent: '#EAB308', text: `Your listing sold — ${t.notif.preview ?? ''}` }
                 case 'COIN_RECEIVED':       return { icon: <CoinIcon size={20}/>, accent: '#EAB308', text: `${name} sent you ${t.notif.preview ?? 'coins'}!` }
                 case 'ASSIGNMENT_CREATED':              return { icon: <BooksIcon size={20}/>, accent: '#6366F1', text: t.notif.preview ?? 'New assignment added' }
+                case 'ASSIGNMENT_DUE_SOON':             return { icon: <BooksIcon size={20}/>, accent: '#F59E0B', text: t.notif.preview ?? 'An assignment is due soon' }
                 case 'TEACHER_ASSIGNMENT':              return { icon: <ClipboardIcon size={20}/>, accent: '#6366F1', text: `${name} posted: ${t.notif.preview ?? 'New assignment'}` }
                 case 'CLASSROOM_JOINED':                return { icon: <SchoolBuildingIcon size={20}/>, accent: '#10B981', text: `You joined ${t.notif.preview ?? 'a classroom'}` }
                 case 'COUNSELOR_LINKED':                return { icon: <HandshakeIcon size={20}/>, accent: '#3B82F6', text: `${name} is now your counselor` }

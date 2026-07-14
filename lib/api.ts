@@ -213,15 +213,7 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ avatarUrl }),
     }),
-  roadmap: () => request<{
-    gradeLevel: number
-    creditsCompleted: number
-    creditsRequired: number
-    percentComplete: number
-    weightedGpa: number
-    unweightedGpa: number
-    futureDecision: string | null
-  }>('/api/roadmap'),
+  roadmap: () => request<RoadmapData>('/api/roadmap'),
   // LLM-backed endpoints get a longer timeout than the 30s default — generation
   // latency is inherently more variable than a typical CRUD call.
   chat: (message: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []) =>
@@ -565,6 +557,11 @@ export const api = {
   plannerDelete: (id: number) =>
     request<{ deleted: boolean }>(`/api/assignments/${id}`, {
       method: 'DELETE',
+    }),
+
+  plannerScorePriorities: () =>
+    request<{ scored: number }>('/api/assignments/score-priorities', {
+      method: 'POST',
     }),
 
   // ── Canvas Integration ────────────────────────────────────────────────────────
@@ -1168,6 +1165,20 @@ export interface PlannerItem {
   completedAt: string | null
   userId: number
   source?: string
+  priority: string | null
+}
+
+export interface RoadmapData {
+  gradeLevel: number
+  graduationYear: number | null
+  creditsCompleted: number
+  creditsRequired: number
+  percentComplete: number
+  creditsByCategory: Record<string, number>
+  milestones: Array<{ grade: number; label: string; done: boolean }>
+  weightedGpa: number
+  unweightedGpa: number
+  futureDecision: string | null
 }
 
 export interface CanvasConnectionInfo {
@@ -1720,7 +1731,7 @@ export interface AppNotification {
   id: number
   userId: number
   fromUserId: number
-  type: 'FOLLOW' | 'LIKE' | 'COMMENT' | 'GIVEAWAY_WIN' | 'TRADE_OFFER' | 'TRADE_ACCEPTED' | 'TRADE_DECLINED' | 'LISTING_SOLD' | 'ASSIGNMENT_CREATED' | 'TEACHER_ASSIGNMENT' | 'CLASSROOM_JOINED' | 'COUNSELOR_LINKED' | 'COUNSELOR_NOTE_ADDED' | 'COUNSELOR_RECOMMENDATION_ADDED' | 'ACTION_ITEM_CREATED' | 'COIN_RECEIVED'
+  type: 'FOLLOW' | 'LIKE' | 'COMMENT' | 'GIVEAWAY_WIN' | 'TRADE_OFFER' | 'TRADE_ACCEPTED' | 'TRADE_DECLINED' | 'LISTING_SOLD' | 'ASSIGNMENT_CREATED' | 'ASSIGNMENT_DUE_SOON' | 'TEACHER_ASSIGNMENT' | 'CLASSROOM_JOINED' | 'COUNSELOR_LINKED' | 'COUNSELOR_NOTE_ADDED' | 'COUNSELOR_RECOMMENDATION_ADDED' | 'ACTION_ITEM_CREATED' | 'COIN_RECEIVED'
   postId: number | null
   preview: string | null
   read: boolean
