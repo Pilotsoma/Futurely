@@ -88,11 +88,20 @@ function fastPathBlock(message: string): boolean {
   return FAST_BLOCK_PATTERNS.some((pattern) => pattern.test(message))
 }
 
+// Intent classification is a cheap/small task (~1 short JSON object out) that
+// doesn't need a large model — confirmed via direct API test that the 8B
+// model classifies correctly in well under a second, versus 10-15s+ measured
+// using the same 70B model configured for full chat responses. Since this
+// runs before every single chat message, using the small model here cuts
+// meaningful latency off every chat round-trip for free.
+const NVIDIA_FAST_CLASSIFIER_MODEL = 'meta/llama-3.1-8b-instruct'
+
 function classifierModel(): string {
-  // Intent classification is a cheap/small task — allow overriding to a
-  // smaller model than the main chat model via env, but default to whatever
-  // the active provider already resolves so no extra credentials are needed.
-  return process.env.INTENT_MODEL ?? getAiModel()
+  // Allow overriding via env, but default to a fast small model on NVIDIA
+  // rather than falling through to whatever (possibly large/slow) model is
+  // configured for full chat responses.
+  if (process.env.INTENT_MODEL) return process.env.INTENT_MODEL
+  return process.env.AI_PROVIDER === 'nvidia' ? NVIDIA_FAST_CLASSIFIER_MODEL : getAiModel()
 }
 
 function buildClassifierPrompt(): string {
