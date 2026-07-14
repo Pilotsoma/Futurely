@@ -344,7 +344,17 @@ export default function InactivityWatcher() {
   const [show, setShow] = useState(false)
   const [slideIndex, setSlideIndex] = useState(0)
   const [readyToLogout, setReadyToLogout] = useState(false)
-  const reduced = useReducedMotion() ?? false
+  const [lowSpec, setLowSpec] = useState(false)
+  const prefersReducedMotion = useReducedMotion() ?? false
+  const reduced = prefersReducedMotion || lowSpec
+
+  // Heuristic low-spec detection: few CPU cores or little RAM struggles with
+  // the blurred, continuously-animating glow orbs, so skip them on weaker machines.
+  useEffect(() => {
+    const cores  = navigator.hardwareConcurrency ?? 8
+    const memory = (navigator as { deviceMemory?: number }).deviceMemory ?? 8
+    if (cores <= 4 || memory <= 4) setLowSpec(true)
+  }, [])
 
   const idleTimer  = useRef<ReturnType<typeof setTimeout>  | null>(null)
   const slideTimer = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -439,10 +449,16 @@ export default function InactivityWatcher() {
       tabIndex={0}
       aria-label={readyToLogout ? 'Tap to log out' : 'Tap to dismiss and return to app'}
     >
-      {/* Layered ambient glow orbs — ken-burns drift */}
-      <div className="ns-glow-a" style={{ background: slide.color }} />
-      <div className="ns-glow-b" style={{ background: slide.glow2 }} />
-      <div className="ns-glow-c" style={{ background: slide.color }} />
+      {/* Layered ambient glow orbs — ken-burns drift. Skipped entirely (not just
+          un-animated) on low-spec machines: the blur filters are expensive to
+          paint even when static. */}
+      {!reduced && (
+        <>
+          <div className="ns-glow-a" style={{ background: slide.color }} />
+          <div className="ns-glow-b" style={{ background: slide.glow2 }} />
+          <div className="ns-glow-c" style={{ background: slide.color }} />
+        </>
+      )}
 
       {/* Widget card — AnimatePresence handles crossfade + depth transition */}
       <div className="ns-stage">

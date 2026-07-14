@@ -400,7 +400,6 @@ export default function SettingsPage() {
               {data?.id && (
                 <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
                   myFuturely ID: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1 }}>{data.id}</span>
-                  <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-muted)' }}>(share with your counselor to get linked)</span>
                 </div>
               )}
             </div>
