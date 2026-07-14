@@ -7,7 +7,7 @@ import { api, type StudentData, type CanvasStatus } from '../../../lib/api'
 import { CheckIcon, MoonIcon, SunIcon } from '@/components/icons'
 import { clearWebAuth } from '../../../lib/authState'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
-import { CHANGELOG } from '../../../lib/changelog'
+import { CHANGELOG, CURRENT_VERSION } from '../../../lib/changelog'
 
 function DeleteAccountModal({ onClose, hasPassword }: { onClose: () => void; hasPassword: boolean }) {
   const router = useRouter()
@@ -927,7 +927,7 @@ export default function SettingsPage() {
           <div className="ns-card" style={S.card}>
             <p style={S.cardLabel}>Support</p>
             <InfoRow label="Contact" value="support@myfuturely.ai" />
-            <InfoRow label="Version" value="v1.0.3" />
+            <InfoRow label="Version" value={`v${CURRENT_VERSION}`} />
           </div>
 
           <button style={S.logoutBtn} onClick={handleLogout}>
