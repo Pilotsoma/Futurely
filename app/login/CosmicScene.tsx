@@ -116,9 +116,9 @@ export default function CosmicScene() {
         animate={reduceMotion ? {} : { y: [0, -10, 0] }}
         transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
         className="cosmic-boy"
-        style={{ position: 'absolute', bottom: '-3%', left: '2%', width: 360 }}
+        style={{ position: 'absolute', bottom: '-3%', left: '2%', width: 300 }}
       >
-        <BoyOnRock />
+        <StargazerOnRock />
       </motion.div>
     </div>
   )
@@ -289,132 +289,46 @@ function MoonPlanet() {
   )
 }
 
-/** Illustrated boy — three-quarter turn, warm colored jacket, visible face and hair,
- *  standing at ease on a small cratered world, gazing up toward the top-right sky. */
-function BoyOnRock() {
+/** A small cratered world with a standing figure silhouette gazing up toward the
+ *  top-right sky. The figure is a public-domain (CC0) illustration from freesvg.org
+ *  — hand-coded SVG couldn't reach a convincing human likeness, so this uses a real
+ *  illustration instead, recolored to sit naturally in the scene. */
+function StargazerOnRock() {
   return (
-    <svg viewBox="0 0 280 240" width="360" height="309" style={{ overflow: 'visible' }}>
-      <defs>
-        <radialGradient id="by-rock" cx="30%" cy="14%" r="82%">
-          <stop offset="0%" stopColor="#40335c" />
-          <stop offset="50%" stopColor="#221b38" />
-          <stop offset="100%" stopColor="#0a0816" />
-        </radialGradient>
-        <radialGradient id="by-crater" cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.08)" />
-          <stop offset="50%" stopColor="rgba(0,0,0,0.05)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
-        </radialGradient>
-
-        <linearGradient id="by-hair" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#4a3324" />
-          <stop offset="100%" stopColor="#1c130c" />
-        </linearGradient>
-        <linearGradient id="by-skin" x1="20%" y1="0%" x2="90%" y2="100%">
-          <stop offset="0%" stopColor="#f0c39b" />
-          <stop offset="100%" stopColor="#c9895e" />
-        </linearGradient>
-        <linearGradient id="by-jacket" x1="10%" y1="0%" x2="95%" y2="100%">
-          <stop offset="0%" stopColor="#e08a4c" />
-          <stop offset="55%" stopColor="#c1602c" />
-          <stop offset="100%" stopColor="#8a3d1a" />
-        </linearGradient>
-        <linearGradient id="by-pants" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#31324a" />
-          <stop offset="100%" stopColor="#1a1a29" />
-        </linearGradient>
-      </defs>
-
-      {/* the small world he's standing on */}
-      <ellipse cx="140" cy="360" rx="240" ry="240" fill="url(#by-rock)" stroke="rgba(180,160,255,0.16)" strokeWidth="1.5" />
-      <path d="M -60 122 Q 140 82 340 122" fill="none" stroke="rgba(190,175,255,0.22)" strokeWidth="1.5" />
-      <circle cx="58" cy="128" r="9" fill="url(#by-crater)" />
-      <circle cx="212" cy="132" r="12" fill="url(#by-crater)" />
-      <circle cx="138" cy="146" r="6" fill="url(#by-crater)" />
-
-      {/* contact shadow under his feet */}
-      <ellipse cx="150" cy="220" rx="34" ry="7" fill="rgba(0,0,0,0.4)" />
-
-      {/* ── figure ─────────────────────────────────────────────────────── */}
-      <g transform="translate(112,40)">
-
-        {/* back arm, hand relaxed at side */}
-        <path d="M -20 58 C -28 66 -30 82 -26 98 C -25 103 -19 104 -16 100 C -19 88 -18 74 -12 62 Z"
-          fill="url(#by-jacket)" />
-        <ellipse cx="-24" cy="99" rx="5" ry="6" fill="url(#by-skin)" />
-
-        {/* legs */}
-        <path d="M -3 150 C -8 150 -12 154 -12 159 L -15 196 C -15 200 -12 202 -7 202 L 2 202 C 6 202 8 200 8 196 L 6 156 Z"
-          fill="url(#by-pants)" />
-        <path d="M 22 152 C 27 151 32 154 33 159 L 40 194 C 41 199 38 202 33 202 L 22 202 C 18 202 16 200 16 196 L 17 158 Z"
-          fill="url(#by-pants)" />
-        {/* shoes */}
-        <path d="M -17 196 L 3 196 C 6 196 7 199 5 202 C 2 207 -8 208 -16 206 C -20 205 -21 200 -17 196 Z" fill="#e9e4d8" />
-        <path d="M -17 196 L 3 196 C 6 196 7 199 5 202 L -17 202 Z" fill="#c1602c" opacity="0.7" />
-        <path d="M 16 194 L 41 194 C 44 194 46 197 43 200 C 40 205 29 207 20 205 C 16 204 14 198 16 194 Z" fill="#e9e4d8" />
-        <path d="M 16 194 L 41 194 C 44 194 46 197 43 200 L 16 200 Z" fill="#c1602c" opacity="0.7" />
-
-        {/* torso / jacket, slight forward lean, three-quarter turn */}
-        <path d="M -16 46 C -22 55 -23 72 -19 92 L -14 148
-                 C -13 155 -6 160 4 160 L 24 160
-                 C 33 160 39 154 38 146 L 32 92
-                 C 36 72 33 55 25 46
-                 C 16 40 -7 40 -16 46 Z"
-          fill="url(#by-jacket)" />
-        {/* jacket zipper + collar */}
-        <path d="M 4 48 L 2 158" fill="none" stroke="rgba(30,14,4,0.35)" strokeWidth="1.4" />
-        <path d="M -10 44 C -6 50 8 50 14 44 L 10 52 C 4 56 -4 56 -8 52 Z" fill="#e9d9bf" opacity="0.85" />
-        {/* fold shading */}
-        <path d="M -14 70 C -6 76 20 76 28 68" fill="none" stroke="rgba(30,14,4,0.22)" strokeWidth="1.6" strokeLinecap="round" />
-        <path d="M -12 110 C -2 116 22 116 30 108" fill="none" stroke="rgba(30,14,4,0.18)" strokeWidth="1.6" strokeLinecap="round" />
-        {/* highlight edge catching starlight from upper right */}
-        <path d="M 25 46 C 33 55 36 72 32 92 L 38 146" fill="none" stroke="rgba(255,220,180,0.4)" strokeWidth="1.4" strokeLinecap="round" />
-
-        {/* front arm, bent at the elbow, hand tucked into the front pocket */}
-        <path d="M 22 50 C 30 54 35 63 36 73 C 37 81 34 88 27 91 C 23 93 19 91 19 87
-                 C 23 85 26 79 25 71 C 24 63 21 56 15 51 Z"
-          fill="url(#by-jacket)" />
-
-        {/* neck */}
-        <path d="M -5 27 L -5 46 L 11 46 L 11 27 Z" fill="url(#by-skin)" />
-        <path d="M -5 27 L 11 27 L 11 33 C 5 36 1 36 -5 33 Z" fill="#000" opacity="0.12" />
-
-        {/* ── head, three-quarter turn toward upper right ───────────────── */}
-        <g transform="translate(0,17) rotate(-10 2 8)">
-          {/* hair — back mass */}
-          <path d="M -20 6 C -23 -10 -14 -26 4 -29 C 22 -32 35 -19 34 -3
-                   C 34 3 31 6 27 5 C 29 -6 22 -16 8 -18 C -6 -20 -16 -10 -17 3
-                   C -17 8 -14 12 -10 13 C -16 15 -20 12 -20 6 Z"
-            fill="url(#by-hair)" />
-          {/* face — skin base */}
-          <ellipse cx="7" cy="-8" rx="17" ry="19" fill="url(#by-skin)" />
-          {/* ear */}
-          <path d="M -9 -6 C -13 -7 -14 -2 -11 2 C -9 4 -6 3 -6 0 Z" fill="url(#by-skin)" />
-          {/* hair — swept fringe over the forehead */}
-          <path d="M -12 -18 C -6 -26 8 -28 18 -22 C 22 -19 24 -14 23 -9
-                   C 18 -15 9 -19 -1 -18 C -7 -17 -10 -14 -12 -10 Z"
-            fill="url(#by-hair)" />
-          <path d="M -2 -20 C 4 -24 12 -24 17 -20" fill="none" stroke="#6b4a32" strokeWidth="1.2" strokeLinecap="round" opacity="0.6" />
-
-          {/* eyebrow */}
-          <path d="M 10 -13 C 14 -15 18 -15 21 -13" fill="none" stroke="#2a1c12" strokeWidth="1.6" strokeLinecap="round" />
-          {/* eye */}
-          <path d="M 11 -8 C 14 -10 19 -10 22 -7.5 C 19 -5.5 14 -5.5 11 -8 Z" fill="#fff" />
-          <circle cx="17" cy="-7.8" r="2.1" fill="#4a2f1c" />
-          <circle cx="17.6" cy="-8.4" r="0.6" fill="#fff" />
-          {/* nose */}
-          <path d="M 22 -6 C 24 -3 24 0 21 1.5" fill="none" stroke="#a9744e" strokeWidth="1.3" strokeLinecap="round" opacity="0.7" />
-          {/* mouth */}
-          <path d="M 13 5 C 16 6.5 20 6.5 22 4.8" fill="none" stroke="#93553a" strokeWidth="1.4" strokeLinecap="round" />
-          {/* cheek + jaw shading */}
-          <path d="M 20 -2 C 23 1 22 6 18 9 C 21 5 20 0 17 -2 Z" fill="#a9714a" opacity="0.28" />
-          <path d="M -6 -4 C -3 4 2 10 9 11 C 1 12 -6 6 -8 -2 Z" fill="#a9714a" opacity="0.22" />
-
-          {/* rim light along the hair/skull edge facing the sky */}
-          <path d="M 27 5 C 31 -3 32 -14 27 -22 C 24 -26 20 -29 15 -30"
-            fill="none" stroke="rgba(255,225,190,0.35)" strokeWidth="1.2" strokeLinecap="round" />
-        </g>
-      </g>
-    </svg>
+    <div style={{ position: 'relative', width: 300, height: 240 }}>
+      <svg viewBox="0 0 300 240" width="300" height="240" style={{ position: 'absolute', inset: 0, overflow: 'visible' }} fill="none">
+        <defs>
+          <radialGradient id="sg-rock" cx="30%" cy="14%" r="82%">
+            <stop offset="0%" stopColor="#40335c" />
+            <stop offset="50%" stopColor="#221b38" />
+            <stop offset="100%" stopColor="#0a0816" />
+          </radialGradient>
+          <radialGradient id="sg-crater" cx="35%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.08)" />
+            <stop offset="50%" stopColor="rgba(0,0,0,0.05)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
+          </radialGradient>
+        </defs>
+        {/* the small world he's standing on */}
+        <ellipse cx="150" cy="360" rx="240" ry="240" fill="url(#sg-rock)" stroke="rgba(180,160,255,0.16)" strokeWidth="1.5" />
+        <path d="M -50 122 Q 150 82 350 122" fill="none" stroke="rgba(190,175,255,0.22)" strokeWidth="1.5" />
+        <circle cx="60" cy="128" r="9" fill="url(#sg-crater)" />
+        <circle cx="220" cy="132" r="12" fill="url(#sg-crater)" />
+        <circle cx="145" cy="146" r="6" fill="url(#sg-crater)" />
+        {/* contact shadow under his feet */}
+        <ellipse cx="158" cy="128" rx="26" ry="6" fill="rgba(0,0,0,0.4)" />
+      </svg>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/login/stargazer-silhouette.png"
+        alt=""
+        style={{
+          position: 'absolute', left: 118, bottom: 108, height: 190, width: 'auto',
+          transform: 'scaleX(-1)',
+          filter: 'drop-shadow(2px -3px 6px rgba(180,165,255,0.35)) brightness(0.9)',
+        }}
+      />
+    </div>
   )
 }
+
