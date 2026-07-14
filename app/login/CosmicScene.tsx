@@ -81,8 +81,8 @@ export default function CosmicScene() {
           <div style={{
             position: 'absolute', left: '75%', top: '20%', width: '58%', aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(210,215,255,0.3) 0%, rgba(180,190,250,0.14) 45%, transparent 72%)',
-            filter: 'blur(14px)',
+            background: 'radial-gradient(circle, transparent 0%, transparent 52%, rgba(210,220,255,0.4) 66%, rgba(180,195,255,0.18) 80%, transparent 96%)',
+            filter: 'blur(10px)',
             animation: reduceMotion ? undefined : 'glowPulse 7s ease-in-out infinite',
             animationDelay: '1s',
           }} />
