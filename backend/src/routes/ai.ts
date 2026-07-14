@@ -206,11 +206,14 @@ router.get('/study-plan', requireAuth, async (req: AuthRequest, res: Response): 
     return
   }
   try {
-    const assignments = await prisma.assignment.findMany({
-      where: { userId: req.userId, completed: false, source: { notIn: ['SEED', 'HAC'] } },
-      orderBy: { dueDate: 'asc' },
-      take: 20,
-    })
+    const [assignments, portalData] = await Promise.all([
+      prisma.assignment.findMany({
+        where: { userId: req.userId, completed: false, source: { notIn: ['SEED', 'HAC'] } },
+        orderBy: { dueDate: 'asc' },
+        take: 20,
+      }),
+      getPortalData(req.userId),
+    ])
 
     if (assignments.length === 0) {
       res.json({ data: { overview: "You're all caught up! No assignments pending.", days: [] } })
@@ -239,11 +242,17 @@ router.get('/study-plan', requireAuth, async (req: AuthRequest, res: Response): 
       }
     })
 
+    const courseContext = portalData?.courseList?.length ? portalData.courseList.join(', ') : null
+
     const prompt = `Today is ${todayStr}. Create a realistic study plan for these assignments:
 
 ${JSON.stringify(assignmentList, null, 2)}
 
 Each assignment already includes ground-truth "daysUntilDue" and "isPastDue" fields — treat them as authoritative. Do not recompute due-date status yourself, and never describe an assignment as "past due" or "overdue" unless its isPastDue is true.
+
+${courseContext
+  ? `This student's current grades by course: ${courseContext}${portalData?.attendanceSummary ? `\nAttendance this month: ${portalData.attendanceSummary}` : ''}\nUse this to prioritize: give more study time to assignments in subjects where the student's current grade is weaker (a C or below, or clearly lower than their other courses), and say so specifically in that session's "notes" (e.g. "extra time here since your current grade in this class needs the most attention" — but only when the grade data actually supports it). Don't mention grades for subjects where the student is already doing well unless it's genuinely relevant. Never give generic advice like "study more" when you have real grade data to reference instead.`
+  : `This student's current grades aren't available, so prioritize purely by due date — don't invent or guess at their performance in any subject.`}
 
 Rules: max 120 min/day, prioritize soonest due dates, split large tasks across days, only include days with work. Each calendar date must appear as exactly one entry in "days" — put all of that day's sessions in a single "sessions" array, never create two day entries with the same "date". The "overview" and "notes" text fields are rendered as plain text, not markdown — never use **bold**, *italics*, bullet points, or headers inside them.
 
