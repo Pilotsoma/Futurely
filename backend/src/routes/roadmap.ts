@@ -2,6 +2,7 @@ import { Router, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { writeAuditLog } from '../lib/auditLog'
+import { generatePersonalizedMilestones } from '../services/ai/roadmapInsights'
 
 const router = Router()
 
@@ -70,12 +71,15 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<vo
     const gradeLevel = deriveGradeLevel(profile?.graduationYear ?? null, profile?.gradeLevel ?? null)
     const creditsRequired = 26
 
-    const milestones = [
-      { grade: 9,  label: 'Explore interests, build strong foundations', done: gradeLevel > 9 },
-      { grade: 10, label: 'Challenge yourself — consider AP or Honors courses', done: gradeLevel > 10 },
-      { grade: 11, label: 'SAT/ACT prep, start college research', done: gradeLevel > 11 },
-      { grade: 12, label: 'Apply to colleges, finalize your plans', done: false },
-    ]
+    const milestones = await generatePersonalizedMilestones({
+      gradeLevel,
+      creditsCompleted,
+      creditsRequired,
+      creditsByCategory,
+      weightedGpa: profile?.weightedGpa ?? 0,
+      unweightedGpa: profile?.unweightedGpa ?? 0,
+      futureDecision: profile?.futureDecision ?? null,
+    })
 
     res.json({
       data: {
