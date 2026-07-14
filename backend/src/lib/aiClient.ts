@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import type { ChatCompletion, ChatCompletionCreateParamsNonStreaming } from 'openai/resources/chat/completions'
 import { logger } from '../common/logger'
+import { shouldSkipPrimaryModel, markFallbackUsed } from './aiRequestContext'
 
 // Provider-agnostic LLM client. Switch providers for local testing via
 // AI_PROVIDER=openrouter|nvidia — defaults to openrouter (production).
@@ -94,6 +95,12 @@ function isCircuitOpen(): boolean {
  * for another timeout first. OpenRouter calls are unaffected — no equivalent
  * documented failure mode to fall back from.
  *
+ * Also honors a per-request "skip the primary model" signal (see
+ * aiRequestContext.ts) — set when the client itself already saw a fallback
+ * happen earlier in the browser session and asked to skip straight to the
+ * reliable model for the rest of that session, regardless of the shared
+ * circuit breaker's state.
+ *
  * Pass `retryOnFailure: false` for latency-sensitive calls that already have
  * their own fast, safe failure handling (e.g. a classifier that fails open) —
  * such a call still benefits from an already-open circuit (skips the bad
@@ -111,7 +118,8 @@ export async function createChatCompletion(
   const isNvidia = process.env.AI_PROVIDER === 'nvidia'
   const hasFallback = isNvidia && primaryModel !== NVIDIA_RELIABLE_FALLBACK_MODEL
 
-  if (hasFallback && isCircuitOpen()) {
+  if (hasFallback && (isCircuitOpen() || shouldSkipPrimaryModel())) {
+    markFallbackUsed()
     return await client.chat.completions.create({ ...rest, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
   }
 
@@ -123,6 +131,7 @@ export async function createChatCompletion(
   } catch (err) {
     if (hasFallback) {
       circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS
+      markFallbackUsed()
       logger.warn('AI call failed on configured NVIDIA model, opening circuit breaker', {
         errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
         retrying: retryOnFailure,

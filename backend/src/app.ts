@@ -52,6 +52,7 @@ import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
 import classlinkRouter from './integrations/classlink/classlinkRouter'
 import { logger } from './common/logger'
+import { runWithAiRequestContext } from './lib/aiRequestContext'
 
 const app = express()
 const isProd = process.env.NODE_ENV === 'production'
@@ -108,9 +109,11 @@ const isDevFallback = ALLOWED_ORIGINS.length === 0
 const LAN_ORIGIN_PATTERN = /^http:\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}):(3000|8081|19006)$/
 
 const CORS_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Client-Platform']
-// Expose rate-limit headers so clients can read their quota without guessing.
-const CORS_EXPOSED_HEADERS = ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'RateLimit-Policy']
+const CORS_ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Client-Platform', 'X-AI-Skip-Primary']
+// Expose rate-limit headers so clients can read their quota without guessing,
+// and X-AI-Used-Fallback so the client can remember to skip the primary AI
+// model for the rest of this session once it's seen a fallback happen.
+const CORS_EXPOSED_HEADERS = ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'RateLimit-Policy', 'X-AI-Used-Fallback']
 
 app.use(cors({
   origin: (origin, cb) => {
@@ -221,6 +224,15 @@ app.use((req, res, next) => {
     }
   }
   next()
+})
+
+// Lets the client tell us (once it's seen a fallback happen this session)
+// to skip straight to the reliable AI model on every subsequent request,
+// instead of paying for a doomed primary-model attempt each time. See
+// lib/aiRequestContext.ts and lib/aiClient.ts's createChatCompletion().
+app.use((req, res, next) => {
+  const skipPrimary = req.headers['x-ai-skip-primary'] === '1'
+  runWithAiRequestContext(res, skipPrimary, next)
 })
 
 app.get('/health', async (_req, res) => {

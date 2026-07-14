@@ -58,6 +58,23 @@ async function silentRefresh(): Promise<boolean> {
   return _refreshPromise
 }
 
+// Once the backend reports it had to fall back off the primary AI model
+// (e.g. Deepseek down), remember that for the rest of this browser session so
+// every subsequent AI-backed call skips straight to the reliable model
+// instead of paying for a doomed primary attempt each time. sessionStorage
+// (not memory) so it survives a page reload within the same tab/session.
+const AI_SKIP_PRIMARY_KEY = 'ns_ai_skip_primary'
+
+function shouldSkipAiPrimary(): boolean {
+  if (typeof window === 'undefined') return false
+  return sessionStorage.getItem(AI_SKIP_PRIMARY_KEY) === '1'
+}
+
+function markAiFallbackSeen(): void {
+  if (typeof window === 'undefined') return
+  sessionStorage.setItem(AI_SKIP_PRIMARY_KEY, '1')
+}
+
 async function request<T>(path: string, options?: RequestInit, _retried = false, timeoutMs = 30000): Promise<T> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
@@ -70,12 +87,14 @@ async function request<T>(path: string, options?: RequestInit, _retried = false,
       headers: {
         'Content-Type': 'application/json',
         'X-Client-Platform': 'web',
+        ...(shouldSkipAiPrimary() ? { 'X-AI-Skip-Primary': '1' } : {}),
         ...options?.headers,
       },
     })
   } finally {
     clearTimeout(timeout)
   }
+  if (res.headers.get('X-AI-Used-Fallback') === '1') markAiFallbackSeen()
   // On 401, attempt a silent token refresh and retry once.
   if (res.status === 401 && !_retried) {
     const refreshed = await silentRefresh()
