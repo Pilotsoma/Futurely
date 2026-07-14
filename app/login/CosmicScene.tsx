@@ -27,10 +27,6 @@ export default function CosmicScene() {
           0%, 100% { opacity: 0.35; transform: scale(0.94); }
           50%      { opacity: 0.75; transform: scale(1.06); }
         }
-        @keyframes starTwinkle {
-          0%, 100% { opacity: 0.2; }
-          50%      { opacity: 1; }
-        }
       `}</style>
 
       {/* Deep space gradient — base tint under everything */}
@@ -56,13 +52,6 @@ export default function CosmicScene() {
         />
       </div>
 
-      {/* Ambient starfield across the whole viewport, including the letterboxed edges */}
-      {!reduceMotion && (
-        <div style={{ position: 'absolute', inset: 0 }}>
-          <Particles particleColors={['#ffffff']} particleCount={160} particleSpread={10} speed={0.08} particleBaseSize={80} alphaParticles={false} />
-        </div>
-      )}
-
       {/* The artwork — scaled up and anchored to the top-left so both the boy
           (bottom-left of the frame) and the ringed planet (top-right) clear the
           centered login card, instead of both hiding behind it. A little of the
@@ -79,32 +68,6 @@ export default function CosmicScene() {
             style={{ objectFit: 'contain' }}
           />
 
-          {/* Extra twinkling stars layered directly over the artwork for a livelier sky.
-              Positioned with plain CSS left/top percentages — SVG's own transform=
-              "translate(%, %)" syntax doesn't support percentage units, which silently
-              collapsed every star to the same spot the first time this was written. */}
-          {[
-            { x: '9%', y: '58%', scale: 0.45, dur: 2.4 }, { x: '38%', y: '8%', scale: 0.6, dur: 3.1 },
-            { x: '48%', y: '52%', scale: 0.75, dur: 3.8 }, { x: '73%', y: '65%', scale: 0.45, dur: 2.4 },
-            { x: '91%', y: '46%', scale: 0.6, dur: 3.1 }, { x: '60%', y: '30%', scale: 0.75, dur: 3.8 },
-            { x: '20%', y: '25%', scale: 0.45, dur: 2.4 }, { x: '82%', y: '78%', scale: 0.6, dur: 3.1 },
-          ].map((s, i) => (
-            <div
-              key={i}
-              style={{
-                position: 'absolute', left: s.x, top: s.y, width: 21, height: 21,
-                transform: 'translate(-50%,-50%)',
-                opacity: reduceMotion ? 0.7 : undefined,
-                animation: reduceMotion ? undefined : `starTwinkle ${s.dur}s ease-in-out infinite`,
-                animationDelay: `${i * 0.3}s`,
-              }}
-            >
-              <svg width="100%" height="100%" viewBox="-10.5 -10.5 21 21" style={{ overflow: 'visible' }}>
-                <SparkleStar scale={s.scale} />
-              </svg>
-            </div>
-          ))}
-
           {/* Glow — the lit doorway, pulsing gently */}
           <div style={{
             position: 'absolute', left: '54%', top: '57%', width: '9%', aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
@@ -116,10 +79,10 @@ export default function CosmicScene() {
 
           {/* Glow — soft halo around the ringed planet */}
           <div style={{
-            position: 'absolute', left: '77%', top: '20%', width: '46%', aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+            position: 'absolute', left: '75%', top: '20%', width: '58%', aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(190,200,255,0.16) 0%, rgba(150,170,240,0.07) 50%, transparent 75%)',
-            filter: 'blur(10px)',
+            background: 'radial-gradient(circle, rgba(210,215,255,0.3) 0%, rgba(180,190,250,0.14) 45%, transparent 72%)',
+            filter: 'blur(14px)',
             animation: reduceMotion ? undefined : 'glowPulse 7s ease-in-out infinite',
             animationDelay: '1s',
           }} />
@@ -135,17 +98,15 @@ export default function CosmicScene() {
           }} />
         </div>
       </div>
-    </div>
-  )
-}
 
-function SparkleStar({ scale = 1 }: { scale?: number }) {
-  const s = 14 * scale
-  return (
-    <g>
-      <path d={`M0,${-s} C${s * 0.15},${-s * 0.15} ${s * 0.15},${-s * 0.15} ${s},0 C${s * 0.15},${s * 0.15} ${s * 0.15},${s * 0.15} 0,${s} C${-s * 0.15},${s * 0.15} ${-s * 0.15},${s * 0.15} ${-s},0 C${-s * 0.15},${-s * 0.15} ${-s * 0.15},${-s * 0.15} 0,${-s} Z`}
-        fill="#ffffff" opacity={0.9} />
-      <circle r={s * 0.16} fill="#ffffff" />
-    </g>
+      {/* Ambient starfield — the SAME twinkling stars everywhere, drawn last so they
+          sit on top of both the artwork and the blurred backdrop instead of being
+          hidden behind the picture. */}
+      {!reduceMotion && (
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <Particles particleColors={['#ffffff']} particleCount={160} particleSpread={10} speed={0.08} particleBaseSize={80} alphaParticles={false} />
+        </div>
+      )}
+    </div>
   )
 }
