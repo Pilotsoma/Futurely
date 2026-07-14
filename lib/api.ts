@@ -214,6 +214,10 @@ export const api = {
       body: JSON.stringify({ avatarUrl }),
     }),
   roadmap: () => request<RoadmapData>('/api/roadmap'),
+  // Personalized milestones are fetched separately from the fast structured-data
+  // load above, so the page never blocks on the LLM call.
+  roadmapInsights: () =>
+    request<{ milestones: RoadmapData['milestones'] }>('/api/roadmap/insights', undefined, false, 60000),
   // LLM-backed endpoints get a longer timeout than the 30s default — generation
   // latency is inherently more variable than a typical CRUD call.
   chat: (message: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []) =>

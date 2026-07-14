@@ -2,7 +2,7 @@ import { Router, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { writeAuditLog } from '../lib/auditLog'
-import { generatePersonalizedMilestones } from '../services/ai/roadmapInsights'
+import { generatePersonalizedMilestones, buildFallbackMilestones } from '../services/ai/roadmapInsights'
 
 const router = Router()
 
@@ -31,6 +31,55 @@ function categorize(name: string): string {
   return 'Electives'
 }
 
+interface RoadmapCore {
+  gradeLevel: number
+  graduationYear: number | null
+  creditsCompleted: number
+  creditsRequired: number
+  creditsByCategory: Record<string, number>
+  weightedGpa: number
+  unweightedGpa: number
+  futureDecision: string | null
+}
+
+async function gatherRoadmapCore(userId: number): Promise<RoadmapCore> {
+  const profile = await prisma.profile.findUnique({ where: { userId } })
+  const courses = await prisma.course.findMany({
+    where: { userId },
+    include: { grades: { where: { gradingPeriod: 'CURRENT' }, take: 1 } },
+  })
+
+  const creditsByCategory: Record<string, number> = {
+    English: 0, Math: 0, Science: 0, 'Social Studies': 0,
+    Language: 0, 'Fine Arts': 0, 'PE / Health': 0, Electives: 0,
+  }
+
+  let creditsCompleted = 0
+  for (const c of courses) {
+    const grade = c.grades[0]
+    const passed = grade && grade.letterGrade !== 'F'
+    if (passed) {
+      creditsCompleted += c.creditHours
+      const cat = categorize(c.name)
+      creditsByCategory[cat] = (creditsByCategory[cat] ?? 0) + c.creditHours
+    }
+  }
+
+  return {
+    gradeLevel: deriveGradeLevel(profile?.graduationYear ?? null, profile?.gradeLevel ?? null),
+    graduationYear: profile?.graduationYear ?? null,
+    creditsCompleted,
+    creditsRequired: 26,
+    creditsByCategory,
+    weightedGpa: profile?.weightedGpa ?? 0,
+    unweightedGpa: profile?.unweightedGpa ?? 0,
+    futureDecision: profile?.futureDecision ?? null,
+  }
+}
+
+// Fast path: real structured data + instant (non-AI) milestones, so the page
+// never blocks on an LLM call. The frontend fetches personalized milestones
+// separately from GET /insights once the page has already rendered.
 router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.userId === undefined) {
     res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } })
@@ -46,55 +95,40 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<vo
       ipAddress: req.ip ?? 'unknown',
     })
 
-    const profile = await prisma.profile.findUnique({ where: { userId: req.userId } })
-    const courses = await prisma.course.findMany({
-      where: { userId: req.userId },
-      include: { grades: { where: { gradingPeriod: 'CURRENT' }, take: 1 } },
-    })
-
-    const creditsByCategory: Record<string, number> = {
-      English: 0, Math: 0, Science: 0, 'Social Studies': 0,
-      Language: 0, 'Fine Arts': 0, 'PE / Health': 0, Electives: 0,
-    }
-
-    let creditsCompleted = 0
-    for (const c of courses) {
-      const grade = c.grades[0]
-      const passed = grade && grade.letterGrade !== 'F'
-      if (passed) {
-        creditsCompleted += c.creditHours
-        const cat = categorize(c.name)
-        creditsByCategory[cat] = (creditsByCategory[cat] ?? 0) + c.creditHours
-      }
-    }
-
-    const gradeLevel = deriveGradeLevel(profile?.graduationYear ?? null, profile?.gradeLevel ?? null)
-    const creditsRequired = 26
-
-    const milestones = await generatePersonalizedMilestones({
-      gradeLevel,
-      creditsCompleted,
-      creditsRequired,
-      creditsByCategory,
-      weightedGpa: profile?.weightedGpa ?? 0,
-      unweightedGpa: profile?.unweightedGpa ?? 0,
-      futureDecision: profile?.futureDecision ?? null,
-    })
+    const core = await gatherRoadmapCore(req.userId)
 
     res.json({
       data: {
-        gradeLevel,
-        graduationYear: profile?.graduationYear ?? null,
-        creditsCompleted,
-        creditsRequired,
-        percentComplete: Math.round((creditsCompleted / creditsRequired) * 100),
-        creditsByCategory,
-        milestones,
-        weightedGpa: profile?.weightedGpa ?? 0,
-        unweightedGpa: profile?.unweightedGpa ?? 0,
-        futureDecision: profile?.futureDecision ?? null,
+        ...core,
+        percentComplete: Math.round((core.creditsCompleted / core.creditsRequired) * 100),
+        milestones: buildFallbackMilestones(core.gradeLevel),
       },
     })
+  } catch {
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
+  }
+})
+
+// Slow path: the AI-personalized milestones, fetched separately so the main
+// roadmap page load never waits on an LLM call.
+router.get('/insights', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.userId === undefined) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } })
+    return
+  }
+  try {
+    await writeAuditLog({
+      userId: req.userId,
+      resourceType: 'COURSE',
+      resourceId: String(req.userId),
+      action: 'READ_ROADMAP',
+      ipAddress: req.ip ?? 'unknown',
+    })
+
+    const core = await gatherRoadmapCore(req.userId)
+    const milestones = await generatePersonalizedMilestones(core)
+
+    res.json({ data: { milestones } })
   } catch {
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
   }

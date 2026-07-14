@@ -67,12 +67,28 @@ export default function RoadmapPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
 
+  // Personalized milestones load separately from the fast structured-data
+  // fetch above, so the page renders immediately with the same generic
+  // milestones every student used to see, then swaps in AI-personalized
+  // ones a few seconds later without blocking anything.
+  const [personalizedMilestones, setPersonalizedMilestones] = useState<RoadmapData['milestones'] | null>(null)
+  const [personalizing, setPersonalizing] = useState(false)
+
   useEffect(() => {
     api.roadmap()
       .then(d => setData(d))
       .catch(e => setError(e instanceof Error ? e.message : 'Failed to load roadmap'))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!data) return
+    setPersonalizing(true)
+    api.roadmapInsights()
+      .then(({ milestones }) => setPersonalizedMilestones(milestones))
+      .catch(() => {}) // AI personalization is best-effort — keep the generic milestones on failure
+      .finally(() => setPersonalizing(false))
+  }, [data])
 
   if (loading) return <PageLoader message="Loading your roadmap…" />
 
@@ -89,8 +105,9 @@ export default function RoadmapPage() {
 
   const {
     gradeLevel, graduationYear, creditsCompleted, creditsRequired,
-    percentComplete, creditsByCategory, milestones, weightedGpa, unweightedGpa,
+    percentComplete, creditsByCategory, weightedGpa, unweightedGpa,
   } = data
+  const milestones = personalizedMilestones ?? data.milestones
 
   // Empty state check: no credits at all
   const hasNoCredits =
@@ -178,7 +195,12 @@ export default function RoadmapPage() {
 
       {/* ── Milestone timeline ────────────────────────────────────────────── */}
       <div>
-        <div style={S.sectionLabel}>4-Year Timeline</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={S.sectionLabel}>4-Year Timeline</div>
+          {personalizing && (
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>Personalizing…</span>
+          )}
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
           {milestones.map(m => {
             const isCurrent = m.grade === gradeLevel

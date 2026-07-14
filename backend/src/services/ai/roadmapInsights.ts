@@ -72,7 +72,7 @@ class RoadmapInsightsGenerationError extends Error {
 //   grade 9 → gradeLevel > 9, grade 10 → gradeLevel > 10, etc.
 //   grade 12 → always false since gradeLevel tops out at 12.
 
-function buildFallbackMilestones(gradeLevel: number): RoadmapMilestone[] {
+export function buildFallbackMilestones(gradeLevel: number): RoadmapMilestone[] {
   return [
     { grade: 9,  label: 'Explore interests, build strong foundations',       done: 9  < gradeLevel },
     { grade: 10, label: 'Challenge yourself — consider AP or Honors courses', done: 10 < gradeLevel },
