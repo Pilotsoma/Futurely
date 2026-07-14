@@ -268,17 +268,19 @@ Respond with ONLY a JSON object in exactly this shape (no markdown, no extra tex
   ]
 }`
 
-    const response = await createChatCompletion({
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 2048,
-    })
-
-    const raw = response.choices[0]?.message?.content ?? '{}'
     let data: StudyPlan
     try {
+      const response = await createChatCompletion({
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2048,
+      })
+      const raw = response.choices[0]?.message?.content ?? '{}'
       data = StudyPlanSchema.parse(JSON.parse(extractJson(raw)))
-    } catch (parseErr) {
-      console.error('[AI STUDY PLAN] LLM returned invalid structure, using fallback plan', parseErr)
+    } catch (err) {
+      // Covers both a failed AI call (both primary and fallback models down)
+      // and a malformed/invalid response — either way, degrade to a simple
+      // deterministic plan instead of a 500, same as every other AI feature.
+      console.error('[AI STUDY PLAN] Falling back to deterministic plan', err)
       data = buildFallbackPlan(assignmentList)
     }
 
