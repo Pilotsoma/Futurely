@@ -1,4 +1,6 @@
 import OpenAI from 'openai'
+import type { ChatCompletion, ChatCompletionCreateParamsNonStreaming } from 'openai/resources/chat/completions'
+import { logger } from '../common/logger'
 
 // Provider-agnostic LLM client. Switch providers for local testing via
 // AI_PROVIDER=openrouter|nvidia — defaults to openrouter (production).
@@ -49,4 +51,37 @@ export function getAiClient(): OpenAI {
 export function getAiModel(): string {
   const provider = activeProvider()
   return process.env[provider.modelEnv] ?? provider.defaultModel
+}
+
+const NVIDIA_RELIABLE_FALLBACK_MODEL = PROVIDERS.nvidia.defaultModel // meta/llama-3.1-70b-instruct
+
+/**
+ * Drop-in replacement for `getAiClient().chat.completions.create({ model: getAiModel(), ... })`.
+ * If the configured NVIDIA model fails (newer/trendier NIM models like
+ * deepseek-v4-pro are frequently capacity-overloaded on the free tier — see
+ * PROVIDERS.nvidia above), automatically retries once against the
+ * known-reliable llama-3.1-70b-instruct model before giving up, so a bad
+ * NVIDIA_MODEL override degrades gracefully instead of failing every call.
+ * OpenRouter calls are unaffected — no equivalent documented failure mode
+ * to fall back from.
+ */
+export async function createChatCompletion(
+  params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'> & { model?: string }
+): Promise<ChatCompletion> {
+  const client = getAiClient()
+  const { model: modelOverride, ...rest } = params
+  const primaryModel = modelOverride ?? getAiModel()
+
+  try {
+    return await client.chat.completions.create({ ...rest, model: primaryModel })
+  } catch (err) {
+    const isNvidia = process.env.AI_PROVIDER === 'nvidia'
+    if (isNvidia && primaryModel !== NVIDIA_RELIABLE_FALLBACK_MODEL) {
+      logger.warn('AI call failed on configured NVIDIA model, retrying with reliable fallback', {
+        errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
+      })
+      return await client.chat.completions.create({ ...rest, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
+    }
+    throw err
+  }
 }

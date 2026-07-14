@@ -8,7 +8,7 @@ import { loginHAC, getGrades, getStudentInfo, getTranscript } from '../integrati
 import { normalizeHacGrades } from '../integrations/grades/normalizeGrades'
 import { encryptPassword, decryptPassword } from '../integrations/grades/credentialCrypto'
 import { deleteSessionByUserId } from '../integrations/grades/sessionStore'
-import { getAiClient, getAiModel } from '../lib/aiClient'
+import { createChatCompletion } from '../lib/aiClient'
 
 const router = Router()
 router.use(requireAuth)
@@ -634,8 +634,7 @@ Current courses: ${coursesSummary || 'none on file'}
 Pending assignments: ${pendingCount}
 Answer the parent's question clearly and helpfully. Be concise.`
 
-    const response = await getAiClient().chat.completions.create({
-      model: getAiModel(),
+    const response = await createChatCompletion({
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: message.trim() },

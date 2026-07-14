@@ -13,7 +13,7 @@
 
 import { z } from 'zod'
 import { logger } from '../../common/logger'
-import { getAiClient, getAiModel } from '../../lib/aiClient'
+import { createChatCompletion } from '../../lib/aiClient'
 import type {
   CollegeInsightsPayload,
   CollegeInsightsPromptInput,
@@ -268,10 +268,7 @@ async function generateCollegeInsightsOnce(
 
   let raw: string
   try {
-    const client = getAiClient()
-
-    const response = await client.chat.completions.create({
-      model: getAiModel(),
+    const response = await createChatCompletion({
       max_tokens: 600,
       messages: [
         { role: 'system', content: buildSystemPrompt() },

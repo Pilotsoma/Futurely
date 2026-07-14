@@ -6,7 +6,7 @@
 // All inputs are assignment metadata only — no student PII enters the prompt.
 // Falls back to MEDIUM on any LLM error or invalid response.
 
-import { getAiClient, getAiModel } from '../lib/aiClient'
+import { createChatCompletion } from '../lib/aiClient'
 import { prisma } from '../lib/prisma'
 import { logger } from '../common/logger'
 import { writeAuditLog } from '../lib/auditLog'
@@ -67,8 +67,7 @@ export async function scoreAssignmentPriority(
   input: AssignmentInput,
 ): Promise<AssignmentPriority> {
   try {
-    const response = await getAiClient().chat.completions.create({
-      model: getAiModel(),
+    const response = await createChatCompletion({
       max_tokens: 10,
       // Force deterministic classification — random sampling caused
       // inconsistent results for identical inputs during manual testing.

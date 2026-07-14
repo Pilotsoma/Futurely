@@ -13,7 +13,7 @@
 
 import { z } from 'zod'
 import { logger } from '../../common/logger'
-import { getAiClient, getAiModel } from '../../lib/aiClient'
+import { createChatCompletion } from '../../lib/aiClient'
 
 // ── JSON-extraction helper (mirrors collegeInsightsPrompt.ts) ─────────────────
 
@@ -226,9 +226,7 @@ async function generateMilestonesFromLlm(
 
   let raw: string
   try {
-    const client = getAiClient()
-    const response = await client.chat.completions.create({
-      model: getAiModel(),
+    const response = await createChatCompletion({
       max_tokens: 400,
       messages: [
         { role: 'system', content: buildSystemPrompt() },
