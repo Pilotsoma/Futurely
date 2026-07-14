@@ -35,15 +35,6 @@ export default function CosmicScene() {
         `.replace(/\s+/g, ' '),
       }} />
 
-      {/* Faint nebula wash for depth */}
-      <div style={{
-        position: 'absolute', inset: 0, mixBlendMode: 'screen', opacity: 0.5,
-        background: `
-          radial-gradient(ellipse 700px 380px at 75% 70%, rgba(120,60,180,0.10) 0%, transparent 70%),
-          radial-gradient(ellipse 600px 400px at 15% 20%, rgba(40,90,200,0.10) 0%, transparent 70%)
-        `.replace(/\s+/g, ' '),
-      }} />
-
       {/* Starfield + shooting stars */}
       <div style={{ position: 'absolute', inset: 0 }}>
         {reduceMotion ? (
@@ -107,8 +98,8 @@ function RingedPlanet() {
     <svg viewBox="0 0 200 200" width="190" height="190" style={{ overflow: 'visible' }}>
       <defs>
         <radialGradient id="rp-atmo" cx="50%" cy="50%" r="50%">
-          <stop offset="72%" stopColor="rgba(240,180,110,0)" />
-          <stop offset="100%" stopColor="rgba(240,180,110,0.35)" />
+          <stop offset="80%" stopColor="rgba(240,180,110,0)" />
+          <stop offset="100%" stopColor="rgba(240,180,110,0.2)" />
         </radialGradient>
         <radialGradient id="rp-body" cx="38%" cy="32%" r="72%">
           <stop offset="0%" stopColor="#ffe3ae" />
@@ -162,8 +153,8 @@ function OceanPlanet() {
     <svg viewBox="0 0 100 100" width="96" height="96" style={{ overflow: 'visible' }}>
       <defs>
         <radialGradient id="op-atmo" cx="50%" cy="50%" r="50%">
-          <stop offset="78%" stopColor="rgba(110,180,255,0)" />
-          <stop offset="100%" stopColor="rgba(110,180,255,0.4)" />
+          <stop offset="82%" stopColor="rgba(110,180,255,0)" />
+          <stop offset="100%" stopColor="rgba(110,180,255,0.22)" />
         </radialGradient>
         <radialGradient id="op-body" cx="35%" cy="30%" r="75%">
           <stop offset="0%" stopColor="#bfe3ff" />
@@ -231,73 +222,53 @@ function MoonPlanet() {
 
 function BoyOnRock() {
   return (
-    <svg viewBox="0 0 300 230" width="300" height="230" fill="none" style={{ overflow: 'visible' }}>
+    <svg viewBox="0 0 260 210" width="260" height="210" fill="none" style={{ overflow: 'visible' }}>
       <defs>
-        <radialGradient id="by-glow" cx="46%" cy="30%" r="55%">
-          <stop offset="0%" stopColor="rgba(160,150,255,0.28)" />
-          <stop offset="100%" stopColor="rgba(160,150,255,0)" />
-        </radialGradient>
-        <radialGradient id="by-rock" cx="30%" cy="18%" r="85%">
-          <stop offset="0%" stopColor="#4a3d6b" />
-          <stop offset="30%" stopColor="#332a4d" />
-          <stop offset="65%" stopColor="#1c1730" />
+        <radialGradient id="by-rock" cx="32%" cy="15%" r="80%">
+          <stop offset="0%" stopColor="#372c50" />
+          <stop offset="55%" stopColor="#1e1832" />
           <stop offset="100%" stopColor="#0a0816" />
-        </radialGradient>
-        <linearGradient id="by-figure" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#1b1730" />
-          <stop offset="100%" stopColor="#050409" />
-        </linearGradient>
-        <radialGradient id="by-moon" cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="55%" stopColor="#dfe3ff" />
-          <stop offset="100%" stopColor="#9aa3e0" />
         </radialGradient>
       </defs>
 
-      {/* moon he's looking at, up and to the left */}
-      <circle cx="72" cy="34" r="17" fill="url(#by-moon)" opacity="0.95" />
-      <circle cx="72" cy="34" r="24" fill="url(#by-moon)" opacity="0.12" />
-      <circle cx="66" cy="28" r="2.6" fill="rgba(120,130,190,0.35)" />
-      <circle cx="78" cy="40" r="1.8" fill="rgba(120,130,190,0.3)" />
-
-      {/* ambient glow behind the figure */}
-      <ellipse cx="150" cy="120" rx="160" ry="130" fill="url(#by-glow)" />
-
       {/* the rock/asteroid he's standing on */}
-      <ellipse cx="150" cy="360" rx="260" ry="260" fill="url(#by-rock)" stroke="rgba(170,150,255,0.22)" strokeWidth="1.5" />
-      {/* horizon rim light */}
-      <path d="M -60 118 Q 150 78 360 118" fill="none" stroke="rgba(180,165,255,0.3)" strokeWidth="1.5" />
-      {/* craters */}
-      <ellipse cx="60" cy="128" rx="14" ry="5" fill="rgba(0,0,0,0.22)" />
-      <ellipse cx="225" cy="132" rx="18" ry="6" fill="rgba(0,0,0,0.2)" />
-      <ellipse cx="130" cy="148" rx="9" ry="3.5" fill="rgba(0,0,0,0.16)" />
-      <ellipse cx="55" cy="128" rx="6" ry="2" fill="rgba(255,255,255,0.05)" />
+      <ellipse cx="130" cy="330" rx="230" ry="230" fill="url(#by-rock)" stroke="rgba(170,150,255,0.18)" strokeWidth="1.5" />
+      {/* horizon rim light, catching light from the upper right */}
+      <path d="M -50 104 Q 130 66 310 104" fill="none" stroke="rgba(180,165,255,0.25)" strokeWidth="1.5" />
+      {/* a couple of simple craters */}
+      <ellipse cx="52" cy="112" rx="12" ry="4" fill="rgba(0,0,0,0.2)" />
+      <ellipse cx="196" cy="116" rx="15" ry="5" fill="rgba(0,0,0,0.18)" />
 
       {/* contact shadow under his feet */}
-      <ellipse cx="150" cy="196" rx="30" ry="7" fill="rgba(0,0,0,0.35)" />
+      <ellipse cx="128" cy="176" rx="24" ry="6" fill="rgba(0,0,0,0.35)" />
 
-      {/* boy — hoodie silhouette, hands in pocket, head tilted up at the moon */}
-      <g transform="translate(150,58)">
-        {/* hair / head, slight upward tilt */}
-        <path d="M -13 8 C -14 -6 -3 -14 6 -12 C 16 -10 18 0 15 10 C 14 15 10 18 4 18 C -6 19 -12 15 -13 8 Z" fill="url(#by-figure)" />
-        {/* hoodie shoulders + torso */}
-        <path d="M -20 34 C -21 20 -14 15 -6 15 L 12 14 C 21 14 27 20 27 34 L 29 78 C 29 84 24 88 15 89 L -13 89 C -21 88 -25 84 -24 78 Z" fill="url(#by-figure)" />
-        {/* hood ridge line for detail */}
-        <path d="M -14 16 C -8 22 12 22 18 15" fill="none" stroke="rgba(150,140,220,0.28)" strokeWidth="1.2" />
+      {/* boy — flat side-profile silhouette, facing right, looking up toward the top-right sky */}
+      <g transform="translate(96,44)" fill="#0a0814">
+        {/* head, profile facing right with a small nose */}
+        <path d="M -8 -6 C -11 -16 -6 -27 5 -29 C 15 -31 22 -24 22 -15
+                 C 25 -14 26 -11 24 -9 C 22 -7 20 -8 19 -10
+                 C 18 -5 15 -1 10 1 L 8 5 C 4 7 -2 7 -6 5
+                 C -9 3 -10 -2 -8 -6 Z" />
+        {/* collar / hood base at the neck */}
+        <path d="M -5 3 C -8 8 -7 13 -2 16 L 10 16 C 14 13 15 8 12 3 Z" />
+        {/* hoodie torso, slight forward lean, kangaroo pocket up front */}
+        <path d="M -14 12 C -19 20 -20 34 -17 50 L -13 88
+                 C -12 94 -6 98 3 98 L 19 98
+                 C 27 98 32 93 31 86 L 27 50
+                 C 30 34 28 20 21 12
+                 C 13 7 -6 7 -14 12 Z" />
         {/* pocket seam */}
-        <path d="M -14 58 C -6 63 12 63 20 58" fill="none" stroke="rgba(150,140,220,0.2)" strokeWidth="1" />
-        {/* arms, hands tucked in pocket */}
-        <path d="M -20 30 C -30 36 -33 50 -28 62 C -25 66 -19 65 -16 60 C -20 50 -19 40 -13 32 Z" fill="url(#by-figure)" />
-        <path d="M 27 30 C 37 36 40 50 35 62 C 32 66 26 65 23 60 C 27 50 26 40 20 32 Z" fill="url(#by-figure)" />
-        {/* legs, standing at ease */}
-        <path d="M -13 85 L -18 132 L -6 132 L -2 89 Z" fill="url(#by-figure)" />
-        <path d="M 16 85 L 21 132 L 9 132 L 4 89 Z" fill="url(#by-figure)" />
-        {/* shoes */}
-        <ellipse cx="-13" cy="135" rx="9" ry="4" fill="#050409" />
-        <ellipse cx="16" cy="135" rx="9" ry="4" fill="#050409" />
-        {/* rim light along the sky-facing edge */}
-        <path d="M 15 -10 C 22 -4 26 6 24 16 M 22 24 C 28 30 30 42 27 56 M 20 60 L 24 78"
-          fill="none" stroke="rgba(180,170,255,0.35)" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M -12 58 C -3 64 15 64 24 57" fill="none" stroke="rgba(150,140,220,0.18)" strokeWidth="1.2" strokeLinecap="round" />
+        {/* back leg */}
+        <path d="M -9 92 C -13 92 -16 95 -16 99 L -19 132 C -19 135 -17 137 -13 137 L -6 137 C -3 137 -1 135 -1 132 L -1 96 Z" />
+        {/* front leg, stepped forward toward the right */}
+        <path d="M 12 94 C 16 93 20 95 21 99 L 27 130 C 28 134 26 137 22 137 L 12 137 C 9 137 7 135 7 132 L 8 98 Z" />
+        {/* simple shoe caps */}
+        <path d="M -20 132 L -3 132 C -1 132 0 134 -1 136 C -3 140 -11 141 -17 140 C -20 139 -21 135 -20 132 Z" />
+        <path d="M 8 130 L 30 130 C 33 130 34 132 32 135 C 30 139 21 140 13 138 C 9 137 7 133 8 130 Z" />
+        {/* single rim-light accent along the sky-facing edge, catching light from upper right */}
+        <path d="M 19 -25 C 24 -20 26 -13 24 -9 M 21 12 C 28 20 30 34 27 50 L 31 86 M 27 99 L 32 128"
+          fill="none" stroke="rgba(180,170,255,0.3)" strokeWidth="1.2" strokeLinecap="round" />
       </g>
     </svg>
   )
