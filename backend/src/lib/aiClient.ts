@@ -64,10 +64,17 @@ const NVIDIA_RELIABLE_FALLBACK_MODEL = PROVIDERS.nvidia.defaultModel // meta/lla
  * NVIDIA_MODEL override degrades gracefully instead of failing every call.
  * OpenRouter calls are unaffected — no equivalent documented failure mode
  * to fall back from.
+ *
+ * Pass `retryOnFailure: false` for latency-sensitive calls that already have
+ * their own fast, safe failure handling (e.g. a classifier that fails open) —
+ * the retry doubles worst-case latency (up to another full timeout window),
+ * which isn't worth it when the caller doesn't need the extra reliability.
  */
 export async function createChatCompletion(
-  params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'> & { model?: string }
+  params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'> & { model?: string },
+  options: { retryOnFailure?: boolean } = {}
 ): Promise<ChatCompletion> {
+  const { retryOnFailure = true } = options
   const client = getAiClient()
   const { model: modelOverride, ...rest } = params
   const primaryModel = modelOverride ?? getAiModel()
@@ -76,7 +83,7 @@ export async function createChatCompletion(
     return await client.chat.completions.create({ ...rest, model: primaryModel })
   } catch (err) {
     const isNvidia = process.env.AI_PROVIDER === 'nvidia'
-    if (isNvidia && primaryModel !== NVIDIA_RELIABLE_FALLBACK_MODEL) {
+    if (retryOnFailure && isNvidia && primaryModel !== NVIDIA_RELIABLE_FALLBACK_MODEL) {
       logger.warn('AI call failed on configured NVIDIA model, retrying with reliable fallback', {
         errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
       })

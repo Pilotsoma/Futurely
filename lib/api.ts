@@ -216,15 +216,17 @@ export const api = {
   roadmap: () => request<RoadmapData>('/api/roadmap'),
   // Personalized milestones are fetched separately from the fast structured-data
   // load above, so the page never blocks on the LLM call.
+  // A single LLM call can now take up to ~60s worst case (createChatCompletion
+  // retries once against a fallback model on failure), so single-call endpoints
+  // get 65s. /api/ai/chat makes two sequential calls (intent classifier, then
+  // the actual response) and gets 95s to cover both.
   roadmapInsights: () =>
-    request<{ milestones: RoadmapData['milestones'] }>('/api/roadmap/insights', undefined, false, 60000),
-  // LLM-backed endpoints get a longer timeout than the 30s default — generation
-  // latency is inherently more variable than a typical CRUD call.
+    request<{ milestones: RoadmapData['milestones'] }>('/api/roadmap/insights', undefined, false, 65000),
   chat: (message: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []) =>
     request<{ reply: string }>('/api/ai/chat', {
       method: 'POST',
       body: JSON.stringify({ message, history, renderMarkdown: true }),
-    }, false, 60000),
+    }, false, 95000),
   studyPlan: () => request<{
     overview: string
     days: Array<{
@@ -239,7 +241,7 @@ export const api = {
         notes: string
       }>
     }>
-  }>('/api/ai/study-plan', undefined, false, 60000),
+  }>('/api/ai/study-plan', undefined, false, 65000),
 
   // ── School Portal Integration ──────────────────────────────────────────────
 
@@ -566,7 +568,7 @@ export const api = {
   plannerScorePriorities: () =>
     request<{ scored: number }>('/api/assignments/score-priorities', {
       method: 'POST',
-    }),
+    }, false, 65000),
 
   // ── Canvas Integration ────────────────────────────────────────────────────────
 
@@ -696,7 +698,7 @@ export const api = {
     request<{ deleted: boolean }>(`/api/colleges/${id}`, { method: 'DELETE' }),
 
   collegeInsights: (id: number) =>
-    request<CollegeInsights>(`/api/colleges/${id}/insights`),
+    request<CollegeInsights>(`/api/colleges/${id}/insights`, undefined, false, 65000),
 
   deleteAccount: (password?: string) =>
     request<{ deleted: boolean }>('/api/auth/account', {
@@ -868,7 +870,7 @@ export const api = {
     request<{ reply: string }>(`/api/parent/students/${studentId}/chat`, {
       method: 'POST',
       body: JSON.stringify({ message }),
-    }),
+    }, false, 65000),
 
   adminStats: () =>
     request<{ totalUsers: number; activeUsers: number; liveUsers: number }>('/api/marketplace/admin/stats'),

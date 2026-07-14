@@ -148,7 +148,11 @@ async function classifyOnce(message: string, history: ChatTurn[]): Promise<Inten
       ...(recentHistory ? [{ role: 'user' as const, content: `Recent conversation for context:\n${recentHistory}` }] : []),
       { role: 'user', content: `Classify this message:\n${message}` },
     ],
-  })
+    // The caller (analyze() below) already fails open safely and fast on any
+    // error — retrying here would just double this call's worst-case latency
+    // for no benefit, and this classifier runs before every chat response,
+    // so that delay hits every single message.
+  }, { retryOnFailure: false })
 
   const raw = response.choices[0]?.message?.content ?? ''
   const parsed = IntentClassificationSchema.parse(JSON.parse(extractJson(raw)))
