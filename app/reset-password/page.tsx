@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { LinkIcon, CheckCircleIcon, CheckIcon } from '@/components/icons'
 import { api, ApiError } from '../../lib/api'
+import CosmicScene from '../login/CosmicScene'
 
 function ResetPasswordForm() {
   const router = useRouter()
@@ -154,9 +155,21 @@ function ResetPasswordForm() {
 }
 
 export default function ResetPasswordPage() {
+  // Cosmic background is desktop-only — mobile keeps the original plain screen,
+  // same gating as the login page.
+  const [isDesktop, setIsDesktop] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    setIsDesktop(mq.matches)
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
+    <div style={isDesktop ? styles.pageCosmic : styles.page}>
+      {isDesktop && <CosmicScene />}
+      <div style={isDesktop ? styles.cardCosmic : styles.card}>
         {/* Logo — icon + live text wordmark (logo2.png has "Futurely" baked into the pixels) */}
         <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <Image src="/logo.png" alt="" width={54} height={54} style={{ objectFit: 'contain' }} />
@@ -178,8 +191,10 @@ export default function ResetPasswordPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page:  { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 20 },
-  card:  { width: '100%', maxWidth: 420, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 40px rgba(26,21,14,0.08), 0 2px 10px rgba(26,21,14,0.05)' },
+  page:       { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 20 },
+  card:       { width: '100%', maxWidth: 420, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 40px rgba(26,21,14,0.08), 0 2px 10px rgba(26,21,14,0.05)' },
+  pageCosmic: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#04040e', padding: 20, position: 'relative', overflow: 'hidden' },
+  cardCosmic: { position: 'relative', zIndex: 2, width: '100%', maxWidth: 420, background: 'rgba(18,16,32,0.72)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(180,160,255,0.16)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(180,160,255,0.05)' },
   field: { display: 'flex', flexDirection: 'column', gap: 6, width: '100%' },
   label: { fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.2px' },
   input: { background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px', color: 'var(--text)', height: 46, width: '100%', outline: 'none', boxSizing: 'border-box' as const, fontSize: 14, transition: 'border-color 0.15s' },
