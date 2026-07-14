@@ -55,6 +55,14 @@ export function getAiModel(): string {
 
 const NVIDIA_RELIABLE_FALLBACK_MODEL = PROVIDERS.nvidia.defaultModel // meta/llama-3.1-70b-instruct
 
+// When a fallback model is available, don't make the caller wait the full
+// 30s client timeout to find out the primary is down — every observed
+// failure has hung for the entire window rather than erroring quickly, so a
+// shorter fail-fast timeout on just the primary attempt gets us to the
+// (already-fast, ~10-15s) fallback sooner without giving up on the primary
+// model as the first choice.
+const PRIMARY_FAIL_FAST_TIMEOUT_MS = 18000
+
 // ── Circuit breaker for the configured NVIDIA model ────────────────────────
 //
 // Once the primary model fails, skip straight to the reliable fallback for a
@@ -108,7 +116,8 @@ export async function createChatCompletion(
   }
 
   try {
-    const result = await client.chat.completions.create({ ...rest, model: primaryModel })
+    const primaryOptions = hasFallback ? { timeout: PRIMARY_FAIL_FAST_TIMEOUT_MS } : undefined
+    const result = await client.chat.completions.create({ ...rest, model: primaryModel }, primaryOptions)
     if (hasFallback) circuitOpenUntil = 0 // primary recovered — close the circuit
     return result
   } catch (err) {
