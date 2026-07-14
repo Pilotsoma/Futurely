@@ -29,7 +29,7 @@ export default function CosmicScene() {
         }
       `}</style>
 
-      {/* Deep space gradient — fills any letterboxed edge around the artwork */}
+      {/* Deep space gradient — base tint under everything */}
       <div style={{
         position: 'absolute', inset: 0,
         background: `
@@ -38,6 +38,19 @@ export default function CosmicScene() {
           radial-gradient(ellipse at 50% 45%, #0b0a20 0%, #050414 100%)
         `.replace(/\s+/g, ' '),
       }} />
+
+      {/* Blurred full-bleed copy of the artwork — fills the whole viewport edge to
+          edge so the sides never go flat black, like a soft-focus backdrop behind
+          the crisp foreground copy. */}
+      <div style={{ position: 'absolute', inset: '-5%' }}>
+        <Image
+          src="/login/login-bg.png"
+          alt=""
+          fill
+          sizes="100vw"
+          style={{ objectFit: 'cover', filter: 'blur(60px) brightness(0.55) saturate(1.15)', transform: 'scale(1.1)' }}
+        />
+      </div>
 
       {/* Ambient starfield across the whole viewport, including the letterboxed edges */}
       {!reduceMotion && (
