@@ -96,16 +96,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [pillReady, setPillReady] = useState(false)
 
   useLayoutEffect(() => {
-    const activeHref = NAV.find(n => pathname === n.href || pathname.startsWith(n.href + '/'))?.href
-    if (!activeHref) return
-    const linkEl = linkRefs.current[activeHref]
-    const navEl  = navRef.current
-    if (!linkEl || !navEl) return
-    const navRect  = navEl.getBoundingClientRect()
-    const linkRect = linkEl.getBoundingClientRect()
-    setPillY(linkRect.top - navRect.top)
-    setPillH(linkRect.height)
-    setPillReady(true)
+    function measurePill() {
+      const activeHref = NAV.find(n => pathname === n.href || pathname.startsWith(n.href + '/'))?.href
+      if (!activeHref) return
+      const linkEl = linkRefs.current[activeHref]
+      const navEl  = navRef.current
+      if (!linkEl || !navEl) return
+      const navRect  = navEl.getBoundingClientRect()
+      const linkRect = linkEl.getBoundingClientRect()
+      setPillY(linkRect.top - navRect.top)
+      setPillH(linkRect.height)
+      setPillReady(true)
+    }
+
+    measurePill()
+
+    // Rows can be added/removed after this effect runs (e.g. the admin-only
+    // "Educator Requests" link appears once permissions load asynchronously),
+    // which shifts row positions without a pathname/isExpanded change. Re-measure
+    // whenever the nav's layout actually changes so the pill never goes stale.
+    const navEl = navRef.current
+    if (!navEl) return
+    const observer = new ResizeObserver(measurePill)
+    observer.observe(navEl)
+    return () => observer.disconnect()
   }, [pathname, isExpanded])
 
   useEffect(() => {
