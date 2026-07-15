@@ -13,7 +13,7 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     href: '/grades/classwork',
     title: 'Grades',
     desc: 'Assignments & current averages',
-    icon: <BarChartIcon size={22}/>,
+    icon: <BarChartIcon size={30}/>,
     iconBg: 'rgba(16,185,129,0.14)',
     iconColor: '#10B981',
   },
@@ -21,7 +21,7 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     href: '/grades/report-card',
     title: 'Report Card',
     desc: 'Official grades by reporting period',
-    icon: <ClipboardIcon size={22}/>,
+    icon: <ClipboardIcon size={30}/>,
     iconBg: 'rgba(59,130,246,0.16)',
     iconColor: '#3B82F6',
   },
@@ -29,7 +29,7 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     href: '/grades/schedule',
     title: 'Class Schedule',
     desc: 'Your class periods',
-    icon: <ClockIcon size={22}/>,
+    icon: <ClockIcon size={30}/>,
     iconBg: 'rgba(245,158,11,0.14)',
     iconColor: '#F59E0B',
   },
@@ -37,7 +37,7 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     href: '/grades/what-if',
     title: 'What-If Calculator',
     desc: 'Simulate GPA changes',
-    icon: <CalculatorIcon size={22}/>,
+    icon: <CalculatorIcon size={30}/>,
     iconBg: 'var(--primary-dim)',
     iconColor: 'var(--primary)',
   },
@@ -45,7 +45,7 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     href: '/grades/contact',
     title: 'Contact Teachers',
     desc: 'Email your teachers',
-    icon: <EnvelopeIcon size={22}/>,
+    icon: <EnvelopeIcon size={30}/>,
     iconBg: 'rgba(249,115,22,0.14)',
     iconColor: '#F97316',
   },
@@ -53,7 +53,7 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     href: '/grades/progress',
     title: 'Progress Report',
     desc: 'Interim grades by date',
-    icon: <TrendingUpIcon size={22}/>,
+    icon: <TrendingUpIcon size={30}/>,
     iconBg: 'rgba(167,139,250,0.16)',
     iconColor: '#A78BFA',
   },
@@ -61,7 +61,7 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     href: '/grades/transcript',
     title: 'Transcript',
     desc: 'Credits & GPA history',
-    icon: <DocumentIcon size={22}/>,
+    icon: <DocumentIcon size={30}/>,
     iconBg: 'rgba(99,102,241,0.16)',
     iconColor: '#6366F1',
   },
@@ -69,7 +69,7 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     href: '/grades/attendance',
     title: 'Attendance',
     desc: 'Absences & tardies calendar',
-    icon: <CalendarIcon size={22}/>,
+    icon: <CalendarIcon size={30}/>,
     iconBg: 'rgba(239,68,68,0.14)',
     iconColor: '#EF4444',
   },
@@ -97,7 +97,7 @@ export default function GradesHubPage() {
               <div style={S.cardTitle}>{card.title}</div>
               <div style={S.cardDesc}>{card.desc}</div>
             </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </button>
@@ -108,10 +108,10 @@ export default function GradesHubPage() {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  title:    { fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 28 },
-  grid:     { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 },
-  card:     { display: 'flex', alignItems: 'center', gap: 18, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s', boxShadow: 'var(--neo-raised)' },
-  iconBox:  { width: 52, height: 52, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  cardTitle:{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 4 },
-  cardDesc: { fontSize: 13, color: 'var(--text-secondary)' },
+  title:    { fontSize: 30, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 32 },
+  grid:     { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 },
+  card:     { display: 'flex', alignItems: 'center', gap: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '34px 30px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s', boxShadow: 'var(--neo-raised)' },
+  iconBox:  { width: 68, height: 68, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  cardTitle:{ fontSize: 19, fontWeight: 700, color: 'var(--text)', marginBottom: 5 },
+  cardDesc: { fontSize: 14.5, color: 'var(--text-secondary)' },
 }
