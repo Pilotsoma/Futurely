@@ -65,12 +65,12 @@ function buildStaticStarBackground() {
 // confirmed by cropping the source image at that exact point, rather than
 // eyeballed off a downscaled preview (which was off by several percent).
 const GLOWS = {
-  litDoor:   { x: 89.0, y: 42.8, size: 4.5, color: 'rgba(220,235,255,0.9)',  colorMid: 'rgba(180,210,255,0.35)', delay: '0s' },
-  blackHole: { x: 84.4, y: 17.0, size: 18,  color: 'rgba(200,170,255,0.5)',  colorMid: 'rgba(160,120,255,0.18)', delay: '0.5s' },
+  litDoor:   { x: 89.0, y: 42.8, w: 3.2, h: 7.5, color: 'rgba(220,235,255,0.9)',  colorMid: 'rgba(180,210,255,0.4)', delay: '0s' },
+  blackHole: { x: 84.4, y: 17.0, size: 20 },
   doors: [
-    { x: 29.9, y: 57.7, size: 4.5, delay: '1.1s' },
-    { x: 35.4, y: 70.9, size: 4,   delay: '2.4s' },
-    { x: 67.2, y: 67.2, size: 4.5, delay: '0.2s' },
+    { x: 29.9, y: 57.7, w: 2.6, h: 8,   delay: '1.1s' },
+    { x: 35.4, y: 70.9, w: 2.2, h: 5,   delay: '2.4s' },
+    { x: 67.2, y: 67.2, w: 3.0, h: 9,   delay: '0.2s' },
   ],
 }
 
@@ -118,33 +118,36 @@ export default function CosmicScene() {
         `.replace(/\s+/g, ' '),
       }} />
 
-      {/* Glow — the lit doorway, pulsing gently */}
+      {/* Glow — the lit doorway, shaped to the door's own tall opening rather
+          than a generic circle, pulsing gently */}
       <div style={{
-        position: 'absolute', ...at(GLOWS.litDoor.x, GLOWS.litDoor.y), width: `${GLOWS.litDoor.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+        position: 'absolute', ...at(GLOWS.litDoor.x, GLOWS.litDoor.y), width: `${GLOWS.litDoor.w}%`, height: `${GLOWS.litDoor.h}%`, transform: 'translate(-50%,-50%)',
         borderRadius: '50%',
-        background: `radial-gradient(circle, ${GLOWS.litDoor.color} 0%, ${GLOWS.litDoor.colorMid} 45%, transparent 75%)`,
-        filter: 'blur(6px)',
+        background: `radial-gradient(ellipse, ${GLOWS.litDoor.color} 0%, ${GLOWS.litDoor.colorMid} 40%, transparent 65%)`,
+        filter: 'blur(3px)',
         animation: reduceMotion ? undefined : 'glowPulse 4.5s ease-in-out infinite',
         animationDelay: GLOWS.litDoor.delay,
       }} />
 
-      {/* Glow — the black hole / supernova, wrapping the visible swirl */}
+      {/* Glow — the black hole / supernova. A ring, not a filled circle: stays
+          dark over the actual void and brightens only where the swirl itself
+          glows, instead of lightening the void's center. */}
       <div style={{
         position: 'absolute', ...at(GLOWS.blackHole.x, GLOWS.blackHole.y), width: `${GLOWS.blackHole.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
         borderRadius: '50%',
-        background: `radial-gradient(circle, ${GLOWS.blackHole.color} 0%, ${GLOWS.blackHole.colorMid} 45%, transparent 72%)`,
-        filter: 'blur(8px)',
+        background: 'radial-gradient(circle, transparent 0%, transparent 20%, rgba(210,185,255,0.55) 38%, rgba(160,120,255,0.22) 58%, transparent 78%)',
+        filter: 'blur(7px)',
         animation: reduceMotion ? undefined : 'glowPulse 5.5s ease-in-out infinite',
-        animationDelay: GLOWS.blackHole.delay,
       }} />
 
-      {/* Purple glows — the smaller floating doors scattered through the scene */}
+      {/* Purple glows — the smaller floating doors scattered through the scene,
+          each shaped to that door's own tall opening */}
       {GLOWS.doors.map((g, i) => (
         <div key={i} style={{
-          position: 'absolute', ...at(g.x, g.y), width: `${g.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+          position: 'absolute', ...at(g.x, g.y), width: `${g.w}%`, height: `${g.h}%`, transform: 'translate(-50%,-50%)',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(196,150,255,0.7) 0%, rgba(150,100,230,0.28) 50%, transparent 75%)',
-          filter: 'blur(5px)',
+          background: 'radial-gradient(ellipse, rgba(196,150,255,0.75) 0%, rgba(150,100,230,0.3) 40%, transparent 65%)',
+          filter: 'blur(3px)',
           animation: reduceMotion ? undefined : `glowPulse ${4.8 + i * 0.6}s ease-in-out infinite`,
           animationDelay: g.delay,
         }} />
