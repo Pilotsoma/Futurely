@@ -19,6 +19,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "nextstep-mobile", "run", "web"],
       "port": 8081
+    },
+    {
+      "name": "mobile",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "nextstep-mobile", "start"],
+      "port": 8081
     }
   ]
 }
