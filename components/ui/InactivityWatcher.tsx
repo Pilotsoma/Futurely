@@ -491,15 +491,7 @@ export default function InactivityWatcher() {
             exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.04, y: -14 }}
             transition={{ duration: reduced ? 0.15 : 0.42, ease: [0.22, 1, 0.36, 1] }}
             className="ns-widget-card"
-            style={{
-              width: '100%',
-              background: '#162235',
-              border: '1px solid #273D5E',
-              borderRadius: 30,
-              padding: '52px 56px',
-              overflow: 'hidden',
-              boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.4), 0 20px 56px rgba(0,0,0,0.35)',
-            }}
+            style={{ width: '100%' }}
           >
             {/* Slow, continuous zoom while the slide is on screen — reads as premium, not the crossfade's snap */}
             <motion.div
