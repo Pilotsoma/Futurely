@@ -65,11 +65,27 @@ export default function CosmicScene() {
         animationDelay: '0.5s',
       }} />
 
-      {/* Ambient starfield — twinkling stars drawn last so they sit on top of the
-          artwork instead of being hidden behind it. */}
+      {/* Purple glows — the smaller floating doors scattered through the scene */}
+      {[
+        { left: '27.5%', top: '54%',   size: '3.5%', delay: '1.1s' },
+        { left: '36%',   top: '67.5%', size: '3.5%', delay: '2.4s' },
+        { left: '67.5%', top: '67.5%', size: '3.5%', delay: '0.2s' },
+      ].map((g, i) => (
+        <div key={i} style={{
+          position: 'absolute', left: g.left, top: g.top, width: g.size, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(196,150,255,0.7) 0%, rgba(150,100,230,0.28) 50%, transparent 75%)',
+          filter: 'blur(5px)',
+          animation: reduceMotion ? undefined : `glowPulse ${4.8 + i * 0.6}s ease-in-out infinite`,
+          animationDelay: g.delay,
+        }} />
+      ))}
+
+      {/* Ambient starfield — twinkling stars and shooting stars, drawn last so
+          they sit on top of the artwork instead of being hidden behind it. */}
       {!reduceMotion && (
         <div style={{ position: 'absolute', inset: 0 }}>
-          <Particles particleColors={['#ffffff']} particleCount={160} particleSpread={10} speed={0.08} particleBaseSize={80} alphaParticles={false} />
+          <Particles particleColors={['#ffffff']} particleCount={220} particleSpread={10} speed={0.08} particleBaseSize={80} alphaParticles={false} meteorMinMs={3000} meteorMaxMs={7000} />
         </div>
       )}
     </div>

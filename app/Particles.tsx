@@ -11,6 +11,8 @@ interface Props {
   alphaParticles?: boolean
   disableRotation?: boolean
   pixelRatio?: number
+  meteorMinMs?: number
+  meteorMaxMs?: number
 }
 
 interface Star {
@@ -46,6 +48,8 @@ export default function Particles({
   particleBaseSize = 100,
   moveParticlesOnHover = false,
   alphaParticles = false,
+  meteorMinMs = 5000,
+  meteorMaxMs = 13000,
 }: Props) {
   const canvasRef  = useRef<HTMLCanvasElement>(null)
   const mouseRef   = useRef({ x: -9999, y: -9999 })
@@ -234,7 +238,7 @@ export default function Particles({
       // Shooting stars
       if (!meteorRef.current && time > nextMeteor.current) {
         spawnMeteor(w, h)
-        nextMeteor.current = time + 5000 + Math.random() * 8000 // every 5–13s
+        nextMeteor.current = time + meteorMinMs + Math.random() * (meteorMaxMs - meteorMinMs)
       }
       if (meteorRef.current) drawMeteor(meteorRef.current, dt, w, h)
 
