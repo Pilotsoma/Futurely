@@ -127,9 +127,10 @@ body {
    up on wider viewports so it reads consistently across OSes. Scoped to the
    authenticated app shell only (.ns-scale-shell) — the login screen and its
    background scene are left completely untouched. */
-@media (min-width: 1600px) { .ns-scale-shell { zoom: 1.08; } }
-@media (min-width: 1920px) { .ns-scale-shell { zoom: 1.15; } }
-@media (min-width: 2560px) { .ns-scale-shell { zoom: 1.25; } }
+.ns-scale-shell { --ui-zoom: 1; }
+@media (min-width: 1600px) { .ns-scale-shell { zoom: 1.08; --ui-zoom: 1.08; } }
+@media (min-width: 1920px) { .ns-scale-shell { zoom: 1.15; --ui-zoom: 1.15; } }
+@media (min-width: 2560px) { .ns-scale-shell { zoom: 1.25; --ui-zoom: 1.25; } }
 
 a { color: var(--primary); text-decoration: none; }
 button { cursor: pointer; font-family: inherit; font-size: inherit; color: inherit; }

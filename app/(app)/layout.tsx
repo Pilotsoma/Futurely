@@ -172,7 +172,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <div className="ns-scale-shell" style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="ns-scale-shell" style={{ display: 'flex', minHeight: 'calc(100vh / var(--ui-zoom, 1))' }}>
       <motion.aside
         animate={{ width: sideW }}
         transition={springTransition}
@@ -465,5 +465,5 @@ const S: Record<string, React.CSSProperties> = {
   userAvatar: { width: 32, height: 32, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 },
   userName:   { fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   logoutBtn:  { display: 'flex', alignItems: 'center', gap: 9, fontSize: 14, padding: '9px 12px' },
-  main:       { flex: 1, padding: 'var(--page-px)', minHeight: '100vh', position: 'relative' },
+  main:       { flex: 1, padding: 'var(--page-px)', minHeight: 'calc(100vh / var(--ui-zoom, 1))', position: 'relative' },
 }

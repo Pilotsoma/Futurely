@@ -47,7 +47,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   if (!checked) return null
 
   return (
-    <div className="ns-scale-shell" style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="ns-scale-shell" style={{ display: 'flex', minHeight: 'calc(100vh / var(--ui-zoom, 1))' }}>
       <aside style={S.sidebar}>
         {/* Logo */}
         <div style={S.logoRow}>
@@ -106,5 +106,5 @@ const S: Record<string, React.CSSProperties> = {
   userAvatar: { width: 26, height: 26, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid var(--primary)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 },
   userName:   { fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' },
   logoutBtn:  { display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', fontSize: 13, padding: '8px 12px' },
-  main:       { marginLeft: 220, flex: 1, overflowY: 'auto' as const, padding: 32, minHeight: '100vh' },
+  main:       { marginLeft: 220, flex: 1, overflowY: 'auto' as const, padding: 32, minHeight: 'calc(100vh / var(--ui-zoom, 1))' },
 }

@@ -481,7 +481,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div style={{ flex: 1, maxHeight: 40 }} />
+      <div style={{ height: 24 }} />
 
       {/* Streak Milestone Celebration Popup */}
       {streakMilestone && createPortal(
