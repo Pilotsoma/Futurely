@@ -169,9 +169,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
 /* The <Link>/<a> wrapping .ns-nav-link has no padding/radius of its own, so the
    browser's default focus outline draws a square, oversized ring around it that
-   doesn't match the rounded pill. Make the anchor hug the pill's shape instead. */
-a:has(> .ns-nav-link) { display: block; border-radius: 12px; outline: none; }
-a:has(> .ns-nav-link):focus-visible { box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.45); }
+   doesn't match the rounded pill. Suppress it and draw the ring on the pill
+   itself instead — .ns-nav-link can be hover-animated (translateX) by Framer
+   Motion, so a ring on the static <a> would drift out of alignment with it. */
+a:has(> .ns-nav-link) { display: block; outline: none; }
+a:focus-visible > .ns-nav-link { box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.45); }
 
 /* ── Cards ──────────────────────────────────────────────────────────────── */
 .ns-card {
