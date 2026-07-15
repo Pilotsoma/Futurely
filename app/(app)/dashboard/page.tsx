@@ -362,7 +362,7 @@ export default function DashboardPage() {
   const gpaBonusPct = getGpaBonusPct(effectiveUGpa, effectiveWGpa)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div className="db-curtain-item" style={S.pageHeader}>
         <div>
@@ -481,7 +481,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div style={{ flex: 1, maxHeight: 96 }} />
+      <div style={{ flex: 1, maxHeight: 40 }} />
 
       {/* Streak Milestone Celebration Popup */}
       {streakMilestone && createPortal(
