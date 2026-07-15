@@ -359,7 +359,7 @@ function AIChatInner() {
            scoped selector here would silently never match. */
         :global(.aic-shell) {
           display: flex;
-          height: calc(100vh - (var(--page-px) * 2));
+          height: calc((100vh / var(--ui-zoom, 1)) - (var(--page-px) * 2));
           gap: 0;
           position: relative;
         }
