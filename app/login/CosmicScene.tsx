@@ -4,6 +4,39 @@ import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Particles from '../Particles'
 
+const IMG_ASPECT = 1536 / 1024
+
+/** object-fit: cover crops the image asymmetrically depending on how the
+ *  viewport's aspect ratio compares to the image's — e.g. on a wider-than-image
+ *  viewport it's cropped top/bottom (scaled to viewport width), and vice versa.
+ *  Glow accents are authored as percentages of the *original* image, so this
+ *  tracks how much has been cropped off each edge and remaps those percentages
+ *  into the visible, on-screen coordinate space. */
+function useCoverCrop(imageAspect: number) {
+  const [crop, setCrop] = useState({ xPct: 0, yPct: 0 })
+  useEffect(() => {
+    function update() {
+      const w = window.innerWidth, h = window.innerHeight
+      const viewportAspect = w / h
+      if (viewportAspect > imageAspect) {
+        const imgH = w / imageAspect
+        setCrop({ xPct: 0, yPct: ((imgH - h) / 2 / imgH) * 100 })
+      } else {
+        const imgW = h * imageAspect
+        setCrop({ xPct: ((imgW - w) / 2 / imgW) * 100, yPct: 0 })
+      }
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [imageAspect])
+  return crop
+}
+
+function mapCoverPct(rawPct: number, cropPct: number) {
+  return ((rawPct - cropPct) / (100 - 2 * cropPct)) * 100
+}
+
 /** A cheap, static starfield — a single CSS background-image of radial-gradient
  *  dots, painted once with no canvas or animation loop. Used in place of the
  *  animated <Particles> canvas for prefers-reduced-motion / low-end CPUs, so
@@ -26,9 +59,26 @@ function buildStaticStarBackground() {
  *  artwork (boy on a small world, looking out at a ringed planet and a distant
  *  galaxy), filling the entire screen edge to edge, with animated stars and soft
  *  glow accents layered on top for motion and depth. Desktop only (mounted by caller). */
+// Glow accents, authored as percentages of the original 1536x1024 artwork
+// (measured directly against the source image), before cover-crop remapping.
+const GLOWS = {
+  litDoor:   { x: 90.5, y: 42,   size: 4.5, color: 'rgba(220,235,255,0.9)',  colorMid: 'rgba(180,210,255,0.35)', delay: '0s' },
+  blackHole: { x: 85.0, y: 14.6, size: 20,  color: 'rgba(200,170,255,0.5)',  colorMid: 'rgba(160,120,255,0.18)', delay: '0.5s' },
+  doors: [
+    { x: 29.8, y: 55.9, size: 4.5, delay: '1.1s' },
+    { x: 37.2, y: 69.6, size: 4,   delay: '2.4s' },
+    { x: 65.4, y: 69.2, size: 4.5, delay: '0.2s' },
+  ],
+}
+
 export default function CosmicScene() {
   const [reduceMotion, setReduceMotion] = useState(false)
   const staticStarBackground = useMemo(buildStaticStarBackground, [])
+  const crop = useCoverCrop(IMG_ASPECT)
+  const at = (x: number, y: number) => ({
+    left: `${mapCoverPct(x, crop.xPct)}%`,
+    top:  `${mapCoverPct(y, crop.yPct)}%`,
+  })
 
   useEffect(() => {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -67,31 +117,28 @@ export default function CosmicScene() {
 
       {/* Glow — the lit doorway, pulsing gently */}
       <div style={{
-        position: 'absolute', left: '90.5%', top: '44%', width: '5%', aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+        position: 'absolute', ...at(GLOWS.litDoor.x, GLOWS.litDoor.y), width: `${GLOWS.litDoor.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(220,235,255,0.9) 0%, rgba(180,210,255,0.35) 45%, transparent 75%)',
+        background: `radial-gradient(circle, ${GLOWS.litDoor.color} 0%, ${GLOWS.litDoor.colorMid} 45%, transparent 75%)`,
         filter: 'blur(6px)',
         animation: reduceMotion ? undefined : 'glowPulse 4.5s ease-in-out infinite',
+        animationDelay: GLOWS.litDoor.delay,
       }} />
 
-      {/* Glow — galaxy core */}
+      {/* Glow — the black hole / supernova, wrapping the visible swirl */}
       <div style={{
-        position: 'absolute', left: '84.5%', top: '15%', width: '8%', aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+        position: 'absolute', ...at(GLOWS.blackHole.x, GLOWS.blackHole.y), width: `${GLOWS.blackHole.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(230,210,255,0.55) 0%, rgba(190,160,255,0.2) 50%, transparent 75%)',
-        filter: 'blur(5px)',
+        background: `radial-gradient(circle, ${GLOWS.blackHole.color} 0%, ${GLOWS.blackHole.colorMid} 45%, transparent 72%)`,
+        filter: 'blur(8px)',
         animation: reduceMotion ? undefined : 'glowPulse 5.5s ease-in-out infinite',
-        animationDelay: '0.5s',
+        animationDelay: GLOWS.blackHole.delay,
       }} />
 
       {/* Purple glows — the smaller floating doors scattered through the scene */}
-      {[
-        { left: '27.5%', top: '54%',   size: '3.5%', delay: '1.1s' },
-        { left: '36%',   top: '67.5%', size: '3.5%', delay: '2.4s' },
-        { left: '67.5%', top: '67.5%', size: '3.5%', delay: '0.2s' },
-      ].map((g, i) => (
+      {GLOWS.doors.map((g, i) => (
         <div key={i} style={{
-          position: 'absolute', left: g.left, top: g.top, width: g.size, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+          position: 'absolute', ...at(g.x, g.y), width: `${g.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
           borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(196,150,255,0.7) 0%, rgba(150,100,230,0.28) 50%, transparent 75%)',
           filter: 'blur(5px)',
@@ -108,7 +155,7 @@ export default function CosmicScene() {
         <div style={{ position: 'absolute', inset: 0, backgroundImage: staticStarBackground }} />
       ) : (
         <div style={{ position: 'absolute', inset: 0 }}>
-          <Particles particleColors={['#ffffff']} particleCount={220} particleSpread={10} speed={0.08} particleBaseSize={80} alphaParticles={false} meteorMinMs={3000} meteorMaxMs={7000} />
+          <Particles particleColors={['#ffffff']} particleCount={220} particleSpread={10} speed={0.08} particleBaseSize={80} alphaParticles={false} meteorMinMs={7000} meteorMaxMs={10000} />
         </div>
       )}
     </div>
