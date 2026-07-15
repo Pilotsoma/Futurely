@@ -125,40 +125,47 @@ export default function CosmicScene() {
         `.replace(/\s+/g, ' '),
       }} />
 
-      {/* Glow — the lit doorway, shaped to the door's own tall opening rather
-          than a generic circle, pulsing gently */}
-      <div style={{
-        position: 'absolute', ...at(GLOWS.litDoor.x, GLOWS.litDoor.y), width: `${GLOWS.litDoor.w}%`, height: `${GLOWS.litDoor.h}%`, transform: 'translate(-50%,-50%)',
-        borderRadius: '50%',
-        background: `radial-gradient(ellipse, ${GLOWS.litDoor.color} 0%, ${GLOWS.litDoor.colorMid} 40%, transparent 65%)`,
-        filter: 'blur(3px)',
-        animation: reduceMotion ? undefined : 'glowPulse 4.5s ease-in-out infinite',
-        animationDelay: GLOWS.litDoor.delay,
-      }} />
+      {/* Glow accents are pulsing-animation-driven decoration, not core content —
+          skip them entirely on low-end/reduced-motion devices rather than just
+          freezing them, so those devices render less (artwork + stars only). */}
+      {!reduceMotion && (
+        <>
+          {/* Glow — the lit doorway, shaped to the door's own tall opening rather
+              than a generic circle, pulsing gently */}
+          <div style={{
+            position: 'absolute', ...at(GLOWS.litDoor.x, GLOWS.litDoor.y), width: `${GLOWS.litDoor.w}%`, height: `${GLOWS.litDoor.h}%`, transform: 'translate(-50%,-50%)',
+            borderRadius: '50%',
+            background: `radial-gradient(ellipse, ${GLOWS.litDoor.color} 0%, ${GLOWS.litDoor.colorMid} 40%, transparent 65%)`,
+            filter: 'blur(3px)',
+            animation: 'glowPulse 4.5s ease-in-out infinite',
+            animationDelay: GLOWS.litDoor.delay,
+          }} />
 
-      {/* Glow — the black hole / supernova. A ring, not a filled circle: stays
-          dark over the actual void and brightens only where the swirl itself
-          glows, instead of lightening the void's center. */}
-      <div style={{
-        position: 'absolute', ...at(GLOWS.blackHole.x, GLOWS.blackHole.y), width: `${GLOWS.blackHole.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, transparent 0%, transparent 20%, rgba(210,185,255,0.55) 38%, rgba(160,120,255,0.22) 58%, transparent 78%)',
-        filter: 'blur(7px)',
-        animation: reduceMotion ? undefined : 'glowPulse 5.5s ease-in-out infinite',
-      }} />
+          {/* Glow — the black hole / supernova. A ring, not a filled circle: stays
+              dark over the actual void and brightens only where the swirl itself
+              glows, instead of lightening the void's center. */}
+          <div style={{
+            position: 'absolute', ...at(GLOWS.blackHole.x, GLOWS.blackHole.y), width: `${GLOWS.blackHole.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, transparent 0%, transparent 20%, rgba(210,185,255,0.55) 38%, rgba(160,120,255,0.22) 58%, transparent 78%)',
+            filter: 'blur(7px)',
+            animation: 'glowPulse 5.5s ease-in-out infinite',
+          }} />
 
-      {/* Purple glows — the smaller floating doors scattered through the scene,
-          each shaped to that door's own tall opening */}
-      {GLOWS.doors.map((g, i) => (
-        <div key={i} style={{
-          position: 'absolute', ...at(g.x, g.y), width: `${g.w}%`, height: `${g.h}%`, transform: 'translate(-50%,-50%)',
-          borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(206,165,255,0.95) 0%, rgba(160,110,240,0.55) 45%, transparent 72%)',
-          filter: 'blur(4px)',
-          animation: reduceMotion ? undefined : `glowPulse ${4.8 + i * 0.6}s ease-in-out infinite`,
-          animationDelay: g.delay,
-        }} />
-      ))}
+          {/* Purple glows — the smaller floating doors scattered through the scene,
+              each shaped to that door's own tall opening */}
+          {GLOWS.doors.map((g, i) => (
+            <div key={i} style={{
+              position: 'absolute', ...at(g.x, g.y), width: `${g.w}%`, height: `${g.h}%`, transform: 'translate(-50%,-50%)',
+              borderRadius: '50%',
+              background: 'radial-gradient(ellipse, rgba(206,165,255,0.95) 0%, rgba(160,110,240,0.55) 45%, transparent 72%)',
+              filter: 'blur(4px)',
+              animation: `glowPulse ${4.8 + i * 0.6}s ease-in-out infinite`,
+              animationDelay: g.delay,
+            }} />
+          ))}
+        </>
+      )}
 
       {/* Ambient starfield — twinkling stars and shooting stars, drawn last so
           they sit on top of the artwork instead of being hidden behind it.
