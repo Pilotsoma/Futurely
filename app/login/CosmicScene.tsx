@@ -77,12 +77,13 @@ export default function CosmicScene() {
             animation: reduceMotion ? undefined : 'glowPulse 4.5s ease-in-out infinite',
           }} />
 
-          {/* Glow — soft halo around the ringed planet */}
+          {/* Glow — soft halo hugging the ringed planet's actual silhouette (planet +
+              rings span roughly x 40%-100%, y 0%-44% of the artwork) */}
           <div style={{
-            position: 'absolute', left: '75%', top: '20%', width: '58%', aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+            position: 'absolute', left: '70%', top: '20%', width: '64%', height: '46%', transform: 'translate(-50%,-50%)',
             borderRadius: '50%',
-            background: 'radial-gradient(circle, transparent 0%, transparent 52%, rgba(210,220,255,0.4) 66%, rgba(180,195,255,0.18) 80%, transparent 96%)',
-            filter: 'blur(10px)',
+            background: 'radial-gradient(ellipse, transparent 0%, transparent 58%, rgba(210,220,255,0.4) 70%, rgba(180,195,255,0.18) 84%, transparent 98%)',
+            filter: 'blur(8px)',
             animation: reduceMotion ? undefined : 'glowPulse 7s ease-in-out infinite',
             animationDelay: '1s',
           }} />
