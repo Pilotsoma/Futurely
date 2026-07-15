@@ -91,10 +91,16 @@ export default function CosmicScene() {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none', background: '#050414' }}>
+      {/* Each glow div is centered on its point via `transform: translate(-50%,-50%)`.
+          A CSS animation targeting `transform` REPLACES the element's static
+          transform outright rather than composing with it — so the keyframes
+          must repeat the translate alongside the scale, or the centering silently
+          breaks the moment the animation starts (the box then renders offset by
+          half its own width/height, toward the bottom-right of the intended point). */}
       <style>{`
         @keyframes glowPulse {
-          0%, 100% { opacity: 0.35; transform: scale(0.94); }
-          50%      { opacity: 0.75; transform: scale(1.06); }
+          0%, 100% { opacity: 0.35; transform: translate(-50%,-50%) scale(0.94); }
+          50%      { opacity: 0.75; transform: translate(-50%,-50%) scale(1.06); }
         }
       `}</style>
 
