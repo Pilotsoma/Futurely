@@ -45,10 +45,10 @@ function buildStaticStarBackground() {
   let seed = 42
   const rand = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff }
   const stops: string[] = []
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < 130; i++) {
     const x = (rand() * 100).toFixed(1)
     const y = (rand() * 100).toFixed(1)
-    const size = (0.7 + rand() * 1.3).toFixed(1)
+    const size = (1.0 + rand() * 1.8).toFixed(1)
     const alpha = (0.35 + rand() * 0.55).toFixed(2)
     stops.push(`radial-gradient(${size}px ${size}px at ${x}% ${y}%, rgba(255,255,255,${alpha}), transparent 100%)`)
   }
@@ -175,7 +175,7 @@ export default function CosmicScene() {
         <div style={{ position: 'absolute', inset: 0, backgroundImage: staticStarBackground }} />
       ) : (
         <div style={{ position: 'absolute', inset: 0 }}>
-          <Particles particleColors={['#ffffff']} particleCount={220} particleSpread={10} speed={0.08} particleBaseSize={80} alphaParticles={false} meteorMinMs={7000} meteorMaxMs={10000} />
+          <Particles particleColors={['#ffffff']} particleCount={300} particleSpread={10} speed={0.08} particleBaseSize={105} alphaParticles={false} meteorMinMs={7000} meteorMaxMs={10000} moveParticlesOnHover />
         </div>
       )}
     </div>
