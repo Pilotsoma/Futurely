@@ -481,7 +481,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div style={{ height: 24 }} />
+      <div className="db-ai-gap" style={{ height: 24 }} />
 
       {/* Streak Milestone Celebration Popup */}
       {streakMilestone && createPortal(
