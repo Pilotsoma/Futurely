@@ -67,10 +67,11 @@ function buildStaticStarBackground() {
 const GLOWS = {
   litDoor:   { x: 89.0, y: 42.8, w: 3.2, h: 7.5, color: 'rgba(220,235,255,0.9)',  colorMid: 'rgba(180,210,255,0.4)', delay: '0s' },
   blackHole: { x: 84.4, y: 17.0, size: 20 },
+  // door2 (35.4, 70.9) sits directly behind the login card at typical viewport
+  // sizes, so its glow is never visible — kept out rather than wasted.
   doors: [
-    { x: 29.9, y: 57.7, w: 2.6, h: 8,   delay: '1.1s' },
-    { x: 35.4, y: 70.9, w: 2.2, h: 5,   delay: '2.4s' },
-    { x: 67.2, y: 67.2, w: 3.0, h: 9,   delay: '0.2s' },
+    { x: 29.9, y: 57.7, w: 4.5, h: 11,  delay: '1.1s' },
+    { x: 67.2, y: 67.2, w: 5.0, h: 12,  delay: '0.2s' },
   ],
 }
 
@@ -152,8 +153,8 @@ export default function CosmicScene() {
         <div key={i} style={{
           position: 'absolute', ...at(g.x, g.y), width: `${g.w}%`, height: `${g.h}%`, transform: 'translate(-50%,-50%)',
           borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(196,150,255,0.75) 0%, rgba(150,100,230,0.3) 40%, transparent 65%)',
-          filter: 'blur(3px)',
+          background: 'radial-gradient(ellipse, rgba(206,165,255,0.95) 0%, rgba(160,110,240,0.55) 45%, transparent 72%)',
+          filter: 'blur(4px)',
           animation: reduceMotion ? undefined : `glowPulse ${4.8 + i * 0.6}s ease-in-out infinite`,
           animationDelay: g.delay,
         }} />
