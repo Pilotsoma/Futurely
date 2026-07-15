@@ -595,7 +595,7 @@ export default function InactivityWatcher() {
           position: absolute;
           inset: 0;
           background:
-            radial-gradient(ellipse at 50% 52%, rgba(4,4,14,0.62) 0%, transparent 52%),
+            radial-gradient(ellipse at 50% 52%, rgba(4,4,14,0.78) 0%, transparent 58%),
             radial-gradient(ellipse at 18% 72%, rgba(50,15,90,0.18) 0%, transparent 48%),
             radial-gradient(ellipse at 82% 18%, rgba(10,30,80,0.15) 0%, transparent 45%),
             radial-gradient(ellipse at 50% 40%, transparent 45%, rgba(4,4,14,0.55) 100%);
@@ -652,18 +652,12 @@ export default function InactivityWatcher() {
           display: flex;
           align-items: center;
           justify-content: center;
-          /* A frosted scrim, not a bordered box (that was deliberately removed) —
-             the feature content needs real contrast against a busy photo behind
-             it, which the ambient darkening gradient alone can't provide. */
-          background: rgba(4,4,14,0.5);
-          backdrop-filter: blur(22px);
-          -webkit-backdrop-filter: blur(22px);
-          border-radius: 32px;
-          padding: 40px 44px;
-          box-sizing: border-box;
-          /* The slide's slow zoom-in was always slightly overflowing this box —
-             invisible with no background to reveal the clip boundary, but now
-             glaringly obvious spilling past the frosted panel's rounded edge. */
+          /* No box/background here — deliberately kept out. Legibility against
+             the artwork comes from text-shadow below plus the darkened center
+             of .ns-space-gradient, not a panel. */
+          text-shadow: 0 1px 3px rgba(0,0,0,0.85), 0 2px 14px rgba(0,0,0,0.7);
+          /* The slide's slow zoom-in slightly overflows this box's nominal
+             bounds; clip it so it can't spill down into the hint text below. */
           overflow: hidden;
         }
 
