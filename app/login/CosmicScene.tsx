@@ -59,15 +59,18 @@ function buildStaticStarBackground() {
  *  artwork (boy on a small world, looking out at a ringed planet and a distant
  *  galaxy), filling the entire screen edge to edge, with animated stars and soft
  *  glow accents layered on top for motion and depth. Desktop only (mounted by caller). */
-// Glow accents, authored as percentages of the original 1536x1024 artwork
-// (measured directly against the source image), before cover-crop remapping.
+// Glow accents, authored as percentages of the original 1536x1024 artwork.
+// Coordinates were found by computer — thresholding pixel brightness to locate
+// each door's bright rectangle centroid and the black hole's dark void — then
+// confirmed by cropping the source image at that exact point, rather than
+// eyeballed off a downscaled preview (which was off by several percent).
 const GLOWS = {
-  litDoor:   { x: 90.5, y: 42,   size: 4.5, color: 'rgba(220,235,255,0.9)',  colorMid: 'rgba(180,210,255,0.35)', delay: '0s' },
-  blackHole: { x: 85.0, y: 14.6, size: 20,  color: 'rgba(200,170,255,0.5)',  colorMid: 'rgba(160,120,255,0.18)', delay: '0.5s' },
+  litDoor:   { x: 89.0, y: 42.8, size: 4.5, color: 'rgba(220,235,255,0.9)',  colorMid: 'rgba(180,210,255,0.35)', delay: '0s' },
+  blackHole: { x: 84.4, y: 17.0, size: 18,  color: 'rgba(200,170,255,0.5)',  colorMid: 'rgba(160,120,255,0.18)', delay: '0.5s' },
   doors: [
-    { x: 29.8, y: 55.9, size: 4.5, delay: '1.1s' },
-    { x: 37.2, y: 69.6, size: 4,   delay: '2.4s' },
-    { x: 65.4, y: 69.2, size: 4.5, delay: '0.2s' },
+    { x: 29.9, y: 57.7, size: 4.5, delay: '1.1s' },
+    { x: 35.4, y: 70.9, size: 4,   delay: '2.4s' },
+    { x: 67.2, y: 67.2, size: 4.5, delay: '0.2s' },
   ],
 }
 
