@@ -2,7 +2,7 @@
 
 import React from 'react'
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -87,40 +87,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isExpanded  = pinnedExpanded || hoverExpanded
   const sideW       = isExpanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED
   const mainMargin  = pinnedExpanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED
-
-  // Floating active pill
-  const navRef   = useRef<HTMLElement>(null)
-  const linkRefs = useRef<Record<string, HTMLAnchorElement | null>>({})
-  const [pillY, setPillY]         = useState(0)
-  const [pillH, setPillH]         = useState(40)
-  const [pillReady, setPillReady] = useState(false)
-
-  useLayoutEffect(() => {
-    function measurePill() {
-      const activeHref = NAV.find(n => pathname === n.href || pathname.startsWith(n.href + '/'))?.href
-      if (!activeHref) return
-      const linkEl = linkRefs.current[activeHref]
-      const navEl  = navRef.current
-      if (!linkEl || !navEl) return
-      const navRect  = navEl.getBoundingClientRect()
-      const linkRect = linkEl.getBoundingClientRect()
-      setPillY(linkRect.top - navRect.top)
-      setPillH(linkRect.height)
-      setPillReady(true)
-    }
-
-    measurePill()
-
-    // Rows can be added/removed after this effect runs (e.g. the admin-only
-    // "Educator Requests" link appears once permissions load asynchronously),
-    // which shifts row positions without a pathname/isExpanded change. Re-measure
-    // whenever the nav's layout actually changes so the pill never goes stale.
-    const navEl = navRef.current
-    if (!navEl) return
-    const observer = new ResizeObserver(measurePill)
-    observer.observe(navEl)
-    return () => observer.disconnect()
-  }, [pathname, isExpanded])
 
   useEffect(() => {
     async function checkAuth() {
@@ -259,22 +225,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Nav */}
-        <nav ref={navRef} style={S.nav}>
-          {/* Floating active pill */}
-          {pillReady && (
-            <motion.div
-              animate={{ y: pillY, height: pillH }}
-              transition={springTransition}
-              style={S.navPill}
-            />
-          )}
+        <nav style={S.nav}>
           {NAV.map(link => {
             const active = pathname === link.href || pathname.startsWith(link.href + '/')
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                ref={el => { linkRefs.current[link.href] = el }}
                 style={{ textDecoration: 'none' }}
                 title={!isExpanded ? link.label : undefined}
               >
@@ -284,8 +241,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   whileHover={{ x: !isExpanded ? 0 : 2 }}
                   transition={fastSpring}
                 >
+                  {active && <motion.div layoutId="ns-sidebar-active-pill" style={S.navPill} transition={springTransition} />}
                   <motion.span
-                    style={{ flexShrink: 0 }}
+                    style={{ flexShrink: 0, position: 'relative', zIndex: 1 }}
                     animate={{ opacity: active ? 1 : 0.55, color: active ? 'var(--primary)' : 'currentColor' }}
                     transition={{ duration: 0.15 }}
                   >
@@ -299,7 +257,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -6 }}
                         transition={fastSpring}
-                        style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}
+                        style={{ whiteSpace: 'nowrap', overflow: 'hidden', position: 'relative', zIndex: 1 }}
                       >
                         {link.label}
                       </motion.span>
@@ -323,13 +281,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     whileHover={{ x: !isExpanded ? 0 : 2 }}
                     transition={fastSpring}
                   >
-                    <motion.span style={{ flexShrink: 0 }} animate={{ opacity: active ? 1 : 0.55, color: '#EF4444' }} transition={{ duration: 0.15 }}>
+                    {active && <motion.div layoutId="ns-sidebar-active-pill" style={S.navPill} transition={springTransition} />}
+                    <motion.span style={{ flexShrink: 0, position: 'relative', zIndex: 1 }} animate={{ opacity: active ? 1 : 0.55, color: '#EF4444' }} transition={{ duration: 0.15 }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
                     </motion.span>
                     <AnimatePresence>
                       {isExpanded && (
                         <motion.span key="label-admin" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={fastSpring}
-                          style={{ whiteSpace: 'nowrap', overflow: 'hidden', color: '#EF4444', fontWeight: 700 }}>
+                          style={{ whiteSpace: 'nowrap', overflow: 'hidden', color: '#EF4444', fontWeight: 700, position: 'relative', zIndex: 1 }}>
                           Educator Requests
                         </motion.span>
                       )}
@@ -394,13 +353,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                           whileHover={{ x: !isExpanded ? 0 : 2 }}
                           transition={fastSpring}
                         >
-                          <motion.span style={{ flexShrink: 0 }} animate={{ opacity: active ? 1 : 0.55, color: '#A855F7' }} transition={{ duration: 0.15 }}>
+                          {active && <motion.div layoutId="ns-sidebar-active-pill" style={S.navPill} transition={springTransition} />}
+                          <motion.span style={{ flexShrink: 0, position: 'relative', zIndex: 1 }} animate={{ opacity: active ? 1 : 0.55, color: '#A855F7' }} transition={{ duration: 0.15 }}>
                             {link.icon}
                           </motion.span>
                           <AnimatePresence>
                             {isExpanded && (
                               <motion.span key={`hidden-${link.href}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={fastSpring}
-                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', color: '#A855F7', fontSize: 15 }}>
+                                style={{ whiteSpace: 'nowrap', overflow: 'hidden', color: '#A855F7', fontSize: 15, position: 'relative', zIndex: 1 }}>
                                 {link.label}
                               </motion.span>
                             )}
@@ -499,7 +459,7 @@ const S: Record<string, React.CSSProperties> = {
   logoRow:    { paddingLeft: 0, marginBottom: 28, display: 'flex' },
   logoText:   { fontSize: 18, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.4px', whiteSpace: 'nowrap' },
   nav:        { flex: 1, display: 'flex', flexDirection: 'column', gap: 3, overflow: 'hidden', position: 'relative' },
-  navPill:    { position: 'absolute', left: 0, right: 0, borderRadius: 12, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', pointerEvents: 'none', zIndex: 0 },
+  navPill:    { position: 'absolute', inset: 0, borderRadius: 12, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', pointerEvents: 'none', zIndex: 0 },
   bottom:     { borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 8 },
   userRow:    { display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 4, overflow: 'hidden' },
   userAvatar: { width: 32, height: 32, borderRadius: '50%', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 },
