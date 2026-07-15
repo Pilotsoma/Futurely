@@ -1,8 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Particles from '../Particles'
+
+/** A cheap, static starfield — a single CSS background-image of radial-gradient
+ *  dots, painted once with no canvas or animation loop. Used in place of the
+ *  animated <Particles> canvas for prefers-reduced-motion / low-end CPUs, so
+ *  those users still see stars instead of a flat gradient. */
+function buildStaticStarBackground() {
+  let seed = 42
+  const rand = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff }
+  const stops: string[] = []
+  for (let i = 0; i < 70; i++) {
+    const x = (rand() * 100).toFixed(1)
+    const y = (rand() * 100).toFixed(1)
+    const size = (0.7 + rand() * 1.3).toFixed(1)
+    const alpha = (0.35 + rand() * 0.55).toFixed(2)
+    stops.push(`radial-gradient(${size}px ${size}px at ${x}% ${y}%, rgba(255,255,255,${alpha}), transparent 100%)`)
+  }
+  return stops.join(', ')
+}
 
 /** Fixed cosmic backdrop for the login/register screen — the hand-designed hero
  *  artwork (boy on a small world, looking out at a ringed planet and a distant
@@ -10,6 +28,7 @@ import Particles from '../Particles'
  *  glow accents layered on top for motion and depth. Desktop only (mounted by caller). */
 export default function CosmicScene() {
   const [reduceMotion, setReduceMotion] = useState(false)
+  const staticStarBackground = useMemo(buildStaticStarBackground, [])
 
   useEffect(() => {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -82,8 +101,12 @@ export default function CosmicScene() {
       ))}
 
       {/* Ambient starfield — twinkling stars and shooting stars, drawn last so
-          they sit on top of the artwork instead of being hidden behind it. */}
-      {!reduceMotion && (
+          they sit on top of the artwork instead of being hidden behind it.
+          Low-end/reduced-motion devices get a static (unanimated) starfield
+          instead of the animated canvas, so they still see stars. */}
+      {reduceMotion ? (
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: staticStarBackground }} />
+      ) : (
         <div style={{ position: 'absolute', inset: 0 }}>
           <Particles particleColors={['#ffffff']} particleCount={220} particleSpread={10} speed={0.08} particleBaseSize={80} alphaParticles={false} meteorMinMs={3000} meteorMaxMs={7000} />
         </div>
