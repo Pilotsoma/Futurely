@@ -56,7 +56,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response): Promise<vo
 
     const assignments = await prisma.assignment.findMany({
       where,
-      orderBy: { dueDate: 'asc' },
+      orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
       take: limit + 1,
       ...(cursor !== undefined && {
         cursor: { id: cursor },
