@@ -7,7 +7,7 @@ import { api, isWebAuthed } from '@/lib/api'
 import { clearWebAuth } from '@/lib/authState'
 import Particles from '../../app/Particles'
 
-const IDLE_MS         = 5 * 60 * 1000   // 5 minutes idle before the animation appears
+const IDLE_MS         = 10 * 60 * 1000  // 10 minutes idle before the animation appears
 const LOGOUT_AFTER_MS = 3 * 60 * 1000   // clicking the animation logs out once it's been up this long
 const SLIDE_MS        = 12500
 
