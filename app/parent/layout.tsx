@@ -47,7 +47,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   if (!checked) return null
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="ns-scale-shell" style={{ display: 'flex', minHeight: '100vh' }}>
       <aside style={S.sidebar}>
         {/* Logo */}
         <div style={S.logoRow}>

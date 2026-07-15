@@ -206,7 +206,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="ns-scale-shell" style={{ display: 'flex', minHeight: '100vh' }}>
       <motion.aside
         animate={{ width: sideW }}
         transition={springTransition}

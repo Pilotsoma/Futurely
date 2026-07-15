@@ -95,7 +95,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="ns-scale-shell" style={{ display: 'flex', minHeight: '100vh' }}>
       <aside style={S.sidebar}>
         {/* Logo */}
         <div style={S.logoRow}>

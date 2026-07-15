@@ -124,10 +124,12 @@ body {
    Our px-based UI is tuned to look right on a MacBook's ~1440–1512 logical-px
    display. Windows monitors are typically wider at 100% OS scaling (1920,
    2560+), so the same fixed px sizes read as smaller/more spread out. Scale
-   the whole page up on wider viewports so it reads consistently across OSes. */
-@media (min-width: 1600px) { html { zoom: 1.08; } }
-@media (min-width: 1920px) { html { zoom: 1.15; } }
-@media (min-width: 2560px) { html { zoom: 1.25; } }
+   up on wider viewports so it reads consistently across OSes. Scoped to the
+   authenticated app shell only (.ns-scale-shell) — the login screen and its
+   background scene are left completely untouched. */
+@media (min-width: 1600px) { .ns-scale-shell { zoom: 1.08; } }
+@media (min-width: 1920px) { .ns-scale-shell { zoom: 1.15; } }
+@media (min-width: 2560px) { .ns-scale-shell { zoom: 1.25; } }
 
 a { color: var(--primary); text-decoration: none; }
 button { cursor: pointer; font-family: inherit; font-size: inherit; color: inherit; }
