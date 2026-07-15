@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { api, isWebAuthed } from '@/lib/api'
 import { clearWebAuth } from '@/lib/authState'
+import Particles from '../../app/Particles'
 
 const IDLE_MS         = 5 * 60 * 1000   // 5 minutes idle before the animation appears
 const LOGOUT_AFTER_MS = 3 * 60 * 1000   // clicking the animation logs out once it's been up this long
@@ -449,6 +450,26 @@ export default function InactivityWatcher() {
       tabIndex={0}
       aria-label={readyToLogout ? 'Tap to log out' : 'Tap to dismiss and return to app'}
     >
+      {/* Deep space gradient + animated starfield — same cosmic backdrop as the
+          landing page, so the idle screen feels like part of the same world. */}
+      <div className="ns-space-gradient" />
+      <div className="ns-starfield">
+        {reduced ? (
+          <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0 }}>
+            {Array.from({ length: 180 }, (_, i) => {
+              const seed = i * 2654435761
+              const x = ((seed >>> 0) % 10000) / 100
+              const y = ((seed * 1234567) >>> 0) % 10000 / 100
+              const r = 0.4 + ((seed * 987654) >>> 0) % 10 / 14
+              const op = 0.25 + ((seed * 123456) >>> 0) % 10 / 17
+              return <circle key={i} cx={`${x}%`} cy={`${y}%`} r={r} fill="white" fillOpacity={op} />
+            })}
+          </svg>
+        ) : (
+          <Particles particleColors={['#ffffff']} particleCount={350} particleSpread={10} speed={0.1} particleBaseSize={100} alphaParticles={false} />
+        )}
+      </div>
+
       {/* Layered ambient glow orbs — ken-burns drift. Skipped entirely (not just
           un-animated) on low-spec machines: the blur filters are expensive to
           paint even when static. */}
@@ -470,6 +491,15 @@ export default function InactivityWatcher() {
             exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.04, y: -14 }}
             transition={{ duration: reduced ? 0.15 : 0.42, ease: [0.22, 1, 0.36, 1] }}
             className="ns-widget-card"
+            style={{
+              width: '100%',
+              background: '#162235',
+              border: '1px solid #273D5E',
+              borderRadius: 30,
+              padding: '52px 56px',
+              overflow: 'hidden',
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.4), 0 20px 56px rgba(0,0,0,0.35)',
+            }}
           >
             {/* Slow, continuous zoom while the slide is on screen — reads as premium, not the crossfade's snap */}
             <motion.div
@@ -501,11 +531,26 @@ export default function InactivityWatcher() {
           align-items: center;
           justify-content: center;
           gap: 28px;
-          background: #0D1829;
+          background: #04040e;
           cursor: pointer;
           overflow: hidden;
           animation: nsFadeIn 0.6s ease both;
           user-select: none;
+        }
+
+        /* Same deep space gradient as the landing page */
+        .ns-space-gradient {
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(ellipse at 18% 72%, rgba(50,15,90,0.12) 0%, transparent 48%),
+            radial-gradient(ellipse at 82% 18%, rgba(10,30,80,0.10) 0%, transparent 45%),
+            radial-gradient(ellipse at 50% 40%, #0c0c22 0%, #04040e 100%);
+        }
+
+        .ns-starfield {
+          position: absolute;
+          inset: 0;
         }
 
         /* Three glow orbs at different positions for layered depth */
@@ -554,21 +599,6 @@ export default function InactivityWatcher() {
           display: flex;
           align-items: center;
           justify-content: center;
-        }
-
-        .ns-widget-card {
-          width: 100%;
-          background: #162235;
-          border: 1px solid #273D5E;
-          border-radius: 30px;
-          padding: 52px 56px;
-          overflow: hidden;
-          /* Layered shadow for depth/elevation */
-          box-shadow:
-            0 0 0 1px rgba(255,255,255,0.04),
-            0 2px 8px rgba(0,0,0,0.3),
-            0 8px 32px rgba(0,0,0,0.4),
-            0 20px 56px rgba(0,0,0,0.35);
         }
 
         .ns-hint {
