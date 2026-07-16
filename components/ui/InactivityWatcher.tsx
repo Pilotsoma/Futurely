@@ -653,8 +653,11 @@ export default function InactivityWatcher() {
           align-items: center;
           justify-content: center;
           /* A light frosted scrim — enough to read text against the artwork
-             without going opaque and blocking the picture out. */
-          background: rgba(4,4,14,0.28);
+             without going opaque and blocking the picture out. Contrast leans
+             on the plain background alpha rather than the blur, since
+             backdrop-filter has rendered noticeably weaker on Windows/Chrome
+             than Mac/Safari in practice — plain rgba is consistent everywhere. */
+          background: rgba(4,4,14,0.42);
           backdrop-filter: blur(14px);
           -webkit-backdrop-filter: blur(14px);
           border-radius: 32px;
