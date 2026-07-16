@@ -595,7 +595,7 @@ export default function InactivityWatcher() {
           position: absolute;
           inset: 0;
           background:
-            radial-gradient(ellipse at 50% 52%, rgba(4,4,14,0.78) 0%, transparent 58%),
+            radial-gradient(ellipse at 50% 52%, rgba(4,4,14,0.45) 0%, transparent 55%),
             radial-gradient(ellipse at 18% 72%, rgba(50,15,90,0.18) 0%, transparent 48%),
             radial-gradient(ellipse at 82% 18%, rgba(10,30,80,0.15) 0%, transparent 45%),
             radial-gradient(ellipse at 50% 40%, transparent 45%, rgba(4,4,14,0.55) 100%);
@@ -652,12 +652,17 @@ export default function InactivityWatcher() {
           display: flex;
           align-items: center;
           justify-content: center;
-          /* No box/background here — deliberately kept out. Legibility against
-             the artwork comes from text-shadow below plus the darkened center
-             of .ns-space-gradient, not a panel. */
+          /* A light frosted scrim — enough to read text against the artwork
+             without going opaque and blocking the picture out. */
+          background: rgba(4,4,14,0.28);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          border-radius: 32px;
+          padding: 40px 44px;
+          box-sizing: border-box;
           text-shadow: 0 1px 3px rgba(0,0,0,0.85), 0 2px 14px rgba(0,0,0,0.7);
           /* The slide's slow zoom-in slightly overflows this box's nominal
-             bounds; clip it so it can't spill down into the hint text below. */
+             bounds; clip it so it can't spill past the panel's rounded edge. */
           overflow: hidden;
         }
 
