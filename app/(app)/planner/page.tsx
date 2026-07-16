@@ -5,7 +5,8 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { api, type PlannerItem, type CanvasStatus } from '../../../lib/api'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import PageLoader from '../../../components/ui/PageLoader'
-import { CheckIcon, SparklesIcon, XMarkIcon } from '@/components/icons'
+import { CheckIcon, SparklesIcon, XMarkIcon, CalendarIcon } from '@/components/icons'
+import CalendarView from '../../../components/planner/CalendarView'
 
 type StudyPlan = {
   overview: string
@@ -111,11 +112,16 @@ export default function PlannerPage() {
   const [showCompleted, setShowCompleted] = useState(false)
   const [aiSorting, setAiSorting] = useState(false)
 
+  // View mode: list (grouped by due date) or calendar (month grid)
+  const [view, setView] = useState<'list' | 'calendar'>('list')
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date())
+
   // Form state
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [subject, setSubject] = useState('')
   const [customSubject, setCustomSubject] = useState('')
+  const [startDate, setStartDate] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -178,6 +184,7 @@ export default function PlannerPage() {
       const created = await api.plannerCreate({
         title: title.trim(),
         subject: finalSubject || undefined,
+        startDate: startDate || undefined,
         dueDate,
         dueTime: dueTime || undefined,
       })
@@ -185,6 +192,7 @@ export default function PlannerPage() {
       setTitle('')
       setSubject('')
       setCustomSubject('')
+      setStartDate('')
       setDueDate('')
       setDueTime('')
       setShowForm(false)
@@ -225,6 +233,22 @@ export default function PlannerPage() {
       await api.plannerDelete(id)
     } catch {
       void fetchData()
+    }
+  }
+
+  async function handleReschedule(item: PlannerItem, newDueDate: Date) {
+    const deltaMs = newDueDate.getTime() - new Date(item.dueDate).getTime()
+    const newDueIso = newDueDate.toISOString()
+    const newStartIso = item.startDate ? new Date(new Date(item.startDate).getTime() + deltaMs).toISOString() : null
+
+    const prevItems = items
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, dueDate: newDueIso, startDate: newStartIso } : i))
+    try {
+      const updated = await api.plannerReschedule(item.id, { startDate: newStartIso, dueDate: newDueIso })
+      setItems(prev => prev.map(i => i.id === item.id ? updated : i))
+    } catch {
+      setItems(prevItems)
+      setToggleError('Failed to reschedule — please try again.')
     }
   }
 
@@ -364,22 +388,53 @@ export default function PlannerPage() {
             {aiSorting ? 'Scoring…' : '✦ AI Sorted'}
           </button>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          style={{
-            background: showForm ? 'var(--surface-2)' : 'var(--primary)',
-            color: showForm ? 'var(--text)' : '#fff',
-            border: showForm ? '1px solid var(--border)' : 'none',
-            borderRadius: 10,
-            padding: '10px 20px',
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-        >
-          {showForm ? 'Cancel' : '+ New Task'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+            <button
+              onClick={() => setView('list')}
+              style={{
+                background: view === 'list' ? 'var(--surface-2)' : 'transparent',
+                color: view === 'list' ? 'var(--text)' : 'var(--text-secondary)',
+                border: 'none', padding: '8px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setView('calendar')}
+              title="Calendar view"
+              style={{
+                background: view === 'calendar' ? 'var(--surface-2)' : 'transparent',
+                color: view === 'calendar' ? 'var(--text)' : 'var(--text-secondary)',
+                border: 'none', padding: '8px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <CalendarIcon size={13} /> Calendar
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              if (!showForm && view === 'calendar') {
+                setDueDate(`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`)
+              }
+              setShowForm(!showForm)
+            }}
+            style={{
+              background: showForm ? 'var(--surface-2)' : 'var(--primary)',
+              color: showForm ? 'var(--text)' : '#fff',
+              border: showForm ? '1px solid var(--border)' : 'none',
+              borderRadius: 10,
+              padding: '10px 20px',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            {showForm ? 'Cancel' : '+ New Task'}
+          </button>
+        </div>
       </div>
 
       {/* ── Canvas: Connect form (shown when adding first OR second connection) ── */}
@@ -591,6 +646,13 @@ export default function PlannerPage() {
                 onChange={e => setCustomSubject(e.target.value)} required style={{ ...S.input, flex: 1 }} />
             </div>
           )}
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>
+            Starts on (optional — for multi-day tasks that should span the calendar)
+          </div>
+          <div style={S.formRow}>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+              max={dueDate || undefined} style={{ ...S.input, flex: 1, color: startDate ? 'var(--text)' : 'var(--text-secondary)' }} />
+          </div>
           <div style={S.formRow}>
             <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required style={{ ...S.input, flex: 1 }} />
             <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} style={{ ...S.input, flex: 1 }} />
@@ -703,86 +765,36 @@ export default function PlannerPage() {
         </div>
       )}
 
+      {/* Calendar view: month grid + selected day's assignments */}
+      {view === 'calendar' && (
+        <>
+          <CalendarView items={items} selectedDate={selectedDate} onSelectDate={setSelectedDate} onReschedule={(item, newDue) => void handleReschedule(item, newDue)} />
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
+              {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+            {(() => {
+              const dayItems = items.filter(item => {
+                const due = new Date(item.dueDate)
+                return due.getFullYear() === selectedDate.getFullYear() &&
+                  due.getMonth() === selectedDate.getMonth() &&
+                  due.getDate() === selectedDate.getDate()
+              })
+              if (dayItems.length === 0) {
+                return <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Nothing due this day.</p>
+              }
+              return dayItems.map(item => (
+                <AssignmentCard key={item.id} item={item} toggling={toggling} onToggle={handleToggle} onDelete={handleDelete} draggable />
+              ))
+            })()}
+          </div>
+        </>
+      )}
+
       {/* Assignment Groups */}
-      {(() => {
+      {view === 'list' && (() => {
         const activeGroups = groups.filter(g => g.key !== 'Completed')
         const completedGroup = groups.find(g => g.key === 'Completed')
-
-        function AssignmentCard({ item }: { item: PlannerItem }) {
-          const priority = item.priority?.toUpperCase() as 'HIGH' | 'MEDIUM' | 'LOW' | undefined
-          const priorityStyle = priority ? PRIORITY_BADGE[priority] : null
-
-          return (
-            <div key={item.id} className="ns-card" style={{ padding: '13px 14px', marginBottom: 8, opacity: item.completed ? 0.6 : 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    width: 18, height: 18, borderRadius: 5,
-                    border: `1.5px solid ${item.completed ? 'var(--primary)' : 'var(--border)'}`,
-                    background: item.completed ? 'var(--primary)' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                    transition: 'background 0.15s, border-color 0.15s',
-                  }}>
-                    {item.completed && (
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                        <path d="M1 4L3.5 6.5L9 1" stroke="#060D10" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
-                  </div>
-                  <input type="checkbox" checked={item.completed} disabled={toggling.has(item.id)}
-                    onChange={() => void handleToggle(item.id, !item.completed)} style={{ display: 'none' }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 13.5, fontWeight: 500,
-                      textDecoration: item.completed ? 'line-through' : 'none',
-                      color: item.completed ? 'var(--text-muted)' : 'var(--text)',
-                    }}>
-                      {item.title}
-                    </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {item.subject && <span>{item.subject}</span>}
-                      {item.source === 'CANVAS' && (
-                        <span style={{ background: 'rgba(229,57,53,0.12)', color: '#E53935', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
-                          Canvas
-                        </span>
-                      )}
-                      {isLate(item) && (
-                        <span style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
-                          Late
-                        </span>
-                      )}
-                      <span>Due {formatDueDate(item)}</span>
-                    </div>
-                  </div>
-                </label>
-                {priorityStyle && (
-                  <span style={{
-                    flexShrink: 0,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    background: priorityStyle.bg,
-                    color: priorityStyle.color,
-                    border: `1px solid ${priorityStyle.border}`,
-                    borderRadius: 20,
-                    padding: '3px 9px',
-                    whiteSpace: 'nowrap' as const,
-                  }}>
-                    {priority!.charAt(0) + priority!.slice(1).toLowerCase()}
-                  </span>
-                )}
-                <button onClick={() => void handleDelete(item.id)} title="Delete task" style={{
-                  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
-                  fontSize: 16, padding: 4, opacity: 0.5, transition: 'opacity 0.15s', flexShrink: 0,
-                }}
-                  onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '1' }}
-                  onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '0.5' }}
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          )
-        }
 
         return (
           <>
@@ -814,7 +826,7 @@ export default function PlannerPage() {
                       {group.items.length}
                     </span>
                   </div>
-                  {group.items.map(item => <AssignmentCard key={item.id} item={item} />)}
+                  {group.items.map(item => <AssignmentCard key={item.id} item={item} toggling={toggling} onToggle={handleToggle} onDelete={handleDelete} />)}
                 </div>
               )
             })}
@@ -836,12 +848,99 @@ export default function PlannerPage() {
                   </svg>
                   {showCompleted ? 'Hide completed assignments' : `Show completed assignments (${completedGroup.items.length})`}
                 </button>
-                {showCompleted && completedGroup.items.map(item => <AssignmentCard key={item.id} item={item} />)}
+                {showCompleted && completedGroup.items.map(item => <AssignmentCard key={item.id} item={item} toggling={toggling} onToggle={handleToggle} onDelete={handleDelete} />)}
               </div>
             )}
           </>
         )
       })()}
+    </div>
+  )
+}
+
+function AssignmentCard({ item, toggling, onToggle, onDelete, draggable }: {
+  item: PlannerItem
+  toggling: Set<number>
+  onToggle: (id: number, completed: boolean) => void
+  onDelete: (id: number) => void
+  draggable?: boolean
+}) {
+  const priority = item.priority?.toUpperCase() as 'HIGH' | 'MEDIUM' | 'LOW' | undefined
+  const priorityStyle = priority ? PRIORITY_BADGE[priority] : null
+
+  return (
+    <div
+      className="ns-card"
+      draggable={draggable}
+      onDragStart={draggable ? e => { e.dataTransfer.setData('text/plain', String(item.id)); e.dataTransfer.effectAllowed = 'move' } : undefined}
+      style={{ padding: '13px 14px', marginBottom: 8, opacity: item.completed ? 0.6 : 1, cursor: draggable ? 'grab' : undefined }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1, minWidth: 0 }}>
+          <div style={{
+            width: 18, height: 18, borderRadius: 5,
+            border: `1.5px solid ${item.completed ? 'var(--primary)' : 'var(--border)'}`,
+            background: item.completed ? 'var(--primary)' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            transition: 'background 0.15s, border-color 0.15s',
+          }}>
+            {item.completed && (
+              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                <path d="M1 4L3.5 6.5L9 1" stroke="#060D10" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </div>
+          <input type="checkbox" checked={item.completed} disabled={toggling.has(item.id)}
+            onChange={() => onToggle(item.id, !item.completed)} style={{ display: 'none' }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: 13.5, fontWeight: 500,
+              textDecoration: item.completed ? 'line-through' : 'none',
+              color: item.completed ? 'var(--text-muted)' : 'var(--text)',
+            }}>
+              {item.title}
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 3, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              {item.subject && <span>{item.subject}</span>}
+              {item.source === 'CANVAS' && (
+                <span style={{ background: 'rgba(229,57,53,0.12)', color: '#E53935', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
+                  Canvas
+                </span>
+              )}
+              {isLate(item) && (
+                <span style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '0.3px' }}>
+                  Late
+                </span>
+              )}
+              <span>Due {formatDueDate(item)}</span>
+            </div>
+          </div>
+        </label>
+        {priorityStyle && (
+          <span style={{
+            flexShrink: 0,
+            fontSize: 11,
+            fontWeight: 700,
+            background: priorityStyle.bg,
+            color: priorityStyle.color,
+            border: `1px solid ${priorityStyle.border}`,
+            borderRadius: 20,
+            padding: '3px 9px',
+            whiteSpace: 'nowrap' as const,
+          }}>
+            {priority!.charAt(0) + priority!.slice(1).toLowerCase()}
+          </span>
+        )}
+        <button onClick={() => onDelete(item.id)} title="Delete task" style={{
+          background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+          fontSize: 16, padding: 4, opacity: 0.5, transition: 'opacity 0.15s', flexShrink: 0,
+        }}
+          onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '1' }}
+          onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '0.5' }}
+        >
+          ×
+        </button>
+      </div>
     </div>
   )
 }

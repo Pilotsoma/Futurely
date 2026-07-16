@@ -197,6 +197,7 @@ model Assignment {
   userId           Int
   title            String
   subject          String
+  startDate        DateTime?
   dueDate          DateTime
   dueTime          String?
   estimatedMinutes Int?      @default(0)

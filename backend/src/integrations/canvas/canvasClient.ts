@@ -239,6 +239,7 @@ export interface CanvasCourse {
 export interface CanvasAssignment {
   name: string
   due_at: string | null
+  unlock_at: string | null
   course_id: number
   points_possible: number | null
   html_url: string

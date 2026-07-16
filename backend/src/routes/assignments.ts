@@ -18,12 +18,20 @@ const listQuerySchema = z.object({
 const createBodySchema = z.object({
   title: z.string().min(1).max(200),
   subject: z.string().max(100).optional(),
+  startDate: z.string().min(1).optional(),
   dueDate: z.string().min(1),
   dueTime: z.string().max(20).optional(),
 })
 
 const patchBodySchema = z.object({
   completed: z.boolean(),
+})
+
+// startDate/dueDate here are full ISO timestamps (not YYYY-MM-DD) — the client computes
+// the shifted instant itself when dragging a card to a new day, preserving time-of-day.
+const rescheduleBodySchema = z.object({
+  startDate: z.string().min(1).nullable().optional(),
+  dueDate: z.string().min(1),
 })
 
 const idParamSchema = z.object({
@@ -97,7 +105,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
     return
   }
 
-  const { title, subject, dueDate, dueTime } = parsed.data
+  const { title, subject, startDate, dueDate, dueTime } = parsed.data
 
   // Parse date as local time by splitting components — new Date("YYYY-MM-DD") is UTC midnight
   // which shifts the day back by one in US timezones. Using Date(y, m, d, h, min) is always local.
@@ -112,11 +120,25 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
     return
   }
 
+  let parsedStartDate: Date | null = null
+  if (startDate) {
+    const [sYear, sMonth, sDay] = startDate.split('-').map(Number)
+    parsedStartDate = new Date(sYear, sMonth - 1, sDay, 0, 0, 0)
+    if (isNaN(parsedStartDate.getTime()) || parsedStartDate.getTime() >= parsedDate.getTime()) {
+      res.status(422).json({
+        data: null,
+        error: { code: 'VALIDATION_ERROR', message: 'startDate must be a valid date before dueDate' },
+      })
+      return
+    }
+  }
+
   try {
     const assignment = await prisma.assignment.create({
       data: {
         title: title.trim(),
         subject: subject?.trim() ?? '',
+        startDate: parsedStartDate,
         dueDate: parsedDate,
         dueTime: dueTime?.trim() || null,
         userId: req.userId,
@@ -147,6 +169,68 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Failed to create assignment' },
+    })
+  }
+})
+
+// PATCH /:id/reschedule — moves an assignment to a new due date (and, for multi-day
+// spans, a new start date), preserving the gap between them. Used by calendar drag-and-drop.
+router.patch('/:id/reschedule', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  if (req.userId === undefined) {
+    res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED' } })
+    return
+  }
+
+  const params = idParamSchema.safeParse(req.params)
+  const body = rescheduleBodySchema.safeParse(req.body)
+
+  if (!params.success || !body.success) {
+    res.status(422).json({
+      data: null,
+      error: {
+        code: 'VALIDATION_ERROR',
+        details: {
+          ...(!params.success && { params: params.error.flatten() }),
+          ...(!body.success && { body: body.error.flatten() }),
+        },
+      },
+    })
+    return
+  }
+
+  const { id } = params.data
+  const dueDate = new Date(body.data.dueDate)
+  const startDate = body.data.startDate ? new Date(body.data.startDate) : null
+
+  if (isNaN(dueDate.getTime()) || (startDate && isNaN(startDate.getTime()))) {
+    res.status(422).json({
+      data: null,
+      error: { code: 'VALIDATION_ERROR', message: 'Invalid date' },
+    })
+    return
+  }
+
+  try {
+    const result = await prisma.assignment.updateMany({
+      where: { id, userId: req.userId },
+      data: { dueDate, startDate },
+    })
+
+    if (result.count === 0) {
+      res.status(404).json({
+        data: null,
+        error: { code: 'NOT_FOUND', message: 'Assignment not found' },
+      })
+      return
+    }
+
+    const updated = await prisma.assignment.findFirst({ where: { id, userId: req.userId } })
+    res.status(200).json({ data: updated })
+  } catch (err) {
+    logger.error('Failed to reschedule assignment', { err })
+    res.status(500).json({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to reschedule assignment' },
     })
   }
 })

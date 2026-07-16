@@ -567,7 +567,7 @@ export const api = {
   plannerList: () =>
     request<PlannerItem[]>('/api/assignments?limit=100'),
 
-  plannerCreate: (item: { title: string; subject?: string; dueDate: string; dueTime?: string }) =>
+  plannerCreate: (item: { title: string; subject?: string; startDate?: string; dueDate: string; dueTime?: string }) =>
     request<PlannerItem>('/api/assignments', {
       method: 'POST',
       body: JSON.stringify(item),
@@ -577,6 +577,13 @@ export const api = {
     request<PlannerItem>(`/api/assignments/${id}/complete`, {
       method: 'PATCH',
       body: JSON.stringify({ completed }),
+    }),
+
+  // dueDate/startDate here are full ISO timestamps, preserving time-of-day across the move
+  plannerReschedule: (id: number, dates: { startDate: string | null; dueDate: string }) =>
+    request<PlannerItem>(`/api/assignments/${id}/reschedule`, {
+      method: 'PATCH',
+      body: JSON.stringify(dates),
     }),
 
   plannerDelete: (id: number) =>
@@ -1184,6 +1191,7 @@ export interface PlannerItem {
   id: number
   title: string
   subject: string | null
+  startDate: string | null
   dueDate: string
   dueTime: string | null
   completed: boolean

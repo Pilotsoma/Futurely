@@ -117,6 +117,10 @@ const PATCHES: string[] = [
     ADD COLUMN IF NOT EXISTS "tosAcceptedAt"     TIMESTAMP(3),
     ADD COLUMN IF NOT EXISTS "privacyAcceptedAt" TIMESTAMP(3),
     ADD COLUMN IF NOT EXISTS "ageConfirmedAt"    TIMESTAMP(3)`,
+
+  // ── Assignment start date (multi-day calendar spans) ─────────────────
+  `ALTER TABLE "Assignment"
+    ADD COLUMN IF NOT EXISTS "startDate" TIMESTAMP(3)`,
 ]
 
 // Data-level repairs that are always idempotent and safe to re-run on every cold start.
@@ -168,6 +172,7 @@ export function ensureSchema(): Promise<void> {
       await prisma.$queryRawUnsafe(`SELECT "spinCoinsSpent" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT "loginStreak", "tosAcceptedAt", "privacyAcceptedAt", "ageConfirmedAt" FROM "User" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT "startDate" FROM "Assignment" LIMIT 0`)
     } catch {
       // Schema is incomplete — run patches below.
       for (const sql of PATCHES) {

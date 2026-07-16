@@ -342,17 +342,26 @@ router.post(
           || submission.workflow_state === 'graded'
       }
 
-      const upsertPayloads = allAssignments.map(assignment => ({
-        userId,
-        title: assignment.name.slice(0, 500),
-        subject: courseMap.get(assignment.course_id) ?? `Canvas Course ${assignment.course_id}`,
-        dueDate: assignment.due_at
+      const upsertPayloads = allAssignments.map(assignment => {
+        const dueDate = assignment.due_at
           ? new Date(assignment.due_at)
-          : new Date(Date.now() + SEVEN_DAYS_MS),
-        source: ASSIGNMENT_SOURCE.CANVAS,
-        completed: isSubmitted(assignment.submission),
-        completedAt: assignment.submission?.submitted_at ? new Date(assignment.submission.submitted_at) : null,
-      }))
+          : new Date(Date.now() + SEVEN_DAYS_MS)
+        // Only treat unlock_at as a span start when it's a distinct earlier day —
+        // most Canvas assignments unlock the moment they're due, which isn't a span.
+        const unlockDate = assignment.unlock_at ? new Date(assignment.unlock_at) : null
+        const startDate = unlockDate && unlockDate.getTime() < dueDate.getTime() - 86400000 ? unlockDate : null
+
+        return {
+          userId,
+          title: assignment.name.slice(0, 500),
+          subject: courseMap.get(assignment.course_id) ?? `Canvas Course ${assignment.course_id}`,
+          startDate,
+          dueDate,
+          source: ASSIGNMENT_SOURCE.CANVAS,
+          completed: isSubmitted(assignment.submission),
+          completedAt: assignment.submission?.submitted_at ? new Date(assignment.submission.submitted_at) : null,
+        }
+      })
 
       // Track which assignments are genuinely new (not just updates)
       const existingKeys = new Set(
@@ -373,6 +382,7 @@ router.post(
           await prisma.assignment.update({
             where: { id: existing.id },
             data: {
+              startDate: payload.startDate,
               dueDate: payload.dueDate,
               ...(payload.completed && { completed: true, completedAt: payload.completedAt ?? new Date() }),
             },
