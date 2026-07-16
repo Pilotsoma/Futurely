@@ -1,20 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, Suspense } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import Image from 'next/image'
 import { motion, useReducedMotion } from 'framer-motion'
-import { api } from '../../../lib/api'
 import { renderChatMarkdown } from '../../../lib/chatMarkdown'
-
-interface Msg { id: string; role: 'user' | 'ai'; text: string }
-
-interface ChatSession {
-  id: string
-  title: string
-  messages: Msg[]
-  createdAt: number
-  updatedAt: number
-}
+import { useAiChat, type ChatSession } from '../../../components/providers/AiChatProvider'
 
 const CHIPS = [
   'What is my GPA?',
@@ -23,31 +13,6 @@ const CHIPS = [
   'Study tips for finals',
   'Weakest subject?',
 ]
-
-const STORAGE_KEY = 'ns_ai_sessions'
-const SESSION_TTL = 7 * 24 * 60 * 60 * 1000
-
-function loadSessions(): ChatSession[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const all: ChatSession[] = JSON.parse(raw)
-    const cutoff = Date.now() - SESSION_TTL
-    return all.filter(s => s.createdAt >= cutoff)
-  } catch {
-    return []
-  }
-}
-
-function saveSessions(sessions: ChatSession[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions))
-  } catch {}
-}
-
-function newSessionId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-}
 
 function formatSessionDate(ts: number): string {
   const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
@@ -64,19 +29,18 @@ const AiSparkIcon = ({ size = 18 }: { size?: number }) => (
 )
 
 function AIChatInner() {
-  // Load persisted sessions synchronously on first client render (mirrors the
-  // curtainEnter pattern below) so the history sidebar never flashes empty
-  // before populating — avoids a layout jump right as the entrance animation settles.
-  const [sessions, setSessions]     = useState<ChatSession[]>(() => {
-    if (typeof window === 'undefined') return []
-    const loaded = loadSessions()
-    saveSessions(loaded)
-    return loaded
-  })
-  const [activeId, setActiveId]     = useState<string | null>(null)
-  const [messages, setMessages]     = useState<Msg[]>([])
+  const {
+    sessions,
+    activeId,
+    messages,
+    sending,
+    handleSend,
+    startNewChat: ctxStartNewChat,
+    openSession: ctxOpenSession,
+    submitPendingMessage,
+  } = useAiChat()
+
   const [input, setInput]           = useState('')
-  const [sending, setSending]       = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -102,121 +66,38 @@ function AIChatInner() {
   }, [input])
 
   // Auto-send a message passed from the dashboard AiBar via sessionStorage.
-  // We use a cancel flag so React 18 Strict Mode's mount→unmount→remount
-  // cycle works correctly: the first mount's callbacks are cancelled on
-  // cleanup, the second (live) mount re-reads sessionStorage and completes
-  // the send. sessionStorage is only removed after a successful send so the
-  // second mount can still read the value.
+  // Fires once per page mount ([] deps). The provider's submitPendingMessage
+  // owns the async logic and keeps state alive across navigations.
+  // sessionStorage is cleared *before* the call so that React 18 Strict Mode's
+  // double-invocation (effect → cleanup → effect) reads null on the second
+  // fire and exits early, preventing duplicate API requests.
   useEffect(() => {
     const msg = sessionStorage.getItem('ai_pending_msg')?.trim()
     if (!msg) return
-
-    let cancelled = false
-    const sessionId = newSessionId()
-    const title = msg.length > 40 ? msg.slice(0, 40) + '…' : msg
-    const userMsg: Msg = { id: Date.now().toString(), role: 'user', text: msg }
-
-    setMessages([userMsg])
-    setSending(true)
-    setActiveId(sessionId)
-    setInput('')
-
-    api.chat(msg)
-      .then(({ reply }) => {
-        if (cancelled) return
-        sessionStorage.removeItem('ai_pending_msg')
-        const aiMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: reply }
-        setMessages([userMsg, aiMsg])
-        setSessions(prev => {
-          const next = [{ id: sessionId, title, messages: [userMsg, aiMsg], createdAt: Date.now(), updatedAt: Date.now() }, ...prev]
-          saveSessions(next)
-          return next
-        })
-      })
-      .catch(() => {
-        if (cancelled) return
-        sessionStorage.removeItem('ai_pending_msg')
-        const errMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: 'Something went wrong. Please try again.' }
-        setMessages([userMsg, errMsg])
-        setSessions(prev => {
-          const next = [{ id: sessionId, title, messages: [userMsg, errMsg], createdAt: Date.now(), updatedAt: Date.now() }, ...prev]
-          saveSessions(next)
-          return next
-        })
-      })
-      .finally(() => {
-        if (!cancelled) setSending(false)
-        if (!cancelled) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
-      })
-
-    return () => { cancelled = true }
+    sessionStorage.removeItem('ai_pending_msg')
+    submitPendingMessage(msg)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Scroll to the latest message whenever the message list grows.
+  useEffect(() => {
+    if (messages.length === 0) return
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
+  }, [messages.length])
+
+  // Page-local wrappers add UI cleanup (input, history panel) on top of the
+  // provider-owned state changes.
   function startNewChat() {
-    setActiveId(null)
-    setMessages([])
+    ctxStartNewChat()
     setInput('')
     setHistoryOpen(false)
   }
 
   function openSession(session: ChatSession) {
-    setActiveId(session.id)
-    setMessages(session.messages)
+    ctxOpenSession(session)
     setInput('')
     setHistoryOpen(false)
   }
-
-  function persistMessages(msgs: Msg[], sessionId: string, title: string) {
-    setSessions(prev => {
-      const exists = prev.some(s => s.id === sessionId)
-      const next = exists
-        ? prev.map(s => s.id === sessionId ? { ...s, messages: msgs, updatedAt: Date.now() } : s)
-        : [{ id: sessionId, title, messages: msgs, createdAt: Date.now(), updatedAt: Date.now() }, ...prev]
-      saveSessions(next)
-      return next
-    })
-  }
-
-  const handleSend = useCallback(async function handleSend(text?: string) {
-    const msg = (text ?? input).trim()
-    if (!msg || sending) return
-    setInput('')
-
-    const userMsg: Msg = { id: Date.now().toString(), role: 'user', text: msg }
-    const withUser = [...messages, userMsg]
-    setMessages(withUser)
-    setSending(true)
-
-    // Determine or create session
-    let sessionId = activeId
-    let sessionTitle = msg.length > 40 ? msg.slice(0, 40) + '…' : msg
-    if (!sessionId) {
-      sessionId = newSessionId()
-      setActiveId(sessionId)
-    } else {
-      const existing = sessions.find(s => s.id === sessionId)
-      if (existing) sessionTitle = existing.title
-    }
-
-    try {
-      const history = messages.slice(-10).map(m => ({ role: m.role === 'ai' ? 'assistant' as const : 'user' as const, content: m.text }))
-      const { reply } = await api.chat(msg, history)
-      const aiMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: reply }
-      const finalMsgs = [...withUser, aiMsg]
-      setMessages(finalMsgs)
-      persistMessages(finalMsgs, sessionId, sessionTitle)
-    } catch {
-      const errMsg: Msg = { id: (Date.now() + 1).toString(), role: 'ai', text: 'Something went wrong. Please try again.' }
-      const finalMsgs = [...withUser, errMsg]
-      setMessages(finalMsgs)
-      persistMessages(finalMsgs, sessionId, sessionTitle)
-    } finally {
-      setSending(false)
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [input, sending, messages, sessions, activeId])
 
   const isEmpty = messages.length === 0
 
@@ -332,7 +213,9 @@ function AIChatInner() {
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
-                void handleSend()
+                const text = input
+                setInput('')
+                void handleSend(text)
               }
             }}
             placeholder="Ask anything about your academics…"
@@ -341,7 +224,11 @@ function AIChatInner() {
           />
           <button
             className="aic-send-btn"
-            onClick={() => void handleSend()}
+            onClick={() => {
+              const text = input
+              setInput('')
+              void handleSend(text)
+            }}
             disabled={sending || !input.trim()}
             aria-label="Send message"
           >

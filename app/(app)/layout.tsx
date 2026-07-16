@@ -18,6 +18,7 @@ import InactivityWatcher from '../../components/ui/InactivityWatcher'
 import ExternalLinkGuard from '../../components/ui/ExternalLinkGuard'
 import CanvasTokenExpiredBanner from '../../components/ui/CanvasTokenExpiredBanner'
 import LagDetector from '../../components/ui/LagDetector'
+import { AiChatProvider } from '../../components/providers/AiChatProvider'
 
 const NAV = [
   {
@@ -172,6 +173,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   )
 
   return (
+    <AiChatProvider>
     <div className="ns-scale-shell" style={{ display: 'flex', minHeight: 'calc(100vh / var(--ui-zoom, 1))' }}>
       <motion.aside
         animate={{ width: sideW }}
@@ -450,6 +452,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </AnimatePresence>
       </motion.main>
     </div>
+    </AiChatProvider>
   )
 }
 
