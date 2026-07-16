@@ -2,11 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { api, isWebAuthed } from '@/lib/api'
 import { clearWebAuth } from '@/lib/authState'
-import { useCoverCrop, mapCoverPct } from '@/lib/useCoverCrop'
 import Particles from '../../app/Particles'
 
 const IDLE_MS         = 10 * 60 * 1000  // 10 minutes idle before the animation appears
@@ -18,30 +16,7 @@ function isIdleLogoutEnabled(): boolean {
   return localStorage.getItem('ns_idle_logout_enabled') !== '0'
 }
 
-const IMG_ASPECT = 1365 / 768
-
-// Glow accents, authored as percentages of the original 1365x768 artwork.
-// Coordinates were found by computer — thresholding warm-bright pixel clusters
-// to locate the moon and each lit house window, then confirmed by cropping the
-// source image at each result (mushroom clusters and cherry blossoms also read
-// as "warm and bright" and had to be filtered out by hand).
-const GLOWS = {
-  moon: { x: 80.8, y: 9.7, size: 5 },
-  windows: [
-    { x: 73.1, y: 32.2, size: 1.8, delay: '0s' },
-    { x: 42.9, y: 43.9, size: 1.8, delay: '1.3s' },
-    { x: 87.4, y: 41.0, size: 1.6, delay: '0.6s' },
-    { x: 83.0, y: 53.7, size: 1.6, delay: '2.0s' },
-    { x: 94.0, y: 49.8, size: 1.6, delay: '1.0s' },
-  ],
-}
-
-const SLIDES = [
-  { id: 'grades',  label: 'Grade Viewer',       color: '#2979FF', glow2: '#7C3AED', bg: '/idle/idle-bg.png' },
-  { id: 'gpa',     label: 'GPA Simulator',      color: '#00E5FF', glow2: '#2979FF', bg: '/idle/idle-bg-trail.png' },
-  { id: 'planner', label: 'Smart Planner',       color: '#7C3AED', glow2: '#A855F7', bg: '/idle/idle-bg-mushroom.png' },
-  { id: 'roadmap', label: 'High School Roadmap', color: '#A855F7', glow2: '#00E5FF', bg: '/idle/idle-bg-bridge.png' },
-] as const
+const SLIDES = ['grades', 'gpa', 'planner', 'roadmap'] as const
 
 // ─── Slide mockup: Grade Viewer ───────────────────────────────────────────────
 
@@ -373,11 +348,6 @@ export default function InactivityWatcher() {
   const [lowSpec, setLowSpec] = useState(false)
   const prefersReducedMotion = useReducedMotion() ?? false
   const reduced = prefersReducedMotion || lowSpec
-  const crop = useCoverCrop(IMG_ASPECT)
-  const at = (x: number, y: number) => ({
-    left: `${mapCoverPct(x, crop.xPct)}%`,
-    top:  `${mapCoverPct(y, crop.yPct)}%`,
-  })
 
   // Heuristic low-spec detection: few CPU cores or little RAM struggles with
   // the blurred, continuously-animating glow orbs, so skip them on weaker machines.
@@ -470,8 +440,6 @@ export default function InactivityWatcher() {
 
   if (!show) return null
 
-  const slide = SLIDES[slideIndex]
-
   return (
     <div
       className="ns-idle-overlay"
@@ -480,41 +448,8 @@ export default function InactivityWatcher() {
       tabIndex={0}
       aria-label={readyToLogout ? 'Tap to log out' : 'Tap to dismiss and return to app'}
     >
-      {/* The artwork — full-bleed, covering the entire screen. Crossfades to a
-          new picture per slide, with a slow Ken Burns zoom applied to the
-          whole background (not the feature content — the content itself stays
-          static now). */}
-      <AnimatePresence>
-        <motion.div
-          key={slide.bg}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: reduced ? 0.4 : 1.2, ease: 'easeInOut' }}
-          style={{ position: 'absolute', inset: 0 }}
-        >
-          <motion.div
-            initial={{ scale: 1 }}
-            animate={{ scale: reduced ? 1 : 1.06 }}
-            transition={{ duration: SLIDE_MS / 1000, ease: 'easeOut' }}
-            style={{ position: 'absolute', inset: 0 }}
-          >
-            <Image
-              src={slide.bg}
-              alt=""
-              fill
-              priority
-              sizes="100vw"
-              style={{ objectFit: 'cover' }}
-            />
-          </motion.div>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Deep space gradient + animated starfield, layered over the artwork —
-          same cosmic backdrop as the landing page, so the idle screen feels
-          like part of the same world, darkened toward the center for the
-          widget card's readability. */}
+      {/* Same cosmic backdrop as the landing page — a fixed radial gradient plus
+          an animated starfield, no per-slide artwork. */}
       <div className="ns-space-gradient" />
       <div className="ns-starfield">
         {reduced ? (
@@ -532,41 +467,6 @@ export default function InactivityWatcher() {
           <Particles particleColors={['#ffffff']} particleCount={350} particleSpread={10} speed={0.1} particleBaseSize={100} alphaParticles={false} />
         )}
       </div>
-
-      {/* Layered ambient glow orbs — ken-burns drift. Skipped entirely (not just
-          un-animated) on low-spec machines: the blur filters are expensive to
-          paint even when static. */}
-      {!reduced && (
-        <>
-          <div className="ns-glow-a" style={{ background: slide.color }} />
-          <div className="ns-glow-b" style={{ background: slide.glow2 }} />
-          <div className="ns-glow-c" style={{ background: slide.color }} />
-
-          {/* Glow — the moon + lit house windows. Coordinates are specific to
-              the Grade Viewer slide's artwork, so only show them there. */}
-          {slide.id === 'grades' && (
-            <>
-              <div style={{
-                position: 'absolute', ...at(GLOWS.moon.x, GLOWS.moon.y), width: `${GLOWS.moon.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(230,240,255,0.85) 0%, rgba(190,210,255,0.35) 45%, transparent 72%)',
-                filter: 'blur(4px)',
-                animation: 'idleGlowPulse 5s ease-in-out infinite',
-              }} />
-              {GLOWS.windows.map((w, i) => (
-                <div key={i} style={{
-                  position: 'absolute', ...at(w.x, w.y), width: `${w.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
-                  borderRadius: '50%',
-                  background: 'radial-gradient(circle, rgba(255,225,160,0.9) 0%, rgba(255,190,110,0.4) 45%, transparent 72%)',
-                  filter: 'blur(2.5px)',
-                  animation: `idleGlowPulse ${4.2 + i * 0.5}s ease-in-out infinite`,
-                  animationDelay: w.delay,
-                }} />
-              ))}
-            </>
-          )}
-        </>
-      )}
 
       {/* Widget card — AnimatePresence handles crossfade + depth transition */}
       <div className="ns-stage">
@@ -610,60 +510,20 @@ export default function InactivityWatcher() {
           user-select: none;
         }
 
-        /* Tint over the artwork — darkest toward the center so the widget card
-           stays readable regardless of how bright that part of the picture is,
-           plus the same subtle color washes the landing page uses. */
+        /* Same fixed cosmic gradient the landing page uses — a dark radial
+           vignette with subtle purple/blue color blooms, no artwork. */
         .ns-space-gradient {
           position: absolute;
           inset: 0;
           background:
-            radial-gradient(ellipse at 50% 52%, rgba(4,4,14,0.45) 0%, transparent 55%),
-            radial-gradient(ellipse at 18% 72%, rgba(50,15,90,0.18) 0%, transparent 48%),
-            radial-gradient(ellipse at 82% 18%, rgba(10,30,80,0.15) 0%, transparent 45%),
-            radial-gradient(ellipse at 50% 40%, transparent 45%, rgba(4,4,14,0.55) 100%);
+            radial-gradient(ellipse at 18% 72%, rgba(50,15,90,0.12) 0%, transparent 48%),
+            radial-gradient(ellipse at 82% 18%, rgba(10,30,80,0.10) 0%, transparent 45%),
+            radial-gradient(ellipse at 50% 40%, #0c0c22 0%, #04040e 100%);
         }
 
         .ns-starfield {
           position: absolute;
           inset: 0;
-        }
-
-        /* Three glow orbs at different positions for layered depth */
-        .ns-glow-a {
-          position: absolute;
-          width: 60vmax;
-          height: 60vmax;
-          border-radius: 50%;
-          filter: blur(140px);
-          opacity: 0.15;
-          top: -22%;
-          left: -12%;
-          transition: background 1.2s ease;
-          animation: nsKb1 24s ease-in-out infinite;
-        }
-        .ns-glow-b {
-          position: absolute;
-          width: 44vmax;
-          height: 44vmax;
-          border-radius: 50%;
-          filter: blur(110px);
-          opacity: 0.10;
-          bottom: -14%;
-          right: -10%;
-          transition: background 1.4s ease;
-          animation: nsKb2 28s ease-in-out infinite;
-        }
-        .ns-glow-c {
-          position: absolute;
-          width: 30vmax;
-          height: 30vmax;
-          border-radius: 50%;
-          filter: blur(90px);
-          opacity: 0.08;
-          top: 55%;
-          left: 55%;
-          transition: background 1s ease;
-          animation: nsKb3 20s ease-in-out infinite;
         }
 
         .ns-stage {
@@ -674,19 +534,17 @@ export default function InactivityWatcher() {
           display: flex;
           align-items: center;
           justify-content: center;
-          /* A light scrim — enough to read text against the artwork without
-             going opaque and blocking the picture out. No backdrop-filter:
-             two rounds of tuning its blur/alpha still rendered inconsistently
-             opaque between Mac/Safari and Windows/Chrome, so drop it and rely
-             solely on plain alpha compositing, which blends identically on
-             every browser since no filter effect is involved. */
+          /* A light scrim — enough to read text against the starfield without
+             going opaque. No backdrop-filter: two rounds of tuning its
+             blur/alpha still rendered inconsistently opaque between
+             Mac/Safari and Windows/Chrome, so drop it and rely solely on
+             plain alpha compositing, which blends identically on every
+             browser since no filter effect is involved. */
           background: rgba(4,4,14,0.32);
           border-radius: 32px;
           padding: 40px 44px;
           box-sizing: border-box;
           text-shadow: 0 1px 3px rgba(0,0,0,0.85), 0 2px 14px rgba(0,0,0,0.7);
-          /* The slide's slow zoom-in slightly overflows this box's nominal
-             bounds; clip it so it can't spill past the panel's rounded edge. */
           overflow: hidden;
         }
 
@@ -703,38 +561,9 @@ export default function InactivityWatcher() {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
-        @keyframes nsKb1 {
-          0%, 100% { transform: translate(0%, 0%) scale(1);      }
-          30%      { transform: translate(8%, 14%) scale(1.14);   }
-          65%      { transform: translate(-4%, 7%) scale(0.94);   }
-        }
-        @keyframes nsKb2 {
-          0%, 100% { transform: translate(0%, 0%) scale(1);      }
-          40%      { transform: translate(-11%, -9%) scale(1.12); }
-          72%      { transform: translate(7%, -13%) scale(0.91);  }
-        }
-        @keyframes nsKb3 {
-          0%, 100% { transform: translate(0%, 0%) scale(1);      }
-          50%      { transform: translate(-8%, 10%) scale(1.18);  }
-        }
 
         @media (prefers-reduced-motion: reduce) {
           .ns-idle-overlay { animation: none; }
-          .ns-glow-a, .ns-glow-b, .ns-glow-c { animation: none; }
-        }
-      `}</style>
-
-      {/* Global (not styled-jsx scoped) — the moon/window glow divs above set
-          `animation` as an inline style, and styled-jsx renames keyframe names
-          declared in a scoped <style jsx> block, which would silently break
-          that reference. Also: a CSS animation targeting `transform` replaces
-          an element's static transform outright rather than composing with it,
-          so translate(-50%,-50%) must be repeated in every keyframe step or the
-          glow's centering breaks the moment the animation starts. */}
-      <style jsx global>{`
-        @keyframes idleGlowPulse {
-          0%, 100% { opacity: 0.35; transform: translate(-50%,-50%) scale(0.94); }
-          50%      { opacity: 0.75; transform: translate(-50%,-50%) scale(1.06); }
         }
       `}</style>
     </div>
