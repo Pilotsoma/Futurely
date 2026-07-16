@@ -32,10 +32,10 @@ const GLOWS = {
 }
 
 const SLIDES = [
-  { id: 'grades',  label: 'Grade Viewer',       color: '#2979FF', glow2: '#7C3AED' },
-  { id: 'gpa',     label: 'GPA Simulator',      color: '#00E5FF', glow2: '#2979FF' },
-  { id: 'planner', label: 'Smart Planner',       color: '#7C3AED', glow2: '#A855F7' },
-  { id: 'roadmap', label: 'High School Roadmap', color: '#A855F7', glow2: '#00E5FF' },
+  { id: 'grades',  label: 'Grade Viewer',       color: '#2979FF', glow2: '#7C3AED', bg: '/idle/idle-bg.png' },
+  { id: 'gpa',     label: 'GPA Simulator',      color: '#00E5FF', glow2: '#2979FF', bg: '/idle/idle-bg-trail.png' },
+  { id: 'planner', label: 'Smart Planner',       color: '#7C3AED', glow2: '#A855F7', bg: '/idle/idle-bg-mushroom.png' },
+  { id: 'roadmap', label: 'High School Roadmap', color: '#A855F7', glow2: '#00E5FF', bg: '/idle/idle-bg-bridge.png' },
 ] as const
 
 // ─── Slide mockup: Grade Viewer ───────────────────────────────────────────────
@@ -475,15 +475,36 @@ export default function InactivityWatcher() {
       tabIndex={0}
       aria-label={readyToLogout ? 'Tap to log out' : 'Tap to dismiss and return to app'}
     >
-      {/* The artwork — full-bleed, covering the entire screen. */}
-      <Image
-        src="/idle/idle-bg.png"
-        alt=""
-        fill
-        priority
-        sizes="100vw"
-        style={{ objectFit: 'cover' }}
-      />
+      {/* The artwork — full-bleed, covering the entire screen. Crossfades to a
+          new picture per slide, with a slow Ken Burns zoom applied to the
+          whole background (not the feature content — the content itself stays
+          static now). */}
+      <AnimatePresence>
+        <motion.div
+          key={slide.bg}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduced ? 0.4 : 1.2, ease: 'easeInOut' }}
+          style={{ position: 'absolute', inset: 0 }}
+        >
+          <motion.div
+            initial={{ scale: 1 }}
+            animate={{ scale: reduced ? 1 : 1.06 }}
+            transition={{ duration: SLIDE_MS / 1000, ease: 'easeOut' }}
+            style={{ position: 'absolute', inset: 0 }}
+          >
+            <Image
+              src={slide.bg}
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              style={{ objectFit: 'cover' }}
+            />
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
 
       {/* Deep space gradient + animated starfield, layered over the artwork —
           same cosmic backdrop as the landing page, so the idle screen feels
@@ -516,26 +537,29 @@ export default function InactivityWatcher() {
           <div className="ns-glow-b" style={{ background: slide.glow2 }} />
           <div className="ns-glow-c" style={{ background: slide.color }} />
 
-          {/* Glow — the moon */}
-          <div style={{
-            position: 'absolute', ...at(GLOWS.moon.x, GLOWS.moon.y), width: `${GLOWS.moon.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(230,240,255,0.85) 0%, rgba(190,210,255,0.35) 45%, transparent 72%)',
-            filter: 'blur(4px)',
-            animation: 'idleGlowPulse 5s ease-in-out infinite',
-          }} />
-
-          {/* Glow — lit house windows scattered through the valley */}
-          {GLOWS.windows.map((w, i) => (
-            <div key={i} style={{
-              position: 'absolute', ...at(w.x, w.y), width: `${w.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(255,225,160,0.9) 0%, rgba(255,190,110,0.4) 45%, transparent 72%)',
-              filter: 'blur(2.5px)',
-              animation: `idleGlowPulse ${4.2 + i * 0.5}s ease-in-out infinite`,
-              animationDelay: w.delay,
-            }} />
-          ))}
+          {/* Glow — the moon + lit house windows. Coordinates are specific to
+              the Grade Viewer slide's artwork, so only show them there. */}
+          {slide.id === 'grades' && (
+            <>
+              <div style={{
+                position: 'absolute', ...at(GLOWS.moon.x, GLOWS.moon.y), width: `${GLOWS.moon.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(230,240,255,0.85) 0%, rgba(190,210,255,0.35) 45%, transparent 72%)',
+                filter: 'blur(4px)',
+                animation: 'idleGlowPulse 5s ease-in-out infinite',
+              }} />
+              {GLOWS.windows.map((w, i) => (
+                <div key={i} style={{
+                  position: 'absolute', ...at(w.x, w.y), width: `${w.size}%`, aspectRatio: '1/1', transform: 'translate(-50%,-50%)',
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(255,225,160,0.9) 0%, rgba(255,190,110,0.4) 45%, transparent 72%)',
+                  filter: 'blur(2.5px)',
+                  animation: `idleGlowPulse ${4.2 + i * 0.5}s ease-in-out infinite`,
+                  animationDelay: w.delay,
+                }} />
+              ))}
+            </>
+          )}
         </>
       )}
 
@@ -551,17 +575,10 @@ export default function InactivityWatcher() {
             className="ns-widget-card"
             style={{ width: '100%' }}
           >
-            {/* Slow, continuous zoom while the slide is on screen — reads as premium, not the crossfade's snap */}
-            <motion.div
-              initial={{ scale: 1 }}
-              animate={{ scale: reduced ? 1 : 1.12 }}
-              transition={{ duration: SLIDE_MS / 1000, ease: 'easeOut' }}
-            >
-              {slideIndex === 0 && <GradeViewerMockup   reduced={reduced} />}
-              {slideIndex === 1 && <GPASimulatorMockup   reduced={reduced} />}
-              {slideIndex === 2 && <SmartPlannerMockup   reduced={reduced} />}
-              {slideIndex === 3 && <RoadmapMockup         reduced={reduced} />}
-            </motion.div>
+            {slideIndex === 0 && <GradeViewerMockup   reduced={reduced} />}
+            {slideIndex === 1 && <GPASimulatorMockup   reduced={reduced} />}
+            {slideIndex === 2 && <SmartPlannerMockup   reduced={reduced} />}
+            {slideIndex === 3 && <RoadmapMockup         reduced={reduced} />}
           </motion.div>
         </AnimatePresence>
       </div>
