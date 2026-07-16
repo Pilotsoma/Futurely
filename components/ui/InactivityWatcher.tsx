@@ -10,8 +10,13 @@ import { useCoverCrop, mapCoverPct } from '@/lib/useCoverCrop'
 import Particles from '../../app/Particles'
 
 const IDLE_MS         = 10 * 60 * 1000  // 10 minutes idle before the animation appears
-const LOGOUT_AFTER_MS = 3 * 60 * 1000   // clicking the animation logs out once it's been up this long
+const LOGOUT_AFTER_MS = 5 * 60 * 1000   // clicking the animation logs out once it's been up this long
 const SLIDE_MS        = 12500
+
+// Settings page toggle (defaults on — absent/'1' means enabled, only '0' disables it).
+function isIdleLogoutEnabled(): boolean {
+  return localStorage.getItem('ns_idle_logout_enabled') !== '0'
+}
 
 const IMG_ASPECT = 1365 / 768
 
@@ -411,7 +416,7 @@ export default function InactivityWatcher() {
     // background-tab timer throttling can't drift this out of sync with the
     // Date.now() check onTap actually uses to decide whether to log out.
     readyTimer.current = setInterval(() => {
-      if (Date.now() - shownAtRef.current >= LOGOUT_AFTER_MS) setReadyToLogout(true)
+      if (isIdleLogoutEnabled() && Date.now() - shownAtRef.current >= LOGOUT_AFTER_MS) setReadyToLogout(true)
     }, 1000)
   }, [])
 
@@ -439,7 +444,7 @@ export default function InactivityWatcher() {
 
   const onTap = useCallback(() => {
     const elapsed = Date.now() - shownAtRef.current
-    if (elapsed >= LOGOUT_AFTER_MS) {
+    if (isIdleLogoutEnabled() && elapsed >= LOGOUT_AFTER_MS) {
       if (slideTimer.current) clearInterval(slideTimer.current)
       if (readyTimer.current) clearInterval(readyTimer.current)
       doLogout()

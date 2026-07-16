@@ -140,6 +140,7 @@ export default function SettingsPage() {
   const [avatarMsg, setAvatarMsg]             = useState<string | null>(null)
   const [showChangelog, setShowChangelog]     = useState(false)
   const [hideGpa, setHideGpa]                 = useState(false)
+  const [idleLogoutEnabled, setIdleLogoutEnabled] = useState(true)
   const [devStats, setDevStats]               = useState<{ totalUsers: number; activeUsers: number; liveUsers: number } | null>(null)
   const [devStatsLoading, setDevStatsLoading] = useState(false)
 
@@ -160,6 +161,7 @@ export default function SettingsPage() {
     setTheme((localStorage.getItem('ns_theme') as 'dark' | 'light') || 'dark')
     setHideGpa(localStorage.getItem('ns_hide_gpa') === '1')
     setReduceMotion(localStorage.getItem('rm') === '1')
+    setIdleLogoutEnabled(localStorage.getItem('ns_idle_logout_enabled') !== '0')
     try {
       const saved = localStorage.getItem('ns_grade_colors_v2')
       if (saved) {
@@ -881,6 +883,24 @@ export default function SettingsPage() {
               >
                 <span style={{
                   position: 'absolute', top: 3, left: hideGpa ? 23 : 3, width: 18, height: 18,
+                  borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div>
+                <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Log out when idle</span>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Automatically log out after tapping the idle screensaver, once it&apos;s been up a while</div>
+              </div>
+              <button
+                onClick={() => { const next = !idleLogoutEnabled; setIdleLogoutEnabled(next); localStorage.setItem('ns_idle_logout_enabled', next ? '1' : '0') }}
+                style={{
+                  width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                  background: idleLogoutEnabled ? 'var(--primary)' : 'var(--border)', transition: 'background 0.2s',
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 3, left: idleLogoutEnabled ? 23 : 3, width: 18, height: 18,
                   borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
                 }} />
               </button>
