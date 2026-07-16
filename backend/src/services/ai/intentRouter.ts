@@ -187,7 +187,7 @@ Score the message on a scale of 1-100 reflecting how much expertise or synthesis
 Category rules for allowed messages:
   - "basic_academics" (score 1–50): how grades/GPA work, what a letter grade means, course descriptions, basic academic concepts
   - "study_skills" (score 1–50): time management, note-taking strategies, test prep habits, focus and productivity techniques
-  - "college_admissions" (score 51–100): SAT/ACT targets by school, application strategy, essay guidance, college selection and fit
+  - "college_admissions" (score 51–100): SAT/ACT targets by school, application strategy, essay guidance, college selection and fit — including vague/general "college prep" or "how do I get ready for college" requests with no specifics given, since they still require real college-admissions expertise to answer well
   - "advanced_planning" (score 51–100): multi-year course sequencing, graduation requirement strategy, major and career planning
   - "complex_academic" (score 51–100): AP/IB-level subject matter, cross-subject synthesis, concepts requiring real explanation depth
 
@@ -206,6 +206,7 @@ EXAMPLES — calibrate your scoring and category using these (two examples per c
 
 {"message":"What GPA and SAT score do I need to have a realistic shot at a UC school?","output":{"allowed":true,"intent":"surface","complexityScore":65,"category":"college_admissions"}}
 {"message":"How do extracurricular activities affect my college application?","output":{"allowed":true,"intent":"surface","complexityScore":60,"category":"college_admissions"}}
+{"message":"Can you give me some college prep advice?","output":{"allowed":true,"intent":"surface","complexityScore":55,"category":"college_admissions"}}
 
 {"message":"If I take AP Calculus junior year, what math should I take senior year to be ready for an engineering major?","output":{"allowed":true,"intent":"surface","complexityScore":75,"category":"advanced_planning"}}
 {"message":"How should I balance taking more APs versus protecting my GPA over all four years?","output":{"allowed":true,"intent":"personalized","complexityScore":85,"category":"advanced_planning"}}
