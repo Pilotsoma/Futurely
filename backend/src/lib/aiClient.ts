@@ -54,6 +54,51 @@ export function getAiModel(): string {
   return process.env[provider.modelEnv] ?? provider.defaultModel
 }
 
+// ── Tier type ──────────────────────────────────────────────────────────────
+//
+// 'basic'    → score 1-50  (HS-level questions, always routed to OpenRouter)
+// 'advanced' → score 51-100 (college/complex questions, routed to NVIDIA NIM)
+export type ChatTier = 'basic' | 'advanced'
+
+/**
+ * Resolves a chat tier from the complexity score returned by the intent
+ * classifier.
+ *
+ * 1–50  → 'basic'    (basic HS-level questions, OpenRouter)
+ * 51–100 → 'advanced' (complex / college-level questions, NVIDIA NIM)
+ * null  → undefined   (prompt was off-topic or blocked)
+ */
+export function resolveTierForScore(score: number | null): ChatTier | undefined {
+  if (score === null) return undefined
+  if (score >= 1 && score <= 50) return 'basic'
+  if (score >= 51 && score <= 100) return 'advanced'
+  return undefined
+}
+
+// ── Tier-specific clients and models ──────────────────────────────────────
+
+function getBasicTierClient(): OpenAI {
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY is not set — cannot call the basic tier LLM')
+  }
+  return new OpenAI({ apiKey, baseURL: PROVIDERS.openrouter.baseURL, timeout: 30000, maxRetries: 0 })
+}
+
+function getAdvancedTierClient(): OpenAI | null {
+  const apiKey = process.env.NVIDIA_API_KEY
+  if (!apiKey) return null
+  return new OpenAI({ apiKey, baseURL: PROVIDERS.nvidia.baseURL, timeout: 30000, maxRetries: 0 })
+}
+
+function getBasicTierModel(): string {
+  return process.env.AI_MODEL_BASIC ?? process.env.AI_MODEL ?? PROVIDERS.openrouter.defaultModel
+}
+
+function getAdvancedTierModel(): string {
+  return process.env.NVIDIA_MODEL ?? PROVIDERS.nvidia.defaultModel
+}
+
 const NVIDIA_RELIABLE_FALLBACK_MODEL = PROVIDERS.nvidia.defaultModel // meta/llama-3.1-70b-instruct
 
 // When a fallback model is available, don't make the caller wait the full
@@ -79,11 +124,17 @@ const PRIMARY_FAIL_FAST_TIMEOUT_MS = 18000
 // conversation). A fully consistent version would need a shared store
 // (Redis/DB row) — not worth that infra for this stage.
 const CIRCUIT_COOLDOWN_MS = 3 * 60 * 1000 // 3 minutes
+
+// Circuit breaker used by createChatCompletion (AI_PROVIDER=nvidia path).
 let circuitOpenUntil = 0
 
 function isCircuitOpen(): boolean {
   return Date.now() < circuitOpenUntil
 }
+
+// Separate circuit breaker for the advanced tier — completely independent
+// from circuitOpenUntil above so the two code paths can't interfere.
+let advancedTierCircuitOpenUntil = 0
 
 /**
  * Drop-in replacement for `getAiClient().chat.completions.create({ model: getAiModel(), ... })`.
@@ -143,4 +194,80 @@ export async function createChatCompletion(
     }
     throw err
   }
+}
+
+// ── Tier-specific completion helpers ──────────────────────────────────────
+
+async function createBasicTierCompletion(
+  params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'>
+): Promise<ChatCompletion> {
+  const client = getBasicTierClient()
+  const model = getBasicTierModel()
+  return client.chat.completions.create({ ...params, model })
+}
+
+async function createAdvancedTierCompletion(
+  params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'>,
+  options?: { retryOnFailure?: boolean }
+): Promise<ChatCompletion> {
+  const advancedClient = getAdvancedTierClient()
+  if (advancedClient === null) {
+    // NVIDIA key is absent — this is a permanent config gap, not a transient
+    // failure. Per the architect's ruling, never block chat over config gaps,
+    // so fall through to the basic tier instead of throwing.
+    logger.warn('advanced_tier_nvidia_key_missing', { tier: 'advanced', action: 'fallback_to_basic' })
+    return createBasicTierCompletion(params)
+  }
+
+  const primaryModel = getAdvancedTierModel()
+  const hasFallback = primaryModel !== NVIDIA_RELIABLE_FALLBACK_MODEL
+
+  if (hasFallback && (advancedTierCircuitOpenUntil > Date.now() || shouldSkipPrimaryModel())) {
+    markFallbackUsed()
+    return advancedClient.chat.completions.create({ ...params, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
+  }
+
+  try {
+    const primaryOptions = hasFallback ? { timeout: PRIMARY_FAIL_FAST_TIMEOUT_MS } : undefined
+    const result = await advancedClient.chat.completions.create({ ...params, model: primaryModel }, primaryOptions)
+    if (hasFallback) advancedTierCircuitOpenUntil = 0
+    return result
+  } catch (err) {
+    if (hasFallback) {
+      advancedTierCircuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS
+      markFallbackUsed()
+      logger.warn('AI call failed on configured NVIDIA model, opening circuit breaker', {
+        errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
+        retrying: options?.retryOnFailure !== false,
+        cooldownMs: CIRCUIT_COOLDOWN_MS,
+      })
+      if (options?.retryOnFailure !== false) {
+        return await advancedClient.chat.completions.create({ ...params, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
+      }
+    }
+    throw err
+  }
+}
+
+/**
+ * Routes a chat completion to the correct provider tier based on the
+ * complexity score assigned by the intent classifier.
+ *
+ * undefined → delegate to createChatCompletion (existing provider routing, unchanged)
+ * 'basic'   → OpenRouter client + AI_MODEL_BASIC / AI_MODEL / provider default
+ * 'advanced' → NVIDIA NIM client + NVIDIA_MODEL, with fallback to
+ *              meta/llama-3.1-70b-instruct on primary failure or key absence.
+ *
+ * An NVIDIA primary + fallback double-failure propagates as a 500 — the
+ * advanced tier does NOT silently downgrade to OpenRouter on transient
+ * failures (only the permanent "key missing" case does, per architect ruling).
+ */
+export async function createTieredChatCompletion(
+  tier: ChatTier | undefined,
+  params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'>,
+  options?: { retryOnFailure?: boolean }
+): Promise<ChatCompletion> {
+  if (tier === undefined) return createChatCompletion(params, options)
+  if (tier === 'basic') return createBasicTierCompletion(params)
+  return createAdvancedTierCompletion(params, options)
 }
