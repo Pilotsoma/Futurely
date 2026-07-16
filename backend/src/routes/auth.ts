@@ -556,21 +556,30 @@ router.post('/refresh', refreshTokenLimiter, async (req: Request, res: Response)
 
 // ── POST /auth/logout ─────────────────────────────────────────────────────────
 
-router.post('/logout', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
-  const { refreshToken } = req.body as { refreshToken?: string }
+// Deliberately NOT behind requireAuth: idle-timeout logout can fire well after
+// the 15-minute access token has expired (idle threshold alone is 10min+3min),
+// and gating this on a valid access token meant an expired one made requireAuth
+// reject the request with 401 before the handler ever ran — clearAuthCookies
+// never executed, the refresh token stayed valid, and the frontend's
+// `.catch(() => null)` swallowed the failure, so logout silently no-opped while
+// looking like it worked. Logout must succeed even when the session already
+// looks expired from the caller's side.
+router.post('/logout', async (req: Request, res: Response): Promise<void> => {
+  const refreshToken = (req.body as { refreshToken?: string }).refreshToken
+    ?? (req as Request & { cookies?: Record<string, string> }).cookies?.refresh_token
 
   if (refreshToken) {
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex')
     await prisma.refreshToken
       .updateMany({
-        where: { tokenHash, userId: req.userId },
+        where: { tokenHash },
         data: { revokedAt: new Date() },
       })
       .catch(() => { /* token not found — fine */ })
   }
 
   clearAuthCookies(res)
-  logger.info('auth.logout', { userId: req.userId })
+  logger.info('auth.logout', { hadRefreshToken: !!refreshToken })
   res.json({ data: { ok: true } })
 })
 
