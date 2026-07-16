@@ -215,7 +215,11 @@ router.post('/chat', requireAuth, async (req: AuthRequest, res: Response): Promi
       reply = await handleSurfaceChat(userMessage, recentHistory, allowMarkdown, tier)
     }
 
-    res.json({ data: { reply } })
+    const taggedReply = process.env.AI_CHAT_DEBUG_TIER_TAG === 'true' && tier
+      ? `(${tier.toUpperCase()}) ${reply}`
+      : reply
+
+    res.json({ data: { reply: taggedReply } })
   } catch (err) {
     logger.error('ai_chat_error', { userId: req.userId, error: err instanceof Error ? err.message : String(err) })
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
