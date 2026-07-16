@@ -151,6 +151,7 @@ export default function DashboardPage() {
   const [showGpaWelcome, setShowGpaWelcome] = useState(false)
   const [hideGpa, setHideGpa] = useState(false)
   const [showConnectModal, setShowConnectModal] = useState(false)
+  const [dontShowConnectAgain, setDontShowConnectAgain] = useState(false)
   const gpaNeedsResync = useRef(false)
 
   useEffect(() => {
@@ -158,11 +159,20 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('connect') === '1') {
+    if (
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('connect') === '1' &&
+      localStorage.getItem('ns_hide_connect_modal') !== '1'
+    ) {
       setShowConnectModal(true)
       window.history.replaceState({}, '', '/dashboard')
     }
   }, [])
+
+  function dismissConnectModal() {
+    if (dontShowConnectAgain) localStorage.setItem('ns_hide_connect_modal', '1')
+    setShowConnectModal(false)
+  }
 
   useEffect(() => {
     // Track day streak using user-specific localStorage keys so accounts
@@ -620,9 +630,9 @@ export default function DashboardPage() {
 
       {/* ── Connect school account modal (shown after OAuth sign-up) ── */}
       {showConnectModal && createPortal(
-        <div style={S.popupOverlay} onClick={() => setShowConnectModal(false)}>
+        <div style={S.popupOverlay} onClick={dismissConnectModal}>
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowConnectModal(false)} style={S.popupClose}>×</button>
+            <button onClick={dismissConnectModal} style={S.popupClose}>×</button>
             <div style={{ marginBottom: 12 }}><GraduationCapIcon size={40}/></div>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
               Connect your school account
@@ -637,11 +647,20 @@ export default function DashboardPage() {
               Connect my school account
             </button>
             <button
-              onClick={() => setShowConnectModal(false)}
+              onClick={dismissConnectModal}
               style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginTop: 8 }}
             >
               Skip for now
             </button>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={dontShowConnectAgain}
+                onChange={e => setDontShowConnectAgain(e.target.checked)}
+                style={{ width: 14, height: 14, cursor: 'pointer', accentColor: 'var(--primary)' }}
+              />
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Don&apos;t show this again</span>
+            </label>
           </div>
         </div>,
         document.body
