@@ -669,15 +669,13 @@ export default function InactivityWatcher() {
           display: flex;
           align-items: center;
           justify-content: center;
-          /* A light frosted scrim — enough to read text against the artwork
-             without going opaque and blocking the picture out. Safari's
-             backdrop-filter blur renders considerably heavier/darker than
-             Chrome's at the same radius, so the blur (not the alpha) is what
-             needed cutting back — bumping alpha only overcorrected Mac while
-             Windows didn't need it in the first place. */
-          background: rgba(4,4,14,0.24);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
+          /* A light scrim — enough to read text against the artwork without
+             going opaque and blocking the picture out. No backdrop-filter:
+             two rounds of tuning its blur/alpha still rendered inconsistently
+             opaque between Mac/Safari and Windows/Chrome, so drop it and rely
+             solely on plain alpha compositing, which blends identically on
+             every browser since no filter effect is involved. */
+          background: rgba(4,4,14,0.32);
           border-radius: 32px;
           padding: 40px 44px;
           box-sizing: border-box;
