@@ -184,6 +184,13 @@ Score the message on a scale of 1-100 reflecting how much expertise or synthesis
   - 51–80 (complex): requires real expertise or cross-domain reasoning beyond standard course content
   - 81–100 (advanced): multi-year strategic planning, financial aid analysis, or deep subject-matter depth
 
+If you are genuinely unsure whether a message is closer to 50 or 51 — for
+example it is vague, has no concrete specifics, or could plausibly belong to
+either a basic or an advanced category — score it 51 or higher rather than
+50 or lower. An advanced question answered by the basic model gives a worse
+answer; a basic question answered by the advanced model just costs a little
+more. When in doubt, route up, not down.
+
 Category rules for allowed messages:
   - "basic_academics" (score 1–50): how grades/GPA work, what a letter grade means, course descriptions, basic academic concepts
   - "study_skills" (score 1–50): time management, note-taking strategies, test prep habits, focus and productivity techniques
