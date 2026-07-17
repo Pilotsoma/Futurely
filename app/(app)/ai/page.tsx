@@ -2,9 +2,12 @@
 
 import { useEffect, useRef, useState, Suspense } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import { renderChatMarkdown } from '../../../lib/chatMarkdown'
 import { useAiChat, type ChatSession } from '../../../components/providers/AiChatProvider'
+import { useAgentSession } from '../../../components/agent/useAgentSession'
+import AgentConfirmDialog from '../../../components/agent/AgentConfirmDialog'
 
 const CHIPS = [
   'What is my GPA?',
@@ -13,6 +16,17 @@ const CHIPS = [
   'Study tips for finals',
   'Weakest subject?',
 ]
+
+// Indicates that a message was produced by an agent session.
+const AGENT_MSG_PREFIX = '​[AGENT]'
+
+function isAgentMessage(text: string): boolean {
+  return text.startsWith(AGENT_MSG_PREFIX)
+}
+
+function stripAgentPrefix(text: string): string {
+  return text.startsWith(AGENT_MSG_PREFIX) ? text.slice(AGENT_MSG_PREFIX.length) : text
+}
 
 function formatSessionDate(ts: number): string {
   const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
@@ -42,9 +56,21 @@ function AIChatInner() {
 
   const [input, setInput]           = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [agentMode, setAgentMode]     = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const prefersReducedMotion = useReducedMotion()
+
+  const {
+    phase: agentPhase,
+    finalResponse: agentFinalResponse,
+    pendingConfirm: agentPendingConfirm,
+    errorMessage: agentErrorMessage,
+    startSession,
+    confirmAction,
+    reset: resetAgent,
+  } = useAgentSession()
 
   // Read and immediately clear the curtain-enter flag written by the dashboard
   // when the user submits a query via AiBar. When set, the page rises from below
@@ -85,21 +111,48 @@ function AIChatInner() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
   }, [messages.length])
 
+  // Agent responses are shown inline in the messages section while the session
+  // is active; they are not injected into the persistent chat history (that
+  // lives in localStorage). The full record is available at /ai/activity.
+
   // Page-local wrappers add UI cleanup (input, history panel) on top of the
   // provider-owned state changes.
   function startNewChat() {
     ctxStartNewChat()
+    resetAgent()
     setInput('')
+    setAgentMode(false)
     setHistoryOpen(false)
   }
 
   function openSession(session: ChatSession) {
     ctxOpenSession(session)
+    resetAgent()
     setInput('')
+    setAgentMode(false)
     setHistoryOpen(false)
   }
 
-  const isEmpty = messages.length === 0
+  // In agent mode the send button starts an agent session instead of the
+  // regular api.chat() call.
+  async function handleAgentSend(text: string) {
+    const msg = text.trim()
+    if (!msg) return
+    setInput('')
+    await startSession('CHAT', msg)
+  }
+
+  async function handleConfirmAgent(confirmed: boolean) {
+    setConfirmLoading(true)
+    try {
+      await confirmAction(confirmed)
+    } finally {
+      setConfirmLoading(false)
+    }
+  }
+
+  const isEmpty = messages.length === 0 && agentPhase === 'idle'
+  const agentActive = agentPhase !== 'idle'
 
   // Curtain-rise entry: when coming from dashboard AiBar submit, the page rises
   // from below to continue the upward sweep. Otherwise a simple fade suffices.
@@ -124,6 +177,12 @@ function AIChatInner() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           New Chat
         </button>
+        <Link href="/ai/activity" className="aic-activity-link">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          AI Activity
+        </Link>
         <p className="aic-history-notice">Chats are automatically deleted after 7 days.</p>
         <p className="aic-eyebrow">Recent</p>
         <div className="aic-history-list">
@@ -156,6 +215,23 @@ function AIChatInner() {
           </button>
           <div className="aic-header-avatar"><AiSparkIcon size={16} /></div>
           <div className="aic-header-name">myFuturely AI</div>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              className={`aic-agent-toggle${agentMode ? ' aic-agent-toggle--on' : ''}`}
+              onClick={() => {
+                if (agentActive) return // don't switch modes mid-session
+                if (agentMode) { setAgentMode(false); resetAgent() }
+                else setAgentMode(true)
+              }}
+              aria-pressed={agentMode}
+              title={agentMode ? 'Switch to Quick AI' : 'Switch to AI Agent (deeper analysis)'}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+              {agentMode ? 'Agent Mode' : 'Quick AI'}
+            </button>
+          </div>
         </header>
 
         <div className="aic-messages" role="log" aria-live="polite" aria-label="Conversation">
@@ -177,20 +253,74 @@ function AIChatInner() {
             </div>
           )}
 
-          {messages.map((m, i) => (
-            <div
-              key={m.id}
-              className={`aic-row ${m.role === 'user' ? 'aic-row--user' : 'aic-row--ai'}`}
-              style={{ animationDelay: `${Math.min(i, 6) * 30}ms` }}
-            >
-              {m.role === 'ai' && <div className="aic-avatar" aria-hidden="true"><AiSparkIcon size={14} /></div>}
-              {m.role === 'ai' ? (
-                <div className="aic-bubble-ai" dangerouslySetInnerHTML={{ __html: renderChatMarkdown(m.text) }} />
-              ) : (
-                <div className="aic-bubble-user">{m.text}</div>
-              )}
+          {messages.map((m, i) => {
+            const isAgent = m.role === 'ai' && isAgentMessage(m.text)
+            const displayText = isAgent ? stripAgentPrefix(m.text) : m.text
+            return (
+              <div
+                key={m.id}
+                className={`aic-row ${m.role === 'user' ? 'aic-row--user' : 'aic-row--ai'}`}
+                style={{ animationDelay: `${Math.min(i, 6) * 30}ms` }}
+              >
+                {m.role === 'ai' && <div className="aic-avatar" aria-hidden="true"><AiSparkIcon size={14} /></div>}
+                {m.role === 'ai' ? (
+                  <div className="aic-bubble-ai">
+                    {isAgent && <span className="aic-agent-badge">Agent</span>}
+                    <span dangerouslySetInnerHTML={{ __html: renderChatMarkdown(displayText) }} />
+                  </div>
+                ) : (
+                  <div className="aic-bubble-user">{displayText}</div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Agent session: running state */}
+          {agentPhase === 'running' && (
+            <div className="aic-row aic-row--ai">
+              <div className="aic-avatar" aria-hidden="true"><AiSparkIcon size={14} /></div>
+              <div className="aic-bubble-ai aic-agent-working" aria-label="AI Agent is working">
+                <div className="aic-agent-spinner" aria-hidden="true" />
+                <span>Thinking…</span>
+              </div>
             </div>
-          ))}
+          )}
+
+          {/* Agent session: awaiting confirmation */}
+          {agentPhase === 'awaiting_confirm' && (
+            <div className="aic-row aic-row--ai">
+              <div className="aic-avatar" aria-hidden="true"><AiSparkIcon size={14} /></div>
+              <div className="aic-bubble-ai">
+                <span className="aic-agent-badge aic-agent-badge--warning">Needs approval</span>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  The AI wants to take an action. Review and confirm or cancel below.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Agent session: completed — shown inline before being reset */}
+          {agentPhase === 'completed' && agentFinalResponse && (
+            <div className="aic-row aic-row--ai">
+              <div className="aic-avatar" aria-hidden="true"><AiSparkIcon size={14} /></div>
+              <div className="aic-bubble-ai">
+                <span className="aic-agent-badge">Agent</span>
+                <span dangerouslySetInnerHTML={{ __html: renderChatMarkdown(agentFinalResponse) }} />
+              </div>
+            </div>
+          )}
+
+          {/* Agent session: error */}
+          {(agentPhase === 'failed' || agentPhase === 'coppa_blocked') && (
+            <div className="aic-row aic-row--ai">
+              <div className="aic-avatar" aria-hidden="true"><AiSparkIcon size={14} /></div>
+              <div className="aic-bubble-ai" style={{ color: 'var(--error)' }}>
+                {agentPhase === 'coppa_blocked'
+                  ? 'This feature requires parental consent. Please ask a parent or guardian to approve AI Check-ins in the Parent Portal.'
+                  : (agentErrorMessage ?? 'The AI Agent encountered an error. Please try again.')}
+              </div>
+            </div>
+          )}
 
           {sending && (
             <div className="aic-row aic-row--ai">
@@ -214,22 +344,30 @@ function AIChatInner() {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
                 const text = input
-                setInput('')
-                void handleSend(text)
+                if (agentMode) {
+                  void handleAgentSend(text)
+                } else {
+                  setInput('')
+                  void handleSend(text)
+                }
               }
             }}
-            placeholder="Ask anything about your academics…"
-            disabled={sending}
-            aria-label="Message myFuturely AI"
+            placeholder={agentMode ? 'Ask the AI Agent (deep analysis)…' : 'Ask anything about your academics…'}
+            disabled={sending || agentPhase === 'running' || agentPhase === 'awaiting_confirm'}
+            aria-label={agentMode ? 'Message AI Agent' : 'Message myFuturely AI'}
           />
           <button
             className="aic-send-btn"
             onClick={() => {
-              const text = input
-              setInput('')
-              void handleSend(text)
+              if (agentMode) {
+                void handleAgentSend(input)
+              } else {
+                const text = input
+                setInput('')
+                void handleSend(text)
+              }
             }}
-            disabled={sending || !input.trim()}
+            disabled={sending || !input.trim() || agentPhase === 'running' || agentPhase === 'awaiting_confirm'}
             aria-label="Send message"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -239,6 +377,16 @@ function AIChatInner() {
           </button>
         </div>
       </section>
+
+      {/* Agent confirmation dialog — shown above everything when a write intent is pending */}
+      {agentPhase === 'awaiting_confirm' && agentPendingConfirm && (
+        <AgentConfirmDialog
+          description={agentPendingConfirm.description}
+          onConfirm={() => void handleConfirmAgent(true)}
+          onDeny={() => void handleConfirmAgent(false)}
+          loading={confirmLoading}
+        />
+      )}
 
       <style jsx>{`
         /* :global because this class lives on a motion.div — styled-jsx's
@@ -437,6 +585,88 @@ function AIChatInner() {
           outline: 2px solid var(--accent-blue);
           outline-offset: 2px;
         }
+
+        /* ── Activity log link in sidebar ── */
+        .aic-activity-link {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 10px;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.06);
+          background: transparent;
+          color: var(--text-muted);
+          font-size: 11.5px;
+          font-weight: 500;
+          text-decoration: none;
+          margin-bottom: 10px;
+          transition: color 120ms ease, background 120ms ease;
+        }
+        .aic-activity-link:hover { color: var(--primary); background: rgba(41,121,255,0.06); }
+
+        /* ── Agent mode toggle in header ── */
+        .aic-agent-toggle {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 5px 11px;
+          border-radius: 100px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: var(--surface-2);
+          color: var(--text-muted);
+          font-size: 11.5px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+        }
+        .aic-agent-toggle--on {
+          border-color: rgba(41,121,255,0.4);
+          color: var(--primary);
+          background: rgba(41,121,255,0.08);
+        }
+        .aic-agent-toggle:hover { border-color: rgba(41,121,255,0.3); color: var(--primary); }
+
+        /* ── Agent badge inside bubbles ── */
+        .aic-agent-badge {
+          display: inline-flex;
+          align-items: center;
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: var(--primary);
+          background: rgba(41,121,255,0.1);
+          border: 1px solid rgba(41,121,255,0.2);
+          border-radius: 4px;
+          padding: 2px 6px;
+          margin-bottom: 6px;
+          margin-right: 4px;
+          vertical-align: middle;
+        }
+        .aic-agent-badge--warning {
+          color: #F59E0B;
+          background: rgba(245,158,11,0.1);
+          border-color: rgba(245,158,11,0.2);
+        }
+
+        /* ── Agent working indicator ── */
+        .aic-agent-working {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 16px;
+          color: var(--text-secondary);
+          font-size: 13px;
+        }
+        .aic-agent-spinner {
+          width: 14px; height: 14px;
+          border-radius: 50%;
+          border: 2px solid rgba(41,121,255,0.2);
+          border-top-color: #2979FF;
+          animation: aicAgentSpin 0.9s linear infinite;
+          flex-shrink: 0;
+        }
+        @keyframes aicAgentSpin { to { transform: rotate(360deg); } }
 
         @keyframes aicRise {
           from { opacity: 0; transform: translateY(10px); }

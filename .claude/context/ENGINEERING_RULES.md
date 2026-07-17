@@ -33,6 +33,8 @@ These rules apply to ALL agents. No exceptions. No negotiation.
 - School credentials (HAC/Skyward/PS passwords) must never be stored in the database — Secrets Manager only.
 - Parental consent must be verified before processing data for users flagged as under 13.
 - Every data access that touches student records must write to the compliance audit log.
+- **Fail closed on age and identity (non-negotiable).** When a user record cannot be found, date of birth is null, or age computation fails for any reason (decryption error, null field, unexpected exception), the system MUST treat the user as potentially under 13 and deny access. Never return a sentinel age value (e.g. 999) that passes an age gate. Never write a catch block whose purpose is to allow access on an age/identity computation failure. "Fail open on age" is prohibited — it is a COPPA violation. This applies to every service, route handler, and background job in the codebase.
+- **Consent revocation must be honored immediately and atomically.** When a user revokes autonomous or data-collection consent, the server-side consent record must be updated and an audit log entry must be written in the same operation before the response is returned to the client. A client-local state change (AsyncStorage, local state) is never sufficient — the server is the source of truth. Any background job or autonomous session must check server-side consent state before each execution cycle.
 
 ## API Design
 - RESTful conventions: GET (read), POST (create), PUT (full update), PATCH (partial update), DELETE.

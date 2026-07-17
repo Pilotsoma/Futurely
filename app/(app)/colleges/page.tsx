@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, ApiError, type CollegeInsights, type CollegeInsightsStep, type CollegeListItem, type CollegeSearchResult, type StudentData, type RoadmapData } from '../../../lib/api'
 import { GraduationCapIcon } from '@/components/icons'
 import PageLoader from '../../../components/ui/PageLoader'
+import AgentPanel from '../../../components/agent/AgentPanel'
 
 // ── Display helpers ────────────────────────────────────────────────────────────
 
@@ -709,6 +710,11 @@ export default function MyFuturePage() {
     <div className="fade-up" style={{ maxWidth: 680, margin: '0 auto' }}>
       <div style={S.header}>
         <h1 style={S.title}>My Future</h1>
+        <AgentPanel
+          module="ROADMAP"
+          buttonLabel="Ask AI about my plan"
+          inputPlaceholder="e.g. What courses should I take next year for my college goals?"
+        />
       </div>
 
       {/* Tab switcher */}
@@ -737,8 +743,8 @@ export default function MyFuturePage() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const S: Record<string, React.CSSProperties> = {
-  header:       { marginBottom: 20 },
-  title:        { fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 4 },
+  header:       { marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  title:        { fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text)', margin: 0 },
   sub:          { fontSize: 13, color: 'var(--text-secondary)', margin: 0 },
   tabRow:       { display: 'flex', gap: 6, background: 'var(--surface-2)', borderRadius: 10, padding: 4, marginBottom: 20, width: 'fit-content' },
   tabBtn:       { border: 'none', background: 'transparent', color: 'var(--text-muted)', fontSize: 13.5, fontWeight: 600, padding: '8px 18px', borderRadius: 7, cursor: 'pointer', transition: 'background 0.15s, color 0.15s' },

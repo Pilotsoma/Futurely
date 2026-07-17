@@ -7,6 +7,7 @@ import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import PageLoader from '../../../components/ui/PageLoader'
 import { CheckIcon, SparklesIcon, XMarkIcon, CalendarIcon } from '@/components/icons'
 import CalendarView from '../../../components/planner/CalendarView'
+import AgentPanel from '../../../components/agent/AgentPanel'
 
 type StudyPlan = {
   overview: string
@@ -389,6 +390,11 @@ export default function PlannerPage() {
           </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AgentPanel
+            module="PLANNER"
+            buttonLabel="Ask AI Agent"
+            inputPlaceholder="e.g. Reschedule all math assignments to next week"
+          />
           <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
             <button
               onClick={() => setView('list')}

@@ -1183,6 +1183,37 @@ export const api = {
       '/api/integrations/classlink/infinitecampus'
     ),
 
+  // ── AI Agent sessions ─────────────────────────────────────────────────────
+
+  startAgentSession: (module: AgentModule, userMessage?: string) =>
+    request<{ sessionId: number; status: 'RUNNING' }>('/api/ai/agent/session', {
+      method: 'POST',
+      body: JSON.stringify({ module, userMessage }),
+    }),
+
+  getAgentSession: (sessionId: number) =>
+    request<AgentSessionData>(`/api/ai/agent/sessions/${sessionId}`),
+
+  getAgentSessions: (cursor?: number) =>
+    request<{ sessions: AgentSessionData[]; nextCursor: number | null }>(
+      `/api/ai/agent/sessions${cursor != null ? `?cursor=${cursor}` : ''}`
+    ),
+
+  getAgentToolCalls: (sessionId: number) =>
+    request<AgentToolCallData[]>(`/api/ai/agent/sessions/${sessionId}/tool-calls`),
+
+  confirmAgentAction: (sessionId: number, confirmed: boolean) =>
+    request<{ ok: boolean }>(`/api/ai/agent/sessions/${sessionId}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ confirmed }),
+    }),
+
+  updateAutonomousConsent: (accepted: boolean) =>
+    request<{ ok: boolean }>('/api/users/me/autonomous-consent', {
+      method: 'PATCH',
+      body: JSON.stringify({ accepted }),
+    }),
+
 }
 
 // ── Planner types ─────────────────────────────────────────────────────────
@@ -2040,4 +2071,35 @@ export interface GameSession {
   }
   host: { id: number; name: string | null }
   participants: GameParticipant[]
+}
+
+// ── AI Agent types ──────────────────────────────────────────────────────────
+
+export type AgentModule = 'PLANNER' | 'GPA' | 'ROADMAP' | 'CHAT'
+export type AgentStatus = 'RUNNING' | 'COMPLETED' | 'FAILED'
+export type ToolCallStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'DENIED'
+
+export interface AgentSessionData {
+  id: number
+  module: AgentModule
+  trigger: string
+  status: AgentStatus
+  toolCallCount: number
+  maxToolCalls: number
+  userMessage: string | null
+  finalResponse: string | null
+  startedAt: string
+  completedAt: string | null
+  errorMessage: string | null
+}
+
+export interface AgentToolCallData {
+  id: number
+  sessionId: number
+  toolName: string
+  toolInput: Record<string, unknown>
+  toolOutput: Record<string, unknown> | null
+  status: ToolCallStatus
+  executedAt: string | null
+  createdAt: string
 }

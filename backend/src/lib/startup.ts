@@ -121,6 +121,95 @@ const PATCHES: string[] = [
   // ── Assignment start date (multi-day calendar spans) ─────────────────
   `ALTER TABLE "Assignment"
     ADD COLUMN IF NOT EXISTS "startDate" TIMESTAMP(3)`,
+
+  // ── COPPA / agentic-consent columns on User ───────────────────────────
+  // dateOfBirth and coppaParentEmail stored as AES-256-GCM ciphertext.
+  `ALTER TABLE "User"
+    ADD COLUMN IF NOT EXISTS "dateOfBirth"                 TEXT,
+    ADD COLUMN IF NOT EXISTS "coppaConsentStatus"          TEXT NOT NULL DEFAULT 'NOT_REQUIRED',
+    ADD COLUMN IF NOT EXISTS "coppaConsentTimestamp"       TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "coppaParentEmail"            TEXT,
+    ADD COLUMN IF NOT EXISTS "autonomousConsentAcceptedAt" TIMESTAMP(3)`,
+
+  // ── AutonomousAgentJob (must come before AgentSession due to FK) ──────
+  `CREATE TABLE IF NOT EXISTS "AutonomousAgentJob" (
+    "id"           SERIAL PRIMARY KEY,
+    "userId"       INTEGER REFERENCES "User"("id"),
+    "module"       TEXT NOT NULL,
+    "triggerType"  TEXT NOT NULL,
+    "triggerEvent" TEXT,
+    "scheduledAt"  TIMESTAMP(3) NOT NULL,
+    "executedAt"   TIMESTAMP(3),
+    "status"       TEXT NOT NULL DEFAULT 'PENDING',
+    "result"       JSONB,
+    "createdAt"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS "AutonomousAgentJob_status_scheduledAt_idx"
+    ON "AutonomousAgentJob"("status", "scheduledAt")`,
+  `CREATE INDEX IF NOT EXISTS "AutonomousAgentJob_userId_module_idx"
+    ON "AutonomousAgentJob"("userId", "module")`,
+
+  // ── AgentSession ──────────────────────────────────────────────────────
+  `CREATE TABLE IF NOT EXISTS "AgentSession" (
+    "id"              SERIAL PRIMARY KEY,
+    "userId"          INTEGER NOT NULL REFERENCES "User"("id"),
+    "module"          TEXT NOT NULL,
+    "trigger"         TEXT NOT NULL,
+    "status"          TEXT NOT NULL,
+    "toolCallCount"   INTEGER NOT NULL DEFAULT 0,
+    "maxToolCalls"    INTEGER NOT NULL DEFAULT 12,
+    "userMessage"     TEXT,
+    "finalResponse"   TEXT,
+    "autonomousJobId" INTEGER REFERENCES "AutonomousAgentJob"("id"),
+    "startedAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "completedAt"     TIMESTAMP(3),
+    "errorMessage"    TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS "AgentSession_userId_module_startedAt_idx"
+    ON "AgentSession"("userId", "module", "startedAt")`,
+  `CREATE INDEX IF NOT EXISTS "AgentSession_status_startedAt_idx"
+    ON "AgentSession"("status", "startedAt")`,
+
+  // ── AgentToolCall ─────────────────────────────────────────────────────
+  `CREATE TABLE IF NOT EXISTS "AgentToolCall" (
+    "id"           SERIAL PRIMARY KEY,
+    "sessionId"    INTEGER NOT NULL REFERENCES "AgentSession"("id"),
+    "toolName"     TEXT NOT NULL,
+    "toolInput"    JSONB NOT NULL,
+    "toolOutput"   JSONB,
+    "status"       TEXT NOT NULL,
+    "denialReason" TEXT,
+    "executedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "durationMs"   INTEGER
+  )`,
+  `CREATE INDEX IF NOT EXISTS "AgentToolCall_sessionId_idx"
+    ON "AgentToolCall"("sessionId")`,
+  `CREATE INDEX IF NOT EXISTS "AgentToolCall_toolName_executedAt_idx"
+    ON "AgentToolCall"("toolName", "executedAt")`,
+
+  // ── AgentWriteRateLimit ───────────────────────────────────────────────
+  `CREATE TABLE IF NOT EXISTS "AgentWriteRateLimit" (
+    "id"          SERIAL PRIMARY KEY,
+    "userId"      INTEGER NOT NULL REFERENCES "User"("id"),
+    "toolName"    TEXT NOT NULL,
+    "windowStart" TIMESTAMP(3) NOT NULL,
+    "callCount"   INTEGER NOT NULL DEFAULT 0,
+    "lastCallAt"  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "AgentWriteRateLimit_userId_toolName_windowStart_key"
+      UNIQUE ("userId", "toolName", "windowStart")
+  )`,
+  `CREATE INDEX IF NOT EXISTS "AgentWriteRateLimit_userId_toolName_idx"
+    ON "AgentWriteRateLimit"("userId", "toolName")`,
+
+  // ── Bug 6 fix: idempotency constraint on write_confirmation records ────────
+  // At most one PENDING write_confirmation may exist per session at a time.
+  // Without this constraint, two concurrent POST .../confirm calls can both
+  // create PENDING records, risking double-execution of write tools.
+  // This is a partial unique index scoped to the specific combination that
+  // must be unique: one PENDING write_confirmation per session.
+  `CREATE UNIQUE INDEX IF NOT EXISTS "AgentToolCall_pending_write_confirm_unique"
+    ON "AgentToolCall" ("sessionId")
+    WHERE "status" = 'PENDING' AND "toolName" = 'write_confirmation'`,
 ]
 
 // Data-level repairs that are always idempotent and safe to re-run on every cold start.
@@ -173,6 +262,20 @@ export function ensureSchema(): Promise<void> {
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT "loginStreak", "tosAcceptedAt", "privacyAcceptedAt", "ageConfirmedAt" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT "startDate" FROM "Assignment" LIMIT 0`)
+      // Agentic schema additions — probe updated 2026-07-16
+      await prisma.$queryRawUnsafe(`SELECT "coppaConsentStatus", "autonomousConsentAcceptedAt" FROM "User" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT 1 FROM "AgentSession" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT 1 FROM "AgentToolCall" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT 1 FROM "AgentWriteRateLimit" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT 1 FROM "AutonomousAgentJob" LIMIT 0`)
+      // Bug 6 fix: probe for the write_confirmation idempotency index — probe updated 2026-07-16
+      const idxProbe = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_indexes
+          WHERE indexname = 'AgentToolCall_pending_write_confirm_unique'
+        ) AS "exists"
+      `
+      if (!idxProbe[0]?.exists) throw new Error('Missing idempotency index: AgentToolCall_pending_write_confirm_unique')
     } catch {
       // Schema is incomplete — run patches below.
       for (const sql of PATCHES) {

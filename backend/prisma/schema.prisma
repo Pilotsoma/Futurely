@@ -113,6 +113,17 @@ model User {
   spinLegendary              Int                             @default(0)
   spinMythic                 Int                             @default(0)
   spinCurse                  Int                             @default(0)
+  // ── COPPA / agentic-consent fields ──────────────────────────────────────────
+  // dateOfBirth and coppaParentEmail are encrypted at rest via AES-256-GCM
+  // using the same CREDENTIAL_ENCRYPTION_KEY as school credentials.
+  dateOfBirth                 String?
+  coppaConsentStatus          String                          @default("NOT_REQUIRED")
+  coppaConsentTimestamp       DateTime?
+  coppaParentEmail            String?
+  autonomousConsentAcceptedAt DateTime?
+  agentSessions               AgentSession[]
+  agentWriteRateLimits        AgentWriteRateLimit[]
+  autonomousAgentJobs         AutonomousAgentJob[]
 }
 
 model OAuthAccount {
@@ -755,4 +766,75 @@ model GameAnswer {
 
   @@unique([participantId, questionId])
   @@index([sessionId, questionId])
+}
+
+// ── Agentic AI models ─────────────────────────────────────────────────────────
+
+model AgentSession {
+  id              Int                 @id @default(autoincrement())
+  userId          Int
+  module          String              // PLANNER | GPA | ROADMAP | CHAT
+  trigger         String              // USER | SYSTEM
+  status          String              // RUNNING | COMPLETED | FAILED | BLOCKED_COPPA
+  toolCallCount   Int                 @default(0)
+  maxToolCalls    Int                 @default(12)
+  userMessage     String?             @db.Text
+  finalResponse   String?             @db.Text
+  autonomousJobId Int?
+  startedAt       DateTime            @default(now())
+  completedAt     DateTime?
+  errorMessage    String?
+  user            User                @relation(fields: [userId], references: [id])
+  toolCalls       AgentToolCall[]
+  autonomousJob   AutonomousAgentJob? @relation(fields: [autonomousJobId], references: [id])
+
+  @@index([userId, module, startedAt])
+  @@index([status, startedAt])
+}
+
+model AgentToolCall {
+  id           Int          @id @default(autoincrement())
+  sessionId    Int
+  toolName     String
+  toolInput    Json
+  toolOutput   Json?
+  status       String       // PENDING | SUCCESS | DENIED | FAILED
+  denialReason String?      // COPPA_GATE | ALLOWLIST | RATE_LIMIT | ERROR | USER_REJECTED
+  executedAt   DateTime     @default(now())
+  durationMs   Int?
+  session      AgentSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([toolName, executedAt])
+}
+
+model AgentWriteRateLimit {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  toolName    String
+  windowStart DateTime
+  callCount   Int      @default(0)
+  lastCallAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, toolName, windowStart])
+  @@index([userId, toolName])
+}
+
+model AutonomousAgentJob {
+  id            Int            @id @default(autoincrement())
+  userId        Int?
+  module        String
+  triggerType   String         // NIGHTLY_GPA_CHECKIN | PROACTIVE_PLANNER_NUDGE | EVENT
+  triggerEvent  String?
+  scheduledAt   DateTime
+  executedAt    DateTime?
+  status        String         @default("PENDING") // PENDING|RUNNING|COMPLETED|FAILED|SKIPPED_FLAG_OFF|SKIPPED_COPPA
+  result        Json?
+  createdAt     DateTime       @default(now())
+  user          User?          @relation(fields: [userId], references: [id])
+  agentSessions AgentSession[]
+
+  @@index([status, scheduledAt])
+  @@index([userId, module])
 }

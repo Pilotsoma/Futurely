@@ -45,6 +45,8 @@ import adminRouter from './routes/admin'
 import schoolsRouter from './routes/schools'
 import setsRouter from './routes/sets'
 import gamesRouter from './routes/games'
+import agentSessionsRouter from './routes/agentSessions'
+import usersRouter from './routes/users'
 
 import { requireAuth } from './middleware/auth'
 import { requireConsent } from './middleware/requireConsent'
@@ -332,6 +334,8 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/students', devBypass, requireConsent, studentsRouter)
   app.use('/roadmap', devBypass, requireConsent, roadmapRouter)
   app.use('/ai', aiLimiter, devBypass, requireConsent, aiRouter)
+  app.use('/ai/agent', aiLimiter, devBypass, requireConsent, agentSessionsRouter)
+  app.use('/users', devBypass, requireConsent, usersRouter)
   app.use('/feed', devBypass, requireConsent, feedRouter)
   app.use('/notifications', devBypass, requireConsent, notificationsRouter)
   app.use('/integrations/grades', devBypass, requireConsent, gradesIntegrationRouter)
@@ -350,6 +354,10 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/students', requireAuth, requireConsent, studentsRouter)
   app.use('/roadmap', requireAuth, requireConsent, roadmapRouter)
   app.use('/ai', aiLimiter, requireAuth, requireConsent, aiRouter)
+  // Agent session routes — mounted before the generic /ai handler so
+  // express-rate-limit and requireConsent are applied consistently.
+  app.use('/ai/agent', aiLimiter, requireAuth, requireConsent, agentSessionsRouter)
+  app.use('/users', requireAuth, requireConsent, usersRouter)
   app.use('/feed', requireAuth, requireConsent, feedRouter)
   app.use('/notifications', requireAuth, requireConsent, notificationsRouter)
   app.use('/integrations/grades', requireAuth, requireConsent, gradesIntegrationRouter)

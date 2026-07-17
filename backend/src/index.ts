@@ -5,6 +5,7 @@ import http from 'http'
 import jwt from 'jsonwebtoken'
 import { clients, userClients, playerSessions, sessionPlayers, sessionAlive, sessionHealth, sessionAmmo, sessionStartTime, registerBattlePlayers, sendToUser, sendToSessionExcept, sendToAllInSession, BATTLE_START_HP, BATTLE_START_AMMO, BATTLE_MAX_AMMO, BATTLE_AMMO_REWARD } from './lib/websocket'
 import { prisma } from './lib/prisma'
+import { startScheduler, enqueueJobsForToday } from './services/agent/autonomousJobScheduler.service'
 
 const PORT = Number(process.env.PORT ?? '3001')
 // app.ts already exits in production when JWT_SECRET is missing or default.
@@ -215,5 +216,18 @@ server.listen(PORT, '0.0.0.0', () => {
   logger.info('NextStep API started', {
     port: PORT,
     url: `http://0.0.0.0:${PORT}`,
+  })
+
+  // Start the autonomous agent scheduler. No-op if AUTONOMOUS_AGENTS_ENABLED
+  // is not "true". Runs only in persistent-server deployments (Render) —
+  // the setInterval would not survive Vercel invocation boundaries.
+  startScheduler()
+
+  // Enqueue today's jobs immediately on startup so users with scheduled jobs
+  // don't have to wait until the next midnight/7am window.
+  enqueueJobsForToday().catch(err => {
+    logger.error('startup_enqueue_error', {
+      error: err instanceof Error ? err.message : String(err),
+    })
   })
 })

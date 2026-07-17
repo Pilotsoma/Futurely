@@ -7,6 +7,7 @@ import {
   BarChartIcon, ClipboardIcon, ClockIcon, CalculatorIcon, EnvelopeIcon,
   TrendingUpIcon, DocumentIcon, CalendarIcon,
 } from '@/components/icons'
+import AgentPanel from '../../../components/agent/AgentPanel'
 
 const CARDS: Array<{ href: string; title: string; desc: string; icon: React.ReactNode; iconBg: string; iconColor: string }> = [
   {
@@ -80,7 +81,14 @@ export default function GradesHubPage() {
   const [hovered, setHovered] = useState<string | null>(null)
   return (
     <div className="fade-up">
-      <h1 style={S.title}>Grade Portal</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', margin: 0 }}>Grade Portal</h1>
+        <AgentPanel
+          module="GPA"
+          buttonLabel="Ask AI about my grades"
+          inputPlaceholder="e.g. How can I improve my GPA this semester?"
+        />
+      </div>
       <div style={S.grid}>
         {CARDS.map(card => (
           <button
@@ -108,7 +116,7 @@ export default function GradesHubPage() {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  title:    { fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 28 },
+  title:    { fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px' },
   grid:     { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 },
   card:     { display: 'flex', alignItems: 'center', gap: 20, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '24px 24px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s', boxShadow: 'var(--neo-raised)' },
   iconBox:  { width: 56, height: 56, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
