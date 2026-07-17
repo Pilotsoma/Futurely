@@ -85,7 +85,10 @@ const PLANNER_WRITE_TOOL_DEFS: ChatCompletionFunctionTool[] = [
           },
           dueDate: {
             type: 'string',
-            description: "Due date in ISO 8601 format (e.g. '2026-07-20T23:59:00Z').",
+            description:
+              "Due date in ISO 8601 format (e.g. '2026-07-20T23:59:00Z'). " +
+              "Resolve any relative date phrases (e.g. 'tomorrow', 'next Friday', 'in 3 days') " +
+              'using the current date provided in your system context.',
           },
           estimatedMinutes: {
             type: 'number',
@@ -124,7 +127,9 @@ const PLANNER_WRITE_TOOL_DEFS: ChatCompletionFunctionTool[] = [
           },
           dueDate: {
             type: 'string',
-            description: 'New due date in ISO 8601 format (optional).',
+            description:
+              'New due date in ISO 8601 format (optional). ' +
+              "Resolve relative phrases (e.g. 'tomorrow', 'next Monday') using the current date in your system context.",
           },
           estimatedMinutes: {
             type: 'number',

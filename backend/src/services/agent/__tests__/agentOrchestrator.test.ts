@@ -21,7 +21,7 @@
  * exercised in suite 3 to verify t.function.name is used correctly.
  */
 
-import { runAgentOrchestrator } from '../agentOrchestrator'
+import { runAgentOrchestrator, buildCurrentDateContext } from '../agentOrchestrator'
 import type { OrchestratorOptions } from '../agentOrchestrator'
 
 // ── Mock: AI client ───────────────────────────────────────────────────────────
@@ -1215,5 +1215,228 @@ describe('AgentOrchestrator — debug tier tag on final response (AI_CHAT_DEBUG_
     await runAgentOrchestrator(BASE_OPTS)
 
     expect(mockCompleteSession).toHaveBeenCalledWith(1, 'Untagged synthesis undefined tier.', 'COMPLETED')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite 6: Current date/time injection into the system prompt
+//
+// The orchestrator must inject the real current date at request time so the
+// model can correctly resolve relative phrases like "tomorrow" or "next Friday".
+//
+// Coverage:
+//  (a) The system prompt message sent to createTieredChatCompletion contains
+//      the date context section for all four modules.
+//  (b) The injected date reflects the actual system clock at request time
+//      (tested by mocking Date and asserting the formatted string matches).
+//  (c) The date is always expressed in UTC (no per-user timezone field exists).
+//  (d) buildCurrentDateContext() itself correctly formats from the system clock.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('AgentOrchestrator — current date/time injection (Suite 6)', () => {
+  // Restore real timers after each test so fake timers don't bleed.
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  // ── (a) Date context section present in the system prompt ─────────────────
+
+  it('(a) PLANNER session: system prompt contains the date context section', async () => {
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Done.' })
+    )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    type Msg = { role: string; content?: string }
+    const systemMsg = (
+      mockCreateTieredChatCompletion.mock.calls[0][1].messages as Msg[]
+    ).find(m => m.role === 'system')
+
+    expect(systemMsg).toBeDefined()
+    // The section header must be present.
+    expect(systemMsg!.content).toContain('## Current date and time')
+    // The marker phrase from buildCurrentDateContext must be present.
+    expect(systemMsg!.content).toContain('Today is')
+    expect(systemMsg!.content).toContain('UTC')
+    expect(systemMsg!.content).toContain('relative date phrases')
+  })
+
+  it('(a) GPA session: system prompt contains the date context section', async () => {
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Done.' })
+    )
+
+    await runAgentOrchestrator({ ...BASE_OPTS, module: 'GPA' })
+
+    type Msg = { role: string; content?: string }
+    const systemMsg = (
+      mockCreateTieredChatCompletion.mock.calls[0][1].messages as Msg[]
+    ).find(m => m.role === 'system')
+
+    expect(systemMsg!.content).toContain('## Current date and time')
+    expect(systemMsg!.content).toContain('Today is')
+    expect(systemMsg!.content).toContain('UTC')
+  })
+
+  it('(a) ROADMAP session: system prompt contains the date context section', async () => {
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Done.' })
+    )
+
+    await runAgentOrchestrator({ ...BASE_OPTS, module: 'ROADMAP' })
+
+    type Msg = { role: string; content?: string }
+    const systemMsg = (
+      mockCreateTieredChatCompletion.mock.calls[0][1].messages as Msg[]
+    ).find(m => m.role === 'system')
+
+    expect(systemMsg!.content).toContain('## Current date and time')
+    expect(systemMsg!.content).toContain('Today is')
+    expect(systemMsg!.content).toContain('UTC')
+  })
+
+  it('(a) CHAT session: system prompt contains the date context section', async () => {
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Done.' })
+    )
+
+    await runAgentOrchestrator({ ...BASE_OPTS, module: 'CHAT' })
+
+    type Msg = { role: string; content?: string }
+    const systemMsg = (
+      mockCreateTieredChatCompletion.mock.calls[0][1].messages as Msg[]
+    ).find(m => m.role === 'system')
+
+    expect(systemMsg!.content).toContain('## Current date and time')
+    expect(systemMsg!.content).toContain('Today is')
+    expect(systemMsg!.content).toContain('UTC')
+  })
+
+  // ── (b) Injected date reflects real system clock at request time ───────────
+
+  it('(b) injected date matches the system clock — mocked to a known timestamp', async () => {
+    // 2026-07-17T15:30:00Z is a Friday.
+    const MOCK_TIMESTAMP = new Date('2026-07-17T15:30:00Z')
+    jest.useFakeTimers()
+    jest.setSystemTime(MOCK_TIMESTAMP)
+
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Done.' })
+    )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    type Msg = { role: string; content?: string }
+    const systemMsg = (
+      mockCreateTieredChatCompletion.mock.calls[0][1].messages as Msg[]
+    ).find(m => m.role === 'system')
+
+    expect(systemMsg!.content).toContain('Friday')
+    expect(systemMsg!.content).toContain('July 17, 2026')
+    expect(systemMsg!.content).toContain('15:30 UTC')
+  })
+
+  it('(b) injected date changes when the clock changes — two sessions at different times', async () => {
+    // First session at 2026-01-01T00:00:00Z (Thursday, January 1, 2026).
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Done.' })
+    )
+    await runAgentOrchestrator(BASE_OPTS)
+
+    type Msg = { role: string; content?: string }
+    const systemMsgFirst = (
+      mockCreateTieredChatCompletion.mock.calls[0][1].messages as Msg[]
+    ).find(m => m.role === 'system')
+    expect(systemMsgFirst!.content).toContain('January 1, 2026')
+
+    jest.clearAllMocks()
+    // Reset default mocks removed by clearAllMocks.
+    mockSessionFindUnique.mockResolvedValue({ maxToolCalls: 12, status: 'RUNNING' })
+    mockDispatchTool.mockResolvedValue({ success: true, output: { result: 'ok' } })
+    mockCompleteSession.mockResolvedValue(undefined)
+    mockToolCallCreate.mockResolvedValue({ id: 99 })
+    mockToolCallUpdate.mockResolvedValue({})
+    mockAnalyze.mockResolvedValue({ allowed: true, intent: 'surface', complexityScore: 75, category: 'college_admissions' })
+    mockResolveTierForScore.mockReturnValue('advanced')
+
+    // Second session at 2026-07-17T15:30:00Z (Friday, July 17, 2026).
+    jest.setSystemTime(new Date('2026-07-17T15:30:00Z'))
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Done.' })
+    )
+    await runAgentOrchestrator(BASE_OPTS)
+
+    const systemMsgSecond = (
+      mockCreateTieredChatCompletion.mock.calls[0][1].messages as Msg[]
+    ).find(m => m.role === 'system')
+    expect(systemMsgSecond!.content).toContain('July 17, 2026')
+    // The two dates must differ — this confirms the value is computed fresh.
+    expect(systemMsgFirst!.content).not.toContain('July 17, 2026')
+    expect(systemMsgSecond!.content).not.toContain('January 1, 2026')
+  })
+
+  // ── (c) UTC is always used — no per-user timezone drift ───────────────────
+
+  it('(c) injected date context always uses UTC regardless of environment timezone', async () => {
+    // 2026-07-17T23:45:00Z: in UTC this is still July 17, but east-coast US
+    // (UTC-4) it would be 19:45 on July 17, while UTC+9 (Japan) it's already
+    // 08:45 on July 18. We assert the UTC date is what appears, not a localised one.
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-07-17T23:45:00Z'))
+
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Done.' })
+    )
+    await runAgentOrchestrator(BASE_OPTS)
+
+    type Msg = { role: string; content?: string }
+    const systemMsg = (
+      mockCreateTieredChatCompletion.mock.calls[0][1].messages as Msg[]
+    ).find(m => m.role === 'system')
+
+    // Must show July 17 (UTC), not July 18 (some +offset timezones).
+    expect(systemMsg!.content).toContain('July 17, 2026')
+    expect(systemMsg!.content).toContain('23:45 UTC')
+    expect(systemMsg!.content).toContain('UTC')
+  })
+
+  // ── (d) buildCurrentDateContext() unit tests ──────────────────────────────
+
+  it('(d) buildCurrentDateContext() returns a string containing the day of week, date, time and UTC marker', () => {
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-07-17T15:30:00Z'))
+
+    const context = buildCurrentDateContext()
+
+    expect(context).toContain('Friday')
+    expect(context).toContain('July 17, 2026')
+    expect(context).toContain('15:30 UTC')
+    expect(context).toContain('relative date phrases')
+    expect(context).toContain('tomorrow')
+  })
+
+  it('(d) buildCurrentDateContext() zero-pads hours and minutes correctly (e.g. 09:05 not 9:5)', () => {
+    jest.useFakeTimers()
+    // 9:05 AM UTC — both hours and minutes need zero-padding.
+    jest.setSystemTime(new Date('2026-07-17T09:05:00Z'))
+
+    const context = buildCurrentDateContext()
+
+    expect(context).toContain('09:05 UTC')
+    // Must not appear as un-padded.
+    expect(context).not.toMatch(/\b9:5\b/)
+  })
+
+  it('(d) buildCurrentDateContext() midnight UTC formats as 00:00', () => {
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-07-17T00:00:00Z'))
+
+    const context = buildCurrentDateContext()
+
+    expect(context).toContain('00:00 UTC')
   })
 })

@@ -82,7 +82,7 @@ export interface OrchestratorOptions {
 
 // ── System prompt selector ────────────────────────────────────────────────────
 
-function buildSystemPrompt(module: AgentModule, trigger: AgentTrigger): string {
+function buildStaticSystemPrompt(module: AgentModule, trigger: AgentTrigger): string {
   switch (module) {
     case 'PLANNER':
       return buildPlannerSystemPrompt(trigger)
@@ -93,6 +93,33 @@ function buildSystemPrompt(module: AgentModule, trigger: AgentTrigger): string {
     case 'CHAT':
       return buildChatSystemPrompt(trigger)
   }
+}
+
+/**
+ * Builds a current date/time context string to inject into the system prompt
+ * at request time (not at module load time) so the model always sees the
+ * actual date of the session.
+ *
+ * Timezone: always UTC. No per-user timezone field exists in the schema.
+ * If a timezone field is added in a future release, reuse it here rather than
+ * defaulting to UTC — see handoff note.
+ *
+ * Exported for testing (allows clock mocking in unit tests).
+ */
+export function buildCurrentDateContext(): string {
+  const now = new Date()
+  const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
+  const monthName = now.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' })
+  const day = now.getUTCDate()
+  const year = now.getUTCFullYear()
+  const hours = String(now.getUTCHours()).padStart(2, '0')
+  const minutes = String(now.getUTCMinutes()).padStart(2, '0')
+  return (
+    `Today is ${dayOfWeek}, ${monthName} ${day}, ${year}. ` +
+    `The current time is ${hours}:${minutes} UTC. ` +
+    `When resolving relative date phrases (e.g. "tomorrow", "next Friday", "in 3 days"), ` +
+    `use this date as your reference point.`
+  )
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -375,7 +402,15 @@ async function makeFinalSynthesisCall(
 export async function runAgentOrchestrator(opts: OrchestratorOptions): Promise<void> {
   const { sessionId, module, trigger, userMessage, ipAddress } = opts
 
-  const systemPrompt = buildSystemPrompt(module, trigger)
+  // Assemble the full system prompt: static module instructions + a freshly
+  // computed date/time context injected at request time so the model always
+  // knows the real current date. Never hardcode this into the static prompt
+  // files — they are module-load-time constants.
+  const systemPrompt =
+    buildStaticSystemPrompt(module, trigger) +
+    '\n\n## Current date and time\n' +
+    buildCurrentDateContext()
+
   const toolDefs = getToolDefsForSession(module, trigger)
 
   // Load session maxToolCalls (DB default is 12; hard cap is 15 in service).
