@@ -29,10 +29,23 @@ import type { OrchestratorOptions } from '../agentOrchestrator'
 // Must be mocked before anything imports aiClient. jest.mock is hoisted.
 
 const mockCreateTieredChatCompletion = jest.fn()
+const mockResolveTierForScore = jest.fn()
 
 jest.mock('../../../lib/aiClient', () => ({
   createTieredChatCompletion: (...args: unknown[]) =>
     mockCreateTieredChatCompletion(...args),
+  resolveTierForScore: (...args: unknown[]) =>
+    mockResolveTierForScore(...args),
+}))
+
+// ── Mock: Intent router (complexity classifier) ────────────────────────────────
+
+const mockAnalyze = jest.fn()
+
+jest.mock('../../../services/ai/intentRouter', () => ({
+  chatIntentRouter: {
+    analyze: (...args: unknown[]) => mockAnalyze(...args),
+  },
 }))
 
 // ── Mock: Prisma (orchestrator direct DB calls: session lookup + write-confirm) ─
@@ -135,6 +148,15 @@ beforeEach(() => {
   // Default: agentToolCall DB operations succeed.
   mockToolCallCreate.mockResolvedValue({ id: 99 })
   mockToolCallUpdate.mockResolvedValue({})
+  // Default: classifier returns advanced-tier score so existing tests are
+  // unaffected (behaviour is identical to the previous hardcoded 'advanced').
+  mockAnalyze.mockResolvedValue({
+    allowed: true,
+    intent: 'surface',
+    complexityScore: 75,
+    category: 'college_admissions',
+  })
+  mockResolveTierForScore.mockReturnValue('advanced')
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -774,7 +796,7 @@ describe('AgentOrchestrator — SYSTEM-session write-tool exclusion', () => {
     expect(toolNames).toContain('roadmap_get_college_readiness')
   })
 
-  it('USER-triggered session DOES include write tools in the tools array (positive control)', async () => {
+  it('USER-triggered session DOES include write tools in the tools array (positive control — no tier change)', async () => {
     mockCreateTieredChatCompletion.mockResolvedValueOnce(
       makeLlmResponse({ finishReason: 'stop', content: 'Done.' })
     )
@@ -807,5 +829,133 @@ describe('AgentOrchestrator — SYSTEM-session write-tool exclusion', () => {
       expect(typeof t.function.name).toBe('string')
       expect(t.function.name.length).toBeGreaterThan(0)
     }
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite 4: Tier classification — one call per session, consistent tier usage
+//
+// Feature: agent mode must run the initial userMessage through the complexity
+// classifier exactly once and use the resolved tier for ALL createTieredChatCompletion
+// calls in the session (main loop turns + final synthesis call). Previously the
+// orchestrator hardcoded 'advanced' unconditionally.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('AgentOrchestrator — tier classification (Feature 2)', () => {
+  it('classifies the userMessage exactly once at session start, not per tool-use turn', async () => {
+    // Two-turn loop: one tool call, then stop.
+    mockCreateTieredChatCompletion
+      .mockResolvedValueOnce(
+        makeLlmResponse({
+          finishReason: 'tool_calls',
+          toolCalls: [{ id: 'tc1', name: 'planner_get_tasks', args: '{}' }],
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeLlmResponse({ finishReason: 'stop', content: 'Here are your tasks.' }),
+      )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    // Classifier must be invoked exactly ONCE regardless of how many LLM turns run.
+    expect(mockAnalyze).toHaveBeenCalledTimes(1)
+    expect(mockAnalyze).toHaveBeenCalledWith(BASE_OPTS.userMessage)
+  })
+
+  it('passes the resolved tier to every createTieredChatCompletion call including synthesis', async () => {
+    // Configure the classifier to return a basic-tier score for this test.
+    mockAnalyze.mockResolvedValueOnce({
+      allowed: true,
+      intent: 'surface',
+      complexityScore: 20,
+      category: 'basic_academics',
+    })
+    mockResolveTierForScore.mockReturnValueOnce('basic')
+
+    // Single-turn session that hits the tool cap immediately (maxToolCalls=0),
+    // forcing a synthesis call — so we get two createTieredChatCompletion calls
+    // and can verify both receive the same tier.
+    mockSessionFindUnique.mockResolvedValue({ maxToolCalls: 0, status: 'RUNNING' })
+
+    mockCreateTieredChatCompletion
+      .mockResolvedValueOnce(
+        makeLlmResponse({
+          finishReason: 'tool_calls',
+          content: 'Checking tasks.',
+          toolCalls: [{ id: 'tc1', name: 'planner_get_tasks', args: '{}' }],
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeLlmResponse({ finishReason: 'stop', content: 'Synthesis done.' }),
+      )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    // Both the main-loop call and the synthesis call must use 'basic', not 'advanced'.
+    expect(mockCreateTieredChatCompletion).toHaveBeenCalledTimes(2)
+    for (const call of mockCreateTieredChatCompletion.mock.calls) {
+      expect(call[0]).toBe('basic')
+    }
+
+    // resolveTierForScore must have been called with the classifier's score.
+    expect(mockResolveTierForScore).toHaveBeenCalledWith(20)
+  })
+
+  it('uses undefined tier (default provider routing) when classifier returns null score', async () => {
+    // Classifier fails open: complexityScore null means off-topic / blocked.
+    // resolveTierForScore(null) → undefined → createChatCompletion fallback.
+    mockAnalyze.mockResolvedValueOnce({
+      allowed: false,
+      intent: 'surface',
+      complexityScore: null,
+      category: 'off_topic',
+    })
+    mockResolveTierForScore.mockReturnValueOnce(undefined)
+
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Response.' }),
+    )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    // The LLM call must receive undefined as the tier (matches non-agentic chat fallback).
+    expect(mockCreateTieredChatCompletion.mock.calls[0][0]).toBeUndefined()
+  })
+
+  it('skips classification and uses undefined tier for an empty userMessage (SYSTEM sessions)', async () => {
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'System response.' }),
+    )
+
+    await runAgentOrchestrator({ ...BASE_OPTS, userMessage: '', trigger: 'SYSTEM' })
+
+    // Classifier must NOT be called for an empty message.
+    expect(mockAnalyze).not.toHaveBeenCalled()
+
+    // Tier passed to LLM must be undefined (default provider).
+    expect(mockCreateTieredChatCompletion.mock.calls[0][0]).toBeUndefined()
+  })
+
+  it('advanced tier returned by classifier is used for all calls in the session', async () => {
+    // Verify the happy path: 75-score → 'advanced' tier → all LLM calls use 'advanced'.
+    // (The default beforeEach already sets this up, but we make it explicit here
+    // so this test documents the expected end-to-end flow.)
+    mockAnalyze.mockResolvedValueOnce({
+      allowed: true,
+      intent: 'personalized',
+      complexityScore: 75,
+      category: 'advanced_planning',
+    })
+    mockResolveTierForScore.mockReturnValueOnce('advanced')
+
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Advanced response.' }),
+    )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCreateTieredChatCompletion).toHaveBeenCalledTimes(1)
+    expect(mockCreateTieredChatCompletion.mock.calls[0][0]).toBe('advanced')
+    expect(mockResolveTierForScore).toHaveBeenCalledWith(75)
   })
 })

@@ -40,7 +40,8 @@ import type {
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma'
 import { logger } from '../../common/logger'
-import { createTieredChatCompletion } from '../../lib/aiClient'
+import { createTieredChatCompletion, resolveTierForScore } from '../../lib/aiClient'
+import type { ChatTier } from '../../lib/aiClient'
 import { dispatchTool, completeSession } from './agentExecution.service'
 import type { AgentModule, AgentTrigger } from './agentExecution.service'
 import { getToolDefsForSession, WRITE_TOOL_NAMES } from './toolSchemas'
@@ -48,6 +49,7 @@ import { buildPlannerSystemPrompt } from './prompts/planner.prompt'
 import { buildGpaSystemPrompt } from './prompts/gpa.prompt'
 import { buildRoadmapSystemPrompt } from './prompts/roadmap.prompt'
 import { buildChatSystemPrompt } from './prompts/chat.prompt'
+import { chatIntentRouter } from '../../services/ai/intentRouter'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -294,6 +296,7 @@ async function makeFinalSynthesisCall(
   conversationMessages: ChatCompletionMessageParam[],
   systemPrompt: string,
   reason: 'cap' | 'token_limit',
+  tier: ChatTier | undefined,
 ): Promise<string> {
   // Strip a dangling tool_calls field from the last assistant message, if
   // present. A dangling tool_calls turn has no following tool messages and
@@ -327,7 +330,7 @@ async function makeFinalSynthesisCall(
   ]
 
   try {
-    const response = await createTieredChatCompletion('advanced', {
+    const response = await createTieredChatCompletion(tier, {
       messages: synthesisMessages,
       max_tokens: MAX_OUTPUT_TOKENS,
       // No tools — prevent any further tool calls in the synthesis turn.
@@ -373,6 +376,24 @@ export async function runAgentOrchestrator(opts: OrchestratorOptions): Promise<v
     // Non-fatal: fall back to the default.
   }
 
+  // Classify the initial user message once to determine the model tier for the
+  // entire session. The complexity classifier runs only here — not on every
+  // tool-use turn — because it is scoring user intent, not LLM output, and
+  // re-classifying each turn would be wasteful and semantically wrong.
+  //
+  // Fallback behaviour (matches the non-agentic chat route):
+  //   - Empty message (e.g. SYSTEM-triggered sessions) → skip classification,
+  //     use undefined tier (routes to the default provider via createChatCompletion).
+  //   - Classifier failure or null complexityScore (off-topic / blocked) →
+  //     resolveTierForScore returns undefined → same default-provider fallback.
+  //
+  // chatIntentRouter.analyze() never throws; it catches internally and fails open.
+  let sessionTier: ChatTier | undefined
+  if (userMessage.trim().length > 0) {
+    const intentAnalysis = await chatIntentRouter.analyze(userMessage)
+    sessionTier = resolveTierForScore(intentAnalysis.complexityScore)
+  }
+
   // Conversation history (excludes the system message — prepended on each call).
   const conversationMessages: ChatCompletionMessageParam[] = [
     { role: 'user', content: userMessage.trim().length > 0 ? userMessage : 'Hello' },
@@ -389,7 +410,7 @@ export async function runAgentOrchestrator(opts: OrchestratorOptions): Promise<v
 
       let response: Awaited<ReturnType<typeof createTieredChatCompletion>>
       try {
-        response = await createTieredChatCompletion('advanced', {
+        response = await createTieredChatCompletion(sessionTier, {
           messages: [
             { role: 'system', content: systemPrompt },
             ...conversationMessages,
@@ -478,7 +499,7 @@ export async function runAgentOrchestrator(opts: OrchestratorOptions): Promise<v
           totalInputTokens,
           totalOutputTokens,
         })
-        const synthesized = await makeFinalSynthesisCall(conversationMessages, systemPrompt, 'token_limit')
+        const synthesized = await makeFinalSynthesisCall(conversationMessages, systemPrompt, 'token_limit', sessionTier)
         await completeSession(sessionId, synthesized, 'COMPLETED')
         return
       }
@@ -487,7 +508,7 @@ export async function runAgentOrchestrator(opts: OrchestratorOptions): Promise<v
 
       if (toolCallCount >= maxToolCalls) {
         logger.info('agent_tool_cap_reached', { sessionId, toolCallCount, maxToolCalls })
-        const synthesized = await makeFinalSynthesisCall(conversationMessages, systemPrompt, 'cap')
+        const synthesized = await makeFinalSynthesisCall(conversationMessages, systemPrompt, 'cap', sessionTier)
         await completeSession(sessionId, synthesized, 'COMPLETED')
         return
       }
@@ -657,7 +678,7 @@ export async function runAgentOrchestrator(opts: OrchestratorOptions): Promise<v
           toolCallCount,
           maxToolCalls,
         })
-        const synthesized = await makeFinalSynthesisCall(conversationMessages, systemPrompt, 'cap')
+        const synthesized = await makeFinalSynthesisCall(conversationMessages, systemPrompt, 'cap', sessionTier)
         await completeSession(sessionId, synthesized, 'COMPLETED')
         return
       }

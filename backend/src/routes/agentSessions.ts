@@ -10,6 +10,7 @@
  */
 
 import { Router, Response } from 'express'
+import { waitUntil } from '@vercel/functions'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
@@ -98,21 +99,26 @@ router.post('/session', requireAuth, async (req: AuthRequest, res: Response): Pr
       return
     }
 
-    // Fire the orchestration loop in the background — the client polls
-    // GET /ai/agent/sessions/:sessionId for status and final response.
-    void runAgentOrchestrator({
-      sessionId: result.sessionId,
-      userId,
-      module: parsed.data.module as AgentModule,
-      trigger: 'USER',
-      userMessage: parsed.data.userMessage ?? '',
-      ipAddress,
-    }).catch(err => {
-      logger.error('agent_orchestrator_unhandled', {
+    // Keep the serverless function alive until the orchestration loop settles.
+    // Without waitUntil(), Vercel may freeze or terminate the execution context
+    // as soon as the HTTP response is sent, cutting off the in-flight LLM calls
+    // and DB writes — leaving the session stuck in RUNNING forever.
+    // waitUntil() is a no-op in non-Vercel runtimes, so local development is unaffected.
+    waitUntil(
+      runAgentOrchestrator({
         sessionId: result.sessionId,
-        errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
-      })
-    })
+        userId,
+        module: parsed.data.module as AgentModule,
+        trigger: 'USER',
+        userMessage: parsed.data.userMessage ?? '',
+        ipAddress,
+      }).catch(err => {
+        logger.error('agent_orchestrator_unhandled', {
+          sessionId: result.sessionId,
+          errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
+        })
+      }),
+    )
 
     res.status(201).json({
       data: { sessionId: result.sessionId, status: 'RUNNING' },
