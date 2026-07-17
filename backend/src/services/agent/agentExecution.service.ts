@@ -24,6 +24,7 @@ import { prisma } from '../../lib/prisma'
 import { logger } from '../../common/logger'
 import { writeAuditLog } from '../../lib/auditLog'
 import { decryptPassword } from '../../integrations/grades/credentialCrypto'
+import { hasDevPowers } from '../../middleware/requireAdmin'
 import { toolRegistry } from './tools/registry'
 import { consumeWriteRateLimitSlot } from './writeRateLimit.service'
 
@@ -112,6 +113,25 @@ export async function startSession(
     return { sessionId: -1, blockedReason: 'COPPA_GATE' }
   }
 
+  // DEV/ADMIN bypass: internal test accounts skip the COPPA age check.
+  // This uses a fresh, server-side DB lookup via hasDevPowers (which queries
+  // role, tag, allTags — distinct from the COPPA query above that only selects
+  // dateOfBirth and coppaConsentStatus). The userId originates exclusively from
+  // auth middleware upstream; no client-supplied header, query param, body
+  // field, or JWT claim is read here to make this decision.
+  const isDevAccount = await hasDevPowers(userId)
+  if (isDevAccount) {
+    await writeAuditLog({
+      userId,
+      resourceType: 'AGENT_SESSION',
+      resourceId: String(userId),
+      action: 'COPPA_BYPASS_DEV_ACCOUNT',
+      ipAddress,
+    })
+    // Do not return — fall through to the RUNNING session creation path below.
+  }
+
+  if (!isDevAccount) {
   // Bug 2 fix: null DOB is treated as age-unknown → COPPA block, not adult.
   if (user.dateOfBirth === null) {
     const session = await prisma.agentSession.create({
@@ -190,6 +210,7 @@ export async function startSession(
     logger.warn('agent_session_coppa_blocked', { sessionId: session.id, module, trigger, reason: 'underage' })
     return { sessionId: session.id, blockedReason: 'COPPA_GATE' }
   }
+  } // end if (!isDevAccount)
 
   // Create RUNNING session
   const session = await prisma.agentSession.create({

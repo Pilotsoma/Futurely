@@ -65,6 +65,13 @@ jest.mock('../writeRateLimit.service', () => ({
   consumeWriteRateLimitSlot: (...args: unknown[]) => mockConsumeRateLimit(...args),
 }))
 
+// hasDevPowers is mocked so the real requireAdmin Prisma query never runs.
+// Default return is false (not a dev account) so all existing tests are unaffected.
+const mockHasDevPowers = jest.fn()
+jest.mock('../../../middleware/requireAdmin', () => ({
+  hasDevPowers: (...args: unknown[]) => mockHasDevPowers(...args),
+}))
+
 // Decrypt mock — simulates the real encrypt/decrypt cycle in test
 jest.mock('../../../integrations/grades/credentialCrypto', () => ({
   decryptPassword: (input: string) => {
@@ -130,6 +137,8 @@ function makeSessionRow(
 
 beforeEach(() => {
   jest.clearAllMocks()
+  // Default: not a dev account — all existing COPPA checks fire unchanged.
+  mockHasDevPowers.mockResolvedValue(false)
   mockWriteAuditLog.mockResolvedValue(undefined)
   mockCreate.mockResolvedValue({ id: 1 })
   mockUpdate.mockResolvedValue({})
@@ -855,7 +864,230 @@ describe('Consent revocation — AICheckInsScreen.tsx frontend gap (documented)'
 })
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 11. SESSION STATUS CHECK BEFORE DISPATCH (non-RUNNING session)
+// 11. DEV/ADMIN COPPA BYPASS — architect-approved for internal test accounts
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe('DEV/ADMIN COPPA bypass — startSession', () => {
+
+  /**
+   * Scenario 1 — Regression guard:
+   * A non-DEV/non-ADMIN account with dateOfBirth=null must still be blocked
+   * with BLOCKED_COPPA status and a COPPA_BLOCK audit entry. hasDevPowers
+   * returns false (the default in beforeEach) so the existing null-DOB path
+   * runs byte-for-byte as before.
+   */
+  it('Scenario 1: non-DEV account with null DOB is still blocked (COPPA_BLOCK audit)', async () => {
+    // hasDevPowers returns false (beforeEach default)
+    mockFindUnique.mockResolvedValueOnce({
+      dateOfBirth: null,
+      coppaConsentStatus: 'PENDING',
+    })
+    mockCreate.mockResolvedValue({ id: 200 })
+
+    const result = await startSession(500, 'PLANNER', 'USER', 'hello', IP)
+
+    expect(result.blockedReason).toBe('COPPA_GATE')
+
+    // A BLOCKED_COPPA session row must have been created
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'BLOCKED_COPPA' }),
+      }),
+    )
+
+    // Audit log must record COPPA_BLOCK (not the bypass action)
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'COPPA_BLOCK' }),
+    )
+
+    // The bypass audit action must NOT have been written
+    expect(mockWriteAuditLog).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'COPPA_BYPASS_DEV_ACCOUNT' }),
+    )
+  })
+
+  /**
+   * Scenario 2 — Regression guard:
+   * A non-DEV/non-ADMIN account whose user record does not exist must still be
+   * blocked before any session row is created. The null-user check fires before
+   * hasDevPowers is ever reached, so hasDevPowers should not be called at all.
+   */
+  it('Scenario 2: null user record is still blocked before session creation (regression guard)', async () => {
+    mockFindUnique.mockResolvedValueOnce(null)  // user not found
+
+    const result = await startSession(501, 'PLANNER', 'USER', 'hello', IP)
+
+    expect(result.blockedReason).toBe('COPPA_GATE')
+    expect(result.sessionId).toBe(-1)
+
+    // No session row should be created
+    expect(mockCreate).not.toHaveBeenCalled()
+
+    // hasDevPowers must not be called — the null-user check fires first
+    expect(mockHasDevPowers).not.toHaveBeenCalled()
+
+    // Audit log must record COPPA_BLOCK
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'COPPA_BLOCK' }),
+    )
+  })
+
+  /**
+   * Scenario 3 — DEV bypass:
+   * A DEV-tagged account with dateOfBirth=null must proceed to a RUNNING session.
+   * The COPPA_BYPASS_DEV_ACCOUNT audit entry must be written FIRST, followed by
+   * the normal SESSION_START audit entry. Both writeAuditLog calls must happen
+   * in the correct order. The session must have status RUNNING.
+   */
+  it('Scenario 3: DEV-tagged account with null DOB proceeds to RUNNING session with both audit entries', async () => {
+    mockHasDevPowers.mockResolvedValue(true)
+    mockFindUnique.mockResolvedValueOnce({
+      dateOfBirth: null,
+      coppaConsentStatus: 'PENDING',
+    })
+    mockCreate.mockResolvedValue({ id: 201 })
+
+    const result = await startSession(502, 'CHAT', 'USER', 'test message', IP)
+
+    // Must NOT be blocked
+    expect(result.blockedReason).toBeUndefined()
+    expect(result.sessionId).toBe(201)
+
+    // Session must be RUNNING
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'RUNNING' }),
+      }),
+    )
+
+    // COPPA_BYPASS_DEV_ACCOUNT audit entry must be written
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 502,
+        resourceType: 'AGENT_SESSION',
+        action: 'COPPA_BYPASS_DEV_ACCOUNT',
+        ipAddress: IP,
+      }),
+    )
+
+    // SESSION_START audit entry must also be written
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 502,
+        resourceType: 'AGENT_SESSION',
+        action: 'SESSION_START',
+        ipAddress: IP,
+      }),
+    )
+
+    // Assert call order: bypass audit first, then session-start audit
+    const calls = mockWriteAuditLog.mock.calls.map(
+      (args: Array<Record<string, unknown>>) => args[0].action,
+    )
+    const bypassIdx = calls.indexOf('COPPA_BYPASS_DEV_ACCOUNT')
+    const startIdx = calls.indexOf('SESSION_START')
+    expect(bypassIdx).toBeGreaterThanOrEqual(0)
+    expect(startIdx).toBeGreaterThan(bypassIdx)
+
+    // No COPPA_BLOCK entry should have been written
+    expect(mockWriteAuditLog).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'COPPA_BLOCK' }),
+    )
+  })
+
+  /**
+   * Scenario 4 — ADMIN bypass:
+   * An ADMIN-tagged account gets the same bypass treatment as a DEV-tagged account.
+   * hasDevPowers returns true for ADMIN role — both return the same bypass result.
+   */
+  it('Scenario 4: ADMIN-tagged account with null DOB gets same bypass as DEV-tagged account', async () => {
+    mockHasDevPowers.mockResolvedValue(true)  // ADMIN role triggers hasDevPowers=true
+    mockFindUnique.mockResolvedValueOnce({
+      dateOfBirth: null,
+      coppaConsentStatus: 'PENDING',
+    })
+    mockCreate.mockResolvedValue({ id: 202 })
+
+    const result = await startSession(503, 'GPA', 'USER', undefined, IP)
+
+    // Must NOT be blocked
+    expect(result.blockedReason).toBeUndefined()
+    expect(result.sessionId).toBe(202)
+
+    // Session must be RUNNING
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'RUNNING' }),
+      }),
+    )
+
+    // Both audit entries must be present
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'COPPA_BYPASS_DEV_ACCOUNT' }),
+    )
+    expect(mockWriteAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'SESSION_START' }),
+    )
+  })
+
+  /**
+   * Scenario 5 — Server-side enforcement:
+   * hasDevPowers is called with the userId param that originates from auth
+   * middleware (the trusted server-side value) — not from any client-supplied
+   * source. This is verified two ways:
+   *   (a) Runtime: confirm mockHasDevPowers is called with exactly userId.
+   *   (b) Structural: read the source file and confirm it contains no reference
+   *       to req.headers, req.query, req.body, or any JWT claim for this decision.
+   */
+  it('Scenario 5a: hasDevPowers is called with the server-trusted userId, not a client value (runtime)', async () => {
+    mockHasDevPowers.mockResolvedValue(false)
+    mockFindUnique.mockResolvedValueOnce({
+      dateOfBirth: null,
+      coppaConsentStatus: 'PENDING',
+    })
+    mockCreate.mockResolvedValue({ id: 203 })
+
+    const testUserId = 504
+    await startSession(testUserId, 'PLANNER', 'USER', 'hi', IP)
+
+    // hasDevPowers must have been called with exactly the userId param
+    expect(mockHasDevPowers).toHaveBeenCalledWith(testUserId)
+    expect(mockHasDevPowers).toHaveBeenCalledTimes(1)
+  })
+
+  it('Scenario 5b: startSession source contains no client-supplied bypass vector (structural audit)', () => {
+    const fs = require('fs') as typeof import('fs')
+    const path = require('path') as typeof import('path')
+
+    const servicePath = path.resolve(
+      __dirname,
+      '../agentExecution.service.ts',
+    )
+    const source = fs.readFileSync(servicePath, 'utf-8')
+
+    // The bypass decision must never read any client-supplied request field.
+    // These patterns would indicate a forbidden client-controlled bypass vector.
+    const forbiddenPatterns = [
+      /req\.headers/,
+      /req\.query/,
+      /req\.body/,
+      /x-dev-bypass/i,
+      /x-admin-override/i,
+      /decodedToken\./,
+    ]
+
+    for (const pattern of forbiddenPatterns) {
+      expect(source).not.toMatch(pattern)
+    }
+
+    // Confirm hasDevPowers is called with userId (the server-trusted param)
+    expect(source).toMatch(/hasDevPowers\(userId\)/)
+  })
+
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 12. SESSION STATUS CHECK BEFORE DISPATCH (non-RUNNING session)
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe('Session status guard — dispatchTool', () => {
