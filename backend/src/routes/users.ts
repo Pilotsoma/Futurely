@@ -18,6 +18,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth'
 import { writeAuditLog } from '../lib/auditLog'
 import { logger } from '../common/logger'
 import { computeAge } from '../services/agent/agentExecution.service'
+import { hasDevPowers } from '../middleware/requireAdmin'
 
 const router = Router()
 
@@ -65,6 +66,22 @@ router.patch(
         return
       }
 
+      // DEV/ADMIN bypass: internal test accounts skip the COPPA age check.
+      // The userId originates exclusively from auth middleware upstream; no
+      // client-supplied header, query param, or body field is used here.
+      const isDevAccount = await hasDevPowers(userId)
+      if (isDevAccount) {
+        await writeAuditLog({
+          userId,
+          resourceType: 'USER_CONSENT',
+          resourceId: String(userId),
+          action: 'COPPA_BYPASS_DEV_ACCOUNT',
+          ipAddress: req.ip ?? 'unknown',
+        })
+        // Do not return — fall through to the consent-write path below.
+      }
+
+      if (!isDevAccount) {
       if (userRecord.dateOfBirth === null) {
         res.status(403).json({
           data: null,
@@ -103,6 +120,7 @@ router.patch(
         })
         return
       }
+      } // end if (!isDevAccount)
     } catch (err) {
       logger.error('autonomous_consent_coppa_check_error', {
         userId,

@@ -115,6 +115,47 @@ async function request<T>(path: string, options?: RequestInit, _retried = false,
   return data
 }
 
+// Like request<T> but preserves the `meta` envelope field that request<T>
+// silently discards. Use this for paginated endpoints that return
+// { data: T, meta: { nextCursor, hasNextPage, ... } }.
+async function requestWithMeta<T>(path: string, options?: RequestInit, _retried = false, timeoutMs = 30000): Promise<{ data: T; meta?: Record<string, unknown> }> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  let res: Response
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...options,
+      signal: controller.signal,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Platform': 'web',
+        ...(shouldSkipAiPrimary() ? { 'X-AI-Skip-Primary': '1' } : {}),
+        ...options?.headers,
+      },
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
+  if (res.headers.get('X-AI-Used-Fallback') === '1') markAiFallbackSeen()
+  if (res.status === 401 && !_retried) {
+    const refreshed = await silentRefresh()
+    if (refreshed) return requestWithMeta<T>(path, options, true, timeoutMs)
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }
+    const msg  = typeof body?.error === 'string' ? body.error : body?.error?.message
+    const code = typeof body?.error === 'object' ? body?.error?.code : undefined
+    if (res.status === 403 && code === 'CONSENT_REQUIRED' && typeof window !== 'undefined') {
+      window.location.replace('/login?oauth=new')
+      return new Promise<{ data: T; meta?: Record<string, unknown> }>(() => {})
+    }
+    throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining, res.status)
+  }
+  const { data, meta } = await res.json() as { data: T; meta?: Record<string, unknown> }
+  return { data, meta }
+}
+
 interface LoginResult {
   // Omitted by the backend for web clients (see X-Client-Platform) — auth
   // cookies are set instead. Still present for mobile, which has no cookie jar.
@@ -1194,10 +1235,15 @@ export const api = {
   getAgentSession: (sessionId: number) =>
     request<AgentSessionData>(`/api/ai/agent/sessions/${sessionId}`),
 
-  getAgentSessions: (cursor?: number) =>
-    request<{ sessions: AgentSessionData[]; nextCursor: number | null }>(
+  getAgentSessions: async (cursor?: number): Promise<{ sessions: AgentSessionData[]; nextCursor: number | null }> => {
+    const { data, meta } = await requestWithMeta<AgentSessionData[]>(
       `/api/ai/agent/sessions${cursor != null ? `?cursor=${cursor}` : ''}`
-    ),
+    )
+    return {
+      sessions: data,
+      nextCursor: (meta?.nextCursor ?? null) as number | null,
+    }
+  },
 
   getAgentToolCalls: (sessionId: number) =>
     request<AgentToolCallData[]>(`/api/ai/agent/sessions/${sessionId}/tool-calls`),

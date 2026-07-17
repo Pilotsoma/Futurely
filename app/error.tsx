@@ -105,13 +105,10 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
 
         <div style={styles.buttonRow}>
           <button
-            onClick={() => {
-              sessionStorage.removeItem(CHUNK_RELOAD_KEY)
-              reset()
-            }}
+            onClick={() => window.history.back()}
             style={styles.primaryBtn}
           >
-            Try again
+            Go back
           </button>
           <button
             onClick={() => {
