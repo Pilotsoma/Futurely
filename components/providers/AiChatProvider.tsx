@@ -5,6 +5,11 @@ import { api } from '../../lib/api'
 
 // ── Exported types (moved from app/(app)/ai/page.tsx) ────────────────────────
 
+// Prefix stored on AI messages that were produced by an agent session.
+// Using a zero-width space so it is invisible in raw text but reliably
+// detectable; exported so the page can use the same constant for detection.
+export const AGENT_MSG_PREFIX = '​[AGENT]'
+
 export interface Msg { id: string; role: 'user' | 'ai'; text: string }
 
 export interface ChatSession {
@@ -53,6 +58,13 @@ interface AiChatContextValue {
   submitPendingMessage: (msg: string) => void
   startNewChat: () => void
   openSession: (session: ChatSession) => void
+  /**
+   * Persist a completed agent-mode turn to localStorage and update the active
+   * session in the sidebar.  The agentText is stored with AGENT_MSG_PREFIX
+   * prepended so that the rendering layer can detect and badge it correctly.
+   * Returns the new session id.
+   */
+  persistAgentTurn: (userText: string, agentText: string) => string
 }
 
 const AiChatContext = createContext<AiChatContextValue | null>(null)
@@ -161,6 +173,28 @@ export function AiChatProvider({ children }: { children: React.ReactNode }) {
       })
   }, [sending, persistMessages])
 
+  // persistAgentTurn — saves a completed agent-mode exchange to localStorage
+  // and updates the running session list so the sidebar reflects it immediately.
+  // The AI text is stored with AGENT_MSG_PREFIX so that reopening the session
+  // via openSession() still renders the "Agent" badge in the message list.
+  const persistAgentTurn = useCallback((userText: string, agentText: string): string => {
+    const sessionId = newSessionId()
+    const title = userText.length > 40 ? userText.slice(0, 40) + '…' : userText
+    const userMsg: Msg = { id: Date.now().toString(), role: 'user', text: userText }
+    const aiMsg: Msg = {
+      id: (Date.now() + 1).toString(),
+      role: 'ai',
+      text: AGENT_MSG_PREFIX + agentText,
+    }
+    const msgs: Msg[] = [userMsg, aiMsg]
+    // Update active session + live message list so the conversation is
+    // immediately visible through the normal messages.map() rendering path.
+    setActiveId(sessionId)
+    setMessages(msgs)
+    persistMessages(msgs, sessionId, title)
+    return sessionId
+  }, [persistMessages])
+
   // startNewChat — only handles provider-owned state. Page-local state (input,
   // historyOpen) is cleared by the page's own wrapper around this function.
   const startNewChat = useCallback((): void => {
@@ -184,7 +218,8 @@ export function AiChatProvider({ children }: { children: React.ReactNode }) {
     submitPendingMessage,
     startNewChat,
     openSession,
-  }), [sessions, activeId, messages, sending, handleSend, submitPendingMessage, startNewChat, openSession])
+    persistAgentTurn,
+  }), [sessions, activeId, messages, sending, handleSend, submitPendingMessage, startNewChat, openSession, persistAgentTurn])
 
   return <AiChatContext.Provider value={value}>{children}</AiChatContext.Provider>
 }

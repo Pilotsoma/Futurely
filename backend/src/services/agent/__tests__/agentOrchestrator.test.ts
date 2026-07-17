@@ -959,3 +959,261 @@ describe('AgentOrchestrator — tier classification (Feature 2)', () => {
     expect(mockResolveTierForScore).toHaveBeenCalledWith(75)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite 5: Debug tier tag on final response (AI_CHAT_DEBUG_TIER_TAG)
+//
+// Verifies that the orchestrator applies the same (TIER) prefix as the
+// non-agentic chat route (ai.ts) when AI_CHAT_DEBUG_TIER_TAG='true'.
+//
+// Coverage per task brief:
+//  (a) env=true + tier='basic' or 'advanced' → both the normal-stop path and
+//      every synthesis-call path (token limit, pre-dispatch cap, post-dispatch
+//      cap) prefix the response with (BASIC) or (ADVANCED).
+//  (b) env unset / env='false' → no tag applied regardless of tier.
+//  (c) sessionTier=undefined → no tag even when env='true'.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('AgentOrchestrator — debug tier tag on final response (AI_CHAT_DEBUG_TIER_TAG)', () => {
+  const savedEnv = process.env.AI_CHAT_DEBUG_TIER_TAG
+
+  afterEach(() => {
+    // Restore env var after each test so suites don't bleed into each other.
+    if (savedEnv === undefined) {
+      delete process.env.AI_CHAT_DEBUG_TIER_TAG
+    } else {
+      process.env.AI_CHAT_DEBUG_TIER_TAG = savedEnv
+    }
+  })
+
+  // ── (a) normal-stop path ──────────────────────────────────────────────────
+
+  it('(a) normal-stop: prefixes with (BASIC) when env=true and tier=basic', async () => {
+    process.env.AI_CHAT_DEBUG_TIER_TAG = 'true'
+    mockAnalyze.mockResolvedValueOnce({ allowed: true, intent: 'surface', complexityScore: 20, category: 'basic' })
+    mockResolveTierForScore.mockReturnValueOnce('basic')
+
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'You have two tasks.' })
+    )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, '(BASIC) You have two tasks.', 'COMPLETED')
+  })
+
+  it('(a) normal-stop: prefixes with (ADVANCED) when env=true and tier=advanced', async () => {
+    process.env.AI_CHAT_DEBUG_TIER_TAG = 'true'
+    // Default beforeEach already returns 'advanced' — make it explicit here.
+    mockAnalyze.mockResolvedValueOnce({ allowed: true, intent: 'personalized', complexityScore: 75, category: 'advanced' })
+    mockResolveTierForScore.mockReturnValueOnce('advanced')
+
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Advanced answer.' })
+    )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, '(ADVANCED) Advanced answer.', 'COMPLETED')
+  })
+
+  // ── (a) synthesis-call path — pre-dispatch tool cap ───────────────────────
+
+  it('(a) synthesis (pre-dispatch cap): prefixes with (ADVANCED) when env=true', async () => {
+    process.env.AI_CHAT_DEBUG_TIER_TAG = 'true'
+    // maxToolCalls=0 so the pre-dispatch cap fires on the first tool_calls turn.
+    mockSessionFindUnique.mockResolvedValue({ maxToolCalls: 0, status: 'RUNNING' })
+    // Default beforeEach resolves 'advanced'.
+
+    mockCreateTieredChatCompletion
+      .mockResolvedValueOnce(
+        makeLlmResponse({
+          finishReason: 'tool_calls',
+          content: 'Let me check.',
+          toolCalls: [{ id: 'tc1', name: 'planner_get_tasks', args: '{}' }],
+        })
+      )
+      .mockResolvedValueOnce(
+        makeLlmResponse({ finishReason: 'stop', content: 'Cap synthesis answer.' })
+      )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, '(ADVANCED) Cap synthesis answer.', 'COMPLETED')
+  })
+
+  it('(a) synthesis (pre-dispatch cap): prefixes with (BASIC) when env=true and tier=basic', async () => {
+    process.env.AI_CHAT_DEBUG_TIER_TAG = 'true'
+    mockSessionFindUnique.mockResolvedValue({ maxToolCalls: 0, status: 'RUNNING' })
+    mockAnalyze.mockResolvedValueOnce({ allowed: true, intent: 'surface', complexityScore: 20, category: 'basic' })
+    mockResolveTierForScore.mockReturnValueOnce('basic')
+
+    mockCreateTieredChatCompletion
+      .mockResolvedValueOnce(
+        makeLlmResponse({
+          finishReason: 'tool_calls',
+          content: 'Checking.',
+          toolCalls: [{ id: 'tc1', name: 'planner_get_tasks', args: '{}' }],
+        })
+      )
+      .mockResolvedValueOnce(
+        makeLlmResponse({ finishReason: 'stop', content: 'Basic cap synthesis.' })
+      )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, '(BASIC) Basic cap synthesis.', 'COMPLETED')
+  })
+
+  // ── (a) synthesis-call path — token limit ─────────────────────────────────
+
+  it('(a) synthesis (token limit): prefixes with (BASIC) when env=true and tier=basic', async () => {
+    process.env.AI_CHAT_DEBUG_TIER_TAG = 'true'
+    mockAnalyze.mockResolvedValueOnce({ allowed: true, intent: 'surface', complexityScore: 20, category: 'basic' })
+    mockResolveTierForScore.mockReturnValueOnce('basic')
+
+    mockCreateTieredChatCompletion
+      .mockResolvedValueOnce(
+        makeLlmResponse({
+          finishReason: 'tool_calls',
+          toolCalls: [{ id: 'tc1', name: 'planner_get_tasks', args: '{}' }],
+          promptTokens: 60_000,
+          completionTokens: 45_000, // 105K > TOKEN_SUMMARY_THRESHOLD (100K)
+        })
+      )
+      .mockResolvedValueOnce(
+        makeLlmResponse({ finishReason: 'stop', content: 'Token limit synthesis.' })
+      )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, '(BASIC) Token limit synthesis.', 'COMPLETED')
+  })
+
+  // ── (a) synthesis-call path — post-dispatch tool cap ─────────────────────
+
+  it('(a) synthesis (post-dispatch cap): prefixes with (ADVANCED) when env=true', async () => {
+    process.env.AI_CHAT_DEBUG_TIER_TAG = 'true'
+    // maxToolCalls=1: pre-dispatch check (toolCallCount=0 >= 1 is false) passes,
+    // one tool is dispatched, post-dispatch check (toolCallCount=1 >= 1) fires.
+    mockSessionFindUnique.mockResolvedValue({ maxToolCalls: 1, status: 'RUNNING' })
+    // Default beforeEach resolves 'advanced'.
+
+    mockCreateTieredChatCompletion
+      .mockResolvedValueOnce(
+        makeLlmResponse({
+          finishReason: 'tool_calls',
+          content: null,
+          toolCalls: [{ id: 'tc1', name: 'planner_get_tasks', args: '{}' }],
+          promptTokens: 200,
+          completionTokens: 100,
+        })
+      )
+      .mockResolvedValueOnce(
+        makeLlmResponse({ finishReason: 'stop', content: 'Post-dispatch synthesis.' })
+      )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockDispatchTool).toHaveBeenCalledTimes(1)
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, '(ADVANCED) Post-dispatch synthesis.', 'COMPLETED')
+  })
+
+  // ── (b) env unset / false — no tag ───────────────────────────────────────
+
+  it('(b) applies no tag when AI_CHAT_DEBUG_TIER_TAG is unset', async () => {
+    delete process.env.AI_CHAT_DEBUG_TIER_TAG
+    // Default beforeEach resolves 'advanced'.
+
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Plain answer.' })
+    )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, 'Plain answer.', 'COMPLETED')
+  })
+
+  it('(b) applies no tag when AI_CHAT_DEBUG_TIER_TAG is "false"', async () => {
+    process.env.AI_CHAT_DEBUG_TIER_TAG = 'false'
+
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Plain answer.' })
+    )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, 'Plain answer.', 'COMPLETED')
+  })
+
+  it('(b) applies no tag on synthesis path when env is unset', async () => {
+    delete process.env.AI_CHAT_DEBUG_TIER_TAG
+    mockSessionFindUnique.mockResolvedValue({ maxToolCalls: 0, status: 'RUNNING' })
+
+    mockCreateTieredChatCompletion
+      .mockResolvedValueOnce(
+        makeLlmResponse({
+          finishReason: 'tool_calls',
+          content: 'Checking.',
+          toolCalls: [{ id: 'tc1', name: 'planner_get_tasks', args: '{}' }],
+        })
+      )
+      .mockResolvedValueOnce(
+        makeLlmResponse({ finishReason: 'stop', content: 'Untagged synthesis.' })
+      )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, 'Untagged synthesis.', 'COMPLETED')
+  })
+
+  // ── (c) sessionTier=undefined — no tag even with env=true ────────────────
+
+  it('(c) applies no tag when sessionTier is undefined even if env=true (off-topic / null score)', async () => {
+    process.env.AI_CHAT_DEBUG_TIER_TAG = 'true'
+    mockAnalyze.mockResolvedValueOnce({
+      allowed: false,
+      intent: 'surface',
+      complexityScore: null,
+      category: 'off_topic',
+    })
+    mockResolveTierForScore.mockReturnValueOnce(undefined)
+
+    mockCreateTieredChatCompletion.mockResolvedValueOnce(
+      makeLlmResponse({ finishReason: 'stop', content: 'Off-topic response.' })
+    )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, 'Off-topic response.', 'COMPLETED')
+  })
+
+  it('(c) applies no tag on synthesis path when sessionTier is undefined and env=true', async () => {
+    process.env.AI_CHAT_DEBUG_TIER_TAG = 'true'
+    mockAnalyze.mockResolvedValueOnce({
+      allowed: false,
+      intent: 'surface',
+      complexityScore: null,
+      category: 'off_topic',
+    })
+    mockResolveTierForScore.mockReturnValueOnce(undefined)
+    // Cap=0 forces synthesis path.
+    mockSessionFindUnique.mockResolvedValue({ maxToolCalls: 0, status: 'RUNNING' })
+
+    mockCreateTieredChatCompletion
+      .mockResolvedValueOnce(
+        makeLlmResponse({
+          finishReason: 'tool_calls',
+          content: 'Checking.',
+          toolCalls: [{ id: 'tc1', name: 'planner_get_tasks', args: '{}' }],
+        })
+      )
+      .mockResolvedValueOnce(
+        makeLlmResponse({ finishReason: 'stop', content: 'Untagged synthesis undefined tier.' })
+      )
+
+    await runAgentOrchestrator(BASE_OPTS)
+
+    expect(mockCompleteSession).toHaveBeenCalledWith(1, 'Untagged synthesis undefined tier.', 'COMPLETED')
+  })
+})

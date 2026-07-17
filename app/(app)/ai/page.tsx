@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import { renderChatMarkdown } from '../../../lib/chatMarkdown'
-import { useAiChat, type ChatSession } from '../../../components/providers/AiChatProvider'
+import { useAiChat, AGENT_MSG_PREFIX, type ChatSession } from '../../../components/providers/AiChatProvider'
 import { useAgentSession } from '../../../components/agent/useAgentSession'
 import AgentConfirmDialog from '../../../components/agent/AgentConfirmDialog'
 
@@ -17,8 +17,8 @@ const CHIPS = [
   'Weakest subject?',
 ]
 
-// Indicates that a message was produced by an agent session.
-const AGENT_MSG_PREFIX = '​[AGENT]'
+// Rendering helpers — AGENT_MSG_PREFIX is imported from AiChatProvider so
+// the stored tag and the detection logic always stay in sync.
 
 function isAgentMessage(text: string): boolean {
   return text.startsWith(AGENT_MSG_PREFIX)
@@ -52,12 +52,16 @@ function AIChatInner() {
     startNewChat: ctxStartNewChat,
     openSession: ctxOpenSession,
     submitPendingMessage,
+    persistAgentTurn,
   } = useAiChat()
 
-  const [input, setInput]           = useState('')
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const [agentMode, setAgentMode]     = useState(false)
-  const [confirmLoading, setConfirmLoading] = useState(false)
+  const [input, setInput]                     = useState('')
+  const [historyOpen, setHistoryOpen]         = useState(false)
+  const [agentMode, setAgentMode]             = useState(false)
+  const [confirmLoading, setConfirmLoading]   = useState(false)
+  // Captures the user's message for the in-flight agent session so we can
+  // persist it alongside the final response when the session completes.
+  const [lastAgentUserMsg, setLastAgentUserMsg] = useState<string | null>(null)
   const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const prefersReducedMotion = useReducedMotion()
@@ -111,10 +115,6 @@ function AIChatInner() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
   }, [messages.length])
 
-  // Agent responses are shown inline in the messages section while the session
-  // is active; they are not injected into the persistent chat history (that
-  // lives in localStorage). The full record is available at /ai/activity.
-
   // Page-local wrappers add UI cleanup (input, history panel) on top of the
   // provider-owned state changes.
   function startNewChat() {
@@ -134,11 +134,13 @@ function AIChatInner() {
   }
 
   // In agent mode the send button starts an agent session instead of the
-  // regular api.chat() call.
+  // regular api.chat() call.  We store the user's message here so the
+  // completion effect below can persist the full Q&A pair.
   async function handleAgentSend(text: string) {
     const msg = text.trim()
     if (!msg) return
     setInput('')
+    setLastAgentUserMsg(msg)
     await startSession('CHAT', msg)
   }
 
@@ -150,6 +152,20 @@ function AIChatInner() {
       setConfirmLoading(false)
     }
   }
+
+  // When the agent session finishes successfully, persist the Q&A pair to
+  // localStorage (via the provider's persistAgentTurn) so it shows up in the
+  // sidebar and survives navigation / page reloads.  After persisting we reset
+  // the agent hook so the live agentPhase blocks disappear and the normal
+  // messages.map() rendering takes over — which already handles the Agent badge
+  // via isAgentMessage / stripAgentPrefix on the stored AGENT_MSG_PREFIX tag.
+  useEffect(() => {
+    if (agentPhase === 'completed' && agentFinalResponse && lastAgentUserMsg) {
+      persistAgentTurn(lastAgentUserMsg, agentFinalResponse)
+      setLastAgentUserMsg(null)
+      resetAgent()
+    }
+  }, [agentPhase, agentFinalResponse, lastAgentUserMsg, persistAgentTurn, resetAgent])
 
   const isEmpty = messages.length === 0 && agentPhase === 'idle'
   const agentActive = agentPhase !== 'idle'

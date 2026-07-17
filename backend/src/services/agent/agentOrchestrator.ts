@@ -135,6 +135,20 @@ function describeWriteAction(toolName: string, toolInput: unknown): string {
 }
 
 /**
+ * Prefixes the final response text with a tier tag when the
+ * AI_CHAT_DEBUG_TIER_TAG env var is 'true' and a tier is defined.
+ * Mirrors the identical behavior in the non-agentic chat route (ai.ts) so
+ * debug output is consistent regardless of which code path answered.
+ * When tier is undefined (off-topic / default-provider fallback) no tag is
+ * applied, matching ai.ts which only tags when `tier` is truthy.
+ */
+function applyTierDebugTag(text: string, tier: ChatTier | undefined): string {
+  return process.env.AI_CHAT_DEBUG_TIER_TAG === 'true' && tier !== undefined
+    ? `(${tier.toUpperCase()}) ${text}`
+    : text
+}
+
+/**
  * Safely parse JSON arguments from a tool call. Returns an empty object on
  * any parse failure so the orchestration loop can continue rather than crash.
  */
@@ -475,7 +489,8 @@ export async function runAgentOrchestrator(opts: OrchestratorOptions): Promise<v
 
       if (choice.finish_reason === 'stop') {
         // Model is done — no tool calls requested.
-        await completeSession(sessionId, finalText.length > 0 ? finalText : buildFallback(module), 'COMPLETED')
+        const finalResponse = finalText.length > 0 ? finalText : buildFallback(module)
+        await completeSession(sessionId, applyTierDebugTag(finalResponse, sessionTier), 'COMPLETED')
         return
       }
 
@@ -500,7 +515,7 @@ export async function runAgentOrchestrator(opts: OrchestratorOptions): Promise<v
           totalOutputTokens,
         })
         const synthesized = await makeFinalSynthesisCall(conversationMessages, systemPrompt, 'token_limit', sessionTier)
-        await completeSession(sessionId, synthesized, 'COMPLETED')
+        await completeSession(sessionId, applyTierDebugTag(synthesized, sessionTier), 'COMPLETED')
         return
       }
 
@@ -509,7 +524,7 @@ export async function runAgentOrchestrator(opts: OrchestratorOptions): Promise<v
       if (toolCallCount >= maxToolCalls) {
         logger.info('agent_tool_cap_reached', { sessionId, toolCallCount, maxToolCalls })
         const synthesized = await makeFinalSynthesisCall(conversationMessages, systemPrompt, 'cap', sessionTier)
-        await completeSession(sessionId, synthesized, 'COMPLETED')
+        await completeSession(sessionId, applyTierDebugTag(synthesized, sessionTier), 'COMPLETED')
         return
       }
 
@@ -679,7 +694,7 @@ export async function runAgentOrchestrator(opts: OrchestratorOptions): Promise<v
           maxToolCalls,
         })
         const synthesized = await makeFinalSynthesisCall(conversationMessages, systemPrompt, 'cap', sessionTier)
-        await completeSession(sessionId, synthesized, 'COMPLETED')
+        await completeSession(sessionId, applyTierDebugTag(synthesized, sessionTier), 'COMPLETED')
         return
       }
 
