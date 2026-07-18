@@ -870,9 +870,10 @@ export default function PlannerPage() {
             />
             {showStudyPlan && (
               <div style={{
-                position: 'absolute', inset: 0, zIndex: 20,
+                position: 'absolute', top: 56, left: 20, zIndex: 20,
+                width: 360, maxWidth: 'calc(100% - 40px)', maxHeight: 420,
                 background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
-                boxShadow: 'var(--shadow-md)', padding: 20, overflowY: 'auto',
+                boxShadow: 'var(--shadow-md)', padding: 16, overflowY: 'auto',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                   <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
