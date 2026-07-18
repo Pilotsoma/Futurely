@@ -91,7 +91,28 @@ router.patch('/', dobCorrectionLimiter, requireAuth, async (req: AuthRequest, re
     if (!user.hacDateOfBirth) {
       // No school record to compare against yet — nothing to verify against.
       // Fail closed: keep the account locked rather than accepting an
-      // unverifiable self-report.
+      // unverifiable self-report. Still counts as a real attempt (saves the
+      // submitted DOB, increments the lifetime cap, and is audited) so this
+      // path can't be used to probe the endpoint for free outside the rate
+      // limiter's reach.
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            dateOfBirth: encryptDob(dobCheck.isoDate),
+            dobCorrectionAttempts: user.dobCorrectionAttempts + 1,
+          },
+        }),
+        prisma.complianceAuditLog.create({
+          data: {
+            userId,
+            resourceType: 'user_identity',
+            resourceId: String(userId),
+            action: 'DOB_CORRECTION_SUBMITTED',
+            ipAddress: req.ip ?? 'unknown',
+          },
+        }),
+      ])
       res.status(409).json({
         data: null,
         error: {

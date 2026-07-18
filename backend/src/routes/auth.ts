@@ -394,6 +394,18 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
         },
       })
 
+      if (encryptedDob) {
+        await tx.complianceAuditLog.create({
+          data: {
+            userId: created.id,
+            resourceType: 'user_identity',
+            resourceId: String(created.id),
+            action: 'DOB_COLLECTED',
+            ipAddress: req.ip ?? 'unknown',
+          },
+        })
+      }
+
       return created
     })
 
@@ -1070,8 +1082,22 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
     // Check if a user with this email already exists — link accounts
     let user = await prisma.user.findUnique({ where: { email } })
     if (!user) {
+      // OAuth signup never collects a date of birth (no form step — it's a
+      // redirect-based provider flow), so a brand-new OAuth user cannot pass
+      // the COPPA 13+ gate at creation time the way email/password signup
+      // does. Fail closed: start them in DOB_MISMATCH_LOCKED (same state as
+      // "no self-reported DOB on file" everywhere else in this module) so
+      // requireActiveAccount blocks them until they submit a DOB via
+      // PATCH /auth/dob, which enforces the same validateDobInput() 13+
+      // check. Never default a new user to ACTIVE without a DOB on file.
       user = await prisma.user.create({
-        data: { email, passwordHash: null, name: name ?? null, emailVerified: true },
+        data: {
+          email,
+          passwordHash: null,
+          name: name ?? null,
+          emailVerified: true,
+          accountStatus: AccountStatus.DOB_MISMATCH_LOCKED,
+        },
       })
       isNew = true
     }
