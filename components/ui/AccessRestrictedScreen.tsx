@@ -47,9 +47,12 @@ export default function AccessRestrictedScreen({ bannedUntilDate, onLogout }: Ac
       </p>
 
       {readableDate && (
-        <p style={S.dateNote}>
-          You&rsquo;ll be able to access Futurely on <strong style={{ color: 'var(--text)' }}>{readableDate}</strong>.
-        </p>
+        <div style={S.dateBlock}>
+          <p style={S.dateLabel}>Access will be restored on</p>
+          <p style={S.dateValue}>
+            <time dateTime={bannedUntilDate ?? undefined}>{readableDate}</time>
+          </p>
+        </div>
       )}
 
       <p style={S.hint}>
@@ -107,7 +110,8 @@ const S: Record<string, React.CSSProperties> = {
     marginBottom: 20,
   },
   heading: {
-    fontSize: 22,
+    fontFamily: 'var(--font-display)',
+    fontSize: 24,
     fontWeight: 700,
     color: 'var(--text)',
     margin: '0 0 14px',
@@ -116,13 +120,32 @@ const S: Record<string, React.CSSProperties> = {
     fontSize: 15,
     color: 'var(--text-secondary)',
     lineHeight: 1.6,
-    margin: '0 0 16px',
+    margin: '0 0 20px',
   },
-  dateNote: {
-    fontSize: 15,
-    color: 'var(--text-secondary)',
-    lineHeight: 1.6,
-    margin: '0 0 16px',
+  dateBlock: {
+    background: 'var(--surface-2)',
+    border: '1px solid var(--border)',
+    borderRadius: 12,
+    padding: '16px 20px',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    margin: '0 0 20px',
+    textAlign: 'center' as const,
+  },
+  dateLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.08em',
+    margin: '0 0 6px',
+  },
+  dateValue: {
+    fontFamily: 'var(--font-display)',
+    fontSize: 20,
+    fontWeight: 600,
+    color: 'var(--text)',
+    margin: 0,
   },
   hint: {
     fontSize: 13,
@@ -137,7 +160,8 @@ const S: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 500,
     cursor: 'pointer',
-    padding: '10px 24px',
+    padding: '12px 24px',
+    minHeight: 44,
     borderRadius: 8,
     width: '100%',
     transition: 'border-color 0.15s',

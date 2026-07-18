@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { motion } from 'framer-motion'
 import { api, ApiError } from '@/lib/api'
 
 interface FixBirthdayBlockScreenProps {
@@ -21,6 +22,7 @@ export default function FixBirthdayBlockScreen({ onLogout }: FixBirthdayBlockScr
   const [dateOfBirth, setDateOfBirth] = useState('')
   const [submitState, setSubmitState] = useState<SubmitState>('idle')
   const [message, setMessage] = useState<UserMessage | null>(null)
+  const [inputFocused, setInputFocused] = useState(false)
 
   const todayStr = new Date().toISOString().split('T')[0]!
 
@@ -122,11 +124,24 @@ export default function FixBirthdayBlockScreen({ onLogout }: FixBirthdayBlockScr
           type="date"
           value={dateOfBirth}
           onChange={e => setDateOfBirth(e.target.value)}
+          onFocus={() => setInputFocused(true)}
+          onBlur={() => setInputFocused(false)}
           max={todayStr}
           required
           disabled={submitState === 'submitting' || submitState === 'success'}
-          style={S.input}
+          aria-invalid={message?.type === 'error' ? true : undefined}
           aria-describedby={message ? 'dob-message' : undefined}
+          style={{
+            ...S.input,
+            borderColor: message?.type === 'error'
+              ? 'var(--error)'
+              : inputFocused
+              ? 'var(--primary)'
+              : 'var(--border)',
+            boxShadow: inputFocused && message?.type !== 'error'
+              ? '0 0 0 3px var(--primary-glow)'
+              : 'none',
+          }}
         />
 
         {message && (
@@ -135,8 +150,17 @@ export default function FixBirthdayBlockScreen({ onLogout }: FixBirthdayBlockScr
             role={message.type === 'error' ? 'alert' : 'status'}
             style={{
               ...S.messageBase,
-              color: message.type === 'error' ? 'var(--error)' : message.type === 'success' ? 'var(--success)' : 'var(--text-secondary)',
-              borderColor: message.type === 'error' ? 'var(--error)' : message.type === 'success' ? 'var(--success)' : 'var(--border)',
+              color: 'var(--text)',
+              borderColor: message.type === 'error'
+                ? 'var(--error)'
+                : message.type === 'success'
+                ? 'var(--success)'
+                : 'var(--border)',
+              background: message.type === 'error'
+                ? 'rgba(239, 68, 68, 0.08)'
+                : message.type === 'success'
+                ? 'rgba(16, 185, 129, 0.08)'
+                : 'transparent',
             }}
           >
             {message.text}
@@ -146,9 +170,22 @@ export default function FixBirthdayBlockScreen({ onLogout }: FixBirthdayBlockScr
         <button
           type="submit"
           disabled={submitState === 'submitting' || submitState === 'success' || !dateOfBirth}
-          style={{ ...S.btn, opacity: submitState === 'submitting' || submitState === 'success' || !dateOfBirth ? 0.5 : 1 }}
+          style={{
+            ...S.btn,
+            opacity: submitState === 'submitting' || submitState === 'success' || !dateOfBirth ? 0.5 : 1,
+            cursor: submitState === 'submitting' || submitState === 'success' || !dateOfBirth ? 'not-allowed' : 'pointer',
+          }}
         >
-          {submitState === 'submitting' ? 'Verifying...' : submitState === 'success' ? 'Verified!' : 'Verify birthday'}
+          {submitState === 'submitting' ? (
+            <>
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+                style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', flexShrink: 0 }}
+              />
+              Verifying&hellip;
+            </>
+          ) : submitState === 'success' ? 'Verified!' : 'Verify birthday'}
         </button>
       </form>
 
@@ -188,7 +225,8 @@ const S: Record<string, React.CSSProperties> = {
     letterSpacing: '-0.3px',
   },
   heading: {
-    fontSize: 22,
+    fontFamily: 'var(--font-display)',
+    fontSize: 24,
     fontWeight: 700,
     color: 'var(--text)',
     margin: '0 0 12px',
@@ -221,7 +259,8 @@ const S: Record<string, React.CSSProperties> = {
     color: 'var(--text)',
     fontSize: 15,
     outline: 'none',
-    boxSizing: 'border-box',
+    boxSizing: 'border-box' as const,
+    transition: 'border-color 0.15s, box-shadow 0.15s',
   },
   messageBase: {
     fontSize: 13,
@@ -243,6 +282,10 @@ const S: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     transition: 'opacity 0.15s',
     marginTop: 4,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   logoutBtn: {
     background: 'none',
@@ -250,7 +293,8 @@ const S: Record<string, React.CSSProperties> = {
     color: 'var(--text-muted)',
     fontSize: 13,
     cursor: 'pointer',
-    padding: 0,
+    padding: '12px 0',
+    minHeight: 44,
     textAlign: 'center' as const,
     width: '100%',
     marginTop: 8,
