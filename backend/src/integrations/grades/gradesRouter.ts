@@ -528,7 +528,7 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
 
     await prisma.schoolConnection.update({
       where: { userId },
-      data: { syncStatus: 'complete', syncError: null, lastSynced: new Date() },
+      data: { syncStatus: 'complete', syncError: null, lastSynced: new Date(), consecutiveSyncFailures: 0 },
     }).catch(() => {})
     console.log('[GRADES ROUTER] Background sync complete for userId:', userId)
   } catch (err) {
@@ -544,7 +544,14 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
         : 'SYNC_FAILED'
     await prisma.schoolConnection.update({
       where: { userId },
-      data: { syncStatus: 'error', syncError: syncErrCode },
+      data: {
+        syncStatus: 'error',
+        syncError: syncErrCode,
+        // Increment regardless of error type — any repeated failure is worth tracking.
+        // The portalDown flag (derived in GET /sync-status) only fires for UNREACHABLE
+        // so students are not alarmed about auth errors they can fix themselves.
+        consecutiveSyncFailures: { increment: 1 },
+      },
     }).catch(() => {})
   }
 }
@@ -1036,19 +1043,29 @@ router.get('/sync-status', asyncHandler(async (req: AuthRequest, res: Response):
   const userId = req.userId!
   const connection = await prisma.schoolConnection.findUnique({
     where: { userId },
-    select: { syncStatus: true, syncError: true, lastSynced: true },
+    select: { syncStatus: true, syncError: true, lastSynced: true, consecutiveSyncFailures: true },
   }).catch(() => null)
 
   if (!connection) {
-    res.json({ data: { status: 'idle', lastSyncedAt: null, errorMessage: null } })
+    res.json({ data: { status: 'idle', lastSyncedAt: null, errorMessage: null, consecutiveSyncFailures: 0, portalDown: false } })
     return
   }
+
+  // A portal is considered "down" when the last error is UNREACHABLE (the portal
+  // was genuinely unreachable, not just a credentials problem) AND we have seen
+  // at least 2 consecutive failures. Threshold of 2 avoids false-positive alerts
+  // from a single transient network blip — two consecutive UNREACHABLE cycles
+  // is a strong signal the portal itself is the problem.
+  const portalDown =
+    connection.syncError === 'UNREACHABLE' && connection.consecutiveSyncFailures >= 2
 
   res.json({
     data: {
       status: connection.syncStatus ?? 'idle',
       lastSyncedAt: connection.lastSynced ?? null,
       errorMessage: connection.syncError ?? null,
+      consecutiveSyncFailures: connection.consecutiveSyncFailures,
+      portalDown,
     },
   })
 }))

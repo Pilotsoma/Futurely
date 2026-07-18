@@ -302,16 +302,18 @@ router.post(
         if (err instanceof CanvasTokenError) {
           await prisma.canvasConnection.update({
             where: { userId_canvasInstanceUrl: { userId, canvasInstanceUrl } },
-            data: { syncStatus: 'error', syncError: 'TOKEN_REVOKED' },
+            data: { syncStatus: 'error', syncError: 'TOKEN_REVOKED', consecutiveSyncFailures: { increment: 1 } },
           })
           lastError = 'CANVAS_TOKEN_EXPIRED'
           continue
         }
         if (err instanceof CanvasNetworkError) {
           // Store a safe code — err.message is returned to the client via GET /status.
+          // Increment consecutiveSyncFailures so the frontend can derive portalDown
+          // (syncError === 'NETWORK_ERROR' && consecutiveSyncFailures >= 2).
           await prisma.canvasConnection.update({
             where: { userId_canvasInstanceUrl: { userId, canvasInstanceUrl } },
-            data: { syncStatus: 'error', syncError: 'NETWORK_ERROR' },
+            data: { syncStatus: 'error', syncError: 'NETWORK_ERROR', consecutiveSyncFailures: { increment: 1 } },
           })
           lastError = 'CANVAS_UNREACHABLE'
           continue
@@ -413,6 +415,7 @@ router.post(
           lastSynced: new Date(),
           syncStatus: 'complete',
           syncError: null,
+          consecutiveSyncFailures: 0,
         },
       })
 
@@ -524,10 +527,21 @@ router.get(
           lastSynced: null,
           syncStatus: null,
           syncError: null,
+          consecutiveSyncFailures: 0,
+          portalDown: false,
         },
       })
       return
     }
+
+    // A Canvas portal is considered "down" when the last error is NETWORK_ERROR
+    // (the Canvas instance was genuinely unreachable, not a token issue) AND we
+    // have seen at least 2 consecutive failures. Threshold of 2 avoids false-positive
+    // alerts from a single transient network blip — two consecutive NETWORK_ERROR
+    // cycles is a strong signal the Canvas instance itself is the problem.
+    const first = connections[0]
+    const firstPortalDown =
+      first.syncError === 'NETWORK_ERROR' && first.consecutiveSyncFailures >= 2
 
     res.status(200).json({
       data: {
@@ -539,14 +553,18 @@ router.get(
           syncStatus: c.syncStatus,
           syncError: c.syncError,
           tokenInvalid: c.tokenInvalid,
+          consecutiveSyncFailures: c.consecutiveSyncFailures,
+          portalDown: c.syncError === 'NETWORK_ERROR' && c.consecutiveSyncFailures >= 2,
         })),
         // Backwards-compat: first connection
-        canvasInstanceUrl: connections[0].canvasInstanceUrl,
-        canvasUserName: connections[0].canvasUserName,
-        lastSynced: connections[0].lastSynced,
-        syncStatus: connections[0].syncStatus,
-        syncError: connections[0].syncError,
-        tokenInvalid: connections[0].tokenInvalid,
+        canvasInstanceUrl: first.canvasInstanceUrl,
+        canvasUserName: first.canvasUserName,
+        lastSynced: first.lastSynced,
+        syncStatus: first.syncStatus,
+        syncError: first.syncError,
+        tokenInvalid: first.tokenInvalid,
+        consecutiveSyncFailures: first.consecutiveSyncFailures,
+        portalDown: firstPortalDown,
       },
     })
   })

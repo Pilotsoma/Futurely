@@ -232,6 +232,17 @@ const PATCHES: string[] = [
     ADD COLUMN IF NOT EXISTS "hacDateOfBirth"         TEXT,
     ADD COLUMN IF NOT EXISTS "bannedUntilDate"        TIMESTAMP(3),
     ADD COLUMN IF NOT EXISTS "dobCorrectionAttempts"  INTEGER NOT NULL DEFAULT 0`,
+
+  // ── Portal-down detection: consecutive sync failure counters ─────────────────
+  // Added 2026-07-18. Tracks how many back-to-back sync cycles have failed for
+  // a school portal connection. The frontend derives portalDown from
+  // (syncError === 'UNREACHABLE' || syncError === 'NETWORK_ERROR') &&
+  // consecutiveSyncFailures >= 2 — a threshold of 2 avoids false-positive alarms
+  // from a single transient network blip. Resets to 0 on every successful sync.
+  `ALTER TABLE "SchoolConnection"
+    ADD COLUMN IF NOT EXISTS "consecutiveSyncFailures" INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE "CanvasConnection"
+    ADD COLUMN IF NOT EXISTS "consecutiveSyncFailures" INTEGER NOT NULL DEFAULT 0`,
 ]
 
 // Data-level repairs that are always idempotent and safe to re-run on every cold start.
@@ -313,6 +324,9 @@ export function ensureSchema(): Promise<void> {
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "AutonomousAgentJob" LIMIT 0`)
       // DOB verification against HAC — probe updated 2026-07-18
       await prisma.$queryRawUnsafe(`SELECT "accountStatus", "hacDateOfBirth", "bannedUntilDate", "dobCorrectionAttempts" FROM "User" LIMIT 0`)
+      // Portal-down detection: consecutive failure counters — probe updated 2026-07-18
+      await prisma.$queryRawUnsafe(`SELECT "consecutiveSyncFailures" FROM "SchoolConnection" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT "consecutiveSyncFailures" FROM "CanvasConnection" LIMIT 0`)
       // Bug 6 fix: probe for the write_confirmation idempotency index — probe updated 2026-07-16
       const idxProbe = await prisma.$queryRaw<Array<{ exists: boolean }>>`
         SELECT EXISTS (

@@ -327,20 +327,21 @@ model Follow {
 }
 
 model SchoolConnection {
-  id                Int       @id @default(autoincrement())
-  userId            Int       @unique
-  systemType        String
-  districtUrl       String
-  hacUsername       String?
-  encryptedPassword String?
-  cachedSession     String?
-  hacDataCache      Json?
-  lastSynced        DateTime?
-  syncStatus        String?
-  syncError         String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      Int       @id @default(autoincrement())
+  userId                  Int       @unique
+  systemType              String
+  districtUrl             String
+  hacUsername             String?
+  encryptedPassword       String?
+  cachedSession           String?
+  hacDataCache            Json?
+  lastSynced              DateTime?
+  syncStatus              String?
+  syncError               String?
+  consecutiveSyncFailures Int       @default(0)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([systemType, districtUrl, hacUsername])
 }
@@ -490,19 +491,20 @@ model ItemPrice {
 }
 
 model CanvasConnection {
-  id                Int       @id @default(autoincrement())
-  userId            Int
-  canvasInstanceUrl String
-  encryptedToken    String
-  canvasUserId      String?
-  canvasUserName    String?
-  lastSynced        DateTime?
-  syncStatus        String?
-  syncError         String?
-  tokenInvalid      Boolean   @default(false)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      Int       @id @default(autoincrement())
+  userId                  Int
+  canvasInstanceUrl       String
+  encryptedToken          String
+  canvasUserId            String?
+  canvasUserName          String?
+  lastSynced              DateTime?
+  syncStatus              String?
+  syncError               String?
+  tokenInvalid            Boolean   @default(false)
+  consecutiveSyncFailures Int       @default(0)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, canvasInstanceUrl])
 }
