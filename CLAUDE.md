@@ -44,21 +44,13 @@ If the task involves backend code or testing:
 >   **live Neon Postgres** — it can be unreachable if it's scaled to zero. Never run
 >   `prisma migrate dev` against it; see ARCHITECTURE.md.)
 > - Do you have all required env vars set (see `backend/.env.example`)?
-> - Is the local dev server running (`npm run dev` at repo root starts web + backend, but
->   NOT the mobile app)?
+> - Is the local dev server running (`npm run dev` at repo root starts web + backend)?
 > I'll need these to verify changes work."
 
-If the task involves the **mobile app** (`nextstep-mobile/`):
-> "Quick check before I touch mobile code:
-> - Is the Expo dev server running? (`cd nextstep-mobile && npm start`, separate from the
->   root `npm run dev`.)
-> - Are you testing on a physical device (Expo Go), iOS Simulator, or Android Emulator?
-> - Does `nextstep-mobile/src/constants/api.ts` `API_BASE_URL` currently point at a host your
->   device/simulator can actually reach? (Physical device → your computer's LAN IP; Android
->   emulator → `10.0.2.2`; iOS simulator → `localhost`.) This is hardcoded per-developer and
->   the most common reason the app can't reach the backend.
-> - Is the backend server it's pointing at actually running?
-> I'll need these to verify mobile changes work."
+The **mobile app no longer lives in this repo** — as of 2026-07-17 it moved to
+https://github.com/Pilotsoma/Futurely-mobile (full history preserved). If the user's task
+is about the mobile app, say so and point them at that repo/its own Claude Code session
+instead of trying to edit mobile code from here.
 
 ---
 
@@ -70,13 +62,11 @@ If the user hasn't mentioned these, proactively recommend them based on what the
 |------|----------------|-------------------|
 | **Database MCP** | I can directly inspect schema, run queries, verify migrations, and check live data — instead of inferring everything from Prisma schema files | Anytime we're changing the database or debugging data issues |
 | **GitHub MCP** | I can create PRs, check CI status, read open issues, and post comments without switching to the browser | Anytime we're near shipping or reviewing code |
-| **Chrome DevTools MCP** (`claude-in-chrome`) | I can drive the web app (`app/`) directly, and inspect the Expo Metro bundler's web dev-tools page | Web-portal work, or checking Metro/bundler state via its browser UI |
-| **Computer-use MCP** | I can screenshot and interact with the iOS Simulator or Android Emulator window on your desktop directly — the closest thing to a live device-testing loop available here | Any mobile screen/navigation work where you want me to actually see and tap through the running app, not just review code |
+| **Chrome DevTools MCP** (`claude-in-chrome`) | I can drive the web app (`app/`) directly | Web-portal work |
 
-There is no dedicated "Expo MCP" connected in this environment — mobile verification goes
-through the computer-use MCP driving a running Simulator/Emulator window, not a
-device-log-streaming tool. If you want real-time device logs beyond what's visible in the
-Metro terminal output, that's a manual copy/paste from your terminal into the conversation.
+Mobile app tooling (Expo Metro bundler inspection, Computer-use MCP for Simulator/Emulator
+screenshots, etc.) is documented in the [Futurely-mobile](https://github.com/Pilotsoma/Futurely-mobile)
+repo's own `CLAUDE.md` — that's where mobile sessions happen now.
 
 > To add an MCP tool: run `/mcp` in Claude Code or open `.claude/settings.json`.
 > I can help you configure any of these if you want to add one.
@@ -218,9 +208,14 @@ These commands are available via the `.claude/commands/` folder:
   actual Express/Prisma/Expo stack — the old version described a fictional NestJS/Firebase
   stack; if ARCHITECTURE.md ever drifts from the code again, fix it before trusting it)
 - See `.claude/DIAGNOSTIC_REPORT.md` for known integration blockers
-- `nextstep-mobile/` is the real mobile app. `nextstep-mobile/Futurely/` is an unrelated,
-  nested Expo starter template with its own `node_modules`, excluded from `tsconfig.json` —
-  don't edit it or treat it as part of this product.
+- **The mobile app moved out of this repo on 2026-07-17**, to
+  https://github.com/Pilotsoma/Futurely-mobile (full commit history preserved via
+  `git subtree split`). It was fully rebuilt from zero on this repo's `mobile-rebuild`
+  branch before the split, scoped to the 7 screens in web's visible student nav (Dashboard,
+  Grades, Planner, Study Feed, Colleges, AI Chat, Settings) plus auth/connect-school. See
+  the mobile repo's own `.claude/context/ARCHITECTURE.md` "Scope note" for what's
+  deliberately excluded and why, and its `README.md` for how to run it against this repo's
+  backend. Nothing in `backend/`'s API contract changed as part of the move.
 - No `lint` script exists in any package; run `npx eslint app components lib` with the root
   flat config if you need to lint the web app.
 - `backend/.env`'s `DATABASE_URL` points at a **live Neon Postgres** — never run
@@ -229,14 +224,6 @@ These commands are available via the `.claude/commands/` folder:
   apply it.
 - No test runner (Jest/Detox/Playwright) is installed anywhere in this repo yet, despite
   ENGINEERING_RULES.md describing target testing standards — verify before claiming tests ran.
-- `nextstep-mobile/AGENTS.md` now correctly points at Expo SDK 54 docs (matching the pinned
-  `expo@^54.0.35`) — fixed during the mobile-rebuild teardown; if it ever drifts from
-  `package.json` again, fix it before trusting it.
-- The mobile app (`nextstep-mobile/`) was fully rebuilt from zero on the `mobile-rebuild`
-  branch, scoped to the 7 screens in web's visible student nav (Dashboard, Grades, Planner,
-  Study Feed, Colleges, AI Chat, Settings) plus auth/connect-school — see the "Scope note" in
-  `.claude/context/ARCHITECTURE.md`'s Mobile App section for what's deliberately excluded and
-  why.
 - A `PreToolUse` hook now guards every `Edit`/`Write` against silently touching existing,
   working, git-tracked code — see `.claude/context/GUARDRAILS.md`. Declare task scope in
   `.claude/guardrails/task-scope.json` before editing existing files, or expect an `ask`

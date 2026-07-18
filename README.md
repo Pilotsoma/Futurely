@@ -29,14 +29,11 @@ cd backend
 npx prisma migrate dev --name add_student_profile
 ```
 
-### 3. Start the mobile app
-```bash
-cd nextstep-mobile
-npm install
-npx expo start
-```
-Scan the QR code with Expo Go on your phone.
-Update `nextstep-mobile/src/constants/api.ts` with your machine's LAN IP.
+### 3. Mobile app has moved
+The Expo / React Native mobile app now lives in its own repo:
+https://github.com/Pilotsoma/Futurely-mobile (full history preserved via `git subtree
+split` on 2026-07-17). Clone it separately and follow its README to run it against this
+repo's backend.
 
 ### 4. Start the web app
 ```bash
@@ -147,8 +144,6 @@ ns1-master/
 │   ├── prisma/       Schema, migrations, seed scripts
 │   ├── scripts/      Demo student listing
 │   └── src/          Routes, middleware, lib
-├── nextstep-mobile/  React Native (Expo) mobile app
-│   └── src/          Screens, navigation, API clients
 ├── app/              Next.js web app
 │   ├── (app)/        Authenticated pages (dashboard, grades, planner, ai, settings)
 │   └── login/        Login page
@@ -157,3 +152,6 @@ ns1-master/
 ├── model/            College probability model training (train_model.py)
 └── model_server/     FastAPI microservice serving the trained model
 ```
+
+The mobile app (Expo/React Native) is a separate repo:
+https://github.com/Pilotsoma/Futurely-mobile

@@ -16,78 +16,25 @@ Futurely-main/
 │   ├── src/integrations/   # classlink/, canvas/, grades/ (HAC) — school system connectors
 │   ├── src/lib/            # email.ts, startup.ts, supabaseAdmin.ts, etc.
 │   └── prisma/schema.prisma + hand-authored migrations
-├── nextstep-mobile/        # Expo / React Native app — THE mobile app
-│   └── Futurely/           # ⚠️ Unrelated nested Expo starter template, excluded from
-│                           #    tsconfig. Not part of this product. Ignore it.
 └── vercel.json             # Single Vercel project serves both app/ and backend/
 ```
 
-`npm run dev` at the repo root only starts the **web** app (`next dev`) + backend
-concurrently. It does **not** start the mobile app. To work on mobile, `cd nextstep-mobile`
-and run `npm start` (or `npm run ios` / `npm run android`) separately, in its own terminal.
+`npm run dev` at the repo root starts the **web** app (`next dev`) + backend concurrently.
 
-## Mobile App (`nextstep-mobile/`)
+## Mobile App — moved to its own repo
 
-- **Framework:** Expo managed workflow, SDK `~54` (check `nextstep-mobile/package.json` —
-  `expo` field — before assuming any Expo API; don't trust doc links pinned to a different
-  SDK version).
-- **Runtime:** React Native `0.81.x`, React `19.1.x`, TypeScript `~5.9`.
-- **No EAS config exists yet** (no `eas.json`). This is a pure Expo Go / managed-workflow
-  project today — no custom native modules, no dev client. If a feature needs a native
-  module Expo Go doesn't support, that's an architecture decision (introduce `expo-dev-client`
-  + EAS) — flag it, don't silently add the dependency.
-- **Navigation:** React Navigation **v7** (`@react-navigation/native`, `native-stack`,
-  `drawer`; `bottom-tabs` is installed but unused — Drawer was chosen instead, see below).
-  Structure: `RootNavigator` (3-state auth gate: unauthenticated → `AuthNavigator`;
-  authenticated + no school portal linked → `ConnectSchoolNavigator`; authenticated + portal
-  linked → `MainNavigator`) → `MainNavigator` is a flat **Drawer**, not nested tabs, with 7
-  screens matching web's real sidebar order (Dashboard, Grades, Planner, StudyFeed, Colleges,
-  AIChat, Settings) — `Grades` is itself a native-stack (`GradesNavigator`) wrapping a hub
-  screen + 8 sub-screens. Not v6 — don't use v6-only APIs.
-- **Why Drawer, not bottom tabs:** matches web's collapsible sidebar, and 7 top-level items
-  exceeds iOS bottom tabs' ~5-item limit before a fragmenting "More" overflow.
-- **Scope note:** this rebuild deliberately covers only the 7 screens in web's visible student
-  nav, plus auth/connect-school. Battle, Play, Classroom, Marketplace (full), Study Sets, My
-  Counselor, the Canvas LMS integration, and ClassLink are **out of scope** — all are hidden
-  from regular students on web itself (DEV-tag-gated, or reachable only via a notification
-  deep-link or a typed URL), so mobile has no parity gap for a normal student. Don't assume
-  these are accidentally missing; treat adding them as a scope-expansion decision, not a bug fix.
-- **Styling:** NativeWind v4 (Tailwind for RN) + `tailwindcss` v3 are dependencies, but screens
-  are actually styled with plain RN `StyleSheet.create` + `src/theme/tokens.ts` constants (dark
-  theme only — `app.json` hardcodes `"userInterfaceStyle": "dark"`, so no `ThemeContext`/
-  provider exists). `expo-linear-gradient` and `react-native-svg` are **not installed** — icons
-  come from `@expo/vector-icons` (already a dependency) instead of inline SVG paths; see
-  DESIGN_SYSTEM.md before adding gradients/SVG.
-- **State management:** No Redux, no RTK Query, no Zustand. State is React Context
-  (`src/context/AuthContext.tsx` for auth/session + portal-connection status) + local component
-  state + a thin per-domain fetch layer in `src/api/*.ts` (`authApi.ts`, `studentsApi.ts`,
-  `gradesApi.ts`, `assignmentsApi.ts`, `collegesApi.ts`, `feedApi.ts`, `aiApi.ts`,
-  `marketplaceApi.ts`). Each calls through the single typed wrapper in `src/api/client.ts` —
-  there is no generic data-fetching/caching library (no TanStack/SWR/RTK Query). Don't
-  introduce one without an architect decision; follow the existing per-domain module pattern.
-- **API client (`src/api/client.ts`):** two timeout tiers (10s CRUD, 45s for any
-  `/integrations/grades/*` path, matching the backend's own HAC/PowerSchool scrape timeouts),
-  and a de-duplicated 401→refresh→retry interceptor — refresh tokens rotate server-side
-  (`POST /auth/refresh` revokes the old one and issues a new pair), so concurrent 401s share
-  one in-flight refresh via a module-level promise rather than each firing their own. Also
-  normalizes the backend's inconsistent error envelopes (`{error:{code,message}}` on
-  auth/assignments/grades/ai/marketplace, `{error:{message}}` with no code on colleges, a bare
-  `{error:"string"}` on feed) into one `ApiRequestError` shape.
-- **Auth/session storage:** JWT access + refresh tokens persisted via
-  `@react-native-async-storage/async-storage` (`src/utils/storage.ts`). `AuthContext` restores
-  the session on launch via `GET /auth/me` (which itself goes through the refresh interceptor).
-  No Firebase Auth anywhere in this repo.
-- **API base URL — the #1 mobile dev-environment gotcha:** `src/constants/api.ts` hardcodes
-  `API_BASE_URL` (default `http://localhost:3001`, which works for the `expo start --web`
-  preview loop and iOS Simulator). It is **not** read from an env var. Physical device via Expo
-  Go needs your computer's LAN IP; Android Emulator needs `http://10.0.2.2:3001`. This is a
-  common "why is nothing loading" cause — check this file first when the mobile app can't reach
-  the backend.
-- **Push notifications:** not implemented. No FCM, no `expo-notifications` dependency yet.
-- **Testing:** `@types/jest` is present as a dev dependency, but **no test runner
-  (`jest`, `jest-expo`, Detox, Playwright) is actually installed**. Treat ENGINEERING_RULES.md's
-  Jest/Detox requirements as aspirational until a runner is wired up — don't claim tests "pass"
-  without verifying a runner exists.
+The Expo / React Native mobile app no longer lives in this repo. As of 2026-07-17 it was
+split out (via `git subtree split`, preserving full commit history) into
+**https://github.com/Pilotsoma/Futurely-mobile**. It still talks to this repo's `backend/`
+over HTTP — nothing about the backend API contract changed, only where the client code
+lives. See that repo's own `.claude/context/ARCHITECTURE.md` for mobile-specific details
+(navigation structure, state management, API client behavior, the `API_BASE_URL`
+dev-environment gotcha, etc.) — a duplicated copy of the same content that used to live in
+this section now lives there, tailored to that repo's layout.
+
+If you're working on the backend and need to reason about what the mobile client expects
+from an endpoint, clone the mobile repo separately rather than assuming — this repo no
+longer contains that source.
 
 ## Backend (`backend/`)
 

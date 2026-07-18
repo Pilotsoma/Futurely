@@ -1,14 +1,15 @@
 {
   "_comment": "Declare which files/dirs are in scope for the CURRENT task before editing existing (git-tracked) files. Glob patterns relative to project root, ** and * and ? supported. Anything git-tracked that is NOT matched here triggers an 'ask' permission prompt from .claude/hooks/guard-protected-paths.js instead of a silent edit. New/untracked files are always allowed regardless of this file. Clear or narrow this list when a task finishes so the next task starts from a protected baseline.",
-  "task": "mobile bug/perf/security hardening pass + Roadmaps feature port (mobile-only, web/backend untouched). Web signup/login flow debug-fix plan (docs/superpowers/plans/2026-07-17-signup-login-flow-fixes.md) is complete — narrowed back out of scope.",
+  "task": "Split nextstep-mobile/ out into a new GitHub repo (Futurely-mobile), preserving git history, then remove it from this repo and update root docs to point at the new repo. Web/backend untouched.",
   "updated": "2026-07-17",
   "in_scope": [
-    "nextstep-mobile/src/**",
-    "nextstep-mobile/app.json",
-    "nextstep-mobile/assets/**",
-    "nextstep-mobile/index.ts",
-    "nextstep-mobile/babel.config.js",
-    "nextstep-mobile/tailwind.config.js",
-    "nextstep-mobile/metro.config.js"
+    "nextstep-mobile/**",
+    "CLAUDE.md",
+    "README.md",
+    ".claude/context/ARCHITECTURE.md",
+    ".claude/context/ENGINEERING_RULES.md",
+    ".claude/context/DESIGN_SYSTEM.md",
+    "tsconfig.json",
+    ".claude/launch.json"
   ]
 }

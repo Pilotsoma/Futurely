@@ -58,7 +58,8 @@ F: #EF4444  (red)
   - Label: 12px / weight 500 / uppercase + letter-spacing
 
 ## Logo & Brand Mark
-- **FuturelyLogo** component (mobile: `nextstep-mobile/src/components/ui/FuturelyLogo.tsx`)
+- **FuturelyLogo** component (mobile: `src/components/ui/FuturelyLogo.tsx` in the
+  [Futurely-mobile](https://github.com/Pilotsoma/Futurely-mobile) repo)
   - Rounded square, brand blue `#2979FF` bg, cyan `#00E5FF` accent stripe, white "F" glyph
   - Props: `size` (default 40) — scales all dimensions
   - No external package required (pure React Native View + Text)

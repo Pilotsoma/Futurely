@@ -38,8 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "backend",
-    "nextstep-mobile"
+    "backend"
   ],
   "extends": "expo/tsconfig.base"
 }
