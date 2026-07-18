@@ -146,7 +146,7 @@ function LoginPageInner() {
     // Registration — validate first
     if (password !== confirmPassword) { setError('Passwords do not match'); return }
     if (password.length < 6)          { setError('Password must be at least 6 characters'); return }
-    if (!dateOfBirth.trim())          { setError('Please enter your date of birth.'); return }
+    if (mode === 'register-student' && !dateOfBirth.trim()) { setError('Please enter your date of birth.'); return }
     if (mode === 'register-student') {
       if (!hacUsername.trim() || !hacPassword.trim()) { setError('School portal credentials are required'); return }
       if (!hacUrl.trim() && !useCustomUrl) { setError('Please select your school district'); return }
@@ -334,11 +334,12 @@ function LoginPageInner() {
               />
             </div>
             {otpError && <p style={styles.error}>{otpError}</p>}
-            <button type="submit" style={styles.btn}>Verify code</button>
-            <button type="button" onClick={() => setRegisterStep('form')}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, textAlign: 'center' as const }}>
-              ← Back / change email
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="button" onClick={() => setRegisterStep('form')} style={styles.btnSecondary}>
+                ← Back
+              </button>
+              <button type="submit" style={{ ...styles.btn, marginTop: 0, flex: 1 }}>Verify code</button>
+            </div>
           </form>
         )}
 
@@ -361,7 +362,7 @@ function LoginPageInner() {
               placeholder="you@example.com" required style={styles.input} />
           </div>
 
-          {mode !== 'login' && (
+          {mode === 'register-student' && (
             <div style={styles.field}>
               <label style={styles.label}>Date of Birth</label>
               <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)}
@@ -791,21 +792,32 @@ function LoginPageInner() {
                 />
                 <span style={styles.checkLabel}>I have read and agree to the Privacy Policy</span>
               </label>
-              <button
-                type="button"
-                disabled={!agreedTos || !agreedPrivacy || isLoading}
-                onClick={() => {
-                  setShowPrivacyModal(false)
-                  if (pendingOAuthNew) {
-                    router.push('/dashboard')
-                  } else {
-                    void doRegisterOrLogin()
-                  }
-                }}
-                style={{ ...styles.btn, marginTop: 6, opacity: (!agreedTos || !agreedPrivacy || isLoading) ? 0.45 : 1 }}
-              >
-                {isLoading ? 'Creating account...' : pendingOAuthNew ? 'Continue to Futurely' : 'Continue & Create Account'}
-              </button>
+              <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                {!pendingOAuthNew && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowPrivacyModal(false); setRegisterStep('otp') }}
+                    style={styles.btnSecondary}
+                  >
+                    ← Back
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={!agreedTos || !agreedPrivacy || isLoading}
+                  onClick={() => {
+                    setShowPrivacyModal(false)
+                    if (pendingOAuthNew) {
+                      router.push('/dashboard')
+                    } else {
+                      void doRegisterOrLogin()
+                    }
+                  }}
+                  style={{ ...styles.btn, marginTop: 0, flex: 1, opacity: (!agreedTos || !agreedPrivacy || isLoading) ? 0.45 : 1 }}
+                >
+                  {isLoading ? 'Creating account...' : pendingOAuthNew ? 'Continue to Futurely' : 'Continue & Create Account'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -816,13 +828,13 @@ function LoginPageInner() {
 
 const styles: Record<string, React.CSSProperties> = {
   page:            { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 20 },
-  card:            { width: '100%', maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 40px rgba(26,21,14,0.08), 0 2px 10px rgba(26,21,14,0.05)' },
+  card:            { width: '100%', maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 40px rgba(26,21,14,0.08), 0 2px 10px rgba(26,21,14,0.05)' },
   heading:         { fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 600, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 6 },
   subheading:      { color: 'var(--text-secondary)', marginBottom: 28, textAlign: 'center', fontSize: 14 },
   form:            { width: '100%', display: 'flex', flexDirection: 'column', gap: 14 },
   field:           { display: 'flex', flexDirection: 'column', gap: 6 },
   label:           { fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.2px' },
-  input:           { background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 9, padding: '12px 14px', color: 'var(--text)', height: 46, width: '100%', outline: 'none', boxSizing: 'border-box' as const, fontSize: 14, transition: 'border-color 0.15s, box-shadow 0.15s' },
+  input:           { background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', color: 'var(--text)', height: 48, width: '100%', outline: 'none', boxSizing: 'border-box' as const, fontSize: 14, transition: 'border-color 0.15s, box-shadow 0.15s' },
   dividerRow:      { display: 'flex', alignItems: 'center', gap: 10, margin: '6px 0' },
   dividerLine:     { flex: 1, height: 1, background: 'var(--border)' },
   dividerText:     { fontSize: 10.5, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.7px', fontWeight: 600 },
@@ -830,8 +842,9 @@ const styles: Record<string, React.CSSProperties> = {
   hint:            { fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 },
   error:           { color: 'var(--error)', fontSize: 13.5, lineHeight: 1.4 },
   hacError:        { color: 'var(--warning)', fontSize: 12, lineHeight: 1.5 },
-  btn:             { background: 'var(--primary)', color: '#FFFFFF', border: 'none', borderRadius: 10, height: 48, fontWeight: 600, fontSize: 15, width: '100%', cursor: 'pointer', marginTop: 4, letterSpacing: '0.1px', transition: 'background 0.15s, box-shadow 0.15s' },
-  oauthBtn:        { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', height: 46, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, fontWeight: 600, textDecoration: 'none', cursor: 'pointer', transition: 'background 0.15s' },
+  btn:             { background: 'var(--primary)', color: '#FFFFFF', border: 'none', borderRadius: 8, height: 48, fontWeight: 600, fontSize: 15, width: '100%', cursor: 'pointer', marginTop: 4, letterSpacing: '0.1px', transition: 'background 0.15s, box-shadow 0.15s' },
+  btnSecondary:    { background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, height: 48, fontWeight: 600, fontSize: 15, padding: '0 20px', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' as const, transition: 'background 0.15s' },
+  oauthBtn:        { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', height: 48, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, fontWeight: 600, textDecoration: 'none', cursor: 'pointer', transition: 'background 0.15s' },
   testHint:        { marginTop: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' as const },
   switchText:      { marginTop: 12, fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' as const },
   switchLink:      { background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: 0 },
