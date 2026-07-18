@@ -153,7 +153,7 @@ async function issueRefreshToken(userId: number): Promise<string> {
 }
 
 async function sendVerificationEmail(email: string, token: string): Promise<void> {
-  const appUrl = process.env.APP_URL ?? 'https://futurely.app'
+  const appUrl = process.env.WEB_APP_URL ?? 'https://futurely.app'
   const link = `${appUrl}/verify-email?token=${token}`
   await sendEmail({
     to: email,
@@ -184,7 +184,7 @@ async function hasValidMailDomain(email: string): Promise<boolean> {
 }
 
 async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
-  const appUrl = process.env.APP_URL ?? 'https://futurely.app'
+  const appUrl = process.env.WEB_APP_URL ?? 'https://futurely.app'
   const link = `${appUrl}/reset-password?token=${token}`
   await sendEmail({
     to: email,
@@ -906,7 +906,7 @@ async function finishOAuth(
   name?: string,
   mobileRedirectUri?: string,
 ): Promise<void> {
-  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
+  const appUrl = process.env.WEB_APP_URL ?? 'https://myfuturely.ai'
 
   let existing = await prisma.oAuthAccount.findFirst({ where: { provider, providerId } })
   let userId: number
@@ -962,7 +962,7 @@ async function finishOAuth(
 router.get('/oauth/google', (req: Request, res: Response): void => {
   const clientId = process.env.GOOGLE_CLIENT_ID
   if (!clientId) { res.status(500).json({ error: 'Google OAuth not configured' }); return }
-  const redirect = encodeURIComponent(`${process.env.APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/google/callback`)
+  const redirect = encodeURIComponent(`${process.env.WEB_APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/google/callback`)
   const { platform, redirectUri } = req.query as { platform?: string; redirectUri?: string }
   const statePayload: { ts: number; mobileRedirectUri?: string } = { ts: Date.now() }
   if (platform === 'mobile' && redirectUri) statePayload.mobileRedirectUri = redirectUri
@@ -972,7 +972,7 @@ router.get('/oauth/google', (req: Request, res: Response): void => {
 })
 
 router.get('/oauth/google/callback', async (req: Request, res: Response): Promise<void> => {
-  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
+  const appUrl = process.env.WEB_APP_URL ?? 'https://myfuturely.ai'
   let mobileRedirectUri: string | undefined
   try {
     const { code, state } = req.query as { code?: string; state?: string }
@@ -1015,14 +1015,14 @@ router.get('/oauth/google/callback', async (req: Request, res: Response): Promis
 router.get('/oauth/microsoft', (_req: Request, res: Response): void => {
   const clientId = process.env.MICROSOFT_CLIENT_ID
   if (!clientId) { res.status(500).json({ error: 'Microsoft OAuth not configured' }); return }
-  const redirect = encodeURIComponent(`${process.env.APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/microsoft/callback`)
+  const redirect = encodeURIComponent(`${process.env.WEB_APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/microsoft/callback`)
   const state = jwt.sign({ ts: Date.now() }, process.env.JWT_SECRET!, { expiresIn: '10m' })
   const url = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=openid%20email%20profile&state=${state}`
   res.redirect(url)
 })
 
 router.get('/oauth/microsoft/callback', async (req: Request, res: Response): Promise<void> => {
-  const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
+  const appUrl = process.env.WEB_APP_URL ?? 'https://myfuturely.ai'
   try {
     const { code, state } = req.query as { code?: string; state?: string }
     if (!code || !state) { res.redirect(`${appUrl}/login?error=oauth_cancelled`); return }
@@ -1118,6 +1118,7 @@ router.get('/test-email', requireAuth, async (req: AuthRequest, res: Response): 
     SMTP_PASS: process.env.SMTP_PASS ? '✓ set' : '✗ missing',
     SMTP_FROM: process.env.SMTP_FROM ?? '✗ missing',
     APP_URL: process.env.APP_URL ?? '✗ missing',
+    WEB_APP_URL: process.env.WEB_APP_URL ?? '✗ missing',
   }
 
   // DB diagnostic — find what's breaking login

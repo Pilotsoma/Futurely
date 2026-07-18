@@ -1,7 +1,7 @@
 {
   "_comment": "Declare which files/dirs are in scope for the CURRENT task before editing existing (git-tracked) files. Glob patterns relative to project root, ** and * and ? supported. Anything git-tracked that is NOT matched here triggers an 'ask' permission prompt from .claude/hooks/guard-protected-paths.js instead of a silent edit. New/untracked files are always allowed regardless of this file. Clear or narrow this list when a task finishes so the next task starts from a protected baseline.",
-  "task": "mobile bug/perf/security hardening pass + Roadmaps feature port (mobile-only, web/backend untouched)",
-  "updated": "2026-07-14",
+  "task": "mobile bug/perf/security hardening pass + Roadmaps feature port (mobile-only, web/backend untouched); + web signup/login flow debug fixes (hydration mismatch, OTP send timeout guard, login page design-token alignment)",
+  "updated": "2026-07-17",
   "in_scope": [
     "nextstep-mobile/src/**",
     "nextstep-mobile/app.json",
@@ -9,6 +9,11 @@
     "nextstep-mobile/index.ts",
     "nextstep-mobile/babel.config.js",
     "nextstep-mobile/tailwind.config.js",
-    "nextstep-mobile/metro.config.js"
+    "nextstep-mobile/metro.config.js",
+    "app/layout.tsx",
+    "app/login/page.tsx",
+    "backend/src/lib/email.ts",
+    "backend/src/routes/auth.ts",
+    "backend/.env.example"
   ]
 }
