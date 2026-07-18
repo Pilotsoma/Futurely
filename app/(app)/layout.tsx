@@ -21,6 +21,7 @@ import LagDetector from '../../components/ui/LagDetector'
 import { AiChatProvider } from '../../components/providers/AiChatProvider'
 import FixBirthdayBlockScreen from '../../components/ui/FixBirthdayBlockScreen'
 import AccessRestrictedScreen from '../../components/ui/AccessRestrictedScreen'
+import ConnectSchoolBlockScreen from '../../components/ui/ConnectSchoolBlockScreen'
 
 const NAV = [
   {
@@ -82,6 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isDeleted, setIsDeleted]       = useState(false)
   const [accountStatus, setAccountStatus] = useState<string | null>(null)
   const [bannedUntilDate, setBannedUntilDate] = useState<string | null>(null)
+  const [hasSchoolConnection, setHasSchoolConnection] = useState(false)
   const [userName, setUserName]         = useState<string>('Student')
   const [pinnedExpanded, setPinnedExpanded] = useState(false)
   const [hoverExpanded, setHoverExpanded]   = useState(false)
@@ -116,6 +118,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (freshUser.accountStatus && freshUser.accountStatus !== 'ACTIVE') {
           setAccountStatus(freshUser.accountStatus)
           setBannedUntilDate(freshUser.bannedUntilDate ?? null)
+          setHasSchoolConnection(freshUser.hasSchoolConnection)
           setChecked(true)
           return
         }
@@ -190,7 +193,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (accountStatus === 'DOB_MISMATCH_LOCKED') return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px', zIndex: 9999 }}>
-      <FixBirthdayBlockScreen onLogout={handleLogout} onVerified={handleDobVerified} />
+      {hasSchoolConnection
+        ? <FixBirthdayBlockScreen onLogout={handleLogout} onVerified={handleDobVerified} />
+        : <ConnectSchoolBlockScreen onLogout={handleLogout} onConnected={() => setHasSchoolConnection(true)} />
+      }
     </div>
   )
 

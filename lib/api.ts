@@ -248,6 +248,7 @@ export const api = {
       accountStatus: string
       bannedUntilDate: string | null
       dobCorrectionAttempts: number
+      hasSchoolConnection: boolean
     }>('/api/auth/me'),
 
   updateDob: (dateOfBirth: string) =>

@@ -132,6 +132,16 @@ function LoginPageInner() {
       setPendingOAuthNew(true)
       setShowPrivacyModal(true)
     }
+    if (oauthResult === 'needs_signup') {
+      // No existing account matched this Google identity — switch to register mode
+      // with email/name pre-filled so the user can complete signup.
+      const prefillEmail = searchParams.get('email') ?? ''
+      const prefillName = searchParams.get('name') ?? ''
+      setMode('register-student')
+      if (prefillEmail) setEmail(prefillEmail)
+      if (prefillName) setName(prefillName)
+      setError("We couldn’t find an account for that Google sign-in — let’s get you set up.")
+    }
   }, [searchParams, router])
 
   const filteredIsds = SORTED_ISD_LIST.filter(isd =>
@@ -328,7 +338,7 @@ function LoginPageInner() {
         {/* ── OAuth buttons (login + student register only — parent/teacher need extra fields) ── */}
         {(mode === 'login' || mode === 'register-student') && registerStep === 'form' && (
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 4 }}>
-            <a href={`${BASE}/api/auth/oauth/google`} style={styles.oauthBtn}>
+            <a href={`${BASE}/api/auth/oauth/google?intent=${mode === 'login' ? 'login' : 'signup'}`} style={styles.oauthBtn}>
               <svg width="18" height="18" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
                 <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>

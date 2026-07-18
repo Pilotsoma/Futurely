@@ -5,8 +5,17 @@ import { useRouter } from 'next/navigation'
 import { api, ApiError } from '@/lib/api'
 import { clearWebAuth } from '@/lib/authState'
 import FixBirthdayBlockScreen from '@/components/ui/FixBirthdayBlockScreen'
+import ConnectSchoolBlockScreen from '@/components/ui/ConnectSchoolBlockScreen'
 
-type CheckState = 'loading' | 'locked' | 'redirecting'
+type CheckState = 'loading' | 'no-school' | 'locked' | 'redirecting'
+
+const centeredPage: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '100vh',
+  padding: '24px 20px',
+}
 
 export default function FixBirthdayPage() {
   const router = useRouter()
@@ -29,11 +38,15 @@ export default function FixBirthdayPage() {
           router.replace('/account/access-restricted')
           return
         }
-        // DOB_MISMATCH_LOCKED or any unrecognised locked status
-        setCheckState('locked')
+        // DOB_MISMATCH_LOCKED or any unrecognised locked status — check whether
+        // a school connection exists before showing the birthday form.
+        if (!user.hasSchoolConnection) {
+          setCheckState('no-school')
+        } else {
+          setCheckState('locked')
+        }
       } catch (err) {
         if (err instanceof ApiError && err.httpStatus === 401) {
-          // Not authenticated
           router.replace('/login')
           return
         }
@@ -82,8 +95,19 @@ export default function FixBirthdayPage() {
 
   if (checkState === 'redirecting') return null
 
+  if (checkState === 'no-school') {
+    return (
+      <div style={centeredPage}>
+        <ConnectSchoolBlockScreen
+          onLogout={handleLogout}
+          onConnected={() => setCheckState('locked')}
+        />
+      </div>
+    )
+  }
+
   return (
-    <>
+    <div style={centeredPage}>
       {error && (
         <p
           style={{
@@ -104,6 +128,6 @@ export default function FixBirthdayPage() {
         </p>
       )}
       <FixBirthdayBlockScreen onLogout={handleLogout} />
-    </>
+    </div>
   )
 }
