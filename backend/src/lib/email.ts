@@ -35,6 +35,11 @@ async function sendViaSMTP(opts: MailOptions): Promise<void> {
     auth: process.env.SMTP_USER
       ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
       : undefined,
+    // Fail fast instead of hanging toward the frontend's request timeout when
+    // SMTP_HOST is misconfigured or unreachable.
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   })
   await transporter.sendMail({
     from: process.env.SMTP_FROM ?? '"Futurely" <noreply@futurely.app>',
