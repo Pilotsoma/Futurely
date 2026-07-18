@@ -5,7 +5,7 @@ import type { PlannerItem } from '../../lib/api'
 import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons'
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-const MAX_VISIBLE_ITEMS = 2
+const MAX_VISIBLE_ITEMS = 3
 const MS_PER_DAY = 86400000
 
 function dayOnly(d: Date): Date {
@@ -194,9 +194,9 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
               })}
             </div>
 
-            {/* Item overlay: up to MAX_VISIBLE_ITEMS draggable pills per day, then a
-                single red count badge for the rest — avoids cramming many small
-                pills into a day cell when a day has a lot of items due. */}
+            {/* Item overlay: up to MAX_VISIBLE_ITEMS draggable pills per day; when a
+                day has more than that, also show a red badge with the total count
+                so a busy day doesn't just look silently truncated. */}
             <div style={{
               position: 'absolute', top: 26, left: 0, right: 0, bottom: 4,
               display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 18, gap: 2,
@@ -236,8 +236,7 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                 )
               })}
               {week.map((cell, i) => {
-                const extra = countByDay[i] - MAX_VISIBLE_ITEMS
-                if (extra <= 0) return null
+                if (countByDay[i] <= MAX_VISIBLE_ITEMS) return null
                 return (
                   <div
                     key={`badge-${i}`}
@@ -261,7 +260,7 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                       cursor: 'pointer',
                     }}
                   >
-                    +{extra}
+                    {countByDay[i]}
                   </div>
                 )
               })}
