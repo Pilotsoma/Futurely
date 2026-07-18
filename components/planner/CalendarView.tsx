@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { PlannerItem } from '../../lib/api'
-import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons'
+import { ChevronLeftIcon, ChevronRightIcon, LinkIcon } from '@/components/icons'
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const MAX_VISIBLE_ITEMS = 3
@@ -80,9 +80,11 @@ interface Props {
   selectedDate: Date
   onSelectDate: (d: Date) => void
   onReschedule: (item: PlannerItem, newDueDate: Date) => void
+  canvasConnected?: boolean
+  onToggleCanvasPanel?: () => void
 }
 
-export default function CalendarView({ items, selectedDate, onSelectDate, onReschedule }: Props) {
+export default function CalendarView({ items, selectedDate, onSelectDate, onReschedule, canvasConnected, onToggleCanvasPanel }: Props) {
   const [monthAnchor, setMonthAnchor] = useState(() => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1))
   const [dragOverDay, setDragOverDay] = useState<string | null>(null)
   const today = dayOnly(new Date())
@@ -119,14 +121,34 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
   }
 
   return (
-    <div className="ns-card" style={{ padding: 16, marginBottom: 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: 14 }}>
-        <div />
+    <div className="ns-card" style={{ padding: 20, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          {onToggleCanvasPanel && (
+            <button
+              onClick={onToggleCanvasPanel}
+              title={canvasConnected ? 'Manage Canvas connection' : 'Link Canvas'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: 'none', border: '1px solid var(--border)', borderRadius: 7,
+                padding: '5px 10px', fontSize: 11.5, fontWeight: 600,
+                color: canvasConnected ? '#22C55E' : 'var(--text-secondary)',
+                cursor: 'pointer', boxShadow: 'var(--neo-raised)',
+              }}
+            >
+              <LinkIcon size={12} />
+              Canvas
+              {canvasConnected && (
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E' }} />
+              )}
+            </button>
+          )}
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifySelf: 'center' }}>
           <button onClick={() => goMonth(-1)} aria-label="Previous month" style={navBtn}>
             <ChevronLeftIcon size={14} />
           </button>
-          <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', minWidth: 160, textAlign: 'center' }}>
+          <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', minWidth: 170, textAlign: 'center' }}>
             {monthLabel}
           </span>
           <button onClick={() => goMonth(1)} aria-label="Next month" style={navBtn}>
@@ -143,9 +165,9 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
         {WEEKDAY_LABELS.map((label, i) => (
-          <div key={i} style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', padding: '4px 0' }}>
+          <div key={i} style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', padding: '6px 0' }}>
             {label}
           </div>
         ))}
@@ -165,8 +187,8 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
         }
 
         return (
-          <div key={weekIdx} style={{ position: 'relative', marginBottom: 4 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+          <div key={weekIdx} style={{ position: 'relative', marginBottom: 6 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
               {week.map((cell, i) => {
                 const isToday = isSameDay(cell.date, today)
                 const isSelected = isSameDay(cell.date, selectedDate)
@@ -181,12 +203,12 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                     onDrop={e => handleDrop(e, cell.date)}
                     style={{
                       position: 'relative',
-                      minHeight: 104,
+                      minHeight: 150,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      paddingTop: 6,
-                      borderRadius: 8,
+                      paddingTop: 8,
+                      borderRadius: 10,
                       border: isSelected ? '1.5px solid var(--primary)' : isDragOver ? '1.5px dashed var(--primary)' : '1px solid transparent',
                       background: isSelected ? 'var(--primary-dim)' : 'var(--surface-2)',
                       cursor: 'pointer',
@@ -195,7 +217,7 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                     }}
                   >
                     <span style={{
-                      fontSize: 13,
+                      fontSize: 16,
                       fontWeight: isToday ? 800 : 500,
                       color: isToday ? 'var(--primary)' : 'var(--text)',
                     }}>
@@ -206,14 +228,14 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                         title={`${countByDay[i]} assignments due`}
                         style={{
                           position: 'absolute',
-                          top: 4,
-                          right: 4,
-                          minWidth: 15,
-                          height: 15,
+                          top: 6,
+                          right: 6,
+                          minWidth: 17,
+                          height: 17,
                           borderRadius: '50%',
                           background: '#EF4444',
                           color: '#fff',
-                          fontSize: 8,
+                          fontSize: 9,
                           fontWeight: 700,
                           display: 'flex',
                           alignItems: 'center',
@@ -232,9 +254,9 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
             {/* Item overlay: up to MAX_VISIBLE_ITEMS draggable pills per day. The
                 overflow badge is rendered next to the date number above, not here. */}
             <div style={{
-              position: 'absolute', top: 26, left: 0, right: 0, bottom: 4,
-              display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 18, gap: 2,
-              padding: '0 2px', pointerEvents: 'none',
+              position: 'absolute', top: 34, left: 0, right: 0, bottom: 6,
+              display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 22, gap: 3,
+              padding: '0 3px', pointerEvents: 'none',
             }}>
               {lanes.filter(l => l.lane < MAX_VISIBLE_ITEMS).map(l => {
                 const col = daysBetween(weekStart, l.due)
@@ -252,8 +274,8 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                       pointerEvents: 'auto',
                       background: `color-mix(in srgb, ${color} 22%, transparent)`,
                       border: `1px solid ${color}`,
-                      borderRadius: 4,
-                      fontSize: 11,
+                      borderRadius: 5,
+                      fontSize: 12,
                       fontWeight: 600,
                       color,
                       padding: '0 5px',

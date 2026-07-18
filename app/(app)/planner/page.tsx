@@ -95,6 +95,7 @@ export default function PlannerPage() {
   // Canvas state
   const [canvasStatus, setCanvasStatus] = useState<CanvasStatus | null>(null)
   const [canvasLoading, setCanvasLoading] = useState(false)
+  const [showCanvasPanel, setShowCanvasPanel] = useState(false)
   const [showCanvasForm, setShowCanvasForm] = useState(false)
   const [canvasUrl, setCanvasUrl] = useState('')
   const [canvasToken, setCanvasToken] = useState('')
@@ -475,6 +476,9 @@ export default function PlannerPage() {
         </div>
       </div>
 
+      {/* ── Canvas: panel toggled via the small Canvas button in the calendar header ── */}
+      {showCanvasPanel && (
+      <>
       {/* ── Canvas: Connect form (shown when adding first OR second connection) ── */}
       {showCanvasForm && (
         <div className="ns-card" style={{ padding: '16px 18px', marginBottom: 16 }}>
@@ -661,6 +665,8 @@ export default function PlannerPage() {
           </button>
         </div>
       )}
+      </>
+      )}
 
       {/* Create Form */}
       {showForm && (
@@ -806,7 +812,14 @@ export default function PlannerPage() {
       {/* Calendar view: month grid + selected day's assignments */}
       {view === 'calendar' && (
         <>
-          <CalendarView items={items} selectedDate={selectedDate} onSelectDate={setSelectedDate} onReschedule={(item, newDue) => void handleReschedule(item, newDue)} />
+          <CalendarView
+            items={items}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onReschedule={(item, newDue) => void handleReschedule(item, newDue)}
+            canvasConnected={!!canvasStatus?.connected}
+            onToggleCanvasPanel={() => setShowCanvasPanel(prev => !prev)}
+          />
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
               {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
