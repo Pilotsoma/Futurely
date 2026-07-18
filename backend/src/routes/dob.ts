@@ -201,14 +201,8 @@ router.patch('/', dobCorrectionLimiter, requireAuth, async (req: AuthRequest, re
       },
     })
   } catch (e) {
-    const debugMessage = e instanceof Error ? e.message : String(e)
-    logger.error('auth.error', { event: 'dob_correction', error: debugMessage })
-    // TEMPORARY: surfacing the raw error message to the client to diagnose a
-    // production-only 500 on this endpoint that isn't reproducible locally.
-    // This is safe — Prisma/validation error messages describe schema shape,
-    // not user data — but revert once the root cause is found (see the
-    // matching debugMessage-only diff, no other logic changed).
-    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error', debugMessage } })
+    logger.error('auth.error', { event: 'dob_correction', error: e instanceof Error ? e.message : String(e) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
   }
 })
 

@@ -266,6 +266,27 @@ const DATA_REPAIRS: string[] = [
        ) AS t
        WHERE t->>'tagColor' = "User"."tagColor"
      )`,
+
+  // Fix "dateOfBirth" column type: it was created as a native DATE/TIMESTAMP
+  // column by an earlier (pre-encryption) version of this field, before the
+  // schema switched it to an encrypted TEXT ciphertext. The ADD COLUMN IF
+  // NOT EXISTS patch above is a no-op once a column already exists under any
+  // type, so it silently left the wrong type in place — every write of an
+  // encrypted ciphertext into this column failed with a Postgres 22007
+  // "invalid input syntax for type date" error. This lives in DATA_REPAIRS
+  // (not PATCHES) because PATCHES only runs when the schema probe fails on a
+  // *missing* column — a wrong-typed-but-present column passes that probe
+  // and would otherwise never get corrected. Guarded on current type so this
+  // is a cheap metadata check on every cold start once fixed, not a repeated
+  // table rewrite.
+  `DO $$ BEGIN
+     IF (
+       SELECT data_type FROM information_schema.columns
+       WHERE table_name = 'User' AND column_name = 'dateOfBirth'
+     ) <> 'text' THEN
+       ALTER TABLE "User" ALTER COLUMN "dateOfBirth" TYPE TEXT USING "dateOfBirth"::TEXT;
+     END IF;
+   END $$`,
 ]
 
 let patchPromise: Promise<void> | null = null
