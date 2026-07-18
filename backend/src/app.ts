@@ -47,6 +47,7 @@ import setsRouter from './routes/sets'
 import gamesRouter from './routes/games'
 import agentSessionsRouter from './routes/agentSessions'
 import usersRouter from './routes/users'
+import cronRouter from './routes/cron'
 
 import { requireAuth } from './middleware/auth'
 import { requireConsent } from './middleware/requireConsent'
@@ -374,6 +375,11 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
 }
 
 app.use('/parent', authLimiter, requireAuth, requireConsent, parentRouter)
+
+// ── Cron endpoints — secret-based auth only, no user session middleware ───────
+// Reachable at /api/cron/... via vercel.json's /api routePrefix.
+// Must be mounted OUTSIDE the requireAuth/requireConsent blocks above.
+app.use('/cron', cronRouter)
 
 // ── Global error handler ─────────────────────────────────────────────────────
 // Catches any error passed to next(err) or thrown inside non-async route handlers.

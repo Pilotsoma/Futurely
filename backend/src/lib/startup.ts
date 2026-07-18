@@ -210,6 +210,12 @@ const PATCHES: string[] = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "AgentToolCall_pending_write_confirm_unique"
     ON "AgentToolCall" ("sessionId")
     WHERE "status" = 'PENDING' AND "toolName" = 'write_confirmation'`,
+
+  // ── Assignment reminder tracking ──────────────────────────────────────────
+  // Added 2026-07-17: tracks whether the 1-hour-before reminder was sent,
+  // preventing duplicate notifications from the cron job.
+  `ALTER TABLE "Assignment"
+    ADD COLUMN IF NOT EXISTS "reminderSentAt" TIMESTAMP(3)`,
 ]
 
 // Data-level repairs that are always idempotent and safe to re-run on every cold start.
@@ -261,8 +267,8 @@ export function ensureSchema(): Promise<void> {
       await prisma.$queryRawUnsafe(`SELECT "spinCoinsSpent" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT "loginStreak", "tosAcceptedAt", "privacyAcceptedAt", "ageConfirmedAt" FROM "User" LIMIT 0`)
-      await prisma.$queryRawUnsafe(`SELECT "startDate" FROM "Assignment" LIMIT 0`)
-      // Agentic schema additions — probe updated 2026-07-16
+      await prisma.$queryRawUnsafe(`SELECT "startDate", "reminderSentAt" FROM "Assignment" LIMIT 0`)
+      // Agentic + reminder schema additions — probe updated 2026-07-17
       await prisma.$queryRawUnsafe(`SELECT "coppaConsentStatus", "autonomousConsentAcceptedAt" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "AgentSession" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "AgentToolCall" LIMIT 0`)

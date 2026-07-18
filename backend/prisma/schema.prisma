@@ -216,6 +216,7 @@ model Assignment {
   completedAt      DateTime?
   source           String    @default("SEED")
   priority         String?
+  reminderSentAt   DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
