@@ -19,6 +19,8 @@ import ExternalLinkGuard from '../../components/ui/ExternalLinkGuard'
 import CanvasTokenExpiredBanner from '../../components/ui/CanvasTokenExpiredBanner'
 import LagDetector from '../../components/ui/LagDetector'
 import { AiChatProvider } from '../../components/providers/AiChatProvider'
+import FixBirthdayBlockScreen from '../../components/ui/FixBirthdayBlockScreen'
+import AccessRestrictedScreen from '../../components/ui/AccessRestrictedScreen'
 
 const NAV = [
   {
@@ -76,9 +78,11 @@ const fastSpring: Transition       = { type: 'spring', stiffness: 500, damping: 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
   const pathname = usePathname()
-  const [checked, setChecked]     = useState(false)
-  const [isDeleted, setIsDeleted] = useState(false)
-  const [userName, setUserName]   = useState<string>('Student')
+  const [checked, setChecked]           = useState(false)
+  const [isDeleted, setIsDeleted]       = useState(false)
+  const [accountStatus, setAccountStatus] = useState<string | null>(null)
+  const [bannedUntilDate, setBannedUntilDate] = useState<string | null>(null)
+  const [userName, setUserName]         = useState<string>('Student')
   const [pinnedExpanded, setPinnedExpanded] = useState(false)
   const [hoverExpanded, setHoverExpanded]   = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -108,6 +112,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       const name = freshUser?.name ?? cachedUser?.name
       if (freshUser) {
         localStorage.setItem('ns_user', JSON.stringify({ ...cachedUser, ...freshUser }))
+        // COPPA account-status gate — lock out DOB-mismatched or under-13 accounts
+        if (freshUser.accountStatus && freshUser.accountStatus !== 'ACTIVE') {
+          setAccountStatus(freshUser.accountStatus)
+          setBannedUntilDate(freshUser.bannedUntilDate ?? null)
+          setChecked(true)
+          return
+        }
       }
       if (role === 'DEV' || role === 'ADMIN') setIsAdmin(true)
       if (role === 'DEV') setIsDev(true)
@@ -169,6 +180,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         Your myFuturely account has been permanently removed by an administrator.
       </p>
       <button className="ns-btn-ghost" style={{ marginTop: 8 }} onClick={handleLogout}>Log out</button>
+    </div>
+  )
+
+  if (accountStatus === 'DOB_MISMATCH_LOCKED') return (
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px', zIndex: 9999 }}>
+      <FixBirthdayBlockScreen onLogout={handleLogout} />
+    </div>
+  )
+
+  if (accountStatus === 'UNDER_13_BANNED') return (
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px', zIndex: 9999 }}>
+      <AccessRestrictedScreen bannedUntilDate={bannedUntilDate} onLogout={handleLogout} />
     </div>
   )
 
