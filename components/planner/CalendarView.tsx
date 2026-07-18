@@ -89,6 +89,11 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
 
   const cells = buildMonthCells(monthAnchor)
   const monthLabel = monthAnchor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const monthAssignmentCount = items.filter(item => {
+    if (item.completed) return false
+    const due = new Date(item.dueDate)
+    return due.getFullYear() === monthAnchor.getFullYear() && due.getMonth() === monthAnchor.getMonth()
+  }).length
 
   function goMonth(delta: number) {
     setMonthAnchor(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1))
@@ -127,9 +132,14 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
             <ChevronRightIcon size={14} />
           </button>
         </div>
-        <button onClick={goToday} style={{ ...navBtn, width: 'auto', padding: '6px 12px', fontSize: 12, fontWeight: 600 }}>
-          Today
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
+            {monthAssignmentCount} assignment{monthAssignmentCount === 1 ? '' : 's'} this month
+          </span>
+          <button onClick={goToday} style={{ ...navBtn, width: 'auto', padding: '6px 12px', fontSize: 12, fontWeight: 600 }}>
+            Today
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
