@@ -5,7 +5,7 @@ import type { PlannerItem } from '../../lib/api'
 import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons'
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-const MAX_LANES = 3
+const MAX_VISIBLE_ITEMS = 2
 const MS_PER_DAY = 86400000
 
 function dayOnly(d: Date): Date {
@@ -147,11 +147,10 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
         // Exclude completed items from the calendar grid entirely (they should
         // not appear at all — not even dimmed; this is calendar-only behaviour).
         const lanes = assignLanes(items.filter(item => !item.completed), weekStart, weekEnd)
-        const overflowByDay = new Array(7).fill(0)
+        const countByDay = new Array(7).fill(0)
         for (const l of lanes) {
-          if (l.lane < MAX_LANES) continue
           const col = daysBetween(weekStart, l.due)
-          if (col >= 0 && col <= 6) overflowByDay[col]++
+          if (col >= 0 && col <= 6) countByDay[col]++
         }
 
         return (
@@ -190,23 +189,20 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                     }}>
                       {cell.date.getDate()}
                     </span>
-                    {overflowByDay[i] > 0 && (
-                      <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, marginTop: 'auto', paddingBottom: 3 }}>
-                        +{overflowByDay[i]}
-                      </span>
-                    )}
                   </div>
                 )
               })}
             </div>
 
-            {/* Pill overlay: each item rendered as a single-day draggable pill on its due date */}
+            {/* Item overlay: up to MAX_VISIBLE_ITEMS draggable pills per day, then a
+                single red count badge for the rest — avoids cramming many small
+                pills into a day cell when a day has a lot of items due. */}
             <div style={{
               position: 'absolute', top: 26, left: 0, right: 0, bottom: 4,
               display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 18, gap: 2,
               padding: '0 2px', pointerEvents: 'none',
             }}>
-              {lanes.filter(l => l.lane < MAX_LANES).map(l => {
+              {lanes.filter(l => l.lane < MAX_VISIBLE_ITEMS).map(l => {
                 const col = daysBetween(weekStart, l.due)
                 const color = itemColor(l.item, today)
                 return (
@@ -236,6 +232,36 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                     }}
                   >
                     {l.item.title}
+                  </div>
+                )
+              })}
+              {week.map((cell, i) => {
+                const extra = countByDay[i] - MAX_VISIBLE_ITEMS
+                if (extra <= 0) return null
+                return (
+                  <div
+                    key={`badge-${i}`}
+                    onClick={e => { e.stopPropagation(); onSelectDate(cell.date) }}
+                    title={`${countByDay[i]} assignments due`}
+                    style={{
+                      gridColumn: `${i + 1} / ${i + 2}`,
+                      gridRow: MAX_VISIBLE_ITEMS + 1,
+                      pointerEvents: 'auto',
+                      justifySelf: 'center',
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: '#EF4444',
+                      color: '#fff',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    +{extra}
                   </div>
                 )
               })}

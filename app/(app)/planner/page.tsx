@@ -419,28 +419,37 @@ export default function PlannerPage() {
             inputPlaceholder="e.g. Reschedule all math assignments to next week"
           />
           <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-            <button
-              onClick={() => { setView('list'); localStorage.setItem('ns_planner_view', 'list') }}
-              style={{
-                background: view === 'list' ? 'var(--surface-2)' : 'transparent',
-                color: view === 'list' ? 'var(--text)' : 'var(--text-secondary)',
-                border: 'none', padding: '8px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              }}
-            >
-              List
-            </button>
-            <button
-              onClick={() => { setView('calendar'); localStorage.setItem('ns_planner_view', 'calendar') }}
-              title="Calendar view"
-              style={{
-                background: view === 'calendar' ? 'var(--surface-2)' : 'transparent',
-                color: view === 'calendar' ? 'var(--text)' : 'var(--text-secondary)',
-                border: 'none', padding: '8px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 6,
-              }}
-            >
-              <CalendarIcon size={13} /> Calendar
-            </button>
+            {(() => {
+              const listBtn = (
+                <button
+                  key="list"
+                  onClick={() => { setView('list'); localStorage.setItem('ns_planner_view', 'list') }}
+                  style={{
+                    background: view === 'list' ? 'var(--surface-2)' : 'transparent',
+                    color: view === 'list' ? 'var(--text)' : 'var(--text-secondary)',
+                    border: 'none', padding: '8px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  List
+                </button>
+              )
+              const calendarBtn = (
+                <button
+                  key="calendar"
+                  onClick={() => { setView('calendar'); localStorage.setItem('ns_planner_view', 'calendar') }}
+                  title="Calendar view"
+                  style={{
+                    background: view === 'calendar' ? 'var(--surface-2)' : 'transparent',
+                    color: view === 'calendar' ? 'var(--text)' : 'var(--text-secondary)',
+                    border: 'none', padding: '8px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  <CalendarIcon size={13} /> Calendar
+                </button>
+              )
+              return view === 'list' ? [listBtn, calendarBtn] : [calendarBtn, listBtn]
+            })()}
           </div>
           <button
             onClick={() => {
