@@ -4,43 +4,7 @@ import { prisma } from '../lib/prisma'
 import { liftExpiredBanIfNeeded } from '../lib/dobVerification'
 import { AuthRequest } from './auth'
 import { logger } from '../common/logger'
-
-/**
- * Paths that bypass the ACTIVE-only account status check even when a user's
- * account is DOB_MISMATCH_LOCKED or UNDER_13_BANNED.
- *
- * These are matched against req.path as Express strips the mount prefix, so
- * a request to POST /integrations/grades/hac/login arrives here with
- * req.path === '/hac/login' when requireActiveAccount is mounted via
- * app.use('/integrations/grades', ..., requireActiveAccount, gradesRouter).
- *
- * WHY THIS EXISTS — the deadlock: requireActiveAccount is applied ahead of
- * the grades and classlink integration routers, which means a locked account
- * cannot call POST /hac/login, POST /powerschool/login, or POST /connect to
- * link their school portal. But for OAuth-created accounts that landed in
- * DOB_MISMATCH_LOCKED without ever completing school-portal setup, connecting
- * the portal is the ONLY way to obtain a hacDateOfBirth value to compare
- * against for DOB verification — there is no other path out of the lock.
- * Blocking those endpoints for locked accounts creates an unresolvable loop.
- *
- * Only the specific connect/login routes are exempted. All data-reading
- * endpoints (transcript, gpa, schedule, classwork, etc.) remain fully blocked
- * for locked/banned accounts; the intent is "you may connect your school
- * portal to attempt to resolve your lock, but you may not use the rest of the
- * app." Do not expand this list without an explicit architecture review.
- *
- * baseUrl is included (not just path) so this stays scoped to the exact
- * router each entry belongs to — matching on path alone would silently
- * exempt any future unrelated `POST /connect` route added to some other
- * router this middleware also guards (e.g. a hypothetical Canvas "connect"
- * endpoint), which would be a real access-control regression for locked or
- * banned accounts, not just a naming accident.
- */
-const SCHOOL_CONNECT_ALLOWLIST: ReadonlyArray<{ method: string; baseUrl: string; path: string }> = [
-  { method: 'POST', baseUrl: '/integrations/grades', path: '/hac/login' },
-  { method: 'POST', baseUrl: '/integrations/grades', path: '/powerschool/login' },
-  { method: 'POST', baseUrl: '/integrations/classlink', path: '/connect' },
-]
+import { isSchoolConnectAllowlisted } from './schoolConnectAllowlist'
 
 /**
  * Enforces that the authenticated user's accountStatus is ACTIVE before
@@ -77,8 +41,9 @@ const SCHOOL_CONNECT_ALLOWLIST: ReadonlyArray<{ method: string; baseUrl: string;
  * Those routes are mounted outside this middleware in app.ts, so they remain
  * exempt automatically.
  *
- * Additionally, the paths in SCHOOL_CONNECT_ALLOWLIST bypass this check so
- * a locked account can connect a school portal. See that constant for details.
+ * Additionally, the paths in schoolConnectAllowlist.ts bypass this check so
+ * a locked account can connect a school portal. See that module for details —
+ * requireConsent shares the exact same allowlist for the exact same reason.
  */
 export async function requireActiveAccount(
   req: AuthRequest,
@@ -98,13 +63,8 @@ export async function requireActiveAccount(
 
   // Allow school-portal connect/login endpoints regardless of account status
   // so a locked account can reach the school portal to resolve the lock.
-  // req.baseUrl is the mount path (e.g. '/integrations/grades'), req.path is
-  // relative to it (e.g. '/hac/login') — both must match so this stays scoped
-  // to the exact router each allowlist entry belongs to. See SCHOOL_CONNECT_ALLOWLIST.
-  const isAllowlisted = SCHOOL_CONNECT_ALLOWLIST.some(
-    (entry) => req.method === entry.method && req.baseUrl === entry.baseUrl && req.path === entry.path,
-  )
-  if (isAllowlisted) {
+  // See schoolConnectAllowlist.ts.
+  if (isSchoolConnectAllowlisted(req)) {
     next()
     return
   }

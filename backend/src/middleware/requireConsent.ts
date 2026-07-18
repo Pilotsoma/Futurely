@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express'
 import { prisma } from '../lib/prisma'
 import { AuthRequest } from './auth'
 import { logger } from '../common/logger'
+import { isSchoolConnectAllowlisted } from './schoolConnectAllowlist'
 
 /**
  * Enforces that the authenticated user has accepted ToS, Privacy Policy, and
@@ -18,6 +19,17 @@ import { logger } from '../common/logger'
  *
  * Those routes are mounted inside auth.ts which is NOT wrapped with this
  * middleware in app.ts, so they remain exempt automatically.
+ *
+ * Additionally, the paths in schoolConnectAllowlist.ts bypass this check —
+ * a fresh OAuth account has neither recorded consent nor a school connection,
+ * and connecting a school portal is the only way out of DOB_MISMATCH_LOCKED.
+ * requireActiveAccount shares the exact same allowlist for the exact same
+ * reason; without this, a locked, unconsented account's connect request was
+ * silently rejected here (this middleware runs before requireActiveAccount,
+ * so the earlier fix there was never enough on its own), bouncing the user
+ * to the consent modal and discarding the school credentials they'd just
+ * entered — so after agreeing to the ToS, they had to enter their school
+ * portal credentials a second time.
  */
 export async function requireConsent(
   req: AuthRequest,
@@ -32,6 +44,14 @@ export async function requireConsent(
       data: null,
       error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
     })
+    return
+  }
+
+  // Allow school-portal connect/login endpoints regardless of consent status
+  // so a locked, unconsented account can reach the school portal to resolve
+  // the lock. See schoolConnectAllowlist.ts.
+  if (isSchoolConnectAllowlisted(req)) {
+    next()
     return
   }
 
