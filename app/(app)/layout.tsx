@@ -148,6 +148,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     void checkAuth()
   }, [router])
 
+  function handleDobVerified() {
+    setAccountStatus(null)
+    setBannedUntilDate(null)
+  }
+
   function handleLogout() {
     api.logout().catch(() => null)
     clearWebAuth()
@@ -185,7 +190,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (accountStatus === 'DOB_MISMATCH_LOCKED') return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px', zIndex: 9999 }}>
-      <FixBirthdayBlockScreen onLogout={handleLogout} />
+      <FixBirthdayBlockScreen onLogout={handleLogout} onVerified={handleDobVerified} />
     </div>
   )
 

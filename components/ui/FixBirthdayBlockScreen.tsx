@@ -8,6 +8,16 @@ import { api, ApiError } from '@/lib/api'
 
 interface FixBirthdayBlockScreenProps {
   onLogout: () => void
+  // Called on successful verification, in addition to navigating to
+  // /dashboard. The parent app layout (app/(app)/layout.tsx) renders this
+  // component as an in-place overlay driven by its own accountStatus state,
+  // set once when the layout mounts and never re-checked afterward — a
+  // client-side router.push() to a route the layout is already showing
+  // doesn't remount it or re-run its auth check, so without this callback
+  // the overlay would keep rendering forever even after the account is
+  // unlocked. Optional because the standalone /account/fix-birthday page
+  // doesn't render inside that layout and doesn't need it.
+  onVerified?: () => void
 }
 
 type SubmitState = 'idle' | 'submitting' | 'success'
@@ -17,7 +27,7 @@ interface UserMessage {
   type: 'error' | 'info' | 'success'
 }
 
-export default function FixBirthdayBlockScreen({ onLogout }: FixBirthdayBlockScreenProps) {
+export default function FixBirthdayBlockScreen({ onLogout, onVerified }: FixBirthdayBlockScreenProps) {
   const router = useRouter()
   const [dateOfBirth, setDateOfBirth] = useState('')
   const [submitState, setSubmitState] = useState<SubmitState>('idle')
@@ -37,7 +47,10 @@ export default function FixBirthdayBlockScreen({ onLogout }: FixBirthdayBlockScr
       // 200 success — DOB matched, account is now ACTIVE
       setSubmitState('success')
       setMessage({ text: 'Your birthday has been verified. Taking you to the app...', type: 'success' })
-      setTimeout(() => router.push('/dashboard'), 1500)
+      setTimeout(() => {
+        onVerified?.()
+        router.push('/dashboard')
+      }, 1500)
     } catch (err) {
       setSubmitState('idle')
 
@@ -55,6 +68,7 @@ export default function FixBirthdayBlockScreen({ onLogout }: FixBirthdayBlockScr
       }
 
       if (code === 'NO_CORRECTION_NEEDED') {
+        onVerified?.()
         router.push('/dashboard')
         return
       }
