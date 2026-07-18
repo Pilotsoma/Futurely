@@ -29,36 +29,56 @@ export interface DobValidationResult {
   ok: boolean
   isoDate?: string
   error?: string
+  // Set only when validation failed specifically because the entered DOB
+  // computes to under MIN_AGE_YEARS — lets callers return the dedicated
+  // COPPA_AGE_GATE error code instead of a generic VALIDATION_ERROR, per
+  // COMPLIANCE.md's signup age gate requirement.
+  errorCode?: 'COPPA_AGE_GATE' | 'VALIDATION_ERROR'
 }
 
 /**
  * Validates a raw date-of-birth string supplied by the user (signup form or
  * the /auth/dob correction endpoint). Expects YYYY-MM-DD or any format
- * `Date` can parse unambiguously. Rejects future dates and unreasonable ages.
+ * `Date` can parse unambiguously. Rejects future dates, unreasonable ages,
+ * and — the COPPA gate — anyone who computes to under MIN_AGE_YEARS (13).
  */
 export function validateDobInput(raw: unknown): DobValidationResult {
   if (typeof raw !== 'string' || raw.trim().length === 0) {
-    return { ok: false, error: 'Date of birth is required.' }
+    return { ok: false, error: 'Date of birth is required.', errorCode: 'VALIDATION_ERROR' }
   }
 
   const trimmed = raw.trim()
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    return { ok: false, error: 'Date of birth must be in YYYY-MM-DD format.' }
+    return { ok: false, error: 'Date of birth must be in YYYY-MM-DD format.', errorCode: 'VALIDATION_ERROR' }
   }
 
   const parsed = new Date(`${trimmed}T00:00:00.000Z`)
   if (isNaN(parsed.getTime())) {
-    return { ok: false, error: 'Invalid date of birth.' }
+    return { ok: false, error: 'Invalid date of birth.', errorCode: 'VALIDATION_ERROR' }
   }
 
   const now = new Date()
   if (parsed.getTime() > now.getTime()) {
-    return { ok: false, error: 'Date of birth cannot be in the future.' }
+    return { ok: false, error: 'Date of birth cannot be in the future.', errorCode: 'VALIDATION_ERROR' }
   }
 
-  const age = ageFromDate(parsed, now)
+  // Fail-closed: if age computation itself throws for any reason, treat as
+  // potentially under 13 rather than letting a computation error pass the
+  // gate. ageFromDate is a pure arithmetic function and does not currently
+  // throw, but this guard keeps the contract explicit per ENGINEERING_RULES.md.
+  let age: number
+  try {
+    age = ageFromDate(parsed, now)
+  } catch {
+    return { ok: false, error: 'You must be at least 13 to create an account.', errorCode: 'COPPA_AGE_GATE' }
+  }
+
   if (age > 120) {
-    return { ok: false, error: 'Please enter a valid date of birth.' }
+    return { ok: false, error: 'Please enter a valid date of birth.', errorCode: 'VALIDATION_ERROR' }
+  }
+
+  if (age < MIN_AGE_YEARS) {
+    return { ok: false, error: 'You must be at least 13 to create an account.', errorCode: 'COPPA_AGE_GATE' }
   }
 
   return { ok: true, isoDate: trimmed }

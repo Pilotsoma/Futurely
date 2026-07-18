@@ -51,7 +51,10 @@ router.patch('/', dobCorrectionLimiter, requireAuth, async (req: AuthRequest, re
 
   const dobCheck = validateDobInput(parsed.data.dateOfBirth)
   if (!dobCheck.ok || !dobCheck.isoDate) {
-    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: dobCheck.error } })
+    res.status(400).json({
+      data: null,
+      error: { code: dobCheck.errorCode ?? 'VALIDATION_ERROR', message: dobCheck.error },
+    })
     return
   }
 

@@ -314,7 +314,10 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     if (!dobCheck.ok || !dobCheck.isoDate) {
       res.status(400).json({
         data: null,
-        error: { code: 'VALIDATION_ERROR', message: dobCheck.error ?? 'A valid date of birth is required.' },
+        error: {
+          code: dobCheck.errorCode ?? 'VALIDATION_ERROR',
+          message: dobCheck.error ?? 'A valid date of birth is required.',
+        },
       })
       return
     }
