@@ -120,19 +120,20 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
 
   return (
     <div className="ns-card" style={{ padding: 16, marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: 14 }}>
+        <div />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifySelf: 'center' }}>
           <button onClick={() => goMonth(-1)} aria-label="Previous month" style={navBtn}>
             <ChevronLeftIcon size={14} />
           </button>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', minWidth: 140, textAlign: 'center' }}>
+          <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', minWidth: 160, textAlign: 'center' }}>
             {monthLabel}
           </span>
           <button onClick={() => goMonth(1)} aria-label="Next month" style={navBtn}>
             <ChevronRightIcon size={14} />
           </button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifySelf: 'end' }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
             {monthAssignmentCount} assignment{monthAssignmentCount === 1 ? '' : 's'} this month
           </span>
