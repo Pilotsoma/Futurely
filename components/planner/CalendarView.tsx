@@ -193,21 +193,42 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                       transition: 'background 0.12s, border-color 0.12s',
                     }}
                   >
-                    <span style={{
-                      fontSize: 13,
-                      fontWeight: isToday ? 800 : 500,
-                      color: isToday ? 'var(--primary)' : 'var(--text)',
-                    }}>
-                      {cell.date.getDate()}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <span style={{
+                        fontSize: 13,
+                        fontWeight: isToday ? 800 : 500,
+                        color: isToday ? 'var(--primary)' : 'var(--text)',
+                      }}>
+                        {cell.date.getDate()}
+                      </span>
+                      {countByDay[i] > MAX_VISIBLE_ITEMS && (
+                        <span
+                          title={`${countByDay[i]} assignments due`}
+                          style={{
+                            minWidth: 15,
+                            height: 15,
+                            borderRadius: '50%',
+                            background: '#EF4444',
+                            color: '#fff',
+                            fontSize: 8,
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0 2px',
+                          }}
+                        >
+                          +{countByDay[i] - MAX_VISIBLE_ITEMS}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )
               })}
             </div>
 
-            {/* Item overlay: up to MAX_VISIBLE_ITEMS draggable pills per day; when a
-                day has more than that, also show a red badge with the total count
-                so a busy day doesn't just look silently truncated. */}
+            {/* Item overlay: up to MAX_VISIBLE_ITEMS draggable pills per day. The
+                overflow badge is rendered next to the date number above, not here. */}
             <div style={{
               position: 'absolute', top: 26, left: 0, right: 0, bottom: 4,
               display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 18, gap: 2,
@@ -243,35 +264,6 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                     }}
                   >
                     {l.item.title}
-                  </div>
-                )
-              })}
-              {week.map((cell, i) => {
-                if (countByDay[i] <= MAX_VISIBLE_ITEMS) return null
-                return (
-                  <div
-                    key={`badge-${i}`}
-                    onClick={e => { e.stopPropagation(); onSelectDate(cell.date) }}
-                    title={`${countByDay[i]} assignments due`}
-                    style={{
-                      gridColumn: `${i + 1} / ${i + 2}`,
-                      gridRow: MAX_VISIBLE_ITEMS + 1,
-                      pointerEvents: 'auto',
-                      justifySelf: 'center',
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      background: '#EF4444',
-                      color: '#fff',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {countByDay[i]}
                   </div>
                 )
               })}
