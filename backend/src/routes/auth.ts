@@ -254,34 +254,40 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     return
   }
 
-  // COPPA age-gate — validate DOB before any DB work or OTP verification
-  if (!rawDob) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'VALIDATION_ERROR', message: 'Date of birth is required.' },
-    })
-    return
-  }
-  const dobResult = parseAndValidateDob(rawDob)
-  if ('error' in dobResult) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'VALIDATION_ERROR', message: dobResult.error },
-    })
-    return
-  }
-  const { dob } = dobResult
-  const age = computeAge(dob)
-  if (age < COPPA_MIN_AGE_YEARS) {
-    logger.info('auth.coppa_block', { ip: req.ip })
-    res.status(403).json({
-      data: null,
-      error: {
-        code: 'COPPA_BLOCK',
-        message: 'Futurely requires users to be at least 13 years old. If you are under 13, a parent or guardian must contact support@futurely.app to request account access.',
-      },
-    })
-    return
+  const userRole = roleInput === 'PARENT' ? 'PARENT' : roleInput === 'TEACHER' ? 'TEACHER' : roleInput === 'COUNSELOR' ? 'COUNSELOR' : 'STUDENT'
+
+  // COPPA age-gate applies only to students — parents/teachers are registering
+  // as themselves, an adult, so no age gate or DOB collection is needed for them.
+  let dob: Date | null = null
+  if (userRole === 'STUDENT') {
+    if (!rawDob) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'VALIDATION_ERROR', message: 'Date of birth is required.' },
+      })
+      return
+    }
+    const dobResult = parseAndValidateDob(rawDob)
+    if ('error' in dobResult) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'VALIDATION_ERROR', message: dobResult.error },
+      })
+      return
+    }
+    dob = dobResult.dob
+    const age = computeAge(dob)
+    if (age < COPPA_MIN_AGE_YEARS) {
+      logger.info('auth.coppa_block', { ip: req.ip })
+      res.status(403).json({
+        data: null,
+        error: {
+          code: 'COPPA_BLOCK',
+          message: 'Futurely requires users to be at least 13 years old. If you are under 13, a parent or guardian must contact support@futurely.app to request account access.',
+        },
+      })
+      return
+    }
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -360,7 +366,6 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     await prisma.emailOTP.update({ where: { id: otpRecord.id }, data: { usedAt: new Date() } })
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
-    const userRole = roleInput === 'PARENT' ? 'PARENT' : roleInput === 'TEACHER' ? 'TEACHER' : roleInput === 'COUNSELOR' ? 'COUNSELOR' : 'STUDENT'
     const defaultTag = userRole === 'PARENT' ? 'Parent' : userRole === 'TEACHER' || userRole === 'COUNSELOR' ? 'Teacher' : 'Student'
 
     const user = await prisma.user.create({
