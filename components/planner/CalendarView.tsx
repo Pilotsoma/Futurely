@@ -48,25 +48,26 @@ function itemColor(item: PlannerItem, today: Date): string {
 
 interface Lane {
   item: PlannerItem
-  start: Date
   due: Date
   lane: number
 }
 
+// Each assignment appears only on its due-date cell — no multi-day spanning bars.
+// Lane-packing still runs so multiple items due on the same day stack vertically
+// without overlapping each other.
 function assignLanes(items: PlannerItem[], weekStart: Date, weekEnd: Date): Lane[] {
   const touching = items
     .map(item => {
       const due = dayOnly(new Date(item.dueDate))
-      const start = item.startDate ? dayOnly(new Date(item.startDate)) : due
-      return { item, start, due }
+      return { item, due }
     })
-    .filter(({ start, due }) => due >= weekStart && start <= weekEnd)
-    .sort((a, b) => a.start.getTime() - b.start.getTime() || (b.due.getTime() - b.start.getTime()) - (a.due.getTime() - a.start.getTime()))
+    .filter(({ due }) => due >= weekStart && due <= weekEnd)
+    .sort((a, b) => a.due.getTime() - b.due.getTime())
 
   const laneEnds: Date[] = []
   const result: Lane[] = []
   for (const t of touching) {
-    let lane = laneEnds.findIndex(end => end < t.start)
+    let lane = laneEnds.findIndex(end => end < t.due)
     if (lane === -1) { lane = laneEnds.length; laneEnds.push(t.due) }
     else laneEnds[lane] = t.due
     result.push({ ...t, lane })
@@ -149,9 +150,8 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
         const overflowByDay = new Array(7).fill(0)
         for (const l of lanes) {
           if (l.lane < MAX_LANES) continue
-          const segStart = Math.max(0, daysBetween(weekStart, l.start))
-          const segEnd = Math.min(6, daysBetween(weekStart, l.due))
-          for (let d = segStart; d <= segEnd; d++) overflowByDay[d]++
+          const col = daysBetween(weekStart, l.due)
+          if (col >= 0 && col <= 6) overflowByDay[col]++
         }
 
         return (
@@ -200,15 +200,14 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
               })}
             </div>
 
-            {/* Bars overlay: spans/single-day items rendered as draggable pills across day columns */}
+            {/* Pill overlay: each item rendered as a single-day draggable pill on its due date */}
             <div style={{
               position: 'absolute', top: 26, left: 0, right: 0, bottom: 4,
               display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 18, gap: 2,
               padding: '0 2px', pointerEvents: 'none',
             }}>
               {lanes.filter(l => l.lane < MAX_LANES).map(l => {
-                const segStart = Math.max(0, daysBetween(weekStart, l.start))
-                const segEnd = Math.min(6, daysBetween(weekStart, l.due))
+                const col = daysBetween(weekStart, l.due)
                 const color = itemColor(l.item, today)
                 return (
                   <div
@@ -218,7 +217,7 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                     onClick={e => { e.stopPropagation(); onSelectDate(l.due) }}
                     title={l.item.title}
                     style={{
-                      gridColumn: `${segStart + 1} / ${segEnd + 2}`,
+                      gridColumn: `${col + 1} / ${col + 2}`,
                       gridRow: l.lane + 1,
                       pointerEvents: 'auto',
                       background: `color-mix(in srgb, ${color} 22%, transparent)`,

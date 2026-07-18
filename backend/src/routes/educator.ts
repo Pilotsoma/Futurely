@@ -8,6 +8,7 @@ import { writeAuditLog } from '../lib/auditLog'
 import { grantCoinsToStudent } from '../services/educatorService'
 import { logger } from '../common/logger'
 import { sendToUser } from '../lib/websocket'
+import { formatDueDateForPreview } from '../lib/dateFormat'
 
 const router = Router()
 
@@ -213,6 +214,10 @@ const createAssignmentSchema = z.object({
   description: z.string().max(1000).optional(),
   subject: z.string().min(1).max(100),
   dueDate: z.string().datetime(),
+  // Optional IANA timezone string (e.g. "America/New_York") sent by the browser
+  // so the server can format notification preview dates in the educator's local
+  // calendar day rather than UTC. Falls back to UTC when omitted (backward-compatible).
+  timezone: z.string().min(1).optional(),
 })
 
 router.post('/classrooms/:classroomId/assignments', async (req: AuthRequest, res: Response): Promise<void> => {
@@ -252,7 +257,9 @@ router.post('/classrooms/:classroomId/assignments', async (req: AuthRequest, res
         where: { classroomId },
         select: { studentId: true },
       })
-      const due = new Date(parse.data.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      // Use the educator's IANA timezone so the preview date matches the local
+      // calendar day, not the UTC clock on the Vercel/server runtime.
+      const due = formatDueDateForPreview(new Date(parse.data.dueDate), parse.data.timezone)
       await Promise.all(memberships.map(async m => {
         const notif = await prisma.notification.create({
           data: { userId: m.studentId, fromUserId: req.userId!, type: 'TEACHER_ASSIGNMENT', preview: `${parse.data.title} — due ${due}` },

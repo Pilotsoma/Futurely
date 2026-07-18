@@ -282,6 +282,10 @@ export function ensureSchema(): Promise<void> {
         ) AS "exists"
       `
       if (!idxProbe[0]?.exists) throw new Error('Missing idempotency index: AgentToolCall_pending_write_confirm_unique')
+      // Visible on every cold start so a stale/incomplete probe (or a warm instance that
+      // never re-checks) shows up in logs instead of failing silently — this is the exact
+      // gap that let reminderSentAt stay missing in production undetected.
+      console.log('[startup] schema probe passed, patches skipped')
     } catch {
       // Schema is incomplete — run patches below.
       for (const sql of PATCHES) {

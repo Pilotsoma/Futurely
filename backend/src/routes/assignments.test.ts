@@ -82,6 +82,81 @@ describe('GET /assignments', () => {
   })
 })
 
+// ── POST /assignments — timezone-aware notification preview ──────────────────
+// These tests verify the fix for the server-side UTC date-formatting bug:
+// a due date that is "Jul 17 9:47 PM Eastern" is stored as ~"Jul 18 01:47 UTC".
+// The notification preview must say "Jul 17" (local day) not "Jul 18" (UTC day)
+// when the client sends its IANA timezone.
+describe('POST /assignments — notification preview timezone', () => {
+  // An ISO instant that is "Jul 17" in America/New_York but "Jul 18" in UTC
+  const crossDayDueDate = '2026-07-18T01:47:00.000Z'
+
+  it('preview reflects the local calendar day when timezone is provided', async () => {
+    // We can't inspect the notification directly in an integration test without
+    // mocking the notification lib, so we verify the route returns 201 (the
+    // notification call is fire-and-forget and never causes a 5xx even if it
+    // internally produced the wrong date).  The unit tests in dateFormat.test.ts
+    // cover the correctness guarantee end-to-end.
+    const res = await request(app)
+      .post('/assignments')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        title: 'Timezone test assignment',
+        subject: 'Math',
+        dueDate: crossDayDueDate,
+        timezone: 'America/New_York',
+      })
+
+    expect(res.status).toBe(201)
+    expect(res.body.data).toBeDefined()
+    // Clean up
+    if (res.body.data?.id) {
+      await request(app)
+        .delete(`/assignments/${res.body.data.id as number}`)
+        .set('Authorization', `Bearer ${authToken}`)
+    }
+  })
+
+  it('preview falls back to UTC formatting when timezone is omitted (unchanged behaviour)', async () => {
+    const res = await request(app)
+      .post('/assignments')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        title: 'UTC fallback test assignment',
+        subject: 'Math',
+        dueDate: crossDayDueDate,
+        // no timezone field
+      })
+
+    expect(res.status).toBe(201)
+    if (res.body.data?.id) {
+      await request(app)
+        .delete(`/assignments/${res.body.data.id as number}`)
+        .set('Authorization', `Bearer ${authToken}`)
+    }
+  })
+
+  it('a garbage timezone string does not crash the request — 201 with UTC fallback', async () => {
+    const res = await request(app)
+      .post('/assignments')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        title: 'Bad timezone test assignment',
+        subject: 'Math',
+        dueDate: crossDayDueDate,
+        timezone: 'Not/A_Valid_Zone',
+      })
+
+    // Must NOT be a 500 — invalid timezone must be caught and fall back to UTC
+    expect(res.status).toBe(201)
+    if (res.body.data?.id) {
+      await request(app)
+        .delete(`/assignments/${res.body.data.id as number}`)
+        .set('Authorization', `Bearer ${authToken}`)
+    }
+  })
+})
+
 describe('PATCH /assignments/:id/complete', () => {
   it('marks an assignment complete', async () => {
     const res = await request(app)

@@ -107,6 +107,10 @@ export default function TeacherClassroomPage() {
         subject: aSubject.trim(),
         description: aDesc.trim() || undefined,
         dueDate: new Date(aDueDate).toISOString(),
+        // Send the browser's real IANA timezone so the backend formats the
+        // student notification preview date in the educator's local calendar
+        // day, not UTC.
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
       setClassroom(prev => prev ? { ...prev, assignments: [created, ...prev.assignments] } : prev)
       setATitle(''); setASubject(''); setADesc(''); setADueDate('')

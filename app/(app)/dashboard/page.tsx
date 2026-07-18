@@ -438,7 +438,7 @@ export default function DashboardPage() {
           {dueToday.length === 0 ? (
             <p style={{ ...S.emptyMsg, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>All clear for today <CheckIcon size={12}/></p>
           ) : (
-            dueToday.slice(0, 3).map(a => (
+            dueToday.slice(0, 2).map(a => (
               <div key={a.id} style={S.dueRow}>
                 <span style={S.dueDot} />
                 <div style={{ flex: 1, minWidth: 0 }}>

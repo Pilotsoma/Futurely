@@ -6,6 +6,7 @@ import { logger } from '../common/logger'
 import { ASSIGNMENT_SOURCE } from '../constants/assignmentSource'
 import { createAndSendNotification } from '../lib/notifications'
 import { scoreSingleAssignmentPriority } from '../services/assignmentPriorityScorer'
+import { formatDueDateForPreview } from '../lib/dateFormat'
 
 const router = Router()
 
@@ -26,6 +27,11 @@ const createBodySchema = z.object({
   // dueTime is a display-only field ("21:30") stored as-is for UI rendering.
   // It has no role in date math — dueDate is the single source of truth for timing.
   dueTime: z.string().max(20).optional(),
+  // Optional IANA timezone string (e.g. "America/New_York") sent by the browser
+  // so the server can format notification preview dates in the student's local
+  // calendar day rather than UTC. Omitted by older clients or agent-created
+  // assignments — falls back to UTC formatting in that case.
+  timezone: z.string().min(1).optional(),
 })
 
 const patchBodySchema = z.object({
@@ -110,7 +116,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
     return
   }
 
-  const { title, subject, startDate, dueDate, dueTime } = parsed.data
+  const { title, subject, startDate, dueDate, dueTime, timezone } = parsed.data
 
   // The client sends full ISO-8601 UTC timestamps — parse them directly.
   // new Date(isoString) is always a safe, timezone-correct parse regardless of
@@ -150,7 +156,10 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
     })
 
     // Notify the user of their new assignment (fire-and-forget; createAndSendNotification never throws)
-    const due = parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    // Use the student's IANA timezone (supplied by the browser) so the calendar
+    // day shown in the preview matches the student's local clock, not the server's
+    // UTC clock. Falls back to UTC when no timezone was sent (backward-compatible).
+    const due = formatDueDateForPreview(parsedDate, timezone)
     createAndSendNotification({
       userId: req.userId,
       fromUserId: req.userId,

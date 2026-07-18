@@ -208,6 +208,9 @@ export default function PlannerPage() {
         startDate: startDateIso,
         dueDate: dueDateIso,
         dueTime: dueTime || undefined, // display-only: stored for UI rendering, not date math
+        // Send the browser's real IANA timezone so the backend formats the
+        // notification preview date in the student's local calendar day, not UTC.
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
       setItems(prev => [...prev, created])
       setTitle('')

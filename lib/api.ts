@@ -613,7 +613,7 @@ export const api = {
   // real browser timezone is captured before the value crosses the network.
   // dueTime is a display-only field ("21:30") stored as-is for UI rendering; it has
   // no role in date math on the backend.
-  plannerCreate: (item: { title: string; subject?: string; startDate?: string; dueDate: string; dueTime?: string }) =>
+  plannerCreate: (item: { title: string; subject?: string; startDate?: string; dueDate: string; dueTime?: string; timezone?: string }) =>
     request<PlannerItem>('/api/assignments', {
       method: 'POST',
       body: JSON.stringify(item),
@@ -985,7 +985,7 @@ export const api = {
   educatorDeleteClassroom: (classroomId: number) =>
     request<{ deleted: boolean }>(`/api/educator/classrooms/${classroomId}`, { method: 'DELETE' }),
 
-  educatorCreateAssignment: (classroomId: number, payload: { title: string; description?: string; subject: string; dueDate: string }) =>
+  educatorCreateAssignment: (classroomId: number, payload: { title: string; description?: string; subject: string; dueDate: string; timezone?: string }) =>
     request<EducatorAssignment>(`/api/educator/classrooms/${classroomId}/assignments`, {
       method: 'POST',
       body: JSON.stringify(payload),
