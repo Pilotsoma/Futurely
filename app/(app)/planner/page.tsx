@@ -387,7 +387,7 @@ export default function PlannerPage() {
   }
 
   return (
-    <div className="fade-up" style={{ maxWidth: view === 'calendar' ? 960 : 680, margin: '0 auto', transition: 'max-width 0.2s ease' }}>
+    <div className="fade-up" style={{ maxWidth: view === 'calendar' ? 1280 : 680, margin: '0 auto', transition: 'max-width 0.2s ease' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
