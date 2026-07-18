@@ -71,6 +71,7 @@ export interface HACStudentInfo {
   district: string
   counselor: string
   cohortYear: string
+  dateOfBirth?: string
 }
 
 export interface HACTranscriptEntry {
@@ -2010,6 +2011,15 @@ export async function getStudentInfo(sessionToken: string): Promise<HACStudentIn
     '[id*="graduationYear"]',
   ]) || tryTableRowPattern(['cohort', 'graduation year', 'grad year', 'class of'])
 
+  // DOB extraction — try specific ID selectors first, then label-keyword patterns.
+  // COMPLIANCE: never log the raw birthdate value — only whether a field was found.
+  const dateOfBirth = tryLabelValuePatterns('birth date', [
+    '#plnMain_lblBirthDate',
+    '[id*="BirthDate"]',
+    '[id*="DateOfBirth"]',
+  ]) || tryTableRowPattern(['birth date', 'date of birth', 'birthday', 'birthdate'])
+  console.log('[HAC CLIENT] Student info DOB extraction:', { found: Boolean(dateOfBirth) })
+
   console.log('[HAC CLIENT] Final student info:', {
     counselor: counselor || '(empty)',
     cohortYear: cohortYear || '(empty)',
@@ -2042,6 +2052,7 @@ export async function getStudentInfo(sessionToken: string): Promise<HACStudentIn
     ]),
     counselor,
     cohortYear,
+    dateOfBirth: dateOfBirth || undefined,
   }
 }
 

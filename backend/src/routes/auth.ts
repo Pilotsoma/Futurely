@@ -4,11 +4,13 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { promises as dnsPromises } from 'dns'
 import rateLimit from 'express-rate-limit'
+import { AccountStatus } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { filterUsername } from '../lib/contentFilter'
 import { sendEmail } from '../lib/email'
 import { logger } from '../common/logger'
+import { validateDobInput, encryptDob, MAX_DOB_CORRECTION_ATTEMPTS, liftExpiredBanIfNeeded } from '../lib/dobVerification'
 
 const router = Router()
 
@@ -102,8 +104,12 @@ function validatePassword(password: string): string | null {
   return null
 }
 
-function issueAccessToken(userId: number, role = 'STUDENT'): string {
-  return jwt.sign({ sub: userId, role }, process.env.JWT_SECRET!, { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_EXPIRY })
+// accountStatus is embedded as a convenience claim only (e.g. for optimistic
+// frontend UI) — it is never trusted as the source of truth for access
+// control. requireActiveAccount always re-reads accountStatus from the DB,
+// since it can change mid-session, well within this token's 15-minute life.
+function issueAccessToken(userId: number, role = 'STUDENT', accountStatus: AccountStatus = AccountStatus.ACTIVE): string {
+  return jwt.sign({ sub: userId, role, accountStatus }, process.env.JWT_SECRET!, { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_EXPIRY })
 }
 
 // Web sends this header (see lib/api.ts) and relies entirely on the httpOnly
@@ -226,7 +232,7 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
 // ── POST /auth/register ───────────────────────────────────────────────────────
 
 router.post('/register', registerLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email, password, name, role: roleInput, otp, agreedTos, agreedPrivacy, agreedAge } = req.body as {
+  const { email, password, name, role: roleInput, otp, agreedTos, agreedPrivacy, agreedAge, dateOfBirth } = req.body as {
     email?: string
     password?: string
     name?: string
@@ -235,6 +241,7 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     agreedTos?: unknown
     agreedPrivacy?: unknown
     agreedAge?: unknown
+    dateOfBirth?: string
   }
 
   if (!email || !password) {
@@ -296,6 +303,24 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
     return
   }
 
+  // Date of birth is required for students — it is later reconciled against
+  // the official HAC (school portal) record; a mismatch locks the account
+  // until corrected via PATCH /auth/dob. Non-student roles (parent/teacher/
+  // counselor) never sync against HAC, so DOB is not collected for them.
+  const isStudentSignup = roleInput !== 'PARENT' && roleInput !== 'TEACHER' && roleInput !== 'COUNSELOR'
+  let encryptedDob: string | null = null
+  if (isStudentSignup) {
+    const dobCheck = validateDobInput(dateOfBirth)
+    if (!dobCheck.ok || !dobCheck.isoDate) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'VALIDATION_ERROR', message: dobCheck.error ?? 'A valid date of birth is required.' },
+      })
+      return
+    }
+    encryptedDob = encryptDob(dobCheck.isoDate)
+  }
+
   try {
     const [emailTaken, nameTaken] = await Promise.all([
       prisma.user.findUnique({ where: { email } }),
@@ -350,6 +375,7 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
           tosAcceptedAt: consentTimestamp,
           privacyAcceptedAt: consentTimestamp,
           ageConfirmedAt: consentTimestamp,
+          dateOfBirth: encryptedDob,
         },
       })
 
@@ -474,7 +500,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
       data: { failedLoginAttempts: 0, lockedUntil: null },
     })
 
-    const token = issueAccessToken(user.id, user.role)
+    const token = issueAccessToken(user.id, user.role, user.accountStatus)
     const refreshToken = await issueRefreshToken(user.id)
     setAuthCookies(res, token, refreshToken)
 
@@ -489,6 +515,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
           name: user.name,
           role: user.role,
           emailVerified: user.emailVerified,
+          accountStatus: user.accountStatus,
         },
       },
     })
@@ -534,10 +561,10 @@ router.post('/refresh', refreshTokenLimiter, async (req: Request, res: Response)
     const [newRefreshToken,, refreshedUser] = await Promise.all([
       issueRefreshToken(stored.userId),
       prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } }),
-      prisma.user.findUnique({ where: { id: stored.userId }, select: { role: true } }),
+      prisma.user.findUnique({ where: { id: stored.userId }, select: { role: true, accountStatus: true } }),
     ])
 
-    const newAccessToken = issueAccessToken(stored.userId, refreshedUser?.role ?? 'STUDENT')
+    const newAccessToken = issueAccessToken(stored.userId, refreshedUser?.role ?? 'STUDENT', refreshedUser?.accountStatus)
     setAuthCookies(res, newAccessToken, newRefreshToken)
 
     logger.info('auth.token_refreshed', { userId: stored.userId })
@@ -821,7 +848,17 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { id: true, email: true, name: true, role: true, emailVerified: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        emailVerified: true,
+        createdAt: true,
+        accountStatus: true,
+        bannedUntilDate: true,
+        dobCorrectionAttempts: true,
+      },
     })
     if (!user) {
       res.status(404).json({
@@ -830,9 +867,49 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
       })
       return
     }
-    res.json({ data: user })
+    const lifted = await liftExpiredBanIfNeeded(user.id, user.accountStatus, user.bannedUntilDate, req.ip ?? 'unknown')
+    res.json({
+      data: { ...user, accountStatus: lifted.accountStatus, bannedUntilDate: lifted.bannedUntilDate },
+    })
   } catch (e) {
     logger.error('auth.error', { event: 'me', error: e instanceof Error ? e.message : String(e) })
+    res.status(500).json({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
+    })
+  }
+})
+
+// ── GET /auth/account-status ────────────────────────────────────────────────
+// Lightweight poll endpoint for the frontend to check whether the account is
+// locked/banned without pulling the full /me payload — used by the DOB
+// correction screen and by clients reacting to a 403 DOB_VERIFICATION_REQUIRED
+// / ACCOUNT_BANNED from requireActiveAccount elsewhere in the API.
+// Deliberately exempt from requireActiveAccount (mounted outside that chain
+// via auth.ts) so a locked/banned user can still poll their own status.
+
+router.get('/account-status', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { accountStatus: true, bannedUntilDate: true, dobCorrectionAttempts: true, hacDateOfBirth: true },
+    })
+    if (!user) {
+      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
+      return
+    }
+    const lifted = await liftExpiredBanIfNeeded(req.userId!, user.accountStatus, user.bannedUntilDate, req.ip ?? 'unknown')
+    res.json({
+      data: {
+        accountStatus: lifted.accountStatus,
+        bannedUntilDate: lifted.bannedUntilDate,
+        dobCorrectionAttempts: user.dobCorrectionAttempts,
+        dobCorrectionAttemptsRemaining: Math.max(0, MAX_DOB_CORRECTION_ATTEMPTS - user.dobCorrectionAttempts),
+        hasSchoolRecord: user.hacDateOfBirth !== null,
+      },
+    })
+  } catch (e) {
+    logger.error('auth.error', { event: 'account_status', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
@@ -1000,11 +1077,11 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
   }
 
   const [oauthUser, refreshToken, hasSchool] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { role: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { role: true, accountStatus: true } }),
     issueRefreshToken(userId),
     prisma.schoolConnection.findUnique({ where: { userId } }),
   ])
-  const accessToken = issueAccessToken(userId, oauthUser?.role ?? 'STUDENT')
+  const accessToken = issueAccessToken(userId, oauthUser?.role ?? 'STUDENT', oauthUser?.accountStatus)
   setAuthCookies(res, accessToken, refreshToken)
   if (isNew) {
     res.redirect(`${appUrl}/login?oauth=new`)

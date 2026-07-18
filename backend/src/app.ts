@@ -49,8 +49,10 @@ import agentSessionsRouter from './routes/agentSessions'
 import usersRouter from './routes/users'
 import cronRouter from './routes/cron'
 
+import dobRouter from './routes/dob'
 import { requireAuth } from './middleware/auth'
 import { requireConsent } from './middleware/requireConsent'
+import { requireActiveAccount } from './middleware/requireActiveAccount'
 import gradesIntegrationRouter from './integrations/grades/gradesRouter'
 import canvasRouter from './integrations/canvas/canvasRouter'
 import classlinkRouter from './integrations/classlink/classlinkRouter'
@@ -283,8 +285,12 @@ app.get('/health/connectivity', async (_req, res) => {
 // Auth routes get their own tight limiter; register gets an even stricter one
 app.use('/auth/register', registerLimiter)
 app.use('/auth', authLimiter, authRoutes)
+// Mounted separately from authRoutes so it isn't itself gated behind
+// requireActiveAccount below — a DOB_MISMATCH_LOCKED user must be able to
+// reach this endpoint to correct their DOB and unlock the account.
+app.use('/auth/dob', authLimiter, requireAuth, dobRouter)
 app.use('/schools', schoolsRouter)
-app.use('/grades', requireAuth, requireConsent, gradesRoutes)
+app.use('/grades', requireAuth, requireConsent, requireActiveAccount, gradesRoutes)
 
 /**
  * TEMPORARY LOCAL DEV ONLY:
@@ -331,50 +337,50 @@ function devBypass(req: any, _res: any, next: any): void {
 if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   console.warn('⚠️  [DEV] Auth bypass active — requests will use real JWT userId or fall back to userId=1')
   console.warn('⚠️  [DEV] Set ENABLE_DEV_INTEGRATION_AUTH_BYPASS=false before any real testing')
-  app.use('/assignments', devBypass, requireConsent, assignmentsRouter)
-  app.use('/students', devBypass, requireConsent, studentsRouter)
-  app.use('/roadmap', devBypass, requireConsent, roadmapRouter)
-  app.use('/ai', aiLimiter, devBypass, requireConsent, aiRouter)
-  app.use('/ai/agent', aiLimiter, devBypass, requireConsent, agentSessionsRouter)
-  app.use('/users', devBypass, requireConsent, usersRouter)
-  app.use('/feed', devBypass, requireConsent, feedRouter)
-  app.use('/notifications', devBypass, requireConsent, notificationsRouter)
-  app.use('/integrations/grades', devBypass, requireConsent, gradesIntegrationRouter)
-  app.use('/integrations/canvas', devBypass, requireConsent, canvasRouter)
-  app.use('/integrations/classlink', devBypass, requireConsent, classlinkRouter)
-  app.use('/colleges', devBypass, requireConsent, collegesRouter)
-  app.use('/marketplace', devBypass, requireConsent, marketplaceRouter)
-  app.use('/educator', devBypass, requireConsent, educatorRouter)
-  app.use('/counselor', devBypass, requireConsent, counselorRouter)
-  app.use('/admin', devBypass, requireConsent, adminRouter)
-  app.use('/sets', devBypass, requireConsent, setsRouter)
-  app.use('/games', devBypass, requireConsent, gamesRouter)
+  app.use('/assignments', devBypass, requireConsent, requireActiveAccount, assignmentsRouter)
+  app.use('/students', devBypass, requireConsent, requireActiveAccount, studentsRouter)
+  app.use('/roadmap', devBypass, requireConsent, requireActiveAccount, roadmapRouter)
+  app.use('/ai', aiLimiter, devBypass, requireConsent, requireActiveAccount, aiRouter)
+  app.use('/ai/agent', aiLimiter, devBypass, requireConsent, requireActiveAccount, agentSessionsRouter)
+  app.use('/users', devBypass, requireConsent, requireActiveAccount, usersRouter)
+  app.use('/feed', devBypass, requireConsent, requireActiveAccount, feedRouter)
+  app.use('/notifications', devBypass, requireConsent, requireActiveAccount, notificationsRouter)
+  app.use('/integrations/grades', devBypass, requireConsent, requireActiveAccount, gradesIntegrationRouter)
+  app.use('/integrations/canvas', devBypass, requireConsent, requireActiveAccount, canvasRouter)
+  app.use('/integrations/classlink', devBypass, requireConsent, requireActiveAccount, classlinkRouter)
+  app.use('/colleges', devBypass, requireConsent, requireActiveAccount, collegesRouter)
+  app.use('/marketplace', devBypass, requireConsent, requireActiveAccount, marketplaceRouter)
+  app.use('/educator', devBypass, requireConsent, requireActiveAccount, educatorRouter)
+  app.use('/counselor', devBypass, requireConsent, requireActiveAccount, counselorRouter)
+  app.use('/admin', devBypass, requireConsent, requireActiveAccount, adminRouter)
+  app.use('/sets', devBypass, requireConsent, requireActiveAccount, setsRouter)
+  app.use('/games', devBypass, requireConsent, requireActiveAccount, gamesRouter)
 
 } else {
-  app.use('/assignments', requireAuth, requireConsent, assignmentsRouter)
-  app.use('/students', requireAuth, requireConsent, studentsRouter)
-  app.use('/roadmap', requireAuth, requireConsent, roadmapRouter)
-  app.use('/ai', aiLimiter, requireAuth, requireConsent, aiRouter)
+  app.use('/assignments', requireAuth, requireConsent, requireActiveAccount, assignmentsRouter)
+  app.use('/students', requireAuth, requireConsent, requireActiveAccount, studentsRouter)
+  app.use('/roadmap', requireAuth, requireConsent, requireActiveAccount, roadmapRouter)
+  app.use('/ai', aiLimiter, requireAuth, requireConsent, requireActiveAccount, aiRouter)
   // Agent session routes — mounted before the generic /ai handler so
   // express-rate-limit and requireConsent are applied consistently.
-  app.use('/ai/agent', aiLimiter, requireAuth, requireConsent, agentSessionsRouter)
-  app.use('/users', requireAuth, requireConsent, usersRouter)
-  app.use('/feed', requireAuth, requireConsent, feedRouter)
-  app.use('/notifications', requireAuth, requireConsent, notificationsRouter)
-  app.use('/integrations/grades', requireAuth, requireConsent, gradesIntegrationRouter)
-  app.use('/integrations/canvas', requireAuth, requireConsent, canvasRouter)
-  app.use('/integrations/classlink', requireAuth, requireConsent, classlinkRouter)
-  app.use('/colleges', requireAuth, requireConsent, collegesRouter)
-  app.use('/marketplace', requireAuth, requireConsent, marketplaceRouter)
-  app.use('/educator', requireAuth, requireConsent, educatorRouter)
-  app.use('/counselor', requireAuth, requireConsent, counselorRouter)
-  app.use('/admin', requireAuth, requireConsent, adminRouter)
-  app.use('/sets', requireAuth, requireConsent, setsRouter)
-  app.use('/games', requireAuth, requireConsent, gamesRouter)
+  app.use('/ai/agent', aiLimiter, requireAuth, requireConsent, requireActiveAccount, agentSessionsRouter)
+  app.use('/users', requireAuth, requireConsent, requireActiveAccount, usersRouter)
+  app.use('/feed', requireAuth, requireConsent, requireActiveAccount, feedRouter)
+  app.use('/notifications', requireAuth, requireConsent, requireActiveAccount, notificationsRouter)
+  app.use('/integrations/grades', requireAuth, requireConsent, requireActiveAccount, gradesIntegrationRouter)
+  app.use('/integrations/canvas', requireAuth, requireConsent, requireActiveAccount, canvasRouter)
+  app.use('/integrations/classlink', requireAuth, requireConsent, requireActiveAccount, classlinkRouter)
+  app.use('/colleges', requireAuth, requireConsent, requireActiveAccount, collegesRouter)
+  app.use('/marketplace', requireAuth, requireConsent, requireActiveAccount, marketplaceRouter)
+  app.use('/educator', requireAuth, requireConsent, requireActiveAccount, educatorRouter)
+  app.use('/counselor', requireAuth, requireConsent, requireActiveAccount, counselorRouter)
+  app.use('/admin', requireAuth, requireConsent, requireActiveAccount, adminRouter)
+  app.use('/sets', requireAuth, requireConsent, requireActiveAccount, setsRouter)
+  app.use('/games', requireAuth, requireConsent, requireActiveAccount, gamesRouter)
 
 }
 
-app.use('/parent', authLimiter, requireAuth, requireConsent, parentRouter)
+app.use('/parent', authLimiter, requireAuth, requireConsent, requireActiveAccount, parentRouter)
 
 // ── Cron endpoints — secret-based auth only, no user session middleware ───────
 // Reachable at /api/cron/... via vercel.json's /api routePrefix.
