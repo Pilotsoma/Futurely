@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { PlannerItem } from '../../lib/api'
-import { ChevronLeftIcon, ChevronRightIcon, LinkIcon } from '@/components/icons'
+import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons'
 
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const MAX_VISIBLE_ITEMS = 3
@@ -80,11 +80,9 @@ interface Props {
   selectedDate: Date
   onSelectDate: (d: Date) => void
   onReschedule: (item: PlannerItem, newDueDate: Date) => void
-  canvasConnected?: boolean
-  onToggleCanvasPanel?: () => void
 }
 
-export default function CalendarView({ items, selectedDate, onSelectDate, onReschedule, canvasConnected, onToggleCanvasPanel }: Props) {
+export default function CalendarView({ items, selectedDate, onSelectDate, onReschedule }: Props) {
   const [monthAnchor, setMonthAnchor] = useState(() => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1))
   const [dragOverDay, setDragOverDay] = useState<string | null>(null)
   const today = dayOnly(new Date())
@@ -123,27 +121,7 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
   return (
     <div className="ns-card" style={{ padding: 20, marginBottom: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: 16 }}>
-        <div>
-          {onToggleCanvasPanel && (
-            <button
-              onClick={onToggleCanvasPanel}
-              title={canvasConnected ? 'Manage Canvas connection' : 'Link Canvas'}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: 'none', border: '1px solid var(--border)', borderRadius: 7,
-                padding: '5px 10px', fontSize: 11.5, fontWeight: 600,
-                color: canvasConnected ? '#22C55E' : 'var(--text-secondary)',
-                cursor: 'pointer', boxShadow: 'var(--neo-raised)',
-              }}
-            >
-              <LinkIcon size={12} />
-              Canvas
-              {canvasConnected && (
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E' }} />
-              )}
-            </button>
-          )}
-        </div>
+        <div />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifySelf: 'center' }}>
           <button onClick={() => goMonth(-1)} aria-label="Previous month" style={navBtn}>
             <ChevronLeftIcon size={14} />

@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { api, type PlannerItem, type CanvasStatus } from '../../../lib/api'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import PageLoader from '../../../components/ui/PageLoader'
-import { CheckIcon, SparklesIcon, XMarkIcon, CalendarIcon } from '@/components/icons'
+import { CheckIcon, SparklesIcon, XMarkIcon, CalendarIcon, LinkIcon } from '@/components/icons'
 import CalendarView from '../../../components/planner/CalendarView'
 import AgentPanel from '../../../components/agent/AgentPanel'
 
@@ -453,6 +453,23 @@ export default function PlannerPage() {
             })()}
           </div>
           <button
+            onClick={() => setShowCanvasPanel(prev => !prev)}
+            title={canvasStatus?.connected ? 'Manage Canvas connection' : 'Link Canvas'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: 'none', border: '1px solid var(--border)', borderRadius: 10,
+              padding: '8px 12px', fontSize: 12, fontWeight: 600,
+              color: canvasStatus?.connected ? '#22C55E' : 'var(--text-secondary)',
+              cursor: 'pointer', boxShadow: 'var(--neo-raised)',
+            }}
+          >
+            <LinkIcon size={13} />
+            Canvas
+            {canvasStatus?.connected && (
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E' }} />
+            )}
+          </button>
+          <button
             onClick={() => {
               if (!showForm && view === 'calendar') {
                 setDueDate(`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`)
@@ -817,8 +834,6 @@ export default function PlannerPage() {
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             onReschedule={(item, newDue) => void handleReschedule(item, newDue)}
-            canvasConnected={!!canvasStatus?.connected}
-            onToggleCanvasPanel={() => setShowCanvasPanel(prev => !prev)}
           />
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
