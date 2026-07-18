@@ -182,12 +182,26 @@ export default function PlannerPage() {
     setSubmitting(true)
     setFormError(null)
     try {
+      // Build full local-timezone Date objects from the form's raw date/time strings.
+      // new Date(y, m, d, h, min) executes here in the browser, so it correctly uses
+      // the user's real local timezone. .toISOString() then converts to UTC for the wire.
+      // The backend will parse the ISO string directly — no server-side timezone assumption.
+      const [dYear, dMonth, dDay] = dueDate.split('-').map(Number)
+      const [dHours, dMinutes] = dueTime ? dueTime.split(':').map(Number) : [23, 59]
+      const dueDateIso = new Date(dYear, dMonth - 1, dDay, dHours, dMinutes, 0).toISOString()
+
+      let startDateIso: string | undefined
+      if (startDate) {
+        const [sYear, sMonth, sDay] = startDate.split('-').map(Number)
+        startDateIso = new Date(sYear, sMonth - 1, sDay, 0, 0, 0).toISOString()
+      }
+
       const created = await api.plannerCreate({
         title: title.trim(),
         subject: finalSubject || undefined,
-        startDate: startDate || undefined,
-        dueDate,
-        dueTime: dueTime || undefined,
+        startDate: startDateIso,
+        dueDate: dueDateIso,
+        dueTime: dueTime || undefined, // display-only: stored for UI rendering, not date math
       })
       setItems(prev => [...prev, created])
       setTitle('')

@@ -608,6 +608,11 @@ export const api = {
   plannerList: () =>
     request<PlannerItem[]>('/api/assignments?limit=100'),
 
+  // dueDate and startDate are full ISO-8601 UTC timestamps — the caller constructs
+  // them client-side via new Date(y, m, d, h, min).toISOString() so that the user's
+  // real browser timezone is captured before the value crosses the network.
+  // dueTime is a display-only field ("21:30") stored as-is for UI rendering; it has
+  // no role in date math on the backend.
   plannerCreate: (item: { title: string; subject?: string; startDate?: string; dueDate: string; dueTime?: string }) =>
     request<PlannerItem>('/api/assignments', {
       method: 'POST',

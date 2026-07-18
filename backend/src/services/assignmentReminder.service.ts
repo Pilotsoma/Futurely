@@ -37,35 +37,17 @@ const WINDOW_UPPER_MS = 70 * 60 * 1000 // 70 minutes
 const DB_PREFILTER_LOWER_MS = 45 * 60 * 1000 // 45 minutes
 const DB_PREFILTER_UPPER_MS = 75 * 60 * 1000 // 75 minutes
 
-const DUE_TIME_PATTERN = /^\d{2}:\d{2}$/
-
 /**
- * Computes the effective UTC deadline for an assignment.
+ * Returns the effective UTC deadline for an assignment.
  *
- * If `dueTime` is a non-null string matching `HH:MM`, the deadline is that
- * time on the UTC date of `dueDate`. If `dueTime` is null or malformed, the
- * deadline defaults to 23:59 UTC on that same date (a structured warning is
- * emitted for non-null malformed values — no PII, assignment ID only).
+ * Since the 2026-07-17 timezone fix, `dueDate` is always a complete,
+ * timezone-correct UTC timestamp (constructed by the browser client in the
+ * user's real local timezone and converted to UTC via .toISOString() before
+ * being stored). The `dueTime` column is now a display-only field ("21:30")
+ * with no role in date math — `dueDate` is the single source of truth.
  */
-export function computeDeadline(dueDate: Date, dueTime: string | null, assignmentId: number): Date {
-  const utcYear = dueDate.getUTCFullYear()
-  const utcMonth = dueDate.getUTCMonth()
-  const utcDay = dueDate.getUTCDate()
-
-  if (dueTime !== null) {
-    if (DUE_TIME_PATTERN.test(dueTime)) {
-      const [hours, minutes] = dueTime.split(':').map(Number)
-      return new Date(Date.UTC(utcYear, utcMonth, utcDay, hours, minutes, 0, 0))
-    }
-
-    // Non-null but bad format — unexpected data; log without PII
-    logger.warn('assignment_reminder_malformed_due_time', {
-      assignmentId,
-      reason: 'dueTime field does not match HH:MM format — falling back to 23:59 UTC',
-    })
-  }
-
-  return new Date(Date.UTC(utcYear, utcMonth, utcDay, 23, 59, 0, 0))
+export function computeDeadline(dueDate: Date): Date {
+  return dueDate
 }
 
 /**
@@ -108,7 +90,7 @@ export async function checkAndSendReminders(): Promise<ReminderResult> {
       continue
     }
 
-    const deadline = computeDeadline(assignment.dueDate, assignment.dueTime, assignment.id)
+    const deadline = computeDeadline(assignment.dueDate)
     const deadlineMs = deadline.getTime()
 
     if (deadlineMs < windowStart || deadlineMs > windowEnd) {

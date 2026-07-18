@@ -14,8 +14,8 @@
  *   (b) Skips PENDING-consent users.
  *   (c) Skips already-reminded assignments (reminderSentAt not null —
  *       enforced by the DB query filter, verified via the mock call).
- *   (d) Correctly parses valid dueTime; falls back to 23:59 UTC for null
- *       and malformed dueTime values.
+ *   (d) dueDate is the sole deadline source — dueTime is display-only and
+ *       ignored in all date math.
  *   (e) Sets reminderSentAt after a successful send.
  *   (f) One assignment's update failure doesn't block others in the batch.
  */
@@ -75,61 +75,47 @@ function nowPlusMs(offsetMs: number): Date {
 }
 
 /**
- * Builds `dueDate` (UTC midnight on the date of `target`) and `dueTime` (HH:MM UTC)
- * so that `computeDeadline(dueDate, dueTime)` returns exactly `target` floored to
- * the minute. Use this when you want a precise, time-of-day-independent deadline.
+ * Returns the `dueDate` to pass to `makeAssignment` so that `computeDeadline`
+ * produces exactly `target`. Since the 2026-07-17 timezone fix, `dueDate` IS
+ * the complete UTC deadline — `computeDeadline` returns it unchanged.
  */
-function makeDeadlineInputs(target: Date): { dueDate: Date; dueTime: string } {
-  const dueDate = new Date(
-    Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate()),
-  )
-  const hh = String(target.getUTCHours()).padStart(2, '0')
-  const mm = String(target.getUTCMinutes()).padStart(2, '0')
-  return { dueDate, dueTime: `${hh}:${mm}` }
+function makeDeadlineInputs(target: Date): { dueDate: Date } {
+  return { dueDate: target }
 }
 
 const MIN = 60 * 1000
 
 // ── Suite: computeDeadline ────────────────────────────────────────────────────
+//
+// Since the 2026-07-17 timezone fix, dueDate is always a complete UTC timestamp
+// (produced by the browser via .toISOString()). computeDeadline returns it
+// unchanged — dueTime is a display-only field, not used in date math.
 
 describe('computeDeadline', () => {
-  const baseDate = new Date('2026-08-01T00:00:00.000Z') // 2026-08-01 UTC midnight
-
-  it('returns HH:MM UTC on the dueDate when dueTime is a valid "HH:MM" string', () => {
-    const result = computeDeadline(baseDate, '14:30', 1)
-    expect(result.toISOString()).toBe('2026-08-01T14:30:00.000Z')
+  it('returns the dueDate argument unchanged', () => {
+    const date = new Date('2026-08-01T14:30:00.000Z')
+    expect(computeDeadline(date)).toBe(date)
   })
 
-  it('returns 23:59 UTC when dueTime is null', () => {
-    const result = computeDeadline(baseDate, null, 1)
-    expect(result.toISOString()).toBe('2026-08-01T23:59:00.000Z')
+  it('preserves the exact UTC instant for an afternoon deadline', () => {
+    const date = new Date('2026-08-01T21:30:00.000Z') // 9:30 PM UTC
+    expect(computeDeadline(date).toISOString()).toBe('2026-08-01T21:30:00.000Z')
   })
 
-  it('returns 23:59 UTC when dueTime is malformed (non-HH:MM string)', () => {
-    const result = computeDeadline(baseDate, 'invalid', 99)
-    expect(result.toISOString()).toBe('2026-08-01T23:59:00.000Z')
+  it('preserves UTC midnight', () => {
+    const date = new Date('2026-08-01T00:00:00.000Z')
+    expect(computeDeadline(date).toISOString()).toBe('2026-08-01T00:00:00.000Z')
   })
 
-  it('returns 23:59 UTC when dueTime is an empty string', () => {
-    const result = computeDeadline(baseDate, '', 2)
-    expect(result.toISOString()).toBe('2026-08-01T23:59:00.000Z')
+  it('preserves end-of-day UTC (23:59)', () => {
+    const date = new Date('2026-08-01T23:59:00.000Z')
+    expect(computeDeadline(date).toISOString()).toBe('2026-08-01T23:59:00.000Z')
   })
 
-  it('handles midnight correctly (00:00)', () => {
-    const result = computeDeadline(baseDate, '00:00', 3)
-    expect(result.toISOString()).toBe('2026-08-01T00:00:00.000Z')
-  })
-
-  it('handles end-of-day (23:59)', () => {
-    const result = computeDeadline(baseDate, '23:59', 4)
-    expect(result.toISOString()).toBe('2026-08-01T23:59:00.000Z')
-  })
-
-  it('uses the UTC date of dueDate, not the local date', () => {
-    // dueDate is 2026-07-31T23:30:00.000Z — UTC date is July 31, not Aug 1
-    const nearMidnight = new Date('2026-07-31T23:30:00.000Z')
-    const result = computeDeadline(nearMidnight, '10:00', 5)
-    expect(result.toISOString()).toBe('2026-07-31T10:00:00.000Z')
+  it('preserves a date-time that crosses the UTC date boundary (e.g. US evening → next UTC day)', () => {
+    // 9:30 PM US/Eastern (UTC-5) = 2026-08-02T02:30:00.000Z (next UTC day)
+    const date = new Date('2026-08-02T02:30:00.000Z')
+    expect(computeDeadline(date).toISOString()).toBe('2026-08-02T02:30:00.000Z')
   })
 })
 
@@ -145,8 +131,8 @@ describe('checkAndSendReminders', () => {
   // (a) Assignments inside the window are processed; those outside are not
   it('(a) sends a reminder for an assignment whose deadline is exactly 60 min away', async () => {
     const target = nowPlusMs(60 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 1, dueDate, dueTime })
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 1, dueDate })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -162,8 +148,8 @@ describe('checkAndSendReminders', () => {
 
   it('(a) does not send when deadline is only 49 min away (below the 50-min lower bound)', async () => {
     const target = nowPlusMs(49 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 10, dueDate, dueTime })
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 10, dueDate })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -175,8 +161,8 @@ describe('checkAndSendReminders', () => {
 
   it('(a) does not send when deadline is 71 min away (above the 70-min upper bound)', async () => {
     const target = nowPlusMs(71 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 11, dueDate, dueTime })
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 11, dueDate })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -190,8 +176,8 @@ describe('checkAndSendReminders', () => {
     // Use 51 min to avoid sub-second rounding issues when the exact 50-min timestamp
     // is floored to the minute: floored(now+50min) can be just below windowStart.
     const target = nowPlusMs(51 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 12, dueDate, dueTime })
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 12, dueDate })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -202,8 +188,8 @@ describe('checkAndSendReminders', () => {
 
   it('(a) sends near the upper boundary (69 min — inside the 50–70 min window)', async () => {
     const target = nowPlusMs(69 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 13, dueDate, dueTime })
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 13, dueDate })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -215,11 +201,10 @@ describe('checkAndSendReminders', () => {
   // (b) PENDING consent users are skipped
   it('(b) skips assignments whose user has coppaConsentStatus PENDING', async () => {
     const target = nowPlusMs(60 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
+    const { dueDate } = makeDeadlineInputs(target)
     const assignment = makeAssignment({
       id: 3,
       dueDate,
-      dueTime,
       coppaConsentStatus: 'PENDING',
     })
 
@@ -234,8 +219,8 @@ describe('checkAndSendReminders', () => {
 
   it('(b) processes assignments for VERIFIED-consent users normally', async () => {
     const target = nowPlusMs(60 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 4, dueDate, dueTime, coppaConsentStatus: 'VERIFIED' })
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 4, dueDate, coppaConsentStatus: 'VERIFIED' })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -263,12 +248,13 @@ describe('checkAndSendReminders', () => {
     expect(callArgs.where).toMatchObject({ completed: false })
   })
 
-  // (d) dueTime parsing and fallback — tested via computeDeadline unit tests above;
-  //     here we verify the integration: valid dueTime is respected at service level.
-  it('(d) uses dueTime when valid — deadline must fall in window for notification to fire', async () => {
+  // (d) dueDate is the sole deadline source — dueTime is display-only and ignored.
+  it('(d) assignment in the window fires regardless of dueTime display field value', async () => {
+    // dueDate is already the correct UTC deadline; dueTime is just a display string
     const target = nowPlusMs(65 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 20, dueDate, dueTime })
+    const { dueDate } = makeDeadlineInputs(target)
+    // Pass an arbitrary dueTime display value — it must have zero effect on the outcome
+    const assignment = makeAssignment({ id: 20, dueDate, dueTime: 'bad-format' })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -277,17 +263,16 @@ describe('checkAndSendReminders', () => {
     expect(result.processed).toBe(1)
   })
 
-  it('(d) a malformed dueTime causes deadline to fall to 23:59 UTC, which may exclude it from window', async () => {
-    // dueDate is tomorrow — 23:59 UTC tomorrow is well outside [50, 70] min window
-    const tomorrow = new Date()
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
-    const assignment = makeAssignment({ id: 21, dueDate: tomorrow, dueTime: 'bad-format' })
+  it('(d) an assignment whose dueDate is tomorrow is correctly outside the 50–70 min window', async () => {
+    // dueDate is 24h in the future — well outside the reminder window.
+    // dueTime display value is irrelevant to this check.
+    const tomorrow = new Date(Date.now() + 24 * 60 * MIN)
+    const assignment = makeAssignment({ id: 21, dueDate: tomorrow })
 
     mockFindMany.mockResolvedValue([assignment])
 
     const result = await checkAndSendReminders()
 
-    // 23:59 UTC tomorrow is ~24h from now — outside the 50–70 min window
     expect(result.processed).toBe(0)
     expect(mockCreateAndSendNotification).not.toHaveBeenCalled()
   })
@@ -295,8 +280,8 @@ describe('checkAndSendReminders', () => {
   // (e) reminderSentAt is set after a successful send
   it('(e) updates reminderSentAt on the assignment after sending the notification', async () => {
     const target = nowPlusMs(60 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 5, dueDate, dueTime })
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 5, dueDate })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -310,8 +295,8 @@ describe('checkAndSendReminders', () => {
 
   it('(e) does NOT update reminderSentAt when the assignment is outside the window', async () => {
     const target = nowPlusMs(90 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 6, dueDate, dueTime })
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 6, dueDate })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -324,11 +309,9 @@ describe('checkAndSendReminders', () => {
   it('(f) processes remaining assignments even if one throws on update', async () => {
     const target60 = nowPlusMs(60 * MIN)
     const target62 = nowPlusMs(62 * MIN)
-    const inputs60 = makeDeadlineInputs(target60)
-    const inputs62 = makeDeadlineInputs(target62)
 
-    const failing = makeAssignment({ id: 7, title: 'Failing', ...inputs60 })
-    const succeeding = makeAssignment({ id: 8, title: 'Succeeding', ...inputs62 })
+    const failing = makeAssignment({ id: 7, title: 'Failing', dueDate: target60 })
+    const succeeding = makeAssignment({ id: 8, title: 'Succeeding', dueDate: target62 })
 
     mockFindMany.mockResolvedValue([failing, succeeding])
 
@@ -356,8 +339,8 @@ describe('checkAndSendReminders', () => {
 
   it('notification preview contains the assignment title', async () => {
     const target = nowPlusMs(60 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 9, title: 'Math Homework', dueDate, dueTime })
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 9, title: 'Math Homework', dueDate })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -372,8 +355,8 @@ describe('checkAndSendReminders', () => {
 
   it('notification uses userId as both userId and fromUserId (self-notification pattern)', async () => {
     const target = nowPlusMs(60 * MIN)
-    const { dueDate, dueTime } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 15, userId: 99, dueDate, dueTime })
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 15, userId: 99, dueDate })
 
     mockFindMany.mockResolvedValue([assignment])
 

@@ -18,8 +18,13 @@ const listQuerySchema = z.object({
 const createBodySchema = z.object({
   title: z.string().min(1).max(200),
   subject: z.string().max(100).optional(),
-  startDate: z.string().min(1).optional(),
-  dueDate: z.string().min(1),
+  // startDate and dueDate are full ISO-8601 UTC timestamps — the browser client
+  // constructs them via new Date(y, m, d, h, min).toISOString() so that the user's
+  // real local timezone is captured before the value crosses the network.
+  startDate: z.string().datetime().optional(),
+  dueDate: z.string().datetime(),
+  // dueTime is a display-only field ("21:30") stored as-is for UI rendering.
+  // It has no role in date math — dueDate is the single source of truth for timing.
   dueTime: z.string().max(20).optional(),
 })
 
@@ -107,11 +112,10 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
 
   const { title, subject, startDate, dueDate, dueTime } = parsed.data
 
-  // Parse date as local time by splitting components — new Date("YYYY-MM-DD") is UTC midnight
-  // which shifts the day back by one in US timezones. Using Date(y, m, d, h, min) is always local.
-  const [year, month, day] = dueDate.split('-').map(Number)
-  const [hours, minutes] = (dueTime?.trim() || '23:59').split(':').map(Number)
-  const parsedDate = new Date(year, month - 1, day, hours, minutes, 0)
+  // The client sends full ISO-8601 UTC timestamps — parse them directly.
+  // new Date(isoString) is always a safe, timezone-correct parse regardless of
+  // the server's local timezone (Zod .datetime() already validated the format above).
+  const parsedDate = new Date(dueDate)
   if (isNaN(parsedDate.getTime())) {
     res.status(422).json({
       data: null,
@@ -122,8 +126,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
 
   let parsedStartDate: Date | null = null
   if (startDate) {
-    const [sYear, sMonth, sDay] = startDate.split('-').map(Number)
-    parsedStartDate = new Date(sYear, sMonth - 1, sDay, 0, 0, 0)
+    parsedStartDate = new Date(startDate)
     if (isNaN(parsedStartDate.getTime()) || parsedStartDate.getTime() >= parsedDate.getTime()) {
       res.status(422).json({
         data: null,
