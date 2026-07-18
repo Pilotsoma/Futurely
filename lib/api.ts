@@ -221,10 +221,10 @@ interface StudentData {
 }
 
 export const api = {
-  register: (email: string, password: string, otp: string, name: string | undefined, role: string | undefined, agreedTos: boolean, agreedPrivacy: boolean, agreedAge: boolean) =>
+  register: (email: string, password: string, otp: string, name: string | undefined, role: string | undefined, agreedTos: boolean, agreedPrivacy: boolean, agreedAge: boolean, dateOfBirth?: string) =>
     request<LoginResult>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, otp, name, role, agreedTos, agreedPrivacy, agreedAge }),
+      body: JSON.stringify({ email, password, otp, name, role, agreedTos, agreedPrivacy, agreedAge, ...(dateOfBirth ? { dateOfBirth } : {}) }),
     }),
   submitConsent: () =>
     request<{ tosAcceptedAt: string; privacyAcceptedAt: string; ageConfirmedAt: string }>('/api/auth/consent', {
@@ -239,7 +239,23 @@ export const api = {
   logout: () =>
     request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
   authMe: () =>
-    request<{ id: number; email: string; name: string | null; role: string; emailVerified: boolean }>('/api/auth/me'),
+    request<{
+      id: number
+      email: string
+      name: string | null
+      role: string
+      emailVerified: boolean
+      accountStatus: string
+      bannedUntilDate: string | null
+      dobCorrectionAttempts: number
+    }>('/api/auth/me'),
+
+  updateDob: (dateOfBirth: string) =>
+    request<{ accountStatus: string; bannedUntilDate: string | null }>('/api/auth/dob', {
+      method: 'PATCH',
+      body: JSON.stringify({ dateOfBirth }),
+    }),
+
   searchSchools: (q: string) =>
     request<Array<{ name: string; city: string; state: string }>>(`/api/schools/search?q=${encodeURIComponent(q)}`),
   sendOtp: (email: string) =>

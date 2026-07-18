@@ -25,6 +25,9 @@ import { APIError, AuthenticationError } from './errors'
 import { normalizeHacGrades, normalizePsGrades } from './normalizeGrades'
 import { encryptPassword, decryptPassword } from './credentialCrypto'
 import { assertPublicHttpUrl } from '../../lib/ssrfGuard'
+import { parseHacDate, encryptDob, evaluateDobVerification } from '../../lib/dobVerification'
+import { AccountStatus } from '@prisma/client'
+import { logger } from '../../common/logger'
 
 const router = Router()
 
@@ -437,7 +440,7 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
         if (studentInfo.name?.trim()) {
           // Write to hacName — never overwrite the user's chosen display name
           await prisma.user.update({ where: { id: userId }, data: { hacName: studentInfo.name.trim() } })
-          console.log('[GRADES ROUTER] Background sync: updated hacName:', studentInfo.name.trim())
+          console.log('[GRADES ROUTER] Background sync: updated hacName for userId:', userId)
         }
         const profileUpdate: Record<string, unknown> = {}
         if (studentInfo.counselor?.trim()) profileUpdate.counselorName = studentInfo.counselor.trim()
@@ -451,6 +454,47 @@ async function runBackgroundSync(userId: number, sessionToken: string): Promise<
         }
         if (Object.keys(profileUpdate).length > 0) {
           await prisma.profile.upsert({ where: { userId }, create: { userId, ...profileUpdate }, update: profileUpdate })
+        }
+
+        // DOB verification — compare HAC-reported DOB against self-reported DOB.
+        // Non-fatal: a failure here must never abort the grade sync.
+        if (studentInfo.dateOfBirth) {
+          const parsedDob = parseHacDate(studentInfo.dateOfBirth)
+          if (parsedDob) {
+            try {
+              const hacDobEncrypted = encryptDob(parsedDob)
+              const user = await prisma.user.findUnique({ where: { id: userId }, select: { dateOfBirth: true } })
+              if (user) {
+                const evaluation = user.dateOfBirth
+                  ? evaluateDobVerification({ selfReportedDobEncrypted: user.dateOfBirth, hacDobEncrypted })
+                  : { status: AccountStatus.DOB_MISMATCH_LOCKED, ageYears: null, bannedUntilDate: null }
+                const auditAction = evaluation.status === AccountStatus.ACTIVE
+                  ? 'DOB_MATCH_VERIFIED'
+                  : evaluation.status === AccountStatus.UNDER_13_BANNED
+                    ? 'UNDER_13_BANNED'
+                    : 'DOB_MISMATCH_LOCKED'
+                await prisma.$transaction([
+                  prisma.user.update({
+                    where: { id: userId },
+                    data: {
+                      hacDateOfBirth: hacDobEncrypted,
+                      accountStatus: evaluation.status,
+                      bannedUntilDate: evaluation.bannedUntilDate,
+                    },
+                  }),
+                  prisma.complianceAuditLog.create({
+                    data: { userId, resourceType: 'user_identity', resourceId: String(userId), action: 'HAC_DOB_SYNCED', ipAddress: 'background-sync' },
+                  }),
+                  prisma.complianceAuditLog.create({
+                    data: { userId, resourceType: 'user_identity', resourceId: String(userId), action: auditAction, ipAddress: 'background-sync' },
+                  }),
+                ])
+              }
+            } catch (dobErr) {
+              logger.error('grades.dobVerification.failed', { userId, error: dobErr instanceof Error ? dobErr.message : String(dobErr) })
+              // Non-fatal — DOB comparison failure must not abort the grade sync.
+            }
+          }
         }
       } catch (infoErr) {
         console.warn('[GRADES ROUTER] Background sync: student info fetch failed (non-fatal):',
@@ -1218,7 +1262,49 @@ router.post('/sync-profile', asyncHandler(async (req: AuthRequest, res: Response
     // Apply user updates (name)
     if (Object.keys(userUpdate).length > 0) {
       await prisma.user.update({ where: { id: userId }, data: userUpdate })
-      console.log('[GRADES ROUTER] Synced user from HAC:', userUpdate)
+      console.log('[GRADES ROUTER] Synced user from HAC for userId:', userId, 'fields:', Object.keys(userUpdate))
+    }
+
+    // DOB verification — compare HAC-reported DOB against self-reported DOB.
+    // Non-fatal: a failure here must never prevent the profile sync response.
+    if (studentInfo.dateOfBirth) {
+      const parsedDob = parseHacDate(studentInfo.dateOfBirth)
+      if (parsedDob) {
+        try {
+          const hacDobEncrypted = encryptDob(parsedDob)
+          const userForDob = await prisma.user.findUnique({ where: { id: userId }, select: { dateOfBirth: true } })
+          if (userForDob) {
+            const evaluation = userForDob.dateOfBirth
+              ? evaluateDobVerification({ selfReportedDobEncrypted: userForDob.dateOfBirth, hacDobEncrypted })
+              : { status: AccountStatus.DOB_MISMATCH_LOCKED, ageYears: null, bannedUntilDate: null }
+            const auditAction = evaluation.status === AccountStatus.ACTIVE
+              ? 'DOB_MATCH_VERIFIED'
+              : evaluation.status === AccountStatus.UNDER_13_BANNED
+                ? 'UNDER_13_BANNED'
+                : 'DOB_MISMATCH_LOCKED'
+            const ipAddress = req.ip ?? 'unknown'
+            await prisma.$transaction([
+              prisma.user.update({
+                where: { id: userId },
+                data: {
+                  hacDateOfBirth: hacDobEncrypted,
+                  accountStatus: evaluation.status,
+                  bannedUntilDate: evaluation.bannedUntilDate,
+                },
+              }),
+              prisma.complianceAuditLog.create({
+                data: { userId, resourceType: 'user_identity', resourceId: String(userId), action: 'HAC_DOB_SYNCED', ipAddress },
+              }),
+              prisma.complianceAuditLog.create({
+                data: { userId, resourceType: 'user_identity', resourceId: String(userId), action: auditAction, ipAddress },
+              }),
+            ])
+          }
+        } catch (dobErr) {
+          logger.error('grades.dobVerification.failed', { userId, error: dobErr instanceof Error ? dobErr.message : String(dobErr) })
+          // Non-fatal — DOB comparison failure must not abort the profile sync.
+        }
+      }
     }
 
     // Fetch and persist GPA from transcript

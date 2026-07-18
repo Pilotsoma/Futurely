@@ -26,6 +26,7 @@ function LoginPageInner() {
   const [password, setPassword]               = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName]                       = useState('')
+  const [dateOfBirth, setDateOfBirth]         = useState('')
 
   const [hacUrl, setHacUrl]           = useState('')
   const [hacUsername, setHacUsername] = useState('')
@@ -163,6 +164,7 @@ function LoginPageInner() {
     if (password !== confirmPassword) { setError('Passwords do not match'); return }
     if (password.length < 6)          { setError('Password must be at least 6 characters'); return }
     if (mode === 'register-student') {
+      if (!dateOfBirth) { setError('Please enter your birthday'); return }
       if (!hacUsername.trim() || !hacPassword.trim()) { setError('School portal credentials are required'); return }
       if (!isClasslinkDistrict && !hacUrl.trim() && !useCustomUrl) { setError('Please select your school district'); return }
     }
@@ -200,7 +202,7 @@ function LoginPageInner() {
       if (mode === 'login') {
         result = await api.login(email, password)
       } else if (mode === 'register-student') {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, undefined, agreedTos, agreedPrivacy, agreedAge)
+        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, undefined, agreedTos, agreedPrivacy, agreedAge, dateOfBirth || undefined)
       } else if (mode === 'register-teacher') {
         result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'TEACHER', agreedTos, agreedPrivacy, agreedAge)
       } else {
@@ -253,6 +255,8 @@ function LoginPageInner() {
     } catch (err) {
       if (err instanceof ApiError && err.code === 'NAME_TAKEN') {
         setError('That display name is already taken. Please choose a different one.')
+      } else if (err instanceof ApiError && err.code === 'COPPA_AGE_GATE') {
+        setError('You must be at least 13 years old to create an account.')
       } else if (err instanceof ApiError && err.code === 'ACCOUNT_LOCKED' && err.secondsRemaining) {
         const totalMins = Math.ceil(err.secondsRemaining / 60)
         const hours = Math.floor(totalMins / 60)
@@ -401,6 +405,33 @@ function LoginPageInner() {
                 placeholder="Re-enter your password" required style={styles.input} />
             </div>
           )}
+
+          {mode === 'register-student' && (() => {
+            // Approximate under-13 hint — server is the actual enforcer
+            const dobHintVisible = (() => {
+              if (!dateOfBirth) return false
+              const approxAge = new Date().getFullYear() - new Date(dateOfBirth).getFullYear()
+              return approxAge < 13
+            })()
+            return (
+              <div style={styles.field}>
+                <label style={styles.label}>Your birthday</label>
+                <input
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={e => setDateOfBirth(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  required
+                  style={styles.input}
+                />
+                {dobHintVisible && (
+                  <span style={{ fontSize: 12, color: 'var(--error)', marginTop: 2 }}>
+                    You must be 13 or older to sign up.
+                  </span>
+                )}
+              </div>
+            )
+          })()}
 
           {mode === 'register-student' && (
             <>

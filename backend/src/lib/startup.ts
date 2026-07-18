@@ -216,6 +216,22 @@ const PATCHES: string[] = [
   // preventing duplicate notifications from the cron job.
   `ALTER TABLE "Assignment"
     ADD COLUMN IF NOT EXISTS "reminderSentAt" TIMESTAMP(3)`,
+
+  // ── DOB verification against HAC (school portal) record ────────────────────
+  // Added 2026-07-18. hacDateOfBirth is encrypted at rest the same way as
+  // dateOfBirth (AES-256-GCM, CREDENTIAL_ENCRYPTION_KEY). accountStatus is the
+  // first real Postgres enum in this schema — CREATE TYPE has no native
+  // IF NOT EXISTS, hence the DO-block guard below.
+  `DO $$ BEGIN
+    CREATE TYPE "AccountStatus" AS ENUM ('ACTIVE', 'DOB_MISMATCH_LOCKED', 'UNDER_13_BANNED');
+  EXCEPTION
+    WHEN duplicate_object THEN null;
+  END $$`,
+  `ALTER TABLE "User"
+    ADD COLUMN IF NOT EXISTS "accountStatus"         "AccountStatus" NOT NULL DEFAULT 'ACTIVE',
+    ADD COLUMN IF NOT EXISTS "hacDateOfBirth"         TEXT,
+    ADD COLUMN IF NOT EXISTS "bannedUntilDate"        TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "dobCorrectionAttempts"  INTEGER NOT NULL DEFAULT 0`,
 ]
 
 // Data-level repairs that are always idempotent and safe to re-run on every cold start.
@@ -274,6 +290,8 @@ export function ensureSchema(): Promise<void> {
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "AgentToolCall" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "AgentWriteRateLimit" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "AutonomousAgentJob" LIMIT 0`)
+      // DOB verification against HAC — probe updated 2026-07-18
+      await prisma.$queryRawUnsafe(`SELECT "accountStatus", "hacDateOfBirth", "bannedUntilDate", "dobCorrectionAttempts" FROM "User" LIMIT 0`)
       // Bug 6 fix: probe for the write_confirmation idempotency index — probe updated 2026-07-16
       const idxProbe = await prisma.$queryRaw<Array<{ exists: boolean }>>`
         SELECT EXISTS (
