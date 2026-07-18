@@ -330,6 +330,9 @@ export const api = {
       lastSynced: string | null
     }>('/api/integrations/grades/status'),
 
+  portalSyncStatus: () =>
+    request<GradesSyncStatus>('/api/integrations/grades/sync-status'),
+
   portalLoginHAC: (baseUrl: string, username: string, password: string) =>
     request<{
       sessionToken: string
@@ -1312,6 +1315,14 @@ export interface RoadmapData {
   futureDecision: string | null
 }
 
+export interface GradesSyncStatus {
+  status: string
+  lastSyncedAt: string | null
+  errorMessage: string | null
+  consecutiveSyncFailures: number
+  portalDown: boolean
+}
+
 export interface CanvasConnectionInfo {
   canvasInstanceUrl: string
   canvasUserName: string | null
@@ -1319,6 +1330,8 @@ export interface CanvasConnectionInfo {
   syncStatus: string | null
   syncError: string | null
   tokenInvalid: boolean
+  consecutiveSyncFailures: number
+  portalDown: boolean
 }
 
 export interface CanvasStatus {
@@ -1331,6 +1344,8 @@ export interface CanvasStatus {
   syncStatus: string | null
   syncError: string | null
   tokenInvalid?: boolean
+  consecutiveSyncFailures: number
+  portalDown: boolean
 }
 
 // ── Canvas Dashboard types ─────────────────────────────────────────────────

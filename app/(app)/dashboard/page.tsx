@@ -13,7 +13,7 @@ import {
   BarChartIcon, DocumentIcon, CalendarIcon, ClipboardIcon,
   CheckCircleIcon, LightningBoltIcon, MedalIcon, DiamondIcon, CrownIcon,
   FlameIcon, GraduationCapIcon, LinkIcon, RefreshIcon,
-  CheckIcon, RocketIcon,
+  CheckIcon, RocketIcon, WarningIcon,
 } from '@/components/icons'
 
 const QUICK_ACCESS_LINKS: Array<{ href: string; label: string; icon: React.ReactNode; color: string; bg: string }> = [
@@ -149,6 +149,8 @@ export default function DashboardPage() {
   const [resyncError, setResyncError] = useState<string | null>(null)
   const [needsReconnect, setNeedsReconnect] = useState(false)
   const [dontShowResyncAgain, setDontShowResyncAgain] = useState(false)
+  const [showPortalDownNotice, setShowPortalDownNotice] = useState(false)
+  const [dontShowPortalDownAgain, setDontShowPortalDownAgain] = useState(false)
   const [showGpaWelcome, setShowGpaWelcome] = useState(false)
   const [hideGpa, setHideGpa] = useState(false)
   const [showConnectModal, setShowConnectModal] = useState(false)
@@ -158,6 +160,10 @@ export default function DashboardPage() {
   // (broken credentials), determined from the error code BEFORE the popup ever
   // opens. Used by the resyncTimer to bypass soft-case suppression for hard cases.
   const needsReconnectAtLoad = useRef(false)
+  // Tracks whether the sync-status endpoint reported the portal as genuinely down
+  // (UNREACHABLE for 2+ consecutive cycles). When true, the resync popup is
+  // suppressed in favour of the informational portal-down notice.
+  const portalDownDetected = useRef(false)
 
   useEffect(() => {
     setHideGpa(localStorage.getItem('ns_hide_gpa') === '1')
@@ -187,6 +193,15 @@ export default function DashboardPage() {
       localStorage.setItem('ns_hide_resync_popup', '1')
     }
     setShowResyncPopup(false)
+  }
+
+  function dismissPortalDownNotice() {
+    // Portal-down is informational — the user can't fix it, so it's safe to
+    // let them permanently silence the notice. No hard-case exception needed.
+    if (dontShowPortalDownAgain) {
+      localStorage.setItem('ns_hide_portal_down_notice', '1')
+    }
+    setShowPortalDownNotice(false)
   }
 
   useEffect(() => {
@@ -262,6 +277,18 @@ export default function DashboardPage() {
       const now = new Date()
       const isFall = now.getMonth() >= 7
       setSemesterLabel(isFall ? `Fall ${now.getFullYear()}` : `Spring ${now.getFullYear()}`)
+
+      // Check whether the portal itself is down (UNREACHABLE for 2+ consecutive
+      // background sync cycles). This is evaluated independently of portalGrades()
+      // so the timer can distinguish a genuine outage from a credentials problem.
+      api.portalSyncStatus()
+        .then(syncStatus => {
+          if (syncStatus.portalDown) {
+            portalDownDetected.current = true
+          }
+        })
+        .catch(() => { /* non-fatal — best-effort status enrichment */ })
+
       api.portalGrades()
         .then(g => { setCourseCount(new Set(g.grades.map(c => c.name)).size) })
         .catch((err) => {
@@ -279,7 +306,17 @@ export default function DashboardPage() {
     }).catch(() => {})
 
     const resyncTimer = setTimeout(() => {
-      if (gpaNeedsResync.current) {
+      if (portalDownDetected.current) {
+        // The portal itself is unreachable — show an informational notice explaining
+        // this is an outage the user can't fix, rather than the "please re-sync"
+        // popup which implies user action is required.
+        // Deliberately skip the resync popup even if gpaNeedsResync is also set:
+        // an unreachable portal will cause portalGrades() to fail too, but showing
+        // both popups simultaneously would be contradictory and confusing.
+        if (localStorage.getItem('ns_hide_portal_down_notice') !== '1') {
+          setShowPortalDownNotice(true)
+        }
+      } else if (gpaNeedsResync.current) {
         if (needsReconnectAtLoad.current) {
           // Hard case: credentials are genuinely broken — always surface the warning
           // regardless of any prior "don't show again" dismissal of the soft case.
@@ -672,6 +709,37 @@ export default function DashboardPage() {
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Don&apos;t show this again</span>
               </label>
             )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* School portal genuinely unreachable — informational only, no retry action */}
+      {showPortalDownNotice && createPortal(
+        <div style={S.popupOverlay} onClick={dismissPortalDownNotice}>
+          <div style={S.popupCard} onClick={e => e.stopPropagation()}>
+            <button onClick={dismissPortalDownNotice} style={S.popupClose}>×</button>
+            <div style={{ marginBottom: 12 }}><WarningIcon size={36}/></div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
+              Your school portal is down
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+              We haven&apos;t been able to reach your school&apos;s portal for a while — this looks like an
+              outage on their end, not a problem with your account. There&apos;s nothing to do here; we&apos;ll
+              keep syncing automatically as soon as it&apos;s back online.
+            </p>
+            <button onClick={dismissPortalDownNotice} style={S.popupButton}>
+              Got it
+            </button>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={dontShowPortalDownAgain}
+                onChange={e => setDontShowPortalDownAgain(e.target.checked)}
+                style={{ width: 14, height: 14, cursor: 'pointer', accentColor: 'var(--primary)' }}
+              />
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Don&apos;t show this again</span>
+            </label>
           </div>
         </div>,
         document.body
