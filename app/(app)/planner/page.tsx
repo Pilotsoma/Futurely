@@ -113,8 +113,14 @@ export default function PlannerPage() {
   const [showCompleted, setShowCompleted] = useState(false)
   const [aiSorting, setAiSorting] = useState(false)
 
-  // View mode: list (grouped by due date) or calendar (month grid)
-  const [view, setView] = useState<'list' | 'calendar'>('list')
+  // View mode: list (grouped by due date) or calendar (month grid).
+  // Lazy-init from localStorage (ns_planner_view) so the last-chosen view
+  // is restored without a flash on load. Defaults to 'calendar' on first visit.
+  const [view, setView] = useState<'list' | 'calendar'>(() => {
+    if (typeof window === 'undefined') return 'calendar'
+    const saved = localStorage.getItem('ns_planner_view')
+    return saved === 'list' || saved === 'calendar' ? saved : 'calendar'
+  })
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date())
 
   // Form state
@@ -377,7 +383,7 @@ export default function PlannerPage() {
   }
 
   return (
-    <div className="fade-up" style={{ maxWidth: 680, margin: '0 auto' }}>
+    <div className="fade-up" style={{ maxWidth: view === 'calendar' ? 960 : 680, margin: '0 auto', transition: 'max-width 0.2s ease' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -411,7 +417,7 @@ export default function PlannerPage() {
           />
           <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
             <button
-              onClick={() => setView('list')}
+              onClick={() => { setView('list'); localStorage.setItem('ns_planner_view', 'list') }}
               style={{
                 background: view === 'list' ? 'var(--surface-2)' : 'transparent',
                 color: view === 'list' ? 'var(--text)' : 'var(--text-secondary)',
@@ -421,7 +427,7 @@ export default function PlannerPage() {
               List
             </button>
             <button
-              onClick={() => setView('calendar')}
+              onClick={() => { setView('calendar'); localStorage.setItem('ns_planner_view', 'calendar') }}
               title="Calendar view"
               style={{
                 background: view === 'calendar' ? 'var(--surface-2)' : 'transparent',

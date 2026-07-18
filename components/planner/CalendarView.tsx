@@ -133,7 +133,7 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
         {WEEKDAY_LABELS.map((label, i) => (
-          <div key={i} style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', padding: '4px 0' }}>
+          <div key={i} style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', padding: '4px 0' }}>
             {label}
           </div>
         ))}
@@ -143,7 +143,9 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
         const week = cells.slice(weekIdx * 7, weekIdx * 7 + 7)
         const weekStart = week[0].date
         const weekEnd = week[6].date
-        const lanes = assignLanes(items, weekStart, weekEnd)
+        // Exclude completed items from the calendar grid entirely (they should
+        // not appear at all — not even dimmed; this is calendar-only behaviour).
+        const lanes = assignLanes(items.filter(item => !item.completed), weekStart, weekEnd)
         const overflowByDay = new Array(7).fill(0)
         for (const l of lanes) {
           if (l.lane < MAX_LANES) continue
@@ -168,11 +170,11 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                     onDragLeave={() => setDragOverDay(prev => (prev === dayKey ? null : prev))}
                     onDrop={e => handleDrop(e, cell.date)}
                     style={{
-                      minHeight: 74,
+                      minHeight: 104,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      paddingTop: 4,
+                      paddingTop: 6,
                       borderRadius: 8,
                       border: isSelected ? '1.5px solid var(--primary)' : isDragOver ? '1.5px dashed var(--primary)' : '1px solid transparent',
                       background: isSelected ? 'var(--primary-dim)' : 'var(--surface-2)',
@@ -182,14 +184,14 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                     }}
                   >
                     <span style={{
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: isToday ? 800 : 500,
                       color: isToday ? 'var(--primary)' : 'var(--text)',
                     }}>
                       {cell.date.getDate()}
                     </span>
                     {overflowByDay[i] > 0 && (
-                      <span style={{ fontSize: 8.5, color: 'var(--text-muted)', fontWeight: 700, marginTop: 'auto', paddingBottom: 2 }}>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, marginTop: 'auto', paddingBottom: 3 }}>
                         +{overflowByDay[i]}
                       </span>
                     )}
@@ -200,8 +202,8 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
 
             {/* Bars overlay: spans/single-day items rendered as draggable pills across day columns */}
             <div style={{
-              position: 'absolute', top: 22, left: 0, right: 0, bottom: 4,
-              display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 15, gap: 2,
+              position: 'absolute', top: 26, left: 0, right: 0, bottom: 4,
+              display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 18, gap: 2,
               padding: '0 2px', pointerEvents: 'none',
             }}>
               {lanes.filter(l => l.lane < MAX_LANES).map(l => {
@@ -222,17 +224,16 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                       background: `color-mix(in srgb, ${color} 22%, transparent)`,
                       border: `1px solid ${color}`,
                       borderRadius: 4,
-                      fontSize: 9.5,
+                      fontSize: 11,
                       fontWeight: 600,
                       color,
-                      padding: '0 4px',
+                      padding: '0 5px',
                       overflow: 'hidden',
                       whiteSpace: 'nowrap',
                       textOverflow: 'ellipsis',
                       cursor: 'grab',
                       display: 'flex',
                       alignItems: 'center',
-                      opacity: l.item.completed ? 0.55 : 1,
                     }}
                   >
                     {l.item.title}
