@@ -180,6 +180,7 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                     onDragLeave={() => setDragOverDay(prev => (prev === dayKey ? null : prev))}
                     onDrop={e => handleDrop(e, cell.date)}
                     style={{
+                      position: 'relative',
                       minHeight: 104,
                       display: 'flex',
                       flexDirection: 'column',
@@ -193,35 +194,36 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                       transition: 'background 0.12s, border-color 0.12s',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span style={{
-                        fontSize: 13,
-                        fontWeight: isToday ? 800 : 500,
-                        color: isToday ? 'var(--primary)' : 'var(--text)',
-                      }}>
-                        {cell.date.getDate()}
+                    <span style={{
+                      fontSize: 13,
+                      fontWeight: isToday ? 800 : 500,
+                      color: isToday ? 'var(--primary)' : 'var(--text)',
+                    }}>
+                      {cell.date.getDate()}
+                    </span>
+                    {countByDay[i] > MAX_VISIBLE_ITEMS && (
+                      <span
+                        title={`${countByDay[i]} assignments due`}
+                        style={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          minWidth: 15,
+                          height: 15,
+                          borderRadius: '50%',
+                          background: '#EF4444',
+                          color: '#fff',
+                          fontSize: 8,
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 2px',
+                        }}
+                      >
+                        +{countByDay[i] - MAX_VISIBLE_ITEMS}
                       </span>
-                      {countByDay[i] > MAX_VISIBLE_ITEMS && (
-                        <span
-                          title={`${countByDay[i]} assignments due`}
-                          style={{
-                            minWidth: 15,
-                            height: 15,
-                            borderRadius: '50%',
-                            background: '#EF4444',
-                            color: '#fff',
-                            fontSize: 8,
-                            fontWeight: 700,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '0 2px',
-                          }}
-                        >
-                          +{countByDay[i] - MAX_VISIBLE_ITEMS}
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
                 )
               })}
