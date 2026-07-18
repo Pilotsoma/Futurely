@@ -1,0 +1,47 @@
+# assignment-reminders.yml
+#
+# Calls the assignment-reminder cron endpoint every 10 minutes so students
+# receive ASSIGNMENT_DUE_SOON notifications at the right time.
+#
+# WHY GITHUB ACTIONS INSTEAD OF VERCEL CRON:
+# Vercel Hobby plan limits cron jobs to once per day. This feature requires
+# every-10-minute scheduling, so the trigger was moved here. The endpoint
+# itself is unchanged — it still validates the Authorization: Bearer header
+# regardless of who calls it.
+#
+# REQUIRED CONFIGURATION (Settings → Secrets and variables → Actions):
+#
+#   Secret  — CRON_SECRET
+#     Must be added as a GitHub Actions REPO SECRET.
+#     Use the EXACT same value as the CRON_SECRET env var set in Vercel.
+#     If these ever diverge, every scheduled run will receive a 401 and no
+#     reminders will be sent.
+#
+#   Variable — PRODUCTION_URL
+#     Must be added as a GitHub Actions REPO VARIABLE (not a secret — the
+#     domain is not sensitive).
+#     Value: https://myfuturely.ai
+#     The full endpoint path is appended in the step below.
+
+name: Assignment Reminders
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes, UTC
+  workflow_dispatch:           # allows manual trigger from the Actions UI
+
+jobs:
+  trigger-reminders:
+    name: Trigger assignment-reminder check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call assignment-reminders endpoint
+        run: |
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --request GET \
+            --header "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.PRODUCTION_URL }}/api/cron/assignment-reminders"

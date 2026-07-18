@@ -9,8 +9,5 @@
       "routePrefix": "/api",
       "entrypoint": "api/index.ts"
     }
-  },
-  "crons": [
-    { "path": "/api/cron/assignment-reminders", "schedule": "*/10 * * * *" }
-  ]
+  }
 }

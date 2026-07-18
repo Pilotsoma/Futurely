@@ -26,7 +26,9 @@ if (!process.env.CRON_SECRET) {
 /**
  * GET /cron/assignment-reminders
  *
- * Called by Vercel Cron every 10 minutes (configured in vercel.json).
+ * Called by a GitHub Actions scheduled workflow every 10 minutes
+ * (see .github/workflows/assignment-reminders.yml) — Vercel Hobby plan does
+ * not support sub-daily Cron Jobs, so scheduling was moved off-platform.
  * Finds assignments due in ~1 hour and sends ASSIGNMENT_DUE_SOON notifications.
  *
  * Auth: Authorization: Bearer <CRON_SECRET>
