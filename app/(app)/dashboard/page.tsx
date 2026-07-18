@@ -148,11 +148,16 @@ export default function DashboardPage() {
   const [resyncing, setResyncing] = useState(false)
   const [resyncError, setResyncError] = useState<string | null>(null)
   const [needsReconnect, setNeedsReconnect] = useState(false)
+  const [dontShowResyncAgain, setDontShowResyncAgain] = useState(false)
   const [showGpaWelcome, setShowGpaWelcome] = useState(false)
   const [hideGpa, setHideGpa] = useState(false)
   const [showConnectModal, setShowConnectModal] = useState(false)
   const [dontShowConnectAgain, setDontShowConnectAgain] = useState(false)
   const gpaNeedsResync = useRef(false)
+  // Tracks whether the portalGrades() failure at initial load was a hard case
+  // (broken credentials), determined from the error code BEFORE the popup ever
+  // opens. Used by the resyncTimer to bypass soft-case suppression for hard cases.
+  const needsReconnectAtLoad = useRef(false)
 
   useEffect(() => {
     setHideGpa(localStorage.getItem('ns_hide_gpa') === '1')
@@ -172,6 +177,16 @@ export default function DashboardPage() {
   function dismissConnectModal() {
     if (dontShowConnectAgain) localStorage.setItem('ns_hide_connect_modal', '1')
     setShowConnectModal(false)
+  }
+
+  function dismissResyncPopup() {
+    // Only persist the suppression for the soft "some data didn't load" case.
+    // When needsReconnect is true the user's credentials are actively broken —
+    // suppressing that nag permanently would silently hide lost functionality.
+    if (dontShowResyncAgain && !needsReconnect) {
+      localStorage.setItem('ns_hide_resync_popup', '1')
+    }
+    setShowResyncPopup(false)
   }
 
   useEffect(() => {
@@ -249,11 +264,34 @@ export default function DashboardPage() {
       setSemesterLabel(isFall ? `Fall ${now.getFullYear()}` : `Spring ${now.getFullYear()}`)
       api.portalGrades()
         .then(g => { setCourseCount(new Set(g.grades.map(c => c.name)).size) })
-        .catch(() => { gpaNeedsResync.current = true })
+        .catch((err) => {
+          gpaNeedsResync.current = true
+          // Distinguish hard case (broken/missing credentials) from soft case (transient
+          // session expiry). The same error codes that handleResync() checks are also
+          // thrown by portalGrades() when the stored credentials can't be used. Setting
+          // this ref here — before the popup gate runs — lets the timer bypass the
+          // "don't show again" suppression for genuinely broken credentials.
+          const code = (err as { code?: string }).code
+          if (code === 'NOT_CONNECTED' || code === 'NO_CREDENTIALS' || code === 'RELOGIN_FAILED') {
+            needsReconnectAtLoad.current = true
+          }
+        })
     }).catch(() => {})
 
     const resyncTimer = setTimeout(() => {
-      if (gpaNeedsResync.current) setShowResyncPopup(true)
+      if (gpaNeedsResync.current) {
+        if (needsReconnectAtLoad.current) {
+          // Hard case: credentials are genuinely broken — always surface the warning
+          // regardless of any prior "don't show again" dismissal of the soft case.
+          // The user must never be permanently unable to discover their school account
+          // is disconnected just because they once dismissed a softer transient-error notice.
+          setNeedsReconnect(true)
+          setShowResyncPopup(true)
+        } else if (localStorage.getItem('ns_hide_resync_popup') !== '1') {
+          // Soft case: transient session expiry — respect the user's suppression choice.
+          setShowResyncPopup(true)
+        }
+      }
     }, 6000)
 
     return () => clearTimeout(resyncTimer)
@@ -587,9 +625,9 @@ export default function DashboardPage() {
 
       {/* HAC session expired / resync popup */}
       {showResyncPopup && createPortal(
-        <div style={S.popupOverlay} onClick={() => setShowResyncPopup(false)}>
+        <div style={S.popupOverlay} onClick={dismissResyncPopup}>
           <div style={S.popupCard} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowResyncPopup(false)} style={S.popupClose}>×</button>
+            <button onClick={dismissResyncPopup} style={S.popupClose}>×</button>
             <div style={{ marginBottom: 12 }}>{needsReconnect ? <LinkIcon size={36}/> : <RefreshIcon size={36}/>}</div>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
               {needsReconnect ? 'Reconnect your school account' : 'Some school data didn\'t load'}
@@ -620,9 +658,20 @@ export default function DashboardPage() {
                 {resyncing ? 'Syncing…' : 'Re-sync with HAC'}
               </button>
             )}
-            <button onClick={() => setShowResyncPopup(false)} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginTop: 8 }}>
+            <button onClick={dismissResyncPopup} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', marginTop: 8 }}>
               Dismiss
             </button>
+            {!needsReconnect && (
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={dontShowResyncAgain}
+                  onChange={e => setDontShowResyncAgain(e.target.checked)}
+                  style={{ width: 14, height: 14, cursor: 'pointer', accentColor: 'var(--primary)' }}
+                />
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Don&apos;t show this again</span>
+              </label>
+            )}
           </div>
         </div>,
         document.body
