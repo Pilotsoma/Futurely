@@ -861,20 +861,23 @@ router.post('/resend-verification', resendVerifyLimiter, requireAuth, async (req
 
 router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        emailVerified: true,
-        createdAt: true,
-        accountStatus: true,
-        bannedUntilDate: true,
-        dobCorrectionAttempts: true,
-      },
-    })
+    const [user, schoolConn] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: req.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          emailVerified: true,
+          createdAt: true,
+          accountStatus: true,
+          bannedUntilDate: true,
+          dobCorrectionAttempts: true,
+        },
+      }),
+      prisma.schoolConnection.findUnique({ where: { userId: req.userId }, select: { id: true } }),
+    ])
     if (!user) {
       res.status(404).json({
         data: null,
@@ -884,7 +887,12 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
     }
     const lifted = await liftExpiredBanIfNeeded(user.id, user.accountStatus, user.bannedUntilDate, req.ip ?? 'unknown')
     res.json({
-      data: { ...user, accountStatus: lifted.accountStatus, bannedUntilDate: lifted.bannedUntilDate },
+      data: {
+        ...user,
+        accountStatus: lifted.accountStatus,
+        bannedUntilDate: lifted.bannedUntilDate,
+        hasSchoolConnection: schoolConn !== null,
+      },
     })
   } catch (e) {
     logger.error('auth.error', { event: 'me', error: e instanceof Error ? e.message : String(e) })
@@ -905,10 +913,13 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
 
 router.get('/account-status', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.userId },
-      select: { accountStatus: true, bannedUntilDate: true, dobCorrectionAttempts: true, hacDateOfBirth: true },
-    })
+    const [user, schoolConn] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: req.userId },
+        select: { accountStatus: true, bannedUntilDate: true, dobCorrectionAttempts: true, hacDateOfBirth: true },
+      }),
+      prisma.schoolConnection.findUnique({ where: { userId: req.userId }, select: { id: true } }),
+    ])
     if (!user) {
       res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
       return
@@ -921,6 +932,7 @@ router.get('/account-status', requireAuth, async (req: AuthRequest, res: Respons
         dobCorrectionAttempts: user.dobCorrectionAttempts,
         dobCorrectionAttemptsRemaining: Math.max(0, MAX_DOB_CORRECTION_ATTEMPTS - user.dobCorrectionAttempts),
         hasSchoolRecord: user.hacDateOfBirth !== null,
+        hasSchoolConnection: schoolConn !== null,
       },
     })
   } catch (e) {
@@ -1069,7 +1081,14 @@ const otpLimiter = rateLimit({
   message: { data: null, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many OTP requests. Try again in 1 hour.' } },
 })
 
-async function finishOAuth(res: Response, provider: string, providerId: string, email: string, name?: string): Promise<void> {
+async function finishOAuth(
+  res: Response,
+  provider: string,
+  providerId: string,
+  email: string,
+  name: string | undefined,
+  intent: string,
+): Promise<void> {
   const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
 
   let existing = await prisma.oAuthAccount.findFirst({ where: { provider, providerId } })
@@ -1082,6 +1101,18 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
     // Check if a user with this email already exists — link accounts
     let user = await prisma.user.findUnique({ where: { email } })
     if (!user) {
+      // No existing account found for this identity. If the user initiated
+      // OAuth from the login tab (intent === 'login'), do NOT auto-create an
+      // account — redirect back to the login page carrying the verified email
+      // and name so the signup form can be prefilled. No cookies, no tokens.
+      if (intent === 'login') {
+        const nameParam = name ? `&name=${encodeURIComponent(name)}` : ''
+        res.redirect(
+          `${appUrl}/login?oauth=needs_signup&email=${encodeURIComponent(email)}${nameParam}`,
+        )
+        return
+      }
+
       // OAuth signup never collects a date of birth (no form step — it's a
       // redirect-based provider flow), so a brand-new OAuth user cannot pass
       // the COPPA 13+ gate at creation time the way email/password signup
@@ -1090,11 +1121,27 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
       // requireActiveAccount blocks them until they submit a DOB via
       // PATCH /auth/dob, which enforces the same validateDobInput() 13+
       // check. Never default a new user to ACTIVE without a DOB on file.
+
+      // Guard against a unique-constraint violation on User.name: if the
+      // provider-supplied display name is already taken by another account,
+      // create the account with name: null rather than crashing. The user
+      // can set a display name later via their profile settings. This mirrors
+      // the explicit nameTaken check in the email/password /register handler,
+      // but here we fall back silently to null instead of rejecting, because
+      // the OAuth redirect flow has no form the user can immediately correct.
+      let resolvedName: string | null = name ?? null
+      if (resolvedName !== null) {
+        const nameTaken = await prisma.user.findFirst({ where: { name: resolvedName }, select: { id: true } })
+        if (nameTaken) {
+          resolvedName = null
+        }
+      }
+
       user = await prisma.user.create({
         data: {
           email,
           passwordHash: null,
-          name: name ?? null,
+          name: resolvedName,
           emailVerified: true,
           accountStatus: AccountStatus.DOB_MISMATCH_LOCKED,
         },
@@ -1120,11 +1167,16 @@ async function finishOAuth(res: Response, provider: string, providerId: string, 
 }
 
 // ── GET /auth/oauth/google ───────────────────────────────────────────────────
-router.get('/oauth/google', (_req: Request, res: Response): void => {
+router.get('/oauth/google', (req: Request, res: Response): void => {
   const clientId = process.env.GOOGLE_CLIENT_ID
   if (!clientId) { res.status(500).json({ error: 'Google OAuth not configured' }); return }
   const redirect = encodeURIComponent(`${process.env.APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/google/callback`)
-  const state = jwt.sign({ ts: Date.now() }, process.env.JWT_SECRET!, { expiresIn: '10m' })
+  // Accept 'login' or 'signup' intent from the frontend. Default to 'signup'
+  // for any missing/unrecognised value so malformed links never silently block
+  // a legitimate new-account creation (fail toward the less-restrictive path).
+  const rawIntent = (req.query.intent as string | undefined) ?? ''
+  const intent: 'login' | 'signup' = rawIntent === 'login' ? 'login' : 'signup'
+  const state = jwt.sign({ ts: Date.now(), intent }, process.env.JWT_SECRET!, { expiresIn: '10m' })
   const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=openid%20email%20profile&state=${state}`
   res.redirect(url)
 })
@@ -1134,7 +1186,8 @@ router.get('/oauth/google/callback', async (req: Request, res: Response): Promis
   try {
     const { code, state } = req.query as { code?: string; state?: string }
     if (!code || !state) { res.redirect(`${appUrl}/login?error=oauth_cancelled`); return }
-    jwt.verify(state, process.env.JWT_SECRET!)
+    const statePayload = jwt.verify(state, process.env.JWT_SECRET!) as { intent?: string }
+    const intent = statePayload.intent === 'login' ? 'login' : 'signup'
 
     const redirect = encodeURIComponent(`${appUrl}/api/auth/oauth/google/callback`)
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -1154,7 +1207,7 @@ router.get('/oauth/google/callback', async (req: Request, res: Response): Promis
     const info = await userRes.json() as { sub?: string; email?: string; name?: string }
     if (!info.sub || !info.email) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
 
-    await finishOAuth(res, 'google', info.sub, info.email, info.name)
+    await finishOAuth(res, 'google', info.sub, info.email, info.name, intent)
   } catch (e) {
     logger.error('auth.error', { event: 'oauth_google_callback', error: e instanceof Error ? e.message : String(e) })
     res.redirect(`${appUrl}/login?error=oauth_failed`)
@@ -1162,11 +1215,16 @@ router.get('/oauth/google/callback', async (req: Request, res: Response): Promis
 })
 
 // ── GET /auth/oauth/microsoft ────────────────────────────────────────────────
-router.get('/oauth/microsoft', (_req: Request, res: Response): void => {
+router.get('/oauth/microsoft', (req: Request, res: Response): void => {
   const clientId = process.env.MICROSOFT_CLIENT_ID
   if (!clientId) { res.status(500).json({ error: 'Microsoft OAuth not configured' }); return }
   const redirect = encodeURIComponent(`${process.env.APP_URL ?? 'https://myfuturely.ai'}/api/auth/oauth/microsoft/callback`)
-  const state = jwt.sign({ ts: Date.now() }, process.env.JWT_SECRET!, { expiresIn: '10m' })
+  // Accept 'login' or 'signup' intent from the frontend. Default to 'signup'
+  // for any missing/unrecognised value so malformed links never silently block
+  // a legitimate new-account creation (fail toward the less-restrictive path).
+  const rawIntent = (req.query.intent as string | undefined) ?? ''
+  const intent: 'login' | 'signup' = rawIntent === 'login' ? 'login' : 'signup'
+  const state = jwt.sign({ ts: Date.now(), intent }, process.env.JWT_SECRET!, { expiresIn: '10m' })
   const url = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=openid%20email%20profile&state=${state}`
   res.redirect(url)
 })
@@ -1176,7 +1234,8 @@ router.get('/oauth/microsoft/callback', async (req: Request, res: Response): Pro
   try {
     const { code, state } = req.query as { code?: string; state?: string }
     if (!code || !state) { res.redirect(`${appUrl}/login?error=oauth_cancelled`); return }
-    jwt.verify(state, process.env.JWT_SECRET!)
+    const statePayload = jwt.verify(state, process.env.JWT_SECRET!) as { intent?: string }
+    const intent = statePayload.intent === 'login' ? 'login' : 'signup'
 
     const redirect = encodeURIComponent(`${appUrl}/api/auth/oauth/microsoft/callback`)
     const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
@@ -1197,7 +1256,7 @@ router.get('/oauth/microsoft/callback', async (req: Request, res: Response): Pro
     const email = info.mail ?? info.userPrincipalName
     if (!info.id || !email) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
 
-    await finishOAuth(res, 'microsoft', info.id, email, info.displayName)
+    await finishOAuth(res, 'microsoft', info.id, email, info.displayName, intent)
   } catch (e) {
     logger.error('auth.error', { event: 'oauth_microsoft_callback', error: e instanceof Error ? e.message : String(e) })
     res.redirect(`${appUrl}/login?error=oauth_failed`)
