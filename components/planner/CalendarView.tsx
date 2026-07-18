@@ -80,9 +80,10 @@ interface Props {
   selectedDate: Date
   onSelectDate: (d: Date) => void
   onReschedule: (item: PlannerItem, newDueDate: Date) => void
+  headerLeft?: React.ReactNode
 }
 
-export default function CalendarView({ items, selectedDate, onSelectDate, onReschedule }: Props) {
+export default function CalendarView({ items, selectedDate, onSelectDate, onReschedule, headerLeft }: Props) {
   const [monthAnchor, setMonthAnchor] = useState(() => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1))
   const [dragOverDay, setDragOverDay] = useState<string | null>(null)
   const today = dayOnly(new Date())
@@ -121,7 +122,7 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
   return (
     <div className="ns-card" style={{ padding: 20, marginBottom: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: 16 }}>
-        <div />
+        <div>{headerLeft}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifySelf: 'center' }}>
           <button onClick={() => goMonth(-1)} aria-label="Previous month" style={navBtn}>
             <ChevronLeftIcon size={14} />

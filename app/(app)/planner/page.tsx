@@ -364,6 +364,67 @@ export default function PlannerPage() {
     }
   }
 
+  function renderStudyPlanBody() {
+    return (
+      <>
+        {studyPlanLoading && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: 13 }}>
+            <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--primary)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+            Building your personalized study plan…
+          </div>
+        )}
+        {studyPlanError && (
+          <div style={{ color: '#EF4444', fontSize: 13 }}>{studyPlanError}</div>
+        )}
+        {!studyPlanLoading && studyPlan && (
+          <>
+            <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
+              {studyPlan.overview}
+            </p>
+            {studyPlan.days.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No sessions needed — you&apos;re all caught up!</p>
+            ) : studyPlan.days.map(day => (
+              <div key={day.date} style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+                  {day.label}
+                </div>
+                {day.sessions.map((session, i) => (
+                  <div key={i} style={{
+                    display: 'flex', gap: 12, padding: '10px 12px', marginBottom: 6,
+                    background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)',
+                  }}>
+                    <div style={{
+                      flexShrink: 0, width: 42, height: 42, borderRadius: 8,
+                      background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 800, color: 'var(--primary)',
+                    }}>
+                      {session.minutesToSpend}m
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
+                        {session.title}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 4 }}>
+                        {session.subject && <span>{session.subject}</span>}
+                        <span>Due {session.dueDate}</span>
+                      </div>
+                      {session.notes && (
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          {session.notes}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </>
+        )}
+      </>
+    )
+  }
+
   if (error) return <div style={{ padding: 40, color: '#EF4444' }}>{error}</div>
   if (loading) return <PageLoader message="Opening planner…" />
 
@@ -726,97 +787,48 @@ export default function PlannerPage() {
         </form>
       )}
 
-      {/* AI Study Plan */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showStudyPlan ? 12 : 0 }}>
-          <button
-            onClick={() => {
-              if (!showStudyPlan) { void handleGenerateStudyPlan() }
-              else setShowStudyPlan(false)
-            }}
-            disabled={studyPlanLoading}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: showStudyPlan ? 'var(--surface-2)' : 'none',
-              border: '1px solid var(--border)',
-              borderRadius: 8, padding: '8px 14px',
-              fontSize: 13, fontWeight: 600, color: 'var(--text)',
-              cursor: studyPlanLoading ? 'not-allowed' : 'pointer',
-              opacity: studyPlanLoading ? 0.7 : 1,
-            }}
-          >
-            <SparklesIcon size={15} gradient/>
-            {studyPlanLoading ? 'Generating plan…' : showStudyPlan ? 'Hide Study Plan' : 'AI Study Plan'}
-          </button>
-          {showStudyPlan && studyPlan && !studyPlanLoading && (
+      {/* AI Study Plan — list view: inline trigger + expanding card below.
+          Calendar view renders its own trigger in the calendar header and
+          shows this same content as an overlay (see below). */}
+      {view === 'list' && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showStudyPlan ? 12 : 0 }}>
             <button
-              onClick={() => void handleGenerateStudyPlan()}
-              style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}
+              onClick={() => {
+                if (!showStudyPlan) { void handleGenerateStudyPlan() }
+                else setShowStudyPlan(false)
+              }}
+              disabled={studyPlanLoading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: showStudyPlan ? 'var(--surface-2)' : 'none',
+                border: '1px solid var(--border)',
+                borderRadius: 8, padding: '8px 14px',
+                fontSize: 13, fontWeight: 600, color: 'var(--text)',
+                cursor: studyPlanLoading ? 'not-allowed' : 'pointer',
+                opacity: studyPlanLoading ? 0.7 : 1,
+              }}
             >
-              Regenerate
+              <SparklesIcon size={15} gradient/>
+              {studyPlanLoading ? 'Generating plan…' : showStudyPlan ? 'Hide Study Plan' : 'AI Study Plan'}
             </button>
-          )}
-        </div>
-
-        {showStudyPlan && (
-          <div className="ns-card" style={{ padding: 18, marginTop: 10 }}>
-            {studyPlanLoading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: 13 }}>
-                <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--primary)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
-                Building your personalized study plan…
-              </div>
-            )}
-            {studyPlanError && (
-              <div style={{ color: '#EF4444', fontSize: 13 }}>{studyPlanError}</div>
-            )}
-            {!studyPlanLoading && studyPlan && (
-              <>
-                <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
-                  {studyPlan.overview}
-                </p>
-                {studyPlan.days.length === 0 ? (
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No sessions needed — you&apos;re all caught up!</p>
-                ) : studyPlan.days.map(day => (
-                  <div key={day.date} style={{ marginBottom: 18 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
-                      {day.label}
-                    </div>
-                    {day.sessions.map((session, i) => (
-                      <div key={i} style={{
-                        display: 'flex', gap: 12, padding: '10px 12px', marginBottom: 6,
-                        background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)',
-                      }}>
-                        <div style={{
-                          flexShrink: 0, width: 42, height: 42, borderRadius: 8,
-                          background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 12, fontWeight: 800, color: 'var(--primary)',
-                        }}>
-                          {session.minutesToSpend}m
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
-                            {session.title}
-                          </div>
-                          <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 4 }}>
-                            {session.subject && <span>{session.subject}</span>}
-                            <span>Due {session.dueDate}</span>
-                          </div>
-                          {session.notes && (
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                              {session.notes}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </>
+            {showStudyPlan && studyPlan && !studyPlanLoading && (
+              <button
+                onClick={() => void handleGenerateStudyPlan()}
+                style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Regenerate
+              </button>
             )}
           </div>
-        )}
-      </div>
+
+          {showStudyPlan && (
+            <div className="ns-card" style={{ padding: 18, marginTop: 10 }}>
+              {renderStudyPlanBody()}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Toggle error toast */}
       {toggleError && (
@@ -829,12 +841,65 @@ export default function PlannerPage() {
       {/* Calendar view: month grid + selected day's assignments */}
       {view === 'calendar' && (
         <>
-          <CalendarView
-            items={items}
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            onReschedule={(item, newDue) => void handleReschedule(item, newDue)}
-          />
+          <div style={{ position: 'relative' }}>
+            <CalendarView
+              items={items}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              onReschedule={(item, newDue) => void handleReschedule(item, newDue)}
+              headerLeft={
+                <button
+                  onClick={() => {
+                    if (!showStudyPlan) { void handleGenerateStudyPlan() }
+                    else setShowStudyPlan(false)
+                  }}
+                  disabled={studyPlanLoading}
+                  title={showStudyPlan ? 'Hide Study Plan' : 'AI Study Plan'}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    background: 'none', border: '1px solid var(--border)', borderRadius: 7,
+                    padding: '5px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--text)',
+                    cursor: studyPlanLoading ? 'not-allowed' : 'pointer', opacity: studyPlanLoading ? 0.7 : 1,
+                    boxShadow: 'var(--neo-raised)',
+                  }}
+                >
+                  <SparklesIcon size={13} gradient/>
+                  {studyPlanLoading ? 'Generating…' : showStudyPlan ? 'Hide Plan' : 'AI Study Plan'}
+                </button>
+              }
+            />
+            {showStudyPlan && (
+              <div style={{
+                position: 'absolute', inset: 0, zIndex: 20,
+                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+                boxShadow: 'var(--shadow-md)', padding: 20, overflowY: 'auto',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <SparklesIcon size={15} gradient/> AI Study Plan
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {studyPlan && !studyPlanLoading && (
+                      <button
+                        onClick={() => void handleGenerateStudyPlan()}
+                        style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}
+                      >
+                        Regenerate
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowStudyPlan(false)}
+                      aria-label="Close study plan"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
+                    >
+                      <XMarkIcon size={18} />
+                    </button>
+                  </div>
+                </div>
+                {renderStudyPlanBody()}
+              </div>
+            )}
+          </div>
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
               {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
