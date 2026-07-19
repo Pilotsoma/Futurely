@@ -5,12 +5,14 @@
  *   - prisma (assignment.findMany, assignment.update)
  *   - createAndSendNotification (notifications lib)
  *
- * The computeDeadline helper is also tested directly (it is exported for
- * testability).
+ * The computeDeadline and formatDueSoonPreview helpers are also tested
+ * directly (both are exported for testability).
  *
  * Coverage:
- *   (a) Correctly identifies assignments in the 50–70 minute window and
- *       excludes ones outside it.
+ *   (a) Correctly identifies assignments due in the future and within the
+ *       70-minute catch-up window, and excludes ones outside it (already
+ *       due, or too far out) — there is deliberately no lower bound beyond
+ *       "still due in the future".
  *   (b) Skips PENDING-consent users.
  *   (c) Skips already-reminded assignments (reminderSentAt not null —
  *       enforced by the DB query filter, verified via the mock call).
@@ -18,6 +20,7 @@
  *       ignored in all date math.
  *   (e) Sets reminderSentAt after a successful send.
  *   (f) One assignment's update failure doesn't block others in the batch.
+ *   (g) A failed notification send doesn't get permanently marked as sent.
  */
 
 // ── Mocks (hoisted before imports) ───────────────────────────────────────────
@@ -42,7 +45,7 @@ jest.mock('../../lib/notifications', () => ({
 
 // ── Subject under test ────────────────────────────────────────────────────────
 
-import { checkAndSendReminders, computeDeadline } from '../assignmentReminder.service'
+import { checkAndSendReminders, computeDeadline, formatDueSoonPreview } from '../assignmentReminder.service'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -121,6 +124,28 @@ describe('computeDeadline', () => {
 
 // ── Suite: checkAndSendReminders ──────────────────────────────────────────────
 
+describe('formatDueSoonPreview', () => {
+  it('reads "in about an hour" for 60 minutes remaining', () => {
+    expect(formatDueSoonPreview('Essay', 60)).toBe('Essay is due in about an hour')
+  })
+
+  it('reads "in about an hour" just above the 40-minute bucket boundary (41 min)', () => {
+    expect(formatDueSoonPreview('Essay', 41)).toBe('Essay is due in about an hour')
+  })
+
+  it('reads exact minutes remaining between 16 and 40 minutes', () => {
+    expect(formatDueSoonPreview('Essay', 25)).toBe('Essay is due in about 25 minutes')
+  })
+
+  it('reads "less than 15 minutes" at the 15-minute boundary', () => {
+    expect(formatDueSoonPreview('Essay', 15)).toBe('Essay is due in less than 15 minutes')
+  })
+
+  it('reads "less than 15 minutes" when almost due', () => {
+    expect(formatDueSoonPreview('Essay', 1)).toBe('Essay is due in less than 15 minutes')
+  })
+})
+
 describe('checkAndSendReminders', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -128,7 +153,10 @@ describe('checkAndSendReminders', () => {
     mockUpdate.mockResolvedValue({})
   })
 
-  // (a) Assignments inside the window are processed; those outside are not
+  // (a) Assignments within the catch-up window (due in the future, up to 70
+  // min out) are processed; those outside are not. There's deliberately no
+  // lower bound anymore beyond "still in the future" — see the file header
+  // rationale on why a narrow band is fragile against cron scheduling jitter.
   it('(a) sends a reminder for an assignment whose deadline is exactly 60 min away', async () => {
     const target = nowPlusMs(60 * MIN)
     const { dueDate } = makeDeadlineInputs(target)
@@ -146,10 +174,34 @@ describe('checkAndSendReminders', () => {
     expect(mockUpdate).toHaveBeenCalledTimes(1)
   })
 
-  it('(a) does not send when deadline is only 49 min away (below the 50-min lower bound)', async () => {
-    const target = nowPlusMs(49 * MIN)
+  it('(a) sends when deadline is only 10 min away (well below the old 50-min lower bound)', async () => {
+    const target = nowPlusMs(10 * MIN)
     const { dueDate } = makeDeadlineInputs(target)
     const assignment = makeAssignment({ id: 10, dueDate })
+
+    mockFindMany.mockResolvedValue([assignment])
+
+    const result = await checkAndSendReminders()
+
+    expect(result.processed).toBe(1)
+  })
+
+  it('(a) sends when the deadline is only seconds away', async () => {
+    const target = nowPlusMs(30 * 1000)
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 14, dueDate })
+
+    mockFindMany.mockResolvedValue([assignment])
+
+    const result = await checkAndSendReminders()
+
+    expect(result.processed).toBe(1)
+  })
+
+  it('(a) does not send once the deadline has already passed', async () => {
+    const target = nowPlusMs(-5 * MIN)
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 19, dueDate })
 
     mockFindMany.mockResolvedValue([assignment])
 
@@ -172,21 +224,7 @@ describe('checkAndSendReminders', () => {
     expect(mockCreateAndSendNotification).not.toHaveBeenCalled()
   })
 
-  it('(a) sends near the lower boundary (51 min — inside the 50–70 min window)', async () => {
-    // Use 51 min to avoid sub-second rounding issues when the exact 50-min timestamp
-    // is floored to the minute: floored(now+50min) can be just below windowStart.
-    const target = nowPlusMs(51 * MIN)
-    const { dueDate } = makeDeadlineInputs(target)
-    const assignment = makeAssignment({ id: 12, dueDate })
-
-    mockFindMany.mockResolvedValue([assignment])
-
-    const result = await checkAndSendReminders()
-
-    expect(result.processed).toBe(1)
-  })
-
-  it('(a) sends near the upper boundary (69 min — inside the 50–70 min window)', async () => {
+  it('(a) sends near the upper boundary (69 min — inside the window)', async () => {
     const target = nowPlusMs(69 * MIN)
     const { dueDate } = makeDeadlineInputs(target)
     const assignment = makeAssignment({ id: 13, dueDate })

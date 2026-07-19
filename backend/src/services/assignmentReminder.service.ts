@@ -1,12 +1,24 @@
 /**
  * Assignment reminder service.
  *
- * Invoked by the Vercel Cron Job (GET /api/cron/assignment-reminders, every 10
- * minutes). For each incomplete assignment whose deadline falls within the next
- * 50–70 minutes and has not yet had a reminder sent, it fires an in-app
+ * Invoked by a GitHub Actions scheduled workflow (GET /api/cron/assignment-
+ * reminders, nominally every 10 minutes — see .github/workflows/assignment-
+ * reminders.yml). For each incomplete assignment due within the next ~70
+ * minutes that has not yet had a reminder sent, it fires an in-app
  * ASSIGNMENT_DUE_SOON notification and stamps `reminderSentAt` on the row.
  *
  * Design notes:
+ * - The eligibility window is deliberately a catch-up window — "due sometime
+ *   in the next WINDOW_UPPER_MS, hasn't been reminded yet" — rather than a
+ *   narrow band like "due in exactly 50-70 minutes". GitHub Actions
+ *   `schedule` triggers are not guaranteed to fire exactly on time (GitHub
+ *   documents delays, especially under load); a narrow band checked by an
+ *   imprecise scheduler can be skipped entirely if an assignment is created
+ *   close to (or the tick lands late relative to) the band's edge. A wide,
+ *   monotonically-shrinking window means any tick that fires at all while the
+ *   deadline is still in the future and within range will catch it — the
+ *   assignment is never structurally unreachable, only the flavor text of
+ *   "how soon" varies with how close to the deadline the catching tick landed.
  * - Each assignment is processed independently (no batch transaction) so that a
  *   failure on one row does not abort the remainder of the batch.
  * - No ComplianceAuditLog entry is written here, consistent with the existing
@@ -26,16 +38,21 @@ export interface ReminderResult {
   processed: number
 }
 
-/** Window constants (milliseconds). */
-const WINDOW_LOWER_MS = 50 * 60 * 1000 // 50 minutes
+/**
+ * Upper bound (milliseconds): don't remind for anything due further out than
+ * this — the point is a "coming up soon" nudge, not an early heads-up.
+ * There is deliberately no lower bound beyond "still due in the future" — see
+ * the catch-up window rationale in the file header comment above.
+ */
 const WINDOW_UPPER_MS = 70 * 60 * 1000 // 70 minutes
 
 /**
- * A slightly wider pre-filter applied at DB query time to fetch candidates.
- * In-code deadline computation then narrows to the exact [50, 70]-minute window.
+ * DB pre-filter, applied at query time. A small negative lower bound (rather
+ * than exactly `now`) tolerates clock skew and in-flight query latency so an
+ * assignment due in the next few seconds isn't excluded by a hair.
  */
-const DB_PREFILTER_LOWER_MS = 45 * 60 * 1000 // 45 minutes
-const DB_PREFILTER_UPPER_MS = 75 * 60 * 1000 // 75 minutes
+const DB_PREFILTER_LOWER_MS = -60 * 1000 // 1 minute in the past
+const DB_PREFILTER_UPPER_MS = WINDOW_UPPER_MS + 5 * 60 * 1000 // window + 5min buffer
 
 /**
  * Returns the effective UTC deadline for an assignment.
@@ -51,9 +68,23 @@ export function computeDeadline(dueDate: Date): Date {
 }
 
 /**
- * Finds all assignments whose deadline falls within [now+50min, now+70min],
- * skips those with a PENDING coppaConsentStatus, and sends each eligible one
- * an in-app ASSIGNMENT_DUE_SOON notification, then stamps `reminderSentAt`.
+ * Given the minutes remaining until an assignment is due, returns the
+ * ASSIGNMENT_DUE_SOON notification's preview text. Dynamic rather than a
+ * fixed "in about an hour" string, since the catch-up window (see file
+ * header) means a late-running cron tick can legitimately catch an
+ * assignment anywhere from just-over-an-hour down to a few minutes out.
+ */
+export function formatDueSoonPreview(title: string, minutesRemaining: number): string {
+  if (minutesRemaining <= 15) return `${title} is due in less than 15 minutes`
+  if (minutesRemaining <= 40) return `${title} is due in about ${minutesRemaining} minutes`
+  return `${title} is due in about an hour`
+}
+
+/**
+ * Finds all incomplete, not-yet-reminded assignments due within the next
+ * WINDOW_UPPER_MS, skips those with a PENDING coppaConsentStatus, and sends
+ * each eligible one an in-app ASSIGNMENT_DUE_SOON notification, then stamps
+ * `reminderSentAt`.
  *
  * Returns the count of reminders successfully dispatched.
  */
@@ -78,7 +109,6 @@ export async function checkAndSendReminders(): Promise<ReminderResult> {
     },
   })
 
-  const windowStart = now.getTime() + WINDOW_LOWER_MS
   const windowEnd = now.getTime() + WINDOW_UPPER_MS
 
   let processed = 0
@@ -93,12 +123,14 @@ export async function checkAndSendReminders(): Promise<ReminderResult> {
     const deadline = computeDeadline(assignment.dueDate)
     const deadlineMs = deadline.getTime()
 
-    if (deadlineMs < windowStart || deadlineMs > windowEnd) {
-      // Computed deadline falls outside the exact 50–70 minute window
+    // Still due in the future, and not further out than the catch-up window.
+    if (deadlineMs < now.getTime() || deadlineMs > windowEnd) {
       continue
     }
 
     try {
+      const minutesRemaining = Math.max(0, Math.round((deadlineMs - now.getTime()) / 60000))
+
       // createAndSendNotification never throws — it returns false on failure
       // instead. That return value MUST be checked here: reminderSentAt is a
       // permanent "never retry" marker (the query filter above excludes any
@@ -112,7 +144,7 @@ export async function checkAndSendReminders(): Promise<ReminderResult> {
         userId: assignment.userId,
         fromUserId: assignment.userId,
         type: 'ASSIGNMENT_DUE_SOON',
-        preview: `${assignment.title} is due in about an hour`,
+        preview: formatDueSoonPreview(assignment.title, minutesRemaining),
       })
 
       if (!sent) {
