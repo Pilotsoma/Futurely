@@ -18,8 +18,8 @@ import {
 
 const QUICK_ACCESS_LINKS: Array<{ href: string; label: string; icon: React.ReactNode; color: string; bg: string }> = [
   { href: '/grades/classwork',  label: 'Grades',       icon: <BarChartIcon size={20}/>, color: '#10B981', bg: 'rgba(16,185,129,0.14)' },
-  { href: '/grades/transcript', label: 'Transcript',   icon: <DocumentIcon size={20}/>, color: '#6366F1', bg: 'rgba(99,102,241,0.14)' },
   { href: '/grades/attendance', label: 'Attendance',   icon: <CalendarIcon size={20}/>, color: '#EF4444', bg: 'rgba(239,68,68,0.14)' },
+  { href: '/grades/transcript', label: 'Transcript',   icon: <DocumentIcon size={20}/>, color: '#6366F1', bg: 'rgba(99,102,241,0.14)' },
   { href: '/grades/report-card',label: 'Report Card',  icon: <ClipboardIcon size={20}/>, color: '#3B82F6', bg: 'rgba(59,130,246,0.14)' },
 ]
 
