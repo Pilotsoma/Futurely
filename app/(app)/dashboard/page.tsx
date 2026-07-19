@@ -270,7 +270,18 @@ export default function DashboardPage() {
     const dataPromise = prefetch ?? api.me().catch(() => null)
     dataPromise.then(d => { if (d) setData(d); else api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed')) })
     api.portalGpa()
-      .then(g => { setPortalUGpa(g.unweightedGpa); setPortalWGpa(g.weightedGpa); setGpaFetchFailed(false) })
+      .then(g => {
+        setPortalUGpa(g.unweightedGpa)
+        setPortalWGpa(g.weightedGpa)
+        // The request can succeed (HTTP 200) while HAC still yields no usable
+        // GPA — e.g. the transcript page didn't have parseable GPA data for
+        // this account. From the user's perspective that's indistinguishable
+        // from a failed fetch (GPA stays stuck at 0), so treat it the same way
+        // rather than only reacting to thrown errors.
+        const noGpaData = g.unweightedGpa === null && g.weightedGpa === null
+        setGpaFetchFailed(noGpaData)
+        if (noGpaData) gpaNeedsResync.current = true
+      })
       .catch(() => {
         // Same root cause as a portalGrades() failure (expired HAC session mid-load) —
         // surface it through the same resync popup instead of leaving GPA stuck at 0.
@@ -349,7 +360,7 @@ export default function DashboardPage() {
       const [g, grades, freshData] = await Promise.all([api.portalGpa(), api.portalGrades(), api.me()])
       setPortalUGpa(g.unweightedGpa)
       setPortalWGpa(g.weightedGpa)
-      setGpaFetchFailed(false)
+      setGpaFetchFailed(g.unweightedGpa === null && g.weightedGpa === null)
       setCourseCount(new Set(grades.grades.map(c => c.name)).size)
       setData(freshData)
       setShowResyncPopup(false)
