@@ -1,5 +1,6 @@
 import { Router, Response } from 'express'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { logger } from '../common/logger'
@@ -177,6 +178,23 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<v
 
     res.status(201).json({ data: assignment })
   } catch (err) {
+    // Assignment has a @@unique([userId, title, subject]) constraint — a
+    // second assignment with the exact same title and subject for the same
+    // user fails at the DB level. Previously this fell through to a generic
+    // 500 "Failed to create assignment" with no indication of why, and the
+    // assignment silently never got created at all (so it could never show
+    // up anywhere, including in reminder checks). Give a specific, actionable
+    // error instead of a vague failure.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      res.status(409).json({
+        data: null,
+        error: {
+          code: 'DUPLICATE_ASSIGNMENT',
+          message: `You already have an assignment named "${title.trim()}"${subject?.trim() ? ` for ${subject.trim()}` : ''}. Try a different title or subject.`,
+        },
+      })
+      return
+    }
     logger.error('Failed to create assignment', { err })
     res.status(500).json({
       data: null,
