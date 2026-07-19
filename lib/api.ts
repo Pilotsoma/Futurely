@@ -977,6 +977,26 @@ export const api = {
   adminBanMarketplace: (userId: number, banned: boolean) =>
     request<{ ok: boolean }>('/api/admin/ban-marketplace', { method: 'POST', body: JSON.stringify({ userId, banned }) }),
 
+  adminGetDobStatus: (userId: number) =>
+    request<{
+      accountStatus: string
+      dobCorrectionAttempts: number
+      bannedUntilDate: string | null
+      hasSchoolRecord: boolean
+    }>(`/api/admin/users/${userId}/dob-status`),
+
+  adminResetDobAttempts: (userId: number) =>
+    request<{ accountStatus: string; dobCorrectionAttempts: number }>('/api/admin/reset-dob-attempts', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+
+  adminForceActivateAccount: (userId: number) =>
+    request<{ accountStatus: string; bannedUntilDate: string | null; dobCorrectionAttempts: number }>('/api/admin/force-activate-account', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+
   sendCoins: (receiverId: number, amount: number) =>
     request<{ ok: boolean; newBalance: number }>('/api/marketplace/coins/send', { method: 'POST', body: JSON.stringify({ receiverId, amount }) }),
 

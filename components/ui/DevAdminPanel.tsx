@@ -38,6 +38,10 @@ export function DevAdminPanel({
   const [targetCoins, setTargetCoins] = useState<number | null>(profile.coins ?? null)
   const [marketGranting, setMarketGranting] = useState(false)
   const [marketGrantMsg, setMarketGrantMsg] = useState('')
+  const [dobStatus, setDobStatus] = useState<{ accountStatus: string; dobCorrectionAttempts: number; bannedUntilDate: string | null; hasSchoolRecord: boolean } | null>(null)
+  const [dobStatusLoading, setDobStatusLoading] = useState(false)
+  const [dobActionSaving, setDobActionSaving] = useState(false)
+  const [dobActionMsg, setDobActionMsg] = useState('')
 
   useEffect(() => {
     api.feedUserProfile(currentUserId).then((p) => { setMyRole(p.role); setMyTag(p.tag); setMyAllTags(p.allTags ?? []) }).catch(() => {})
@@ -51,6 +55,45 @@ export function DevAdminPanel({
     setStatsLoading(true)
     api.feedDevStats().then(d => { setDevStats(d); setStatsLoading(false) }).catch(() => setStatsLoading(false))
   }, [canManage, isOwnProfile])
+
+  useEffect(() => {
+    if (!canManage || isOwnProfile) return
+    setDobStatusLoading(true)
+    api.adminGetDobStatus(userId).then(setDobStatus).catch(() => setDobStatus(null)).finally(() => setDobStatusLoading(false))
+  }, [canManage, isOwnProfile, userId])
+
+  async function handleResetDobAttempts() {
+    if (dobActionSaving) return
+    setDobActionSaving(true)
+    setDobActionMsg('')
+    try {
+      const result = await api.adminResetDobAttempts(userId)
+      setDobStatus(prev => prev ? { ...prev, dobCorrectionAttempts: result.dobCorrectionAttempts } : prev)
+      setDobActionMsg('✓ Attempts reset')
+    } catch {
+      setDobActionMsg('Failed')
+    } finally {
+      setDobActionSaving(false)
+    }
+  }
+
+  async function handleForceActivate() {
+    if (dobActionSaving) return
+    if (!confirm('Force this account ACTIVE without re-verifying their birthday? Only do this for a confirmed false positive.')) return
+    setDobActionSaving(true)
+    setDobActionMsg('')
+    try {
+      const result = await api.adminForceActivateAccount(userId)
+      setDobStatus(prev => prev
+        ? { ...prev, accountStatus: result.accountStatus, bannedUntilDate: result.bannedUntilDate, dobCorrectionAttempts: result.dobCorrectionAttempts }
+        : prev)
+      setDobActionMsg('✓ Account activated')
+    } catch {
+      setDobActionMsg('Failed')
+    } finally {
+      setDobActionSaving(false)
+    }
+  }
 
   if (!canManage) return null
 
@@ -344,6 +387,54 @@ export function DevAdminPanel({
           <button style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid #EF4444', borderRadius: 6, padding: '6px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }} onClick={() => void handleCoinAction('zero')} disabled={coinSaving}>{coinSaving ? '…' : 'Set 0'}</button>
         </div>
         {coinError && <p style={{ fontSize: 11, color: '#EF4444', marginTop: 6, fontWeight: 600 }}>{coinError}</p>}
+      </div>
+
+      <div style={{ marginTop: 12, borderTop: '1px solid rgba(59,130,246,0.2)', paddingTop: 12 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>DOB VERIFICATION / COPPA LOCK</p>
+        {dobStatusLoading ? (
+          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Loading…</p>
+        ) : !dobStatus ? (
+          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Status unavailable</p>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, alignItems: 'center', marginBottom: 8 }}>
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                background: dobStatus.accountStatus === 'ACTIVE' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                color: dobStatus.accountStatus === 'ACTIVE' ? '#22C55E' : '#EF4444',
+                border: `1px solid ${dobStatus.accountStatus === 'ACTIVE' ? '#22C55E' : '#EF4444'}`,
+              }}>
+                {dobStatus.accountStatus}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                {dobStatus.dobCorrectionAttempts}/3 correction attempts used
+                {' · '}{dobStatus.hasSchoolRecord ? 'school record on file' : 'no school record yet'}
+              </span>
+            </div>
+            {dobStatus.bannedUntilDate && (
+              <p style={{ fontSize: 11, color: '#EF4444', marginBottom: 8 }}>
+                Banned until {new Date(dobStatus.bannedUntilDate).toLocaleDateString()}
+              </p>
+            )}
+            {dobStatus.accountStatus !== 'ACTIVE' && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, alignItems: 'center' }}>
+                <button
+                  style={{ background: '#3B82F6', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: dobActionSaving ? 'not-allowed' : 'pointer', opacity: dobActionSaving ? 0.6 : 1 }}
+                  onClick={() => void handleResetDobAttempts()}
+                  disabled={dobActionSaving}
+                  title="Gives the user 3 more correction attempts — they still have to enter a birthday that actually matches their school record."
+                >{dobActionSaving ? '…' : 'Reset Attempts'}</button>
+                <button
+                  style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid #EF4444', borderRadius: 6, padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: dobActionSaving ? 'not-allowed' : 'pointer', opacity: dobActionSaving ? 0.6 : 1 }}
+                  onClick={() => void handleForceActivate()}
+                  disabled={dobActionSaving}
+                  title="Danger zone: bypasses verification entirely and activates the account without checking the birthday. Only for a confirmed false positive."
+                >{dobActionSaving ? '…' : 'Force Activate'}</button>
+              </div>
+            )}
+            {dobActionMsg && <span style={{ fontSize: 11, color: dobActionMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6, display: 'block' }}>{dobActionMsg}</span>}
+          </>
+        )}
       </div>
 
       <div style={{ marginTop: 12, borderTop: '1px solid rgba(34,197,94,0.15)', paddingTop: 12 }}>
