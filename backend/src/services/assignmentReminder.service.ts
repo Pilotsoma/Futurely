@@ -99,15 +99,28 @@ export async function checkAndSendReminders(): Promise<ReminderResult> {
     }
 
     try {
-      // Fire notification (never throws — failures are logged inside)
-      await createAndSendNotification({
+      // createAndSendNotification never throws — it returns false on failure
+      // instead. That return value MUST be checked here: reminderSentAt is a
+      // permanent "never retry" marker (the query filter above excludes any
+      // row where it's already set), so blindly stamping it regardless of
+      // whether the notification actually got created would turn any
+      // transient DB hiccup into a silent, permanent, unretryable failure —
+      // the assignment would never be reconsidered by a later cron run, and
+      // the student would simply never get a reminder for it, with no error
+      // visible anywhere (the cron endpoint still returns 200).
+      const sent = await createAndSendNotification({
         userId: assignment.userId,
         fromUserId: assignment.userId,
         type: 'ASSIGNMENT_DUE_SOON',
         preview: `${assignment.title} is due in about an hour`,
       })
 
-      // Mark reminder sent only after notification was dispatched
+      if (!sent) {
+        logger.error('assignment_reminder_notification_failed', { assignmentId: assignment.id })
+        continue
+      }
+
+      // Mark reminder sent only after notification was actually dispatched
       await prisma.assignment.update({
         where: { id: assignment.id },
         data: { reminderSentAt: new Date() },

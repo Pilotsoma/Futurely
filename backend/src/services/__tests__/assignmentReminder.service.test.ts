@@ -124,7 +124,7 @@ describe('computeDeadline', () => {
 describe('checkAndSendReminders', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockCreateAndSendNotification.mockResolvedValue(undefined)
+    mockCreateAndSendNotification.mockResolvedValue(true)
     mockUpdate.mockResolvedValue({})
   })
 
@@ -303,6 +303,46 @@ describe('checkAndSendReminders', () => {
     await checkAndSendReminders()
 
     expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  // (g) A failed notification must never permanently mark the assignment as
+  // reminded — reminderSentAt is the query filter that excludes a row from
+  // ever being reconsidered, so stamping it after a failed send would make
+  // that failure silent and permanent instead of retryable on the next run.
+  it('(g) does not set reminderSentAt when createAndSendNotification reports failure', async () => {
+    const target = nowPlusMs(60 * MIN)
+    const { dueDate } = makeDeadlineInputs(target)
+    const assignment = makeAssignment({ id: 16, dueDate })
+
+    mockFindMany.mockResolvedValue([assignment])
+    mockCreateAndSendNotification.mockResolvedValueOnce(false)
+
+    const result = await checkAndSendReminders()
+
+    expect(result.processed).toBe(0)
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('(g) a failed send for one assignment does not block a successful one after it', async () => {
+    const target60 = nowPlusMs(60 * MIN)
+    const target62 = nowPlusMs(62 * MIN)
+
+    const failing = makeAssignment({ id: 17, title: 'Failing', dueDate: target60 })
+    const succeeding = makeAssignment({ id: 18, title: 'Succeeding', dueDate: target62 })
+
+    mockFindMany.mockResolvedValue([failing, succeeding])
+    mockCreateAndSendNotification
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true)
+
+    const result = await checkAndSendReminders()
+
+    expect(result.processed).toBe(1)
+    expect(mockUpdate).toHaveBeenCalledTimes(1)
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 18 },
+      data: { reminderSentAt: expect.any(Date) },
+    })
   })
 
   // (f) Failure on one assignment does not block others
