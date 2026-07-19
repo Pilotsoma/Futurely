@@ -23,8 +23,10 @@ export default function AccessRestrictedPage() {
           setCheckState('redirecting')
           // Refresh first so middleware.ts's edge check sees the updated
           // accountStatus claim rather than bouncing back on the stale one.
+          // Hard navigation (not router.replace) so it can't be served from
+          // a stale client-side router cache entry either.
           await silentRefresh()
-          router.replace('/dashboard')
+          window.location.href = '/dashboard'
           return
         }
         if (status === 'DOB_MISMATCH_LOCKED') {

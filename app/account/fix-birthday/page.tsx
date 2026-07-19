@@ -33,10 +33,12 @@ export default function FixBirthdayPage() {
           // The access token's accountStatus claim is likely still stale
           // (DOB_MISMATCH_LOCKED) even though DB state is now ACTIVE —
           // middleware.ts trusts that claim, not live DB state, so without
-          // refreshing it first, this redirect just bounces straight back
-          // here. See the matching fix/comment in FixBirthdayBlockScreen.tsx.
+          // refreshing it first, this redirect risks bouncing straight back
+          // here. A hard navigation (not router.replace) so it can't be
+          // served from a stale client-side router cache entry either — see
+          // the matching fix/comment in FixBirthdayBlockScreen.tsx.
           await silentRefresh()
-          router.replace('/dashboard')
+          window.location.href = '/dashboard'
           return
         }
         if (status === 'UNDER_13_BANNED') {

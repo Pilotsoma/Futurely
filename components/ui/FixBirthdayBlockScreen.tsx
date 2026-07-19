@@ -63,12 +63,17 @@ export default function FixBirthdayBlockScreen({ onLogout, onVerified, hasSchool
           // The access token issued before this fix still carries the old
           // DOB_MISMATCH_LOCKED claim — middleware.ts reads that claim, not
           // live DB state, so without refreshing it here first, navigating to
-          // /dashboard just bounces straight back to this same screen (looks
-          // like "Taking you to the app..." hanging forever until a manual
-          // reload happens to land after the ~15min token TTL lapses).
+          // /dashboard risks bouncing straight back to this same screen.
           await silentRefresh()
           onVerified?.()
-          router.push('/dashboard')
+          // A hard navigation, not router.push(). Next.js's client-side
+          // router cache can have an earlier /dashboard prefetch cached as
+          // "redirect to /account/fix-birthday" from before this account was
+          // unlocked — router.push() would silently replay that stale cached
+          // redirect with no new network request at all, which is exactly
+          // what "stuck with no navigation attempt visible" looks like. A
+          // full page load can't be served from that cache.
+          window.location.href = '/dashboard'
         })()
       }, 1500)
     } catch (err) {
@@ -90,7 +95,7 @@ export default function FixBirthdayBlockScreen({ onLogout, onVerified, hasSchool
       if (code === 'NO_CORRECTION_NEEDED') {
         void silentRefresh().then(() => {
           onVerified?.()
-          router.push('/dashboard')
+          window.location.href = '/dashboard'
         })
         return
       }
