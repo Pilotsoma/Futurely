@@ -1,12 +1,11 @@
-// prompt-version: 1.0
-// last-updated: 2026-07-14
-// author: ai-engineer
+// Classifies an assignment as HIGH / MEDIUM / LOW priority.
 //
-// Classifies an assignment as HIGH / MEDIUM / LOW priority using an LLM call.
-// All inputs are assignment metadata only — no student PII enters the prompt.
-// Falls back to MEDIUM on any LLM error or invalid response.
+// This used to be an LLM call, but the classification rule was already fully
+// deterministic (see the thresholds below) — handing a rule the prompt spells
+// out verbatim to an LLM just to have it echo back one of three words added
+// latency, cost, and a failure-fallback-to-MEDIUM path for no benefit over
+// evaluating the same rule directly.
 
-import { createChatCompletion } from '../lib/aiClient'
 import { prisma } from '../lib/prisma'
 import { logger } from '../common/logger'
 import { writeAuditLog } from '../lib/auditLog'
@@ -25,83 +24,36 @@ export interface AssignmentInput {
 }
 
 // ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-const VALID_PRIORITIES = new Set<AssignmentPriority>(['HIGH', 'MEDIUM', 'LOW'])
-
-function isValidPriority(value: string): value is AssignmentPriority {
-  return VALID_PRIORITIES.has(value as AssignmentPriority)
-}
-
-function buildSystemPrompt(): string {
-  return `You are a student planner assistant. Your only job is to classify an assignment as HIGH, MEDIUM, or LOW priority.
-
-Classification criteria:
-- HIGH: due within 24 hours, OR estimated time greater than 90 minutes, OR subject is a core class (Math, Science, English, History) with less than 48 hours until due
-- MEDIUM: due in 24–72 hours, or notably time-consuming but not imminent
-- LOW: due more than 72 hours away and estimated time is short or unknown
-
-Reply with ONLY the single word HIGH, MEDIUM, or LOW — no punctuation, no explanation, no other text.`
-}
-
-function buildUserMessage(input: AssignmentInput): string {
-  const daysUntilDue = +((input.dueDate.getTime() - Date.now()) / 86400000).toFixed(1)
-  const parts: string[] = [
-    `title: ${input.title}`,
-    `subject: ${input.subject}`,
-    `daysUntilDue: ${daysUntilDue}`,
-  ]
-  if (input.estimatedMinutes != null) {
-    parts.push(`estimatedMinutes: ${input.estimatedMinutes}`)
-  }
-  return parts.join('\n')
-}
-
-// ---------------------------------------------------------------------------
 // Primary scoring function
 // ---------------------------------------------------------------------------
 
-// FERPA NOTE: inputs are assignment metadata only (title, subject, due date, estimated time) — no student PII. Verify OpenRouter/NVIDIA ToS prohibits training on submitted data before this ships to real users.
+const CORE_SUBJECTS = new Set(['math', 'science', 'english', 'history'])
+
+// Classification criteria (unchanged from the original LLM prompt):
+// - HIGH: due within 24 hours, OR estimated time greater than 90 minutes,
+//         OR subject is a core class (Math, Science, English, History) with
+//         less than 48 hours until due
+// - MEDIUM: due in 24–72 hours
+// - LOW: due more than 72 hours away (and not otherwise HIGH)
 export async function scoreAssignmentPriority(
   input: AssignmentInput,
 ): Promise<AssignmentPriority> {
-  try {
-    const response = await createChatCompletion({
-      max_tokens: 10,
-      // Force deterministic classification — random sampling caused
-      // inconsistent results for identical inputs during manual testing.
-      temperature: 0,
-      messages: [
-        { role: 'system', content: buildSystemPrompt() },
-        { role: 'user', content: buildUserMessage(input) },
-      ],
-    })
+  const hoursUntilDue = (input.dueDate.getTime() - Date.now()) / (1000 * 60 * 60)
+  const isCoreSubject = CORE_SUBJECTS.has(input.subject.trim().toLowerCase())
 
-    const raw = response.choices[0]?.message?.content ?? ''
-    const candidate = raw.trim().toUpperCase()
+  if (
+    hoursUntilDue <= 24 ||
+    (input.estimatedMinutes != null && input.estimatedMinutes > 90) ||
+    (isCoreSubject && hoursUntilDue <= 48)
+  ) {
+    return 'HIGH'
+  }
 
-    if (isValidPriority(candidate)) {
-      return candidate
-    }
-
-    // The model returned something unexpected (extra text, empty string, etc.)
-    logger.warn('assignment_priority_scorer_unexpected_response', {
-      feature: 'assignmentPriorityScorer',
-      rawLength: raw.length,
-    })
-    return 'MEDIUM'
-  } catch (error) {
-    logger.warn('assignment_priority_scorer_llm_error', {
-      feature: 'assignmentPriorityScorer',
-      errorType: error instanceof Error ? error.constructor.name : typeof error,
-      // errorCode included for transport-level debugging; never the assignment
-      // title or any user-identifying value.
-      errorCode: error instanceof Error ? (error as NodeJS.ErrnoException).code ?? null : null,
-      errorMessage: error instanceof Error ? error.message : String(error),
-    })
+  if (hoursUntilDue <= 72) {
     return 'MEDIUM'
   }
+
+  return 'LOW'
 }
 
 // ---------------------------------------------------------------------------
