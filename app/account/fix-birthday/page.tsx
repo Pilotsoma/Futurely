@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation'
 import { api, ApiError } from '@/lib/api'
 import { clearWebAuth } from '@/lib/authState'
 import FixBirthdayBlockScreen from '@/components/ui/FixBirthdayBlockScreen'
-import ConnectSchoolBlockScreen from '@/components/ui/ConnectSchoolBlockScreen'
 
-type CheckState = 'loading' | 'no-school' | 'locked' | 'redirecting'
+type CheckState = 'loading' | 'locked' | 'redirecting'
 
 const centeredPage: React.CSSProperties = {
   display: 'flex',
@@ -21,6 +20,7 @@ export default function FixBirthdayPage() {
   const router = useRouter()
   const [checkState, setCheckState] = useState<CheckState>('loading')
   const [error, setError] = useState<string | null>(null)
+  const [hasSchoolRecord, setHasSchoolRecord] = useState(false)
 
   useEffect(() => {
     async function checkStatus() {
@@ -38,13 +38,11 @@ export default function FixBirthdayPage() {
           router.replace('/account/access-restricted')
           return
         }
-        // DOB_MISMATCH_LOCKED or any unrecognised locked status — check whether
-        // a school connection exists before showing the birthday form.
-        if (!user.hasSchoolConnection) {
-          setCheckState('no-school')
-        } else {
-          setCheckState('locked')
-        }
+        // DOB_MISMATCH_LOCKED or any unrecognised locked status — show the
+        // birthday form. hasSchoolRecord decides whether its copy frames this
+        // as a first-time entry or a real detected mismatch.
+        setHasSchoolRecord(user.hasSchoolRecord)
+        setCheckState('locked')
       } catch (err) {
         if (err instanceof ApiError && err.httpStatus === 401) {
           router.replace('/login')
@@ -95,17 +93,6 @@ export default function FixBirthdayPage() {
 
   if (checkState === 'redirecting') return null
 
-  if (checkState === 'no-school') {
-    return (
-      <div style={centeredPage}>
-        <ConnectSchoolBlockScreen
-          onLogout={handleLogout}
-          onConnected={() => setCheckState('locked')}
-        />
-      </div>
-    )
-  }
-
   return (
     <div style={centeredPage}>
       {error && (
@@ -127,7 +114,7 @@ export default function FixBirthdayPage() {
           {error}
         </p>
       )}
-      <FixBirthdayBlockScreen onLogout={handleLogout} />
+      <FixBirthdayBlockScreen onLogout={handleLogout} hasSchoolRecord={hasSchoolRecord} />
     </div>
   )
 }

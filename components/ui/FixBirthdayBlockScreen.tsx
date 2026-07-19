@@ -18,6 +18,12 @@ interface FixBirthdayBlockScreenProps {
   // unlocked. Optional because the standalone /account/fix-birthday page
   // doesn't render inside that layout and doesn't need it.
   onVerified?: () => void
+  // Whether the school has ever synced a DOB for this account. When false
+  // (most commonly a brand-new OAuth signup that hasn't connected a school
+  // portal yet), there's nothing to have actually mismatched — this is a
+  // first-time DOB entry, not a correction, and the copy below reflects
+  // that rather than implying an error was detected.
+  hasSchoolRecord: boolean
 }
 
 type SubmitState = 'idle' | 'submitting' | 'success'
@@ -27,7 +33,7 @@ interface UserMessage {
   type: 'error' | 'info' | 'success'
 }
 
-export default function FixBirthdayBlockScreen({ onLogout, onVerified }: FixBirthdayBlockScreenProps) {
+export default function FixBirthdayBlockScreen({ onLogout, onVerified, hasSchoolRecord }: FixBirthdayBlockScreenProps) {
   const router = useRouter()
   const [dateOfBirth, setDateOfBirth] = useState('')
   const [submitState, setSubmitState] = useState<SubmitState>('idle')
@@ -46,7 +52,12 @@ export default function FixBirthdayBlockScreen({ onLogout, onVerified }: FixBirt
       await api.updateDob(dateOfBirth)
       // 200 success — DOB matched, account is now ACTIVE
       setSubmitState('success')
-      setMessage({ text: 'Your birthday has been verified. Taking you to the app...', type: 'success' })
+      setMessage({
+        text: hasSchoolRecord
+          ? 'Your birthday has been verified. Taking you to the app...'
+          : "Thanks! Taking you to the app — we'll double check this against your school's records once you connect a school portal.",
+        type: 'success',
+      })
       setTimeout(() => {
         onVerified?.()
         router.push('/dashboard')
@@ -70,14 +81,6 @@ export default function FixBirthdayBlockScreen({ onLogout, onVerified }: FixBirt
       if (code === 'NO_CORRECTION_NEEDED') {
         onVerified?.()
         router.push('/dashboard')
-        return
-      }
-
-      if (code === 'NO_SCHOOL_RECORD') {
-        setMessage({
-          text: "Your updated birthday has been saved. We'll verify it automatically once your school account syncs — check back after your next school sync.",
-          type: 'info',
-        })
         return
       }
 
@@ -123,10 +126,11 @@ export default function FixBirthdayBlockScreen({ onLogout, onVerified }: FixBirt
         <span style={S.logoText}>myFuturely</span>
       </div>
 
-      <h1 style={S.heading}>Let&rsquo;s verify your birthday</h1>
+      <h1 style={S.heading}>{hasSchoolRecord ? "Let’s verify your birthday" : "What’s your birthday?"}</h1>
       <p style={S.body}>
-        The birthday in your account doesn&rsquo;t match what your school has on file. Please enter your
-        correct birthday so we can confirm it matches your school record.
+        {hasSchoolRecord
+          ? "The birthday in your account doesn’t match what your school has on file. Please enter your correct birthday so we can confirm it matches your school record."
+          : "You must be at least 13 to use Futurely. If you connect a school portal later, we’ll automatically double check this against your school’s records."}
       </p>
 
       <form onSubmit={e => void handleSubmit(e)} style={S.form}>
