@@ -155,6 +155,7 @@ export default function DashboardPage() {
   const [hideGpa, setHideGpa] = useState(false)
   const [showConnectModal, setShowConnectModal] = useState(false)
   const [dontShowConnectAgain, setDontShowConnectAgain] = useState(false)
+  const [gpaFetchFailed, setGpaFetchFailed] = useState(false)
   const gpaNeedsResync = useRef(false)
   // Tracks whether the portalGrades() failure at initial load was a hard case
   // (broken credentials), determined from the error code BEFORE the popup ever
@@ -269,8 +270,13 @@ export default function DashboardPage() {
     const dataPromise = prefetch ?? api.me().catch(() => null)
     dataPromise.then(d => { if (d) setData(d); else api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed')) })
     api.portalGpa()
-      .then(g => { setPortalUGpa(g.unweightedGpa); setPortalWGpa(g.weightedGpa) })
-      .catch(() => {})
+      .then(g => { setPortalUGpa(g.unweightedGpa); setPortalWGpa(g.weightedGpa); setGpaFetchFailed(false) })
+      .catch(() => {
+        // Same root cause as a portalGrades() failure (expired HAC session mid-load) —
+        // surface it through the same resync popup instead of leaving GPA stuck at 0.
+        setGpaFetchFailed(true)
+        gpaNeedsResync.current = true
+      })
 
     api.portalStatus().then(status => {
       if (!status.connected) return
@@ -343,6 +349,7 @@ export default function DashboardPage() {
       const [g, grades, freshData] = await Promise.all([api.portalGpa(), api.portalGrades(), api.me()])
       setPortalUGpa(g.unweightedGpa)
       setPortalWGpa(g.weightedGpa)
+      setGpaFetchFailed(false)
       setCourseCount(new Set(grades.grades.map(c => c.name)).size)
       setData(freshData)
       setShowResyncPopup(false)
@@ -672,6 +679,8 @@ export default function DashboardPage() {
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
               {needsReconnect
                 ? 'Your saved HAC credentials couldn\'t be used to sign in — your password may have changed, or credentials weren\'t saved. Go to Settings to sign in again and everything will sync automatically.'
+                : gpaFetchFailed
+                ? 'Your GPA and course list couldn\'t be fetched — your HAC session may have expired mid-load. Hit "Re-sync" to reconnect and pull everything in together.'
                 : 'Your GPA loaded fine, but your course list couldn\'t be fetched — your HAC session may have expired mid-load. Hit "Re-sync" to reconnect and pull everything in together.'}
             </p>
             {resyncError && (
