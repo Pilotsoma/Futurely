@@ -173,6 +173,11 @@ model Profile {
   satScore       Int?
   actScore       Int?
   counselorName  String?
+  // Baseline GPA values from the last nightly check-in notification (not the
+  // same as weightedGpa/unweightedGpa above, which is the live current value).
+  // Null means "never checked in yet" — distinct from an actual 0.0 GPA.
+  lastGpaCheckinWeighted   Float?
+  lastGpaCheckinUnweighted Float?
   user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 

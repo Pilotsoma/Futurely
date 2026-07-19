@@ -8,7 +8,7 @@ import {
   UserIcon, HeartFilledIcon, PartyPopperIcon, TagIcon, TradeArrowsIcon, BooksIcon,
   ClipboardIcon, SchoolBuildingIcon, HandshakeIcon, PencilIcon, SparklesIcon,
   CheckCircleIcon, ChatBubbleIcon, BellIcon, ErrorCircleIcon,
-  CoinIcon,
+  CoinIcon, BarChartIcon,
 } from '@/components/icons'
 
 // Module-level dedup set — shared across all instances so toasts fire only once
@@ -212,6 +212,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                   n.type === 'COUNSELOR_RECOMMENDATION_ADDED' ? { icon: <SparklesIcon size={15}/>, iconColor: '#EAB308' } :
                   n.type === 'ACTION_ITEM_CREATED' ? { icon: <CheckCircleIcon size={15}/>, iconColor: '#22C55E' } :
                   n.type === 'COIN_RECEIVED' ? { icon: <CoinIcon size={15}/>, iconColor: '#EAB308' } :
+                  n.type === 'GPA_CHECKIN' ? { icon: <BarChartIcon size={15}/>, iconColor: '#10B981' } :
                   { icon: <ChatBubbleIcon size={15}/>, iconColor: '#3B82F6' }
 
                 // Row-level navigation: where clicking the notification takes you
@@ -227,6 +228,8 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                     router.push('/grades/classwork')
                   } else if (n.type === 'COUNSELOR_LINKED' || n.type === 'COUNSELOR_NOTE_ADDED' || n.type === 'COUNSELOR_RECOMMENDATION_ADDED' || n.type === 'ACTION_ITEM_CREATED') {
                     router.push('/my-counselor')
+                  } else if (n.type === 'GPA_CHECKIN') {
+                    router.push('/dashboard')
                   } else {
                     setProfileUserId(n.fromUserId)
                   }
@@ -259,6 +262,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 else if (n.type === 'COUNSELOR_NOTE_ADDED') body = <>{link(name)} added a note for you{n.preview ? <> — &quot;{n.preview}&quot;</> : null}</>
                 else if (n.type === 'COUNSELOR_RECOMMENDATION_ADDED') body = <>{link(name)} recommended <b>{n.preview ?? 'a course'}</b></>
                 else if (n.type === 'ACTION_ITEM_CREATED') body = <>{link(name)} assigned you a task: <b>{n.preview ?? 'Action item'}</b></>
+                else if (n.type === 'GPA_CHECKIN') body = n.preview ?? 'Your GPA check-in is ready'
                 else body = n.preview ?? 'New notification'
                 return (
                   <div key={n.id} onClick={handleRowClick} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)', background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)', cursor: 'pointer' }}>
@@ -299,6 +303,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 case 'COUNSELOR_NOTE_ADDED':            return { icon: <PencilIcon size={20}/>, accent: '#8B5CF6', text: `${name} added a note for you` }
                 case 'COUNSELOR_RECOMMENDATION_ADDED':  return { icon: <SparklesIcon size={20}/>, accent: '#EAB308', text: `${name} recommended ${t.notif.preview ?? 'a course'}` }
                 case 'ACTION_ITEM_CREATED':             return { icon: <CheckCircleIcon size={20}/>, accent: '#22C55E', text: `${name} assigned you: ${t.notif.preview ?? 'a task'}` }
+                case 'GPA_CHECKIN':                      return { icon: <BarChartIcon size={20}/>, accent: '#10B981', text: t.notif.preview ?? 'Your GPA check-in is ready' }
                 default:                                return { icon: <BellIcon size={20}/>, accent: 'var(--primary)', text: t.notif.preview ?? 'New notification' }
               }
             })()

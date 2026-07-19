@@ -309,6 +309,11 @@ const DATA_REPAIRS: string[] = [
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE INDEX IF NOT EXISTS "AiChatSession_userId_updatedAt_idx" ON "AiChatSession" ("userId", "updatedAt")`,
+
+  // ── GPA nightly check-in baseline ────────────────────────────────────────
+  `ALTER TABLE "Profile"
+    ADD COLUMN IF NOT EXISTS "lastGpaCheckinWeighted"   DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS "lastGpaCheckinUnweighted" DOUBLE PRECISION`,
 ]
 
 let patchPromise: Promise<void> | null = null
@@ -348,6 +353,8 @@ export function ensureSchema(): Promise<void> {
       if (!idxProbe[0]?.exists) throw new Error('Missing idempotency index: AgentToolCall_pending_write_confirm_unique')
       // AI chat session sync — probe added 2026-07-19
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "AiChatSession" LIMIT 0`)
+      // GPA nightly check-in baseline — probe added 2026-07-19
+      await prisma.$queryRawUnsafe(`SELECT "lastGpaCheckinWeighted", "lastGpaCheckinUnweighted" FROM "Profile" LIMIT 0`)
       // Visible on every cold start so a stale/incomplete probe (or a warm instance that
       // never re-checks) shows up in logs instead of failing silently — this is the exact
       // gap that let reminderSentAt stay missing in production undetected.

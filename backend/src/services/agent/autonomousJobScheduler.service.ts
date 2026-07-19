@@ -12,15 +12,22 @@
  * Scheduling pattern:
  * - A setInterval (started from index.ts) polls for pending jobs every minute.
  * - Jobs are enqueued once per day by enqueueJobs() (also called from
- *   index.ts after server start, and scheduled at midnight + 7am via
+ *   index.ts after server start, and scheduled at midnight UTC via
  *   the same interval by checking the current hour).
  */
 
 import { prisma } from '../../lib/prisma'
 import { logger } from '../../common/logger'
 import { startSession, completeSession } from './agentExecution.service'
+import { runGpaCheckin } from '../gpaCheckin.service'
 
-export type JobTriggerType = 'NIGHTLY_GPA_CHECKIN' | 'PROACTIVE_PLANNER_NUDGE'
+// PROACTIVE_PLANNER_NUDGE was removed — it would have duplicated the
+// existing free, deterministic assignment-due-soon reminder cron
+// (checkAndSendReminders / assignmentReminder.service.ts), which already
+// covers "tell the student about upcoming work" without any AI cost.
+// processJob() below still recognizes the old string value defensively, in
+// case any PENDING rows already exist in the DB from before this change.
+export type JobTriggerType = 'NIGHTLY_GPA_CHECKIN'
 
 const WORKER_BATCH_SIZE = 20
 const SYSTEM_IP = 'scheduler'
@@ -44,7 +51,6 @@ export async function enqueueJobsForToday(): Promise<void> {
 
   const now = new Date()
   const todayMidnightUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  const today7amUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 7))
 
   // Find eligible users (opted in to autonomous features)
   const eligibleUsers = await prisma.user.findMany({
@@ -81,25 +87,6 @@ export async function enqueueJobsForToday(): Promise<void> {
         module: 'GPA',
         triggerType: 'NIGHTLY_GPA_CHECKIN',
         scheduledAt: todayMidnightUtc,
-      })
-    }
-
-    // Check if today's PROACTIVE_PLANNER_NUDGE already exists
-    const existingNudge = await prisma.autonomousAgentJob.findFirst({
-      where: {
-        userId: user.id,
-        triggerType: 'PROACTIVE_PLANNER_NUDGE',
-        scheduledAt: { gte: todayMidnightUtc },
-      },
-      select: { id: true },
-    })
-
-    if (existingNudge === null) {
-      jobsToCreate.push({
-        userId: user.id,
-        module: 'PLANNER',
-        triggerType: 'PROACTIVE_PLANNER_NUDGE',
-        scheduledAt: today7amUtc,
       })
     }
   }
@@ -195,6 +182,17 @@ async function processJob(
       return
     }
 
+    // PROACTIVE_PLANNER_NUDGE was removed (duplicated the existing free
+    // assignment-reminder cron) — this only fires for rows enqueued before
+    // that change that are still PENDING.
+    if (triggerType === 'PROACTIVE_PLANNER_NUDGE') {
+      await prisma.autonomousAgentJob.update({
+        where: { id: jobId },
+        data: { status: 'SKIPPED_FLAG_OFF', result: { reason: 'trigger_removed' } },
+      })
+      return
+    }
+
     // Validate module is a known AgentModule
     const validModules = ['PLANNER', 'GPA', 'ROADMAP', 'CHAT'] as const
     if (!(validModules as readonly string[]).includes(module)) {
@@ -236,12 +234,12 @@ async function processJob(
 
     const sessionId = sessionResult.sessionId
 
-    // For SYSTEM sessions, dispatch only read tools appropriate to the trigger.
-    // Write tools are blocked at the AgentExecutionService level.
-    // The actual tool dispatch and response generation is handled by the
-    // ai-engineer's orchestration layer (Tasks 7-9). For now we create a
-    // completed session with a placeholder — the orchestrator will replace this.
-    const summaryMessage = buildSystemSummaryMessage(triggerType)
+    // Deterministic check + (at most) a single cheap AI call — see
+    // gpaCheckin.service.ts for the cost reasoning. Not an agentic
+    // tool-calling loop: there's nothing here that benefits from one.
+    const summaryMessage = triggerType === 'NIGHTLY_GPA_CHECKIN'
+      ? (await runGpaCheckin(userId)).summary
+      : buildSystemSummaryMessage(triggerType)
 
     await completeSession(sessionId, summaryMessage, 'COMPLETED')
 
@@ -269,19 +267,11 @@ async function processJob(
 }
 
 /**
- * Builds a placeholder summary for SYSTEM session final responses.
- * The ai-engineer's orchestration layer (Tasks 7-9) will replace this with
- * actual tool-derived insights.
+ * Fallback summary for any trigger type other than NIGHTLY_GPA_CHECKIN
+ * (defensive — no other trigger type is currently enqueued).
  */
-function buildSystemSummaryMessage(triggerType: string): string {
-  switch (triggerType) {
-    case 'NIGHTLY_GPA_CHECKIN':
-      return 'Nightly GPA check-in completed. Your academic data has been reviewed.'
-    case 'PROACTIVE_PLANNER_NUDGE':
-      return 'Daily planner review completed. Check your upcoming assignments.'
-    default:
-      return 'Autonomous agent job completed.'
-  }
+function buildSystemSummaryMessage(_triggerType: string): string {
+  return 'Autonomous agent job completed.'
 }
 
 // ── Scheduler loop ────────────────────────────────────────────────────────────
@@ -308,9 +298,8 @@ export function startScheduler(): void {
     const hourUtc = nowUtc.getUTCHours()
     const minuteUtc = nowUtc.getUTCMinutes()
 
-    // Enqueue daily jobs at midnight UTC (hour=0, first 5-minute window)
-    // and at 7am UTC (hour=7, first 5-minute window)
-    if ((hourUtc === 0 || hourUtc === 7) && minuteUtc < 5) {
+    // Enqueue daily jobs at midnight UTC (first 5-minute window)
+    if (hourUtc === 0 && minuteUtc < 5) {
       enqueueJobsForToday().catch(err => {
         logger.error('autonomous_enqueue_error', {
           error: err instanceof Error ? err.message : String(err),
