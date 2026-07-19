@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
 
 // ── Exported types (moved from app/(app)/ai/page.tsx) ────────────────────────
@@ -20,31 +20,23 @@ export interface ChatSession {
   updatedAt: number
 }
 
-// ── Storage helpers (moved from app/(app)/ai/page.tsx) ───────────────────────
-
-const STORAGE_KEY = 'ns_ai_sessions'
-const SESSION_TTL = 7 * 24 * 60 * 60 * 1000
-
-function loadSessions(): ChatSession[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const all: ChatSession[] = JSON.parse(raw)
-    const cutoff = Date.now() - SESSION_TTL
-    return all.filter(s => s.createdAt >= cutoff)
-  } catch {
-    return []
-  }
-}
-
-function saveSessions(sessions: ChatSession[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions))
-  } catch {}
-}
+// ── Server sync ────────────────────────────────────────────────────────────
+// Chat history is persisted on the user's account (GET/PUT /api/ai/sessions)
+// so it follows them across devices — it used to live only in localStorage,
+// which meant a fresh browser/machine always started with an empty history.
 
 function newSessionId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+// Fire-and-forget save — the UI already reflects the change optimistically via
+// local state, so a transient network failure here just means that one turn
+// doesn't make it to the server; it's retried implicitly on the next turn's
+// save since each save sends the session's full message list.
+function persistToServer(session: ChatSession): void {
+  api.saveAiChatSession(session.id, session.title, session.messages).catch(err => {
+    console.warn('[AI CHAT] Failed to sync session to server:', err instanceof Error ? err.message : String(err))
+  })
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -59,7 +51,7 @@ interface AiChatContextValue {
   startNewChat: () => void
   openSession: (session: ChatSession) => void
   /**
-   * Persist a completed agent-mode turn to localStorage and update the active
+   * Persist a completed agent-mode turn to the server and update the active
    * session in the sidebar.  The agentText is stored with AGENT_MSG_PREFIX
    * prepended so that the rendering layer can detect and badge it correctly.
    * Returns the new session id.
@@ -72,26 +64,39 @@ const AiChatContext = createContext<AiChatContextValue | null>(null)
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AiChatProvider({ children }: { children: React.ReactNode }) {
-  // Same lazy-initializer pattern as the page used: read from localStorage on
-  // first client render, return empty array during SSR.
-  const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    if (typeof window === 'undefined') return []
-    const loaded = loadSessions()
-    saveSessions(loaded)
-    return loaded
-  })
+  const [sessions, setSessions] = useState<ChatSession[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
   const [sending, setSending] = useState(false)
 
-  // Internal helper — not exported. Upserts a session in localStorage.
+  // Load this account's chat history from the server once on mount. Not
+  // gated on auth state here — the request just 401s harmlessly for a
+  // logged-out visitor and this provider only renders inside the
+  // authenticated app layout anyway.
+  useEffect(() => {
+    api.aiChatSessions()
+      .then(remote => {
+        setSessions(remote.map(s => ({
+          id: s.id,
+          title: s.title,
+          messages: s.messages as Msg[],
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt,
+        })))
+      })
+      .catch(() => {})
+  }, [])
+
+  // Internal helper — not exported. Upserts a session in local state and
+  // syncs the new message list to the server so it's visible on other devices.
   const persistMessages = useCallback((msgs: Msg[], sessionId: string, title: string) => {
     setSessions(prev => {
       const exists = prev.some(s => s.id === sessionId)
       const next = exists
         ? prev.map(s => s.id === sessionId ? { ...s, messages: msgs, updatedAt: Date.now() } : s)
         : [{ id: sessionId, title, messages: msgs, createdAt: Date.now(), updatedAt: Date.now() }, ...prev]
-      saveSessions(next)
+      const updated = next.find(s => s.id === sessionId)
+      if (updated) persistToServer(updated)
       return next
     })
   }, [])
@@ -173,7 +178,7 @@ export function AiChatProvider({ children }: { children: React.ReactNode }) {
       })
   }, [sending, persistMessages])
 
-  // persistAgentTurn — saves a completed agent-mode exchange to localStorage
+  // persistAgentTurn — saves a completed agent-mode exchange to the server
   // and updates the running session list so the sidebar reflects it immediately.
   // The AI text is stored with AGENT_MSG_PREFIX so that reopening the session
   // via openSession() still renders the "Agent" badge in the message list.

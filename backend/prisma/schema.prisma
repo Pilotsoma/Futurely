@@ -130,6 +130,7 @@ model User {
   agentSessions               AgentSession[]
   agentWriteRateLimits        AgentWriteRateLimit[]
   autonomousAgentJobs         AutonomousAgentJob[]
+  aiChatSessions               AiChatSession[]
   // ── DOB verification against HAC (school portal) record ──────────────────────
   // hacDateOfBirth is encrypted at rest the same way as dateOfBirth (AES-256-GCM,
   // CREDENTIAL_ENCRYPTION_KEY). Populated from the school's official record during
@@ -823,6 +824,23 @@ model AgentToolCall {
 
   @@index([sessionId])
   @@index([toolName, executedAt])
+}
+
+// Web AI-companion chat, synced to the user's account so it's visible across
+// devices (previously localStorage-only, per-browser). Messages are stored as
+// a JSON array (matches the client's Msg[] shape) rather than a normalized
+// table — a chat session is always read/written as one unit, never queried
+// message-by-message, so a relational table would add joins with no benefit.
+model AiChatSession {
+  id        String   @id
+  userId    Int
+  title     String
+  messages  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
 }
 
 model AgentWriteRateLimit {

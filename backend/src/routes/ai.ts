@@ -367,4 +367,92 @@ Respond with ONLY a JSON object in exactly this shape (no markdown, no extra tex
   }
 })
 
+// ── AI chat session sync ────────────────────────────────────────────────────
+// Replaces the old localStorage-only history (7-day TTL, per-browser) with
+// per-account storage so the same chats show up on any device the user logs
+// into. Sessions are stored as an opaque JSON blob (messages array) rather
+// than a normalized table — the client always reads/writes a whole session
+// at once, never a single message.
+
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+const ChatMsgSchema = z.object({
+  id: z.string(),
+  role: z.enum(['user', 'ai']),
+  text: z.string(),
+})
+
+router.get('/sessions', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.userId!
+  try {
+    // Mirror the old localStorage TTL — best-effort, never blocks the read.
+    await prisma.aiChatSession.deleteMany({
+      where: { userId, createdAt: { lt: new Date(Date.now() - SESSION_TTL_MS) } },
+    }).catch(() => {})
+
+    const sessions = await prisma.aiChatSession.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+    })
+
+    res.json({
+      data: sessions.map(s => ({
+        id: s.id,
+        title: s.title,
+        messages: s.messages,
+        createdAt: s.createdAt.getTime(),
+        updatedAt: s.updatedAt.getTime(),
+      })),
+    })
+  } catch (err) {
+    logger.error('ai_sessions_list_error', { userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
+  }
+})
+
+router.put('/sessions/:id', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.userId!
+  const { id } = req.params
+
+  const parse = z.object({
+    title: z.string().min(1).max(200),
+    messages: z.array(ChatMsgSchema).max(500),
+  }).safeParse(req.body)
+
+  if (!parse.success) {
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid request' } })
+    return
+  }
+
+  try {
+    // A session id is client-generated, so guard against one account
+    // overwriting another's session by guessing/reusing an id.
+    const existing = await prisma.aiChatSession.findUnique({ where: { id }, select: { userId: true } })
+    if (existing && existing.userId !== userId) {
+      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'Session does not belong to this account' } })
+      return
+    }
+
+    const { title, messages } = parse.data
+    const session = await prisma.aiChatSession.upsert({
+      where: { id },
+      create: { id, userId, title, messages },
+      update: { title, messages },
+    })
+
+    res.json({
+      data: {
+        id: session.id,
+        title: session.title,
+        messages: session.messages,
+        createdAt: session.createdAt.getTime(),
+        updatedAt: session.updatedAt.getTime(),
+      },
+    })
+  } catch (err) {
+    logger.error('ai_sessions_save_error', { userId, error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
+  }
+})
+
 export default router

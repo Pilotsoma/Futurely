@@ -153,9 +153,9 @@ function AIChatInner() {
     }
   }
 
-  // When the agent session finishes successfully, persist the Q&A pair to
-  // localStorage (via the provider's persistAgentTurn) so it shows up in the
-  // sidebar and survives navigation / page reloads.  After persisting we reset
+  // When the agent session finishes successfully, persist the Q&A pair to the
+  // server (via the provider's persistAgentTurn) so it shows up in the
+  // sidebar and survives navigation / page reloads / device switches.  After persisting we reset
   // the agent hook so the live agentPhase blocks disappear and the normal
   // messages.map() rendering takes over — which already handles the Agent badge
   // via isAgentMessage / stripAgentPrefix on the stored AGENT_MSG_PREFIX tag.

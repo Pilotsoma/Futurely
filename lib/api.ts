@@ -313,6 +313,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ message, history, renderMarkdown: true }),
     }, false, 95000),
+  aiChatSessions: () =>
+    request<Array<{ id: string; title: string; messages: unknown; createdAt: number; updatedAt: number }>>('/api/ai/sessions'),
+  saveAiChatSession: (id: string, title: string, messages: unknown) =>
+    request<{ id: string; title: string; messages: unknown; createdAt: number; updatedAt: number }>(`/api/ai/sessions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ title, messages }),
+    }),
   studyPlan: () => request<{
     overview: string
     days: Array<{
