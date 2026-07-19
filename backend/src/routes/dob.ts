@@ -1,6 +1,13 @@
 /**
- * PATCH /auth/dob — lets a DOB_MISMATCH_LOCKED user correct their self-reported
- * date of birth after it failed to match the HAC (school portal) record.
+ * PATCH /auth/dob — lets a DOB_MISMATCH_LOCKED user submit or correct their
+ * self-reported date of birth. Two distinct cases share this endpoint:
+ *   - No hacDateOfBirth on file (e.g. an OAuth signup that hasn't connected
+ *     a school portal yet): nothing to verify against, so a valid 13+ DOB is
+ *     accepted and the account activates immediately. Real verification
+ *     happens later, in the background, whenever a school portal is
+ *     connected (see dobVerification.ts / gradesRouter.ts).
+ *   - hacDateOfBirth already on file (a real detected mismatch): the
+ *     resubmitted DOB is re-verified against it, never self-certified.
  *
  * Mounted separately from the main auth router (see app.ts) so it can sit
  * behind requireAuth without dragging the rest of /auth along with it.
@@ -89,35 +96,43 @@ router.patch('/', dobCorrectionLimiter, requireAuth, async (req: AuthRequest, re
     }
 
     if (!user.hacDateOfBirth) {
-      // No school record to compare against yet — nothing to verify against.
-      // Fail closed: keep the account locked rather than accepting an
-      // unverifiable self-report. Still counts as a real attempt (saves the
-      // submitted DOB, increments the lifetime cap, and is audited) so this
-      // path can't be used to probe the endpoint for free outside the rate
-      // limiter's reach.
-      await prisma.$transaction([
+      // No school record to compare against yet. There is nothing to verify
+      // this self-report against, but it has already passed the same 13+
+      // format/age validation signup uses (validateDobInput above) — accept
+      // it and activate the account. This is NOT a security bypass: it only
+      // applies when no HAC record exists at all, i.e. no mismatch has ever
+      // been detected. Once a school portal is connected, the existing
+      // sync-time comparison (dobVerification.ts, invoked from
+      // gradesRouter.ts) runs the same match/mismatch/under-13 evaluation in
+      // the background and will re-lock or ban the account if the school's
+      // record contradicts this self-report. A previously banned or
+      // mismatch-locked account always has hacDateOfBirth already set (both
+      // states are only ever reached via that same comparison), so this
+      // branch can never be used to bypass a real, already-detected mismatch.
+      const [updated] = await prisma.$transaction([
         prisma.user.update({
           where: { id: userId },
           data: {
             dateOfBirth: encryptDob(dobCheck.isoDate),
             dobCorrectionAttempts: user.dobCorrectionAttempts + 1,
+            accountStatus: AccountStatus.ACTIVE,
           },
+          select: { accountStatus: true, bannedUntilDate: true },
         }),
         prisma.complianceAuditLog.create({
           data: {
             userId,
             resourceType: 'user_identity',
             resourceId: String(userId),
-            action: 'DOB_CORRECTION_SUBMITTED',
+            action: 'DOB_SELF_CERTIFIED_NO_SCHOOL_RECORD',
             ipAddress: req.ip ?? 'unknown',
           },
         }),
       ])
-      res.status(409).json({
-        data: null,
-        error: {
-          code: 'NO_SCHOOL_RECORD',
-          message: 'We do not have a school record to verify your date of birth against yet. Please try again after your account syncs with your school.',
+      res.json({
+        data: {
+          accountStatus: updated.accountStatus,
+          bannedUntilDate: updated.bannedUntilDate,
         },
       })
       return

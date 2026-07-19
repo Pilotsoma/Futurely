@@ -874,6 +874,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
           accountStatus: true,
           bannedUntilDate: true,
           dobCorrectionAttempts: true,
+          hacDateOfBirth: true,
         },
       }),
       prisma.schoolConnection.findUnique({ where: { userId: req.userId }, select: { id: true } }),
@@ -886,12 +887,18 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
       return
     }
     const lifted = await liftExpiredBanIfNeeded(user.id, user.accountStatus, user.bannedUntilDate, req.ip ?? 'unknown')
+    const { hacDateOfBirth, ...userWithoutHacDob } = user
     res.json({
       data: {
-        ...user,
+        ...userWithoutHacDob,
         accountStatus: lifted.accountStatus,
         bannedUntilDate: lifted.bannedUntilDate,
         hasSchoolConnection: schoolConn !== null,
+        // Whether a school-record DOB has ever been synced — distinguishes a
+        // genuine detected mismatch from "hasn't connected/synced yet, so
+        // there's simply nothing to compare against." Never expose the raw
+        // hacDateOfBirth ciphertext itself.
+        hasSchoolRecord: hacDateOfBirth !== null,
       },
     })
   } catch (e) {
@@ -1121,6 +1128,15 @@ async function finishOAuth(
       // requireActiveAccount blocks them until they submit a DOB via
       // PATCH /auth/dob, which enforces the same validateDobInput() 13+
       // check. Never default a new user to ACTIVE without a DOB on file.
+      //
+      // Connecting a school portal is NOT required to leave this state —
+      // PATCH /auth/dob activates the account as soon as a valid 13+ DOB is
+      // submitted, since there is no hacDateOfBirth yet to contradict it.
+      // Real verification against the school's record happens later, in the
+      // background, whenever (if ever) the user connects a school portal —
+      // see dobVerification.ts's sync-time comparison in gradesRouter.ts,
+      // which can still re-lock (mismatch) or ban (mismatch + under 13) the
+      // account after the fact.
 
       // Guard against a unique-constraint violation on User.name: if the
       // provider-supplied display name is already taken by another account,
