@@ -117,6 +117,37 @@ let isWorkerRunning = false
  *
  * No PII in log lines. Job IDs and status codes only.
  */
+async function processPendingBatch(): Promise<number> {
+  const now = new Date()
+  const pendingJobs = await prisma.autonomousAgentJob.findMany({
+    where: { status: 'PENDING', scheduledAt: { lte: now } },
+    orderBy: { scheduledAt: 'asc' },
+    take: WORKER_BATCH_SIZE,
+    select: {
+      id: true,
+      userId: true,
+      module: true,
+      triggerType: true,
+    },
+  })
+
+  if (pendingJobs.length === 0) return 0
+
+  logger.info('autonomous_worker_processing', { batchSize: pendingJobs.length })
+
+  for (const job of pendingJobs) {
+    await processJob(job.id, job.userId, job.module, job.triggerType)
+  }
+
+  return pendingJobs.length
+}
+
+/**
+ * Processes one batch (up to WORKER_BATCH_SIZE) of pending jobs.
+ * Used by the local-dev setInterval loop (startScheduler) — not called in
+ * production, where the interval doesn't survive Vercel's per-request
+ * invocation model. See drainPendingJobs() for the production path.
+ */
 export async function runWorkerBatch(): Promise<void> {
   if (process.env.AUTONOMOUS_AGENTS_ENABLED !== 'true') {
     return
@@ -128,28 +159,8 @@ export async function runWorkerBatch(): Promise<void> {
   }
 
   isWorkerRunning = true
-
   try {
-    const now = new Date()
-    const pendingJobs = await prisma.autonomousAgentJob.findMany({
-      where: { status: 'PENDING', scheduledAt: { lte: now } },
-      orderBy: { scheduledAt: 'asc' },
-      take: WORKER_BATCH_SIZE,
-      select: {
-        id: true,
-        userId: true,
-        module: true,
-        triggerType: true,
-      },
-    })
-
-    if (pendingJobs.length === 0) return
-
-    logger.info('autonomous_worker_processing', { batchSize: pendingJobs.length })
-
-    for (const job of pendingJobs) {
-      await processJob(job.id, job.userId, job.module, job.triggerType)
-    }
+    await processPendingBatch()
   } catch (err) {
     logger.error('autonomous_worker_batch_error', {
       error: err instanceof Error ? err.message : String(err),
@@ -157,6 +168,33 @@ export async function runWorkerBatch(): Promise<void> {
   } finally {
     isWorkerRunning = false
   }
+}
+
+/**
+ * Enqueues today's jobs (if not already done) and processes pending jobs to
+ * completion within this single call, up to maxBatches batches. Designed for
+ * a serverless request/response lifecycle (no persistent worker to keep
+ * picking up leftover work later) — call this from a cron-triggered HTTP
+ * endpoint, not a setInterval.
+ */
+export async function runDailyCheckins(maxBatches = 25): Promise<{ batchesRun: number; jobsProcessed: number }> {
+  if (process.env.AUTONOMOUS_AGENTS_ENABLED !== 'true') {
+    return { batchesRun: 0, jobsProcessed: 0 }
+  }
+
+  await enqueueJobsForToday()
+
+  let batchesRun = 0
+  let jobsProcessed = 0
+
+  while (batchesRun < maxBatches) {
+    const count = await processPendingBatch()
+    batchesRun++
+    jobsProcessed += count
+    if (count < WORKER_BATCH_SIZE) break // fewer than a full batch means the queue is drained
+  }
+
+  return { batchesRun, jobsProcessed }
 }
 
 async function processJob(

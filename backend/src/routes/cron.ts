@@ -15,6 +15,7 @@
 import { Router, Request, Response } from 'express'
 import { logger } from '../common/logger'
 import { checkAndSendReminders } from '../services/assignmentReminder.service'
+import { runDailyCheckins } from '../services/agent/autonomousJobScheduler.service'
 
 const router = Router()
 
@@ -78,6 +79,59 @@ router.get('/assignment-reminders', async (req: Request, res: Response): Promise
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'Reminder check failed.' },
+    })
+  }
+})
+
+/**
+ * GET /cron/gpa-checkins
+ *
+ * Called by an external scheduled pinger, same pattern as
+ * /assignment-reminders above. Enqueues today's NIGHTLY_GPA_CHECKIN jobs
+ * (idempotent — a no-op if already enqueued today) and drains any pending
+ * jobs within this single request. No persistent in-process scheduler is
+ * used because Vercel's per-request invocation model does not keep one
+ * alive — see autonomousJobScheduler.service.ts's runDailyCheckins().
+ *
+ * No-ops entirely (0 batches, 0 jobs) if AUTONOMOUS_AGENTS_ENABLED is not
+ * "true", so pinging this endpoint before that flag is turned on is safe.
+ *
+ * Auth: Authorization: Bearer <CRON_SECRET>
+ */
+router.get('/gpa-checkins', async (req: Request, res: Response): Promise<void> => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  res.set('Pragma', 'no-cache')
+  res.set('Expires', '0')
+
+  const secret = process.env.CRON_SECRET
+  const authHeader = req.headers.authorization
+
+  if (!secret || authHeader !== `Bearer ${secret}`) {
+    logger.warn('cron_unauthorized', {
+      path: req.originalUrl,
+      hasAuthHeader: Boolean(authHeader),
+    })
+    res.status(401).json({
+      data: null,
+      error: { code: 'UNAUTHORIZED', message: 'Invalid or missing cron secret.' },
+    })
+    return
+  }
+
+  try {
+    const result = await runDailyCheckins()
+    logger.info('cron_gpa_checkins_ran', {
+      ...result,
+      ranAt: new Date().toISOString(),
+    })
+    res.status(200).json({ data: result })
+  } catch (err) {
+    logger.error('cron_gpa_checkins_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    res.status(500).json({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'GPA check-in run failed.' },
     })
   }
 })
