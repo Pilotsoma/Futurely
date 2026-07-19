@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, ApiError } from '@/lib/api'
+import { api, ApiError, silentRefresh } from '@/lib/api'
 import { clearWebAuth } from '@/lib/authState'
 import AccessRestrictedScreen from '@/components/ui/AccessRestrictedScreen'
 
@@ -21,6 +21,9 @@ export default function AccessRestrictedPage() {
 
         if (status === 'ACTIVE') {
           setCheckState('redirecting')
+          // Refresh first so middleware.ts's edge check sees the updated
+          // accountStatus claim rather than bouncing back on the stale one.
+          await silentRefresh()
           router.replace('/dashboard')
           return
         }

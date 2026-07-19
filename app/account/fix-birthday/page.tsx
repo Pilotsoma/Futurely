@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, ApiError } from '@/lib/api'
+import { api, ApiError, silentRefresh } from '@/lib/api'
 import { clearWebAuth } from '@/lib/authState'
 import FixBirthdayBlockScreen from '@/components/ui/FixBirthdayBlockScreen'
 
@@ -30,6 +30,12 @@ export default function FixBirthdayPage() {
 
         if (status === 'ACTIVE') {
           setCheckState('redirecting')
+          // The access token's accountStatus claim is likely still stale
+          // (DOB_MISMATCH_LOCKED) even though DB state is now ACTIVE —
+          // middleware.ts trusts that claim, not live DB state, so without
+          // refreshing it first, this redirect just bounces straight back
+          // here. See the matching fix/comment in FixBirthdayBlockScreen.tsx.
+          await silentRefresh()
           router.replace('/dashboard')
           return
         }

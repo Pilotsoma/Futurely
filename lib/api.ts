@@ -32,7 +32,15 @@ export class ApiError extends Error {
 // Prevents concurrent token refreshes — all callers share the same in-flight promise.
 let _refreshPromise: Promise<boolean> | null = null
 
-async function silentRefresh(): Promise<boolean> {
+// Exported so callers can force a fresh access token on demand — e.g. right
+// after a server-side accountStatus change (PATCH /auth/dob activating the
+// account), so the JWT's accountStatus claim is current *before* navigating
+// into a middleware-gated route. Without this, middleware.ts reads the old
+// access token's stale claim (still DOB_MISMATCH_LOCKED, since access tokens
+// aren't reissued until their ~15min TTL lapses or this is called) and
+// bounces the user straight back to /account/fix-birthday, which looks like
+// "Taking you to the app..." just hanging forever.
+export async function silentRefresh(): Promise<boolean> {
   if (_refreshPromise) return _refreshPromise
   _refreshPromise = (async () => {
     const controller = new AbortController()

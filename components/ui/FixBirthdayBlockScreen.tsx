@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { api, ApiError } from '@/lib/api'
+import { api, ApiError, silentRefresh } from '@/lib/api'
 
 interface FixBirthdayBlockScreenProps {
   onLogout: () => void
@@ -59,8 +59,17 @@ export default function FixBirthdayBlockScreen({ onLogout, onVerified, hasSchool
         type: 'success',
       })
       setTimeout(() => {
-        onVerified?.()
-        router.push('/dashboard')
+        void (async () => {
+          // The access token issued before this fix still carries the old
+          // DOB_MISMATCH_LOCKED claim — middleware.ts reads that claim, not
+          // live DB state, so without refreshing it here first, navigating to
+          // /dashboard just bounces straight back to this same screen (looks
+          // like "Taking you to the app..." hanging forever until a manual
+          // reload happens to land after the ~15min token TTL lapses).
+          await silentRefresh()
+          onVerified?.()
+          router.push('/dashboard')
+        })()
       }, 1500)
     } catch (err) {
       setSubmitState('idle')
@@ -79,8 +88,10 @@ export default function FixBirthdayBlockScreen({ onLogout, onVerified, hasSchool
       }
 
       if (code === 'NO_CORRECTION_NEEDED') {
-        onVerified?.()
-        router.push('/dashboard')
+        void silentRefresh().then(() => {
+          onVerified?.()
+          router.push('/dashboard')
+        })
         return
       }
 
