@@ -45,3 +45,6 @@ next-env.d.ts
 .env*
 reference/
 __token.txt
+
+# local task worktrees (superpowers:using-git-worktrees)
+.worktrees/
