@@ -86,7 +86,7 @@ export function demoTranscript(): {
     weightedGPA: '3.90',
     unweightedGPA: '3.60',
     classRank: '42/310',
-    quartile: '1st',
+    quartile: '1',
   }
 }
 
