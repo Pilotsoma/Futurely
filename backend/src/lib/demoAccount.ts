@@ -65,13 +65,16 @@ export function ensureDemoAccount(): Promise<void> {
   demoAccountPromise = (async () => {
     try {
       const passwordHash = await bcrypt.hash(DEMO_ACCOUNT_PASSWORD, 10)
+      // Name is deliberately just two words — the initials avatar (see
+      // settings page's initials()) takes the first letter of the first and
+      // last word, so a parenthetical like "(Demo)" produced a "T(" avatar.
       const user = await prisma.user.upsert({
         where: { email: DEMO_ACCOUNT_EMAIL },
-        update: { isDemoAccount: true },
+        update: { isDemoAccount: true, name: 'Test Student' },
         create: {
           email: DEMO_ACCOUNT_EMAIL,
           passwordHash,
-          name: 'Test Student (Demo)',
+          name: 'Test Student',
           role: 'STUDENT',
           isDemoAccount: true,
           emailVerified: true,
