@@ -2132,7 +2132,7 @@ router.get('/item/:itemType/:itemId/owners', async (req: Request, res: Response)
           (char_length(u."ownedNameColors" #>> '{}') - char_length(replace(u."ownedNameColors" #>> '{}', ${needle}, ''))) / NULLIF(char_length(${needle}), 0) AS qty
         FROM "User" u
         WHERE (u."ownedNameColors" #>> '{}') LIKE ${idPattern}
-        AND u."deletedAt" IS NULL
+        AND u."deletedAt" IS NULL AND u."isDemoAccount" = false
         ORDER BY qty DESC, u.id ASC LIMIT 50`
     } else if (itemType === 'avatar') {
       const needle = `"id":"${itemId}"`
@@ -2141,7 +2141,7 @@ router.get('/item/:itemType/:itemId/owners', async (req: Request, res: Response)
           (char_length(u."ownedAvatarEffects" #>> '{}') - char_length(replace(u."ownedAvatarEffects" #>> '{}', ${needle}, ''))) / NULLIF(char_length(${needle}), 0) AS qty
         FROM "User" u
         WHERE (u."ownedAvatarEffects" #>> '{}') LIKE ${idPattern}
-        AND u."deletedAt" IS NULL
+        AND u."deletedAt" IS NULL AND u."isDemoAccount" = false
         ORDER BY qty DESC, u.id ASC LIMIT 50`
     } else {
       const spinDef    = TAG_BOX_ITEMS.find(t => t.id === itemId)
@@ -2155,7 +2155,7 @@ router.get('/item/:itemType/:itemId/owners', async (req: Request, res: Response)
           (char_length(u."allTags" #>> '{}') - char_length(replace(u."allTags" #>> '{}', ${needle}, ''))) / NULLIF(char_length(${needle}), 0) AS qty
         FROM "User" u
         WHERE (u."allTags" #>> '{}') LIKE ${tagPattern}
-        AND u."deletedAt" IS NULL
+        AND u."deletedAt" IS NULL AND u."isDemoAccount" = false
         ORDER BY qty DESC, u.id ASC LIMIT 50`
     }
 
@@ -2183,13 +2183,13 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
 
     const [coinsRows, streakRows] = await Promise.all([
       prisma.user.findMany({
-        where: { deletedAt: null },
+        where: { deletedAt: null, isDemoAccount: false },
         select: { ...userSelect, coins: true },
         orderBy: { coins: 'desc' },
         take: 15,
       }),
       prisma.user.findMany({
-        where: { deletedAt: null },
+        where: { deletedAt: null, isDemoAccount: false },
         select: { ...userSelect, loginStreak: true },
         orderBy: { loginStreak: 'desc' },
         take: 15,
@@ -2199,7 +2199,7 @@ router.get('/leaderboard', requireAuth, async (_req: AuthRequest, res: Response)
     // Inventory value: scan all active users, compute value from item prices
     const [activeUsers, allPrices] = await Promise.all([
       prisma.user.findMany({
-        where: { deletedAt: null },
+        where: { deletedAt: null, isDemoAccount: false },
         select: { ...userSelect, ownedNameColors: true, ownedAvatarEffects: true, allTags: true },
         take: 500,
       }),

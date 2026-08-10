@@ -791,7 +791,7 @@ router.get('/search', async (req: Request, res: Response) => {
     const q = (req.query.q as string || '').trim();
     if (!q) return res.json({ data: [] });
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
+      where: { AND: [{ id: { not: userId } }, { isDemoAccount: false }, { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
       select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, avatarEffect: true, badge: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, role: true, allTags: true },
     });
@@ -835,7 +835,7 @@ router.get('/users/search', async (req: Request, res: Response) => {
     const q = (req.query.q as string || '').trim();
     if (!q) return res.json({ data: [] });
     const users = await prisma.user.findMany({
-      where: { AND: [{ id: { not: userId } }, { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
+      where: { AND: [{ id: { not: userId } }, { isDemoAccount: false }, { OR: [{ name: { contains: q, mode: 'insensitive' } }, { hacName: { contains: q, mode: 'insensitive' } }, { tag: { contains: q, mode: 'insensitive' } }] }] },
       take: 20,
       select: { id: true, name: true, hacName: true, tag: true, tagColor: true, nameColor: true, avatarEffect: true, badge: true, avatarUrl: true, chatBanned: true, chatMutedUntil: true, role: true, allTags: true },
     });
