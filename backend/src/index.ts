@@ -6,6 +6,10 @@ import jwt from 'jsonwebtoken'
 import { clients, userClients, playerSessions, sessionPlayers, sessionAlive, sessionHealth, sessionAmmo, sessionStartTime, registerBattlePlayers, sendToUser, sendToSessionExcept, sendToAllInSession, BATTLE_START_HP, BATTLE_START_AMMO, BATTLE_MAX_AMMO, BATTLE_AMMO_REWARD } from './lib/websocket'
 import { prisma } from './lib/prisma'
 import { startScheduler, enqueueJobsForToday } from './services/agent/autonomousJobScheduler.service'
+import { ensureDemoAccount } from './lib/demoAccount'
+
+// Provision the shared demo login in the background — never block server startup.
+ensureDemoAccount().catch(err => logger.error('startup_demo_account_error', { error: err instanceof Error ? err.message : String(err) }))
 
 const PORT = Number(process.env.PORT ?? '3001')
 // app.ts already exits in production when JWT_SECRET is missing or default.

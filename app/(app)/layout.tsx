@@ -8,7 +8,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { motion, AnimatePresence, type Transition } from 'framer-motion'
 import { api } from '../../lib/api'
-import { BanIcon } from '@/components/icons'
+import { BanIcon, WarningIcon } from '@/components/icons'
 import { initWebAuth, clearWebAuth } from '../../lib/authState'
 import { startStudentPrefetch } from '../../lib/prefetch'
 import NotificationBell from '../../components/ui/NotificationBell'
@@ -89,6 +89,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [isDev, setIsDev]     = useState(false)
   const [showHidden, setShowHidden] = useState(false)
+  const [isDemoAccount, setIsDemoAccount] = useState(false)
 
   const isExpanded  = pinnedExpanded || hoverExpanded
   const sideW       = isExpanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED
@@ -113,6 +114,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       const name = freshUser?.name ?? cachedUser?.name
       if (freshUser) {
         localStorage.setItem('ns_user', JSON.stringify({ ...cachedUser, ...freshUser }))
+        setIsDemoAccount(freshUser.isDemoAccount === true)
         // COPPA account-status gate — lock out DOB-mismatched or under-13 accounts
         if (freshUser.accountStatus && freshUser.accountStatus !== 'ACTIVE') {
           setAccountStatus(freshUser.accountStatus)
@@ -468,6 +470,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         transition={springTransition}
         style={S.main}
       >
+        {isDemoAccount && (
+          <div style={S.demoBanner}>
+            <WarningIcon size={16} />
+            <span>
+              <strong>TEST ACCOUNT</strong> — you&apos;re viewing sample data. Nothing here is a real student record, and no school portal is connected.
+            </span>
+          </div>
+        )}
         <AnimatePresence mode="popLayout">
           <motion.div
             key={pathname}
@@ -499,4 +509,5 @@ const S: Record<string, React.CSSProperties> = {
   userName:   { fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   logoutBtn:  { display: 'flex', alignItems: 'center', gap: 9, fontSize: 14, padding: '9px 12px' },
   main:       { flex: 1, padding: 'var(--page-px)', minHeight: 'calc(100vh / var(--ui-zoom, 1))', position: 'relative' },
+  demoBanner: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', marginBottom: 16, borderRadius: 10, border: '1px solid rgba(234,179,8,0.35)', background: 'rgba(234,179,8,0.12)', color: '#B45309', fontSize: 13, fontWeight: 500, lineHeight: 1.4 },
 }

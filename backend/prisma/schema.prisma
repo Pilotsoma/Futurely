@@ -139,6 +139,11 @@ model User {
   hacDateOfBirth              String?
   bannedUntilDate             DateTime?
   dobCorrectionAttempts       Int                             @default(0)
+  // Flags the shared public demo login (test@myfuturely.ai). Never toggled by
+  // user action — only set by the seed/provisioning path. Used to serve canned
+  // grade/GPA/attendance data instead of scraping a real (nonexistent) HAC
+  // account, and to render the "TEST ACCOUNT" banner client-side.
+  isDemoAccount                Boolean                         @default(false)
 }
 
 model OAuthAccount {

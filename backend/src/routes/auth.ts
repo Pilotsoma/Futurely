@@ -875,6 +875,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
           bannedUntilDate: true,
           dobCorrectionAttempts: true,
           hacDateOfBirth: true,
+          isDemoAccount: true,
         },
       }),
       prisma.schoolConnection.findUnique({ where: { userId: req.userId }, select: { id: true } }),

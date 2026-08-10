@@ -28,6 +28,11 @@ import { assertPublicHttpUrl } from '../../lib/ssrfGuard'
 import { parseHacDate, encryptDob, evaluateDobVerification } from '../../lib/dobVerification'
 import { AccountStatus } from '@prisma/client'
 import { logger } from '../../common/logger'
+import {
+  demoCurrentGrades, demoTranscript, demoSchedule, demoGpa, demoStudentInfo,
+  demoStatus, demoSyncStatus, demoClasswork, demoReportCard, demoProgressReport,
+  demoAttendance, demoContactTeachers, demoSyncProfile,
+} from './demoGradesData'
 
 const router = Router()
 
@@ -219,6 +224,56 @@ function asyncHandler(
     })
   }
 }
+
+// ── Demo account interception ───────────────────────────────────────────────────
+// The shared demo login (test@myfuturely.ai) has no real HAC/PowerSchool session
+// behind it — every endpoint below would otherwise fail with NOT_CONNECTED. Serve
+// canned data instead, matching each endpoint's real response shape exactly so the
+// frontend pages work unmodified for both real and demo accounts.
+router.use(asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  const userId = req.userId
+  if (!userId) { next(); return }
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isDemoAccount: true } })
+  if (!user?.isDemoAccount) { next(); return }
+
+  const key = `${req.method} ${req.path}`
+  const demoGetHandlers: Record<string, () => unknown> = {
+    'GET /current': demoCurrentGrades,
+    'GET /transcript': () => ({ systemType: 'HAC', transcript: demoTranscript() }),
+    'GET /schedule': () => ({ schedule: demoSchedule() }),
+    'GET /gpa': demoGpa,
+    'GET /info': demoStudentInfo,
+    'GET /status': demoStatus,
+    'GET /sync-status': demoSyncStatus,
+    'GET /classwork': demoClasswork,
+    'GET /report-card': demoReportCard,
+    'GET /progress-report': demoProgressReport,
+    'GET /attendance': demoAttendance,
+    'GET /contact-teachers': demoContactTeachers,
+  }
+
+  if (key in demoGetHandlers) {
+    res.json({ data: demoGetHandlers[key]() })
+    return
+  }
+  if (req.method === 'POST' && req.path === '/sync-profile') {
+    res.json({ data: demoSyncProfile() })
+    return
+  }
+  if (req.method === 'POST' && (req.path === '/hac/login' || req.path === '/powerschool/login')) {
+    res.status(400).json({
+      data: null,
+      error: {
+        code: 'DEMO_ACCOUNT',
+        message: 'This is a shared demo account preloaded with sample data — connecting a real school portal is disabled for it.',
+      },
+    })
+    return
+  }
+
+  next()
+}))
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

@@ -258,6 +258,7 @@ export const api = {
       dobCorrectionAttempts: number
       hasSchoolConnection: boolean
       hasSchoolRecord: boolean
+      isDemoAccount: boolean
     }>('/api/auth/me'),
 
   updateDob: (dateOfBirth: string) =>
