@@ -945,52 +945,58 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="ns-card" style={S.card}>
-            <p style={S.cardLabel}>AI Features</p>
-            <Link
-              href="/settings/ai-features"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 0',
-                textDecoration: 'none',
-                color: 'var(--text)',
-                borderBottom: '1px solid var(--border)',
-              }}
-            >
-              <div>
-                <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>AI Check-ins</span>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                  Manage automatic AI activity on your account
+          {/* Agentic/autonomous AI features — DEV/ADMIN only until a premium tier
+              exists (see backend requirePremiumAiAccess). Hidden entirely for
+              everyone else rather than shown locked, since there's nothing a
+              regular user can do with either link right now. */}
+          {(data?.role === 'DEV' || data?.role === 'ADMIN') && (
+            <div className="ns-card" style={S.card}>
+              <p style={S.cardLabel}>AI Features</p>
+              <Link
+                href="/settings/ai-features"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 0',
+                  textDecoration: 'none',
+                  color: 'var(--text)',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>AI Check-ins</span>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Manage automatic AI activity on your account
+                  </div>
                 </div>
-              </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </Link>
-            <Link
-              href="/ai/activity"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 0',
-                textDecoration: 'none',
-                color: 'var(--text)',
-              }}
-            >
-              <div>
-                <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>AI Activity</span>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                  View all AI Agent sessions run on your account
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </Link>
+              <Link
+                href="/ai/activity"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 0',
+                  textDecoration: 'none',
+                  color: 'var(--text)',
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>AI Activity</span>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    View all AI Agent sessions run on your account
+                  </div>
                 </div>
-              </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </Link>
-          </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </Link>
+            </div>
+          )}
 
           <div className="ns-card" style={S.card}>
             <p style={S.cardLabel}>Support</p>

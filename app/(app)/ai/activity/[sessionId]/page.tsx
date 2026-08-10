@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { api, type AgentSessionData, type AgentToolCallData } from '../../../../../lib/api'
 import { renderChatMarkdown } from '../../../../../lib/chatMarkdown'
 
@@ -61,6 +61,7 @@ function durationMs(start: string, end: string | null): string {
 }
 
 export default function AgentSessionDetailPage() {
+  const router = useRouter()
   const params = useParams()
   const rawId = params?.sessionId
   const sessionId = typeof rawId === 'string' ? parseInt(rawId, 10) : null
@@ -69,6 +70,14 @@ export default function AgentSessionDetailPage() {
   const [toolCalls, setToolCalls] = useState<AgentToolCallData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Same DEV/ADMIN-only gate as /ai/activity — see the comment there.
+  useEffect(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { role?: string } | null
+      if (cached?.role !== 'DEV' && cached?.role !== 'ADMIN') router.replace('/ai')
+    } catch { router.replace('/ai') }
+  }, [router])
 
   useEffect(() => {
     if (sessionId == null || isNaN(sessionId)) {

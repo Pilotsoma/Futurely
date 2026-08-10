@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { api, type AgentSessionData } from '../../../../lib/api'
 
 const MODULE_LABELS: Record<string, string> = {
@@ -29,11 +30,26 @@ function formatDate(iso: string): string {
 }
 
 export default function AiActivityPage() {
+  const router = useRouter()
   const [sessions, setSessions] = useState<AgentSessionData[]>([])
   const [nextCursor, setNextCursor] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Agent sessions are a DEV/ADMIN-only agentic AI feature (see app.ts's
+  // requirePremiumAiAccess) — this page isn't linked anywhere for other
+  // users, but redirect away rather than surfacing the raw 403 if reached
+  // directly (e.g. a stale bookmark or the browser back button). Starts
+  // false so the fetch effect below doesn't fire until this check resolves.
+  const [canAccess, setCanAccess] = useState(false)
+  useEffect(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { role?: string } | null
+      if (cached?.role === 'DEV' || cached?.role === 'ADMIN') setCanAccess(true)
+      else router.replace('/ai')
+    } catch { router.replace('/ai') }
+  }, [router])
 
   const loadSessions = useCallback(async (cursor?: number) => {
     try {
@@ -49,8 +65,8 @@ export default function AiActivityPage() {
   }, [])
 
   useEffect(() => {
-    void loadSessions()
-  }, [loadSessions])
+    if (canAccess) void loadSessions()
+  }, [canAccess, loadSessions])
 
   async function handleLoadMore() {
     if (nextCursor == null) return
