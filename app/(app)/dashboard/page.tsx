@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { motion, animate, stagger, useReducedMotion } from 'framer-motion'
 import { api, type StudentData } from '../../../lib/api'
 import { consumeStudentPrefetch } from '../../../lib/prefetch'
+import { usePerformanceMode } from '../../../lib/performanceMode'
 import AiBar from '../../../components/ui/AiBar'
 import PageLoader from '../../../components/ui/PageLoader'
 import NotificationBell from '../../../components/ui/NotificationBell'
@@ -403,7 +404,9 @@ export default function DashboardPage() {
   const animStreak  = useCountUp(dayStreak, 500)
   const animUGpa    = useCountUpFloat(portalUGpa ?? data?.profile?.unweightedGpa ?? null, 900)
   const animWGpa    = useCountUpFloat(portalWGpa ?? data?.profile?.weightedGpa ?? null, 900)
-  const prefersReducedMotion = useReducedMotion()
+  const osReducedMotion = useReducedMotion()
+  const appReducedMotion = usePerformanceMode()
+  const prefersReducedMotion = osReducedMotion || appReducedMotion
 
   if (error) return <div style={{ padding: 40, color: 'var(--error)' }}>{error}</div>
   if (!data) return <PageLoader message="Opening dashboard…" />
@@ -453,11 +456,15 @@ export default function DashboardPage() {
     router.push('/ai')
   }
 
-  const staggerItem = (i: number) => ({
-    initial: { opacity: 0, y: 12 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.28, ease: [0.19, 1, 0.22, 1] as [number, number, number, number], delay: i * 0.05 },
-  })
+  const staggerItem = (i: number) => (
+    prefersReducedMotion
+      ? { initial: false as const, animate: { opacity: 1, y: 0 } }
+      : {
+          initial: { opacity: 0, y: 12 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.28, ease: [0.19, 1, 0.22, 1] as [number, number, number, number], delay: i * 0.05 },
+        }
+  )
 
   const effectiveUGpa = portalUGpa ?? data.profile?.unweightedGpa ?? null
   const effectiveWGpa = portalWGpa ?? data.profile?.weightedGpa ?? null

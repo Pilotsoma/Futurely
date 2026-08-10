@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { api, isWebAuthed } from '@/lib/api'
 import { clearWebAuth } from '@/lib/authState'
+import { usePerformanceMode } from '@/lib/performanceMode'
 import Particles from '../../app/Particles'
 
 const IDLE_MS         = 10 * 60 * 1000  // 10 minutes idle before the animation appears
@@ -347,7 +348,8 @@ export default function InactivityWatcher() {
   const [readyToLogout, setReadyToLogout] = useState(false)
   const [lowSpec, setLowSpec] = useState(false)
   const prefersReducedMotion = useReducedMotion() ?? false
-  const reduced = prefersReducedMotion || lowSpec
+  const appReducedMotion = usePerformanceMode()
+  const reduced = prefersReducedMotion || appReducedMotion || lowSpec
 
   // Heuristic low-spec detection: few CPU cores or little RAM struggles with
   // the blurred, continuously-animating glow orbs, so skip them on weaker machines.

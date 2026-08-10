@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import { renderChatMarkdown } from '../../../lib/chatMarkdown'
+import { usePerformanceMode } from '../../../lib/performanceMode'
 import { useAiChat, AGENT_MSG_PREFIX, type ChatSession } from '../../../components/providers/AiChatProvider'
 import { useAgentSession } from '../../../components/agent/useAgentSession'
 import AgentConfirmDialog from '../../../components/agent/AgentConfirmDialog'
@@ -74,7 +75,9 @@ function AIChatInner() {
   const [lastAgentUserMsg, setLastAgentUserMsg] = useState<string | null>(null)
   const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const prefersReducedMotion = useReducedMotion()
+  const osReducedMotion = useReducedMotion()
+  const appReducedMotion = usePerformanceMode()
+  const prefersReducedMotion = osReducedMotion || appReducedMotion
 
   const {
     phase: agentPhase,

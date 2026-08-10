@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { clearWebAuth } from '../../../lib/authState'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import { CHANGELOG, CURRENT_VERSION } from '../../../lib/changelog'
+import { setReducedMotionEnabled } from '../../../lib/performanceMode'
 
 function DeleteAccountModal({ onClose, hasPassword }: { onClose: () => void; hasPassword: boolean }) {
   const router = useRouter()
@@ -854,15 +855,13 @@ export default function SettingsPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
               <div>
                 <span style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>Reduce animations</span>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Disables tag, avatar, and name-color animations — helps if the app is lagging</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Turns off background effects, page transitions, and other decorative animations across the app — helps on slower computers</div>
               </div>
               <button
                 onClick={() => {
                   const next = !reduceMotion
                   setReduceMotion(next)
-                  localStorage.setItem('rm', next ? '1' : '0')
-                  if (next) document.documentElement.classList.add('reduce-motion')
-                  else document.documentElement.classList.remove('reduce-motion')
+                  setReducedMotionEnabled(next)
                 }}
                 style={{
                   width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
