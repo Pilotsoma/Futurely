@@ -20,6 +20,7 @@ import { prisma } from '../../lib/prisma'
 import { logger } from '../../common/logger'
 import { startSession, completeSession } from './agentExecution.service'
 import { runGpaCheckin } from '../gpaCheckin.service'
+import { isDevPowerUser } from '../../middleware/requireAdmin'
 
 // PROACTIVE_PLANNER_NUDGE was removed — it would have duplicated the
 // existing free, deterministic assignment-due-soon reminder cron
@@ -52,11 +53,15 @@ export async function enqueueJobsForToday(): Promise<void> {
   const now = new Date()
   const todayMidnightUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
 
-  // Find eligible users (opted in to autonomous features)
-  const eligibleUsers = await prisma.user.findMany({
+  // Find eligible users (opted in to autonomous features). Autonomous check-ins
+  // are an agentic AI feature — gated to DEV/ADMIN until a premium tier exists,
+  // same as the user-triggered agent session endpoint, so nightly LLM spend
+  // doesn't scale with every consenting regular user.
+  const consentedUsers = await prisma.user.findMany({
     where: { autonomousConsentAcceptedAt: { not: null }, deletedAt: null },
-    select: { id: true },
+    select: { id: true, role: true, tag: true, allTags: true },
   })
+  const eligibleUsers = consentedUsers.filter(isDevPowerUser)
 
   if (eligibleUsers.length === 0) {
     logger.info('autonomous_enqueue_no_eligible_users', { date: todayMidnightUtc.toISOString() })

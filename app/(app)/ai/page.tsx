@@ -58,6 +58,16 @@ function AIChatInner() {
   const [input, setInput]                     = useState('')
   const [historyOpen, setHistoryOpen]         = useState(false)
   const [agentMode, setAgentMode]             = useState(false)
+  // Agent Mode is an agentic/tool-calling feature gated server-side to DEV/ADMIN
+  // until a premium tier exists (regular chat is unaffected). Mirrors the same
+  // check here so the toggle simply doesn't appear for users who'd get a 403.
+  const [canUseAgent, setCanUseAgent] = useState(false)
+  useEffect(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { role?: string } | null
+      setCanUseAgent(cached?.role === 'DEV' || cached?.role === 'ADMIN')
+    } catch { /* leave hidden */ }
+  }, [])
   const [confirmLoading, setConfirmLoading]   = useState(false)
   // Captures the user's message for the in-flight agent session so we can
   // persist it alongside the final response when the session completes.
@@ -232,21 +242,23 @@ function AIChatInner() {
           <div className="aic-header-avatar"><AiSparkIcon size={16} /></div>
           <div className="aic-header-name">myFuturely AI</div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
-              className={`aic-agent-toggle${agentMode ? ' aic-agent-toggle--on' : ''}`}
-              onClick={() => {
-                if (agentActive) return // don't switch modes mid-session
-                if (agentMode) { setAgentMode(false); resetAgent() }
-                else setAgentMode(true)
-              }}
-              aria-pressed={agentMode}
-              title={agentMode ? 'Switch to Quick AI' : 'Switch to AI Agent (deeper analysis)'}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-              </svg>
-              {agentMode ? 'Agent Mode' : 'Quick AI'}
-            </button>
+            {canUseAgent && (
+              <button
+                className={`aic-agent-toggle${agentMode ? ' aic-agent-toggle--on' : ''}`}
+                onClick={() => {
+                  if (agentActive) return // don't switch modes mid-session
+                  if (agentMode) { setAgentMode(false); resetAgent() }
+                  else setAgentMode(true)
+                }}
+                aria-pressed={agentMode}
+                title={agentMode ? 'Switch to Quick AI' : 'Switch to AI Agent (deeper analysis)'}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                {agentMode ? 'Agent Mode' : 'Quick AI'}
+              </button>
+            )}
           </div>
         </header>
 

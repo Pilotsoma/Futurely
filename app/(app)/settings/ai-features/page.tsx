@@ -149,6 +149,17 @@ export default function AiFeaturesPage() {
   const [showModal, setShowModal] = useState(false)
   const [coppaBlocked, setCoppaBlocked] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  // Autonomous check-ins are an agentic AI feature — gated to DEV/ADMIN until a
+  // premium tier ships (same gate as the backend scheduler and Agent Mode).
+  // Consent itself is still harmless to leave togglable server-side, but the UI
+  // shouldn't imply a regular user's toggle will actually do anything yet.
+  const [canUsePremiumAi, setCanUsePremiumAi] = useState(false)
+  useEffect(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('ns_user') ?? 'null') as { role?: string } | null
+      setCanUsePremiumAi(cached?.role === 'DEV' || cached?.role === 'ADMIN')
+    } catch { /* leave locked */ }
+  }, [])
 
   // Load initial consent state from the user profile.
   // If the me() endpoint includes an autonomousConsentAccepted field, use it.
@@ -257,6 +268,16 @@ export default function AiFeaturesPage() {
             <div style={S.loadingRow}>
               <div style={S.spinner} aria-label="Loading" />
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading settings…</span>
+            </div>
+          ) : !canUsePremiumAi ? (
+            <div style={S.toggleRow}>
+              <div style={S.toggleInfo}>
+                <span style={S.toggleLabel}>Automatic AI Check-ins</span>
+                <span style={S.toggleDesc}>
+                  Coming soon as part of a future premium plan — not available on your account yet.
+                </span>
+              </div>
+              <Toggle enabled={false} loading={false} disabled onChange={() => {}} />
             </div>
           ) : (
             <>
