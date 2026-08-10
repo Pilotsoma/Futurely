@@ -497,8 +497,13 @@ export default function SettingsPage() {
                   <span style={S.sysBadge}>{portalStatus.systemType}</span>
                 </div>
                 <p style={S.distUrl}>{portalStatus.districtUrl}</p>
+                {data?.isDemoAccount && (
+                  <p style={{ fontSize: 11.5, color: '#B45309', background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 7, padding: '7px 10px', marginTop: 10 }}>
+                    This is sample data for the demo account — there&apos;s no real school portal behind it.
+                  </p>
+                )}
 
-                {/* Re-sync profile from HAC — refreshes counselor, graduation year, name */}
+                {/* Re-sync profile — refreshes counselor, graduation year, name */}
                 {portalStatus.systemType === 'HAC' && (
                   <div style={{ marginTop: 12 }}>
                     <button
@@ -531,7 +536,7 @@ export default function SettingsPage() {
                             <path d="M3 22v-6h6"/>
                             <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
                           </svg>
-                          Re-sync from HAC
+                          Re-sync
                         </>
                       )}
                     </button>

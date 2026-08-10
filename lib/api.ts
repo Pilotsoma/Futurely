@@ -177,6 +177,7 @@ interface StudentData {
   email: string
   role: string
   hasPassword: boolean
+  isDemoAccount: boolean
   profile: {
     weightedGpa: number
     unweightedGpa: number

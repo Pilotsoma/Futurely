@@ -104,7 +104,7 @@ export function demoGpa(): { gpa: number; unweightedGpa: number; weightedGpa: nu
 export function demoStudentInfo(): HACStudentInfo {
   return {
     name: 'Test, Student',
-    grade: '11',
+    grade: '12',
     school: 'Futurely Demo High School',
     district: 'Futurely Demo ISD',
     counselor: 'Ms. Ortiz (Demo)',
@@ -230,7 +230,7 @@ export function demoSyncProfile(): {
     profile: {
       id: 0,
       userId: 0,
-      gradeLevel: 11,
+      gradeLevel: 12,
       graduationYear: new Date().getFullYear() + 1,
       weightedGpa: 3.9,
       unweightedGpa: 3.6,

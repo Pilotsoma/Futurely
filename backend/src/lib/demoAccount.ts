@@ -87,10 +87,10 @@ export function ensureDemoAccount(): Promise<void> {
 
       await prisma.profile.upsert({
         where: { userId: user.id },
-        update: { gradeLevel: 11, graduationYear: new Date().getFullYear() + 1, weightedGpa: 3.9, unweightedGpa: 3.6, counselorName: 'Ms. Ortiz (Demo)' },
+        update: { gradeLevel: 12, graduationYear: new Date().getFullYear() + 1, weightedGpa: 3.9, unweightedGpa: 3.6, counselorName: 'Ms. Ortiz (Demo)' },
         create: {
           userId: user.id,
-          gradeLevel: 11,
+          gradeLevel: 12,
           graduationYear: new Date().getFullYear() + 1,
           weightedGpa: 3.9,
           unweightedGpa: 3.6,

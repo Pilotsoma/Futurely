@@ -126,6 +126,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response): Promise<
         name: user.name,
         role: user.role,
         hasPassword: !!user.passwordHash,
+        isDemoAccount: user.isDemoAccount,
         profile: user.profile
           ? { ...user.profile, unweightedGpa: unweighted, weightedGpa: weighted }
           : null,
