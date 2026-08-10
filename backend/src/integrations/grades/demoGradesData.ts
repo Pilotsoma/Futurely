@@ -30,6 +30,13 @@ function toId(name: string, i: number): string {
   return `demo-${i}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 }
 
+// The frontend recomputes displayed percentage as (score / totalPoints) * 100
+// rather than trusting the `percentage` field, so score must be scaled to
+// totalPoints (not left as a 0-100 value) or e.g. a 96/20 pair renders as 480%.
+function scaledScore(pct: number, totalPoints: number): number {
+  return Math.round((Math.min(100, pct) / 100) * totalPoints)
+}
+
 export function demoCurrentGrades(): { systemType: string; grades: NormalizedCourse[] } {
   return {
     systemType: DEMO_SYSTEM_TYPE,
@@ -42,7 +49,7 @@ export function demoCurrentGrades(): { systemType: string; grades: NormalizedCou
       letterGrade: c.letterGrade,
       assignments: [
         { name: 'Unit Test', category: 'Major', score: c.average, totalPoints: 100, percentage: `${c.average}`, dateDue: '2025-11-14' },
-        { name: 'Homework Set', category: 'Daily', score: Math.min(100, c.average + 4), totalPoints: 20, percentage: `${Math.min(100, c.average + 4)}`, dateDue: '2025-11-10' },
+        { name: 'Homework Set', category: 'Daily', score: scaledScore(c.average + 4, 20), totalPoints: 20, percentage: `${Math.min(100, c.average + 4)}`, dateDue: '2025-11-10' },
       ],
       upcomingAssignments: [
         { name: 'Chapter Quiz', category: 'Minor', score: null, totalPoints: 25, percentage: '', dateDue: '2025-11-21' },
@@ -61,7 +68,7 @@ export function demoClasswork(): { classes: HACClass[]; availablePeriods: string
     categoryWeights: { Daily: 0.4, Minor: 0.3, Major: 0.3 },
     scores: [
       { name: 'Unit Test', category: 'Major', score: c.average, totalPoints: 100, percentage: `${c.average}`, dateDue: '2025-11-14' },
-      { name: 'Homework Set', category: 'Daily', score: Math.min(100, c.average + 4), totalPoints: 20, percentage: `${Math.min(100, c.average + 4)}`, dateDue: '2025-11-10' },
+      { name: 'Homework Set', category: 'Daily', score: scaledScore(c.average + 4, 20), totalPoints: 20, percentage: `${Math.min(100, c.average + 4)}`, dateDue: '2025-11-10' },
       { name: 'Chapter Quiz', category: 'Minor', score: null, totalPoints: 25, percentage: '', dateDue: '2025-11-21' },
     ],
   }))
