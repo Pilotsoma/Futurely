@@ -80,47 +80,6 @@ const STREAK_MILESTONES: Array<{ days: number; icon: React.ReactNode; tag?: stri
   { days: 100, tag: 'GOAT',    tagColor: '#EAB308', icon: <CrownIcon size={16}/> },
 ]
 
-function normalCdf(z: number): number {
-  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741
-  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911
-  const sign = z >= 0 ? 1 : -1
-  const x = Math.abs(z) / Math.SQRT2
-  const t = 1 / (1 + p * x)
-  const y = 1 - (((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t) * Math.exp(-x * x)
-  return 0.5 * (1 + sign * y)
-}
-
-// National distribution (mean 2.96, sd 0.52). Weighted GPA normalized to 4.0 scale first.
-// Averages both when available — stricter than unweighted-only.
-function computeGpaPercentile(ugpa: number | null, wgpa: number | null): number | null {
-  if (ugpa === null && wgpa === null) return null
-  const pctFromGpa = (g: number) => Math.min(99.99, Math.max(0.01, normalCdf((g - 2.96) / 0.52) * 100))
-  const uPct = ugpa !== null ? pctFromGpa(ugpa) : null
-  const wPct = wgpa !== null ? pctFromGpa(wgpa * 4 / 5) : null
-  if (uPct !== null && wPct !== null) return (uPct + wPct) / 2
-  return uPct ?? wPct!
-}
-
-// Returns 0–50 (percent). Averages unweighted (floor 2.0/max 4.0) and weighted (floor 2.5/max 5.0).
-function getGpaBonusPct(ugpa: number | null, wgpa: number | null): number {
-  const fromU = (g: number) => Math.max(0, Math.min(50, (g - 2.0) / 2.0 * 50))
-  const fromW = (g: number) => Math.max(0, Math.min(50, (g - 2.5) / 2.5 * 50))
-  if (ugpa === null && wgpa === null) return 0
-  if (ugpa !== null && wgpa !== null) return (fromU(ugpa) + fromW(wgpa)) / 2
-  if (ugpa !== null) return fromU(ugpa)
-  return fromW(wgpa!)
-}
-
-function percentileStr(p: number): string {
-  const s = p.toFixed(2)
-  const int = Math.floor(p)
-  const suffix = (int % 100 >= 11 && int % 100 <= 13) ? 'th'
-    : int % 10 === 1 ? 'st'
-    : int % 10 === 2 ? 'nd'
-    : int % 10 === 3 ? 'rd' : 'th'
-  return `${s}${suffix}`
-}
-
 const GRADE_COLOR: Record<string, string> = { A: 'var(--gc-a)', B: 'var(--gc-b)', C: 'var(--gc-c)', D: 'var(--gc-d)', F: 'var(--gc-f)' }
 const gradeColor = (g: string) => GRADE_COLOR[g?.charAt(0).toUpperCase()] ?? 'var(--text-muted)'
 
@@ -152,7 +111,6 @@ export default function DashboardPage() {
   const [dontShowResyncAgain, setDontShowResyncAgain] = useState(false)
   const [showPortalDownNotice, setShowPortalDownNotice] = useState(false)
   const [dontShowPortalDownAgain, setDontShowPortalDownAgain] = useState(false)
-  const [showGpaWelcome, setShowGpaWelcome] = useState(false)
   const [hideGpa, setHideGpa] = useState(false)
   const [showConnectModal, setShowConnectModal] = useState(false)
   const [dontShowConnectAgain, setDontShowConnectAgain] = useState(false)
@@ -377,16 +335,6 @@ export default function DashboardPage() {
     }
   }
 
-  // Show one-time GPA percentile popup when GPA first loads
-  useEffect(() => {
-    const ugpa = portalUGpa ?? data?.profile?.unweightedGpa ?? null
-    const wgpa = portalWGpa ?? data?.profile?.weightedGpa ?? null
-    if (ugpa === null && wgpa === null) return
-    if (localStorage.getItem('ns_gpa_welcome_v1')) return
-    localStorage.setItem('ns_gpa_welcome_v1', '1')
-    setShowGpaWelcome(true)
-  }, [portalUGpa, portalWGpa, data])
-
   // ── Derived values (computed before hooks so they can be passed as targets) ──
   const dbCourseCount = (() => {
     if (!data) return 0
@@ -465,11 +413,6 @@ export default function DashboardPage() {
           transition: { duration: 0.28, ease: [0.19, 1, 0.22, 1] as [number, number, number, number], delay: i * 0.05 },
         }
   )
-
-  const effectiveUGpa = portalUGpa ?? data.profile?.unweightedGpa ?? null
-  const effectiveWGpa = portalWGpa ?? data.profile?.weightedGpa ?? null
-  const gpaPercentile = computeGpaPercentile(effectiveUGpa, effectiveWGpa)
-  const gpaBonusPct = getGpaBonusPct(effectiveUGpa, effectiveWGpa)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -632,55 +575,6 @@ export default function DashboardPage() {
             </p>
             <button onClick={() => setShowStreakPopup(false)} style={S.popupButton}>
               Got it!
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* GPA Percentile Welcome Popup (one-time) */}
-      {showGpaWelcome && createPortal(
-        <div style={S.popupOverlay} onClick={() => setShowGpaWelcome(false)}>
-          <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowGpaWelcome(false)} style={S.popupClose}>×</button>
-            <div style={{ marginBottom: 14 }}><GraduationCapIcon size={48}/></div>
-            <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6, color: 'var(--text)', letterSpacing: '-0.5px' }}>
-              Your GPA Rank
-            </h3>
-            {gpaPercentile !== null ? (
-              <>
-                <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent-blue)', marginBottom: 10 }}>
-                  {percentileStr(gpaPercentile)} Percentile
-                </p>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-                  Based on your {effectiveUGpa !== null ? `${effectiveUGpa.toFixed(2)} unweighted GPA` : 'GPA'}, you rank above the vast majority of myFuturely students.
-                </p>
-                <div style={{ background: 'rgba(43,74,142,0.1)', border: '1px solid rgba(43,74,142,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.7px', marginBottom: 6 }}>
-                    Your Daily Streak Bonus
-                  </p>
-                  <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-blue)', marginBottom: 4 }}>
-                    +{gpaBonusPct.toFixed(1)}% daily boost
-                  </p>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    Applied to your streak coins · perfect GPA = +50%
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-                  Raise your GPA to unlock daily coin bonuses that stack on top of your streak earnings.
-                </p>
-                <div style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: '#EAB308', lineHeight: 1.5 }}>
-                    Perfect GPA (4.0/5.0) → +50% on daily coins<br />Scales smoothly with both your GPAs
-                  </p>
-                </div>
-              </>
-            )}
-            <button onClick={() => setShowGpaWelcome(false)} style={{ ...S.popupButton, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              Got it! <RocketIcon size={16}/>
             </button>
           </div>
         </div>,

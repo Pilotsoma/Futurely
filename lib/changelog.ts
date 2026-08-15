@@ -13,22 +13,22 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '1.01',
     date: 'July 14, 2026',
-    title: 'Fresh Look',
+    title: 'Core Feature Update',
     changes: [
       {
-        emoji: '🌌',
-        headline: 'New Login Background',
-        detail: 'The login screen now has a fully redesigned cosmic backdrop — a dense starfield, naturalistic planets, and an astronaut drifting among them (desktop only).',
+        emoji: '✨',
+        headline: 'New Core Features',
+        detail: 'Added new core features across the app to help you stay on top of your coursework, along with a variety of behind-the-scenes improvements.',
       },
       {
-        emoji: '🧹',
-        headline: 'Cleaner Landing Page',
-        detail: 'Trimmed the marketing site to focus on the core product — removed the gamification/marketplace pitch and the competitor comparison table in favor of a straightforward "why myFuturely" feature grid.',
+        emoji: '🎨',
+        headline: 'Refreshed Look',
+        detail: 'Polished the look and feel across the app, including a redesigned login screen and a cleaner marketing site.',
       },
       {
-        emoji: '✉️',
-        headline: 'Streamlined Sign Up',
-        detail: 'Simplified the account creation options shown on the login screen.',
+        emoji: '🛠️',
+        headline: 'Bug Fixes & Improvements',
+        detail: 'Fixed a number of bugs and made general performance and reliability improvements throughout the app.',
       },
     ],
   },
