@@ -7,7 +7,7 @@ import {
   CheckIcon,
 } from '@/components/icons'
 import { useEffect, useRef, useState } from 'react'
-import { motion, useInView, useScroll, useTransform } from 'framer-motion'
+import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import Particles from './Particles'
 import BorderGlow from './BorderGlow'
 
@@ -79,6 +79,13 @@ const ICON_FIRE = (
   </svg>
 )
 
+// ── Rotating headline words ───────────────────────────────────────────────────
+const ROTATE_WORDS: { text: string; color: string }[] = [
+  { text: 'your future.',   color: '#22d3ee' },
+  { text: 'your decision.', color: 'var(--primary)' },
+  { text: 'your planner.',  color: 'var(--purple)' },
+]
+
 export default function LandingPage() {
   const { scrollYProgress } = useScroll()
   const heroY       = useTransform(scrollYProgress, [0, 0.4], [0, -90])
@@ -97,6 +104,13 @@ export default function LandingPage() {
     const lowEndCpu = (navigator.hardwareConcurrency ?? 8) <= 4
     if (prefersReduced || lowEndCpu) setReduceMotion(true)
   }, [])
+
+  const [wordIdx, setWordIdx] = useState(0)
+  useEffect(() => {
+    if (reduceMotion) return
+    const id = setInterval(() => setWordIdx(i => (i + 1) % ROTATE_WORDS.length), 2600)
+    return () => clearInterval(id)
+  }, [reduceMotion])
 
   return (
     <div style={{ minHeight: '100vh', overflowX: 'hidden', position: 'relative' }}>
@@ -232,13 +246,24 @@ export default function LandingPage() {
               marginBottom: 30,
             }}
           >
-            Your grades.{' '}
+            This is
             <br />
-            <span style={{ color: 'var(--primary)' }}>
-              Your roadmap.
-            </span>
-            <br />
-            Your edge.
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={wordIdx}
+                initial={reduceMotion
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: 24, filter: 'blur(8px)', skewX: 3 }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)', skewX: 0 }}
+                exit={reduceMotion
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: -24, filter: 'blur(8px)', skewX: -3 }}
+                transition={{ duration: 0.52, ease: [0.19, 1, 0.22, 1] }}
+                style={{ display: 'inline-block', color: ROTATE_WORDS[wordIdx].color }}
+              >
+                {ROTATE_WORDS[wordIdx].text}
+              </motion.span>
+            </AnimatePresence>
           </motion.h1>
 
           {/* Subheading */}
@@ -264,7 +289,7 @@ export default function LandingPage() {
               background: 'var(--primary)',
               color: '#fff', borderRadius: 11, padding: '15px 38px',
               fontWeight: 600, fontSize: 15, textDecoration: 'none',
-              boxShadow: '0 4px 24px rgba(45,106,79,0.28)',
+              boxShadow: '0 4px 24px rgba(41,121,255,0.28)',
               letterSpacing: '-0.1px',
             }}>
               Start for free
@@ -465,32 +490,17 @@ export default function LandingPage() {
               Why myFuturely
             </p>
             <h2 style={{ fontFamily: 'var(--font-display)', textAlign: 'center', fontSize: 'clamp(30px, 4.5vw, 54px)', fontWeight: 600, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 16 }}>
-              Everything, built{' '}
-              <span style={{ color: '#F59E0B' }}>around your future.</span>
+              Built for you,{' '}
+              <span style={{ color: '#F59E0B' }}>not the system.</span>
             </h2>
-            <p style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--text-secondary)', maxWidth: 520, margin: '0 auto 64px', lineHeight: 1.75 }}>
-              myFuturely isn&apos;t a grade portal or a homework tracker. It&apos;s the one place where
-              your grades, your AI advisor, and your plan for what&apos;s next all live together.
+            <p style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto 64px', lineHeight: 1.75 }}>
+              myFuturely is yours — not your school&apos;s, not an advertiser&apos;s.
+              We made three commitments before writing a single line of code.
             </p>
           </Reveal>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {[
-              {
-                color: '#2D6A4F', icon: ICON_GRADES,
-                title: 'Real-time grade sync',
-                body: 'Connect your school portal once. Every grade, GPA trend, and attendance record updates automatically — the moment your teacher posts it.',
-              },
-              {
-                color: '#2B4A8E', icon: ICON_AI,
-                title: 'AI that knows your transcript',
-                body: 'Ask "can I still get an A?" and get a real answer, because our AI has actually read your grades — not generic study tips.',
-              },
-              {
-                color: '#6A5A8A', icon: ICON_SIM,
-                title: 'GPA simulator',
-                body: 'Drop a hypothetical grade in and watch your GPA recalculate live. Know exactly what you need before you sit down to take that final.',
-              },
               {
                 color: '#F59E0B', icon: <GraduationCapIcon size={22}/>,
                 title: 'Your account, your data',
@@ -590,7 +600,7 @@ export default function LandingPage() {
         <div style={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
           width: 900, height: 500, pointerEvents: 'none',
-          background: 'radial-gradient(ellipse, rgba(45,106,79,0.07) 0%, transparent 65%)',
+          background: 'radial-gradient(ellipse, rgba(41,121,255,0.07) 0%, transparent 65%)',
         }} />
         <Reveal>
           <div style={{
@@ -603,7 +613,7 @@ export default function LandingPage() {
             <div style={{
               position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%)',
               width: 200, height: 1,
-              background: 'linear-gradient(90deg, transparent, rgba(45,106,79,0.55), transparent)',
+              background: 'linear-gradient(90deg, transparent, rgba(41,121,255,0.45), transparent)',
             }} />
             <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: 20 }}>
               Start Today
@@ -623,7 +633,7 @@ export default function LandingPage() {
               background: 'var(--primary)',
               color: '#fff', borderRadius: 12, padding: '17px 52px',
               fontWeight: 600, fontSize: 16, textDecoration: 'none', letterSpacing: '-0.1px',
-              boxShadow: '0 4px 28px rgba(45,106,79,0.30)',
+              boxShadow: '0 4px 28px rgba(41,121,255,0.30)',
             }}>
               Get started — it&apos;s free
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
