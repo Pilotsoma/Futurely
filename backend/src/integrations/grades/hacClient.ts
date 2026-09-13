@@ -945,11 +945,20 @@ function parseClassBlock(
   // Teacher
   const teacher = $el.find('.sg-header-teacher, [id*="lblTeacher"]').text().trim()
 
+  // The per-class category-weights quick-view (scraped separately below into
+  // `categoryWeights`) reuses the same generic `.sg-asp-table-data-row` / `th`
+  // classes as the real assignments table. Left unscoped, its header cells and
+  // rows (e.g. "Major 100.00 80.000% ...") get pulled into the assignments
+  // parse below, corrupting column detection and appearing as bogus scores.
+  const QUICK_VIEW_SELECTOR = '[id*="dgCourseCategories"], .sg-view-quick'
+
   // Determine column positions dynamically from header row
   const colHeaders: string[] = []
-  $el.find('tr.sg-asp-table-header-row th, thead th, tr:first-child th').each((_i, th) => {
-    colHeaders.push($(th).text().trim().toLowerCase())
-  })
+  $el.find('tr.sg-asp-table-header-row th, thead th, tr:first-child th')
+    .filter((_i, th) => $(th).closest(QUICK_VIEW_SELECTOR).length === 0)
+    .each((_i, th) => {
+      colHeaders.push($(th).text().trim().toLowerCase())
+    })
 
   const colIdx = (keywords: string[]): number => {
     for (const kw of keywords) {
@@ -968,7 +977,9 @@ function parseClassBlock(
 
   const scores: HACScore[] = []
 
-  $el.find('.sg-content-grid > .sg-asp-table > tbody > .sg-asp-table-data-row, tr.sg-asp-table-data-row, tbody tr').each((_j, row) => {
+  $el.find('.sg-content-grid > .sg-asp-table > tbody > .sg-asp-table-data-row, tr.sg-asp-table-data-row, tbody tr')
+    .filter((_j, row) => $(row).closest(QUICK_VIEW_SELECTOR).length === 0)
+    .each((_j, row) => {
     const cells = $(row).find('td')
     if (cells.length < 2) return
 
