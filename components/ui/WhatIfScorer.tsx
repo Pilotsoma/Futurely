@@ -17,6 +17,16 @@ interface ExistingAssignment {
   score: number | null
   total: number | null
   category: string
+  percentage?: string
+}
+
+function existingGradePercent(a: ExistingAssignment): number | null {
+  if (a.score !== null && a.total !== null && a.total > 0) return (a.score / a.total) * 100
+  if (a.percentage) {
+    const parsed = parseFloat(a.percentage.replace('%', '').trim())
+    if (!isNaN(parsed)) return parsed
+  }
+  return null
 }
 
 interface Hypothetical {
@@ -53,10 +63,11 @@ function recalculate(
   // Group existing graded assignments by category
   const existingByCat: Partial<Record<AssignmentType, number[]>> = {}
   for (const a of existing) {
-    if (a.score === null || a.total === null || a.total <= 0) continue
+    const pct = existingGradePercent(a)
+    if (pct === null) continue
     const cat = normalizeCat(a.category)
     if (!cat) continue
-    ;(existingByCat[cat] ??= []).push((a.score / a.total) * 100)
+    ;(existingByCat[cat] ??= []).push(pct)
   }
 
   // Group simulated grades by type

@@ -205,7 +205,7 @@ export default function ClassworkPage() {
                       <td colSpan={6} style={{ background: 'rgba(0,0,0,0.15)', padding: '12px 20px' }}>
                         <WhatIfScorer
                           currentAverage={parseFloat(c.average ?? '0') || 0}
-                          existingAssignments={c.scores.map(a => ({ score: a.score, total: a.totalPoints, category: a.category }))}
+                          existingAssignments={c.scores.map(a => ({ score: a.score, total: a.totalPoints, category: a.category, percentage: a.percentage }))}
                           categoryWeights={c.categoryWeights}
                           onClose={() => setOpenWhatIf(null)}
                         />
