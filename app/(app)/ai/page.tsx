@@ -492,7 +492,7 @@ function AIChatInner() {
           background: var(--surface-2);
           border: 1px solid rgba(255,255,255,0.08);
         }
-        .aic-header-name { font-family: var(--font-display, inherit); font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: 0.1px; }
+        .aic-header-name { font-family: var(--font-display, inherit); font-size: 15px; font-weight: 500; color: var(--text); letter-spacing: 0.1px; }
 
         /* ── Messages ── */
         .aic-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px; margin-bottom: 16px; }
@@ -514,7 +514,7 @@ function AIChatInner() {
           border: 1px solid rgba(255,255,255,0.08);
           box-shadow: 0 8px 28px rgba(41,121,255,0.25), inset 0 1px 0 rgba(255,255,255,0.12);
         }
-        .aic-empty-title { font-family: var(--font-display, inherit); font-size: 24px; font-weight: 600; letter-spacing: -0.2px; color: var(--text); margin-bottom: 10px; }
+        .aic-empty-title { font-family: var(--font-display, inherit); font-size: 24px; font-weight: 500; letter-spacing: -0.2px; color: var(--text); margin-bottom: 10px; }
         .aic-empty-sub { font-size: 14px; color: var(--text-secondary); line-height: 1.6; max-width: 380px; margin-bottom: 28px; }
 
         .aic-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 480px; margin-bottom: 16px; }

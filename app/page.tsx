@@ -9,7 +9,6 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import Particles from './Particles'
-import BorderGlow from './BorderGlow'
 
 function Reveal({
   children, delay = 0, y = 32, style,
@@ -30,27 +29,6 @@ function Reveal({
 }
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
-const ICON_GRADES = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-  </svg>
-)
-const ICON_AI = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-  </svg>
-)
-const ICON_PLANNER = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-    <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-  </svg>
-)
-const ICON_SIM = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-  </svg>
-)
 const ICON_LOCK = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
     <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
@@ -73,17 +51,12 @@ const ICON_TRASH = (
     <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
   </svg>
 )
-const ICON_FIRE = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-    <path d="M8.5 14.5A2.5 2.5 0 0011 17h2a2.5 2.5 0 002.5-2.5c0-1.5-.5-2-1-3-1 .5-1.5 1.5-2 3-.5-2-1-4-3-5.5 0 2-2 3-2 5z"/>
-  </svg>
-)
 
 // ── Rotating headline words ───────────────────────────────────────────────────
 const ROTATE_WORDS: { text: string; color: string }[] = [
   { text: 'your future.',   color: '#22d3ee' },
-  { text: 'your decision.', color: 'var(--primary)' },
-  { text: 'your planner.',  color: 'var(--purple)' },
+  { text: 'your progress.', color: 'var(--primary)' },
+  { text: 'your plan.',     color: 'var(--purple)' },
 ]
 
 export default function LandingPage() {
@@ -108,9 +81,11 @@ export default function LandingPage() {
   const [wordIdx, setWordIdx] = useState(0)
   useEffect(() => {
     if (reduceMotion) return
-    const id = setInterval(() => setWordIdx(i => (i + 1) % ROTATE_WORDS.length), 2600)
+    const id = setInterval(() => setWordIdx(i => (i + 1) % ROTATE_WORDS.length), 3700)
     return () => clearInterval(id)
   }, [reduceMotion])
+
+  const [hoveredFeature, setHoveredFeature] = useState<number | null>(null)
 
   return (
     <div style={{ minHeight: '100vh', overflowX: 'hidden', position: 'relative' }}>
@@ -219,17 +194,7 @@ export default function LandingPage() {
           }} />
         </div>
 
-        <motion.div style={{ y: heroY, opacity: heroOpacity, position: 'relative', textAlign: 'center', padding: '0 24px', maxWidth: 900, margin: '0 auto', width: '100%' }}>
-
-          {/* Label */}
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.19, 1, 0.22, 1], delay: 0.04 }}
-            style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: 28 }}
-          >
-            The Academic Platform Built for Students
-          </motion.p>
+        <motion.div style={{ y: heroY, opacity: heroOpacity, position: 'relative', textAlign: 'center', padding: '0 24px', maxWidth: 1040, margin: '0 auto', width: '100%' }}>
 
           {/* Headline */}
           <motion.h1
@@ -238,12 +203,12 @@ export default function LandingPage() {
             transition={{ duration: 0.75, ease: [0.19, 1, 0.22, 1], delay: 0.09 }}
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(50px, 8vw, 96px)',
-              fontWeight: 600,
-              lineHeight: 1.06,
-              letterSpacing: '-2.5px',
+              fontSize: 'clamp(72px, 11.5vw, 148px)',
+              fontWeight: 500,
+              lineHeight: 1.04,
+              letterSpacing: '-3px',
               color: 'var(--text)',
-              marginBottom: 30,
+              marginBottom: 36,
             }}
           >
             This is
@@ -258,7 +223,7 @@ export default function LandingPage() {
                 exit={reduceMotion
                   ? { opacity: 1, y: 0 }
                   : { opacity: 0, y: -24, filter: 'blur(8px)', skewX: -3 }}
-                transition={{ duration: 0.52, ease: [0.19, 1, 0.22, 1] }}
+                transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
                 style={{ display: 'inline-block', color: ROTATE_WORDS[wordIdx].color }}
               >
                 {ROTATE_WORDS[wordIdx].text}
@@ -271,10 +236,10 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.65, ease: [0.19, 1, 0.22, 1], delay: 0.17 }}
-            style={{ fontSize: 18.5, color: 'var(--text-secondary)', maxWidth: 560, margin: '0 auto 48px', lineHeight: 1.75, fontWeight: 400, letterSpacing: '-0.1px' }}
+            style={{ fontSize: 21, color: 'var(--text-secondary)', maxWidth: 640, margin: '0 auto 52px', lineHeight: 1.7, fontWeight: 400, letterSpacing: '-0.1px' }}
           >
-            myFuturely syncs directly with your school portal, pairs it with an AI advisor
-            that actually knows your transcript, and gives you the tools to plan — not just track.
+            myFuturely pairs a personal AI advisor with a planner built around your
+            academic life — giving you the tools to actually plan ahead, not just get by.
           </motion.p>
 
           {/* CTAs */}
@@ -285,21 +250,21 @@ export default function LandingPage() {
             style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 64 }}
           >
             <Link href="/login" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 9,
+              display: 'inline-flex', alignItems: 'center', gap: 10,
               background: 'var(--primary)',
-              color: '#fff', borderRadius: 11, padding: '15px 38px',
-              fontWeight: 600, fontSize: 15, textDecoration: 'none',
+              color: '#fff', borderRadius: 13, padding: '18px 44px',
+              fontWeight: 600, fontSize: 17, textDecoration: 'none',
               boxShadow: '0 4px 24px rgba(41,121,255,0.28)',
               letterSpacing: '-0.1px',
             }}>
               Start for free
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
             <a href="#features" style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               background: 'transparent', border: '1px solid var(--border)',
-              color: 'var(--text-secondary)', borderRadius: 11, padding: '15px 38px',
-              fontWeight: 500, fontSize: 15, textDecoration: 'none', letterSpacing: '-0.1px',
+              color: 'var(--text-secondary)', borderRadius: 13, padding: '18px 44px',
+              fontWeight: 500, fontSize: 17, textDecoration: 'none', letterSpacing: '-0.1px',
             }}>
               See what it does
             </a>
@@ -313,21 +278,21 @@ export default function LandingPage() {
             style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}
           >
             {[
-              { icon: <LightningBoltIcon size={16}/>, label: 'Live grade sync', sub: 'HAC & PowerSchool' },
-              { icon: <LockIcon size={16}/>, label: 'Credentials encrypted', sub: 'AES-256, always' },
-              { icon: <RobotIcon size={16}/>, label: 'AI knows your data', sub: 'Not a generic chatbot' },
-              { icon: <GraduationCapIcon size={16}/>, label: 'Free for students', sub: 'No trial. No paywall.' },
+              { icon: <LightningBoltIcon size={19}/>, label: 'Organized automatically', sub: 'Zero manual entry' },
+              { icon: <LockIcon size={19}/>, label: 'Encrypted end-to-end', sub: 'AES-256, always' },
+              { icon: <RobotIcon size={19}/>, label: 'AI knows your data', sub: 'Not a generic chatbot' },
+              { icon: <GraduationCapIcon size={19}/>, label: 'Built for students', sub: 'Not schools or counselors' },
             ].map((b, i) => (
               <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
+                display: 'flex', alignItems: 'center', gap: 12,
                 background: 'rgba(255,255,255,0.03)',
                 border: '1px solid var(--border)',
-                borderRadius: 12, padding: '10px 16px',
+                borderRadius: 14, padding: '13px 20px',
               }}>
                 <span style={{ display: 'flex', alignItems: 'center' }}>{b.icon}</span>
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>{b.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.2 }}>{b.sub}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>{b.label}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.2 }}>{b.sub}</div>
                 </div>
               </div>
             ))}
@@ -345,52 +310,354 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      {/* ── Bento Features ──────────────────────────────────────────────── */}
+      {/* ── Features ─────────────────────────────────────────────────────── */}
       <section id="features" style={{ maxWidth: 1160, margin: '0 auto', padding: '120px 28px 100px' }}>
         <Reveal>
-          <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--primary)', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: 16 }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: 16 }}>
             Everything you need
           </p>
-          <h2 style={{ fontFamily: 'var(--font-display)', textAlign: 'center', fontSize: 'clamp(34px, 5vw, 58px)', fontWeight: 600, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.08, marginBottom: 16 }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(34px, 5vw, 58px)', fontWeight: 500, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.08, marginBottom: 16, maxWidth: 640 }}>
             One app. Your entire academic life.
           </h2>
-          <p style={{ textAlign: 'center', fontSize: 16, color: 'var(--text-secondary)', maxWidth: 500, margin: '0 auto 72px', lineHeight: 1.7 }}>
+          <p style={{ fontSize: 16, color: 'var(--text-secondary)', maxWidth: 500, margin: '0 0 64px', lineHeight: 1.7 }}>
             Not a note-taking app. Not a homework tracker. A full academic command center
-            built around the data that actually matters — your grades.
+            built around what actually matters for your future.
           </p>
         </Reveal>
 
-        {/* Row 1 */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
-          <Reveal delay={0.04}>
-            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
-              <BentoCard accent="#2D6A4F" icon={ICON_GRADES} label="Real-Time Grade Sync"
-                desc="Connect HAC or PowerSchool once. Every grade, GPA trend, attendance record, and classwork score pulls automatically — the moment your teacher posts it, not three days later when you remember to check."
-                large />
-            </BorderGlow>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
-              <BentoCard accent="#2B4A8E" icon={ICON_AI} label="AI That Knows You"
-                desc="Our AI has read your transcript. Ask 'can I still get an A?' and get a real answer — not generic study tips." />
-            </BorderGlow>
-          </Reveal>
-        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr', gap: 56, alignItems: 'start' }}>
 
-        {/* Row 2 */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <Reveal delay={0.06}>
-            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
-              <BentoCard accent="#8A6E2D" icon={ICON_PLANNER} label="Smart Planner"
-                desc="Deadlines and assignments surfaced by priority. No manual entry — ever. Just open it and know what matters today." />
-            </BorderGlow>
-          </Reveal>
-          <Reveal delay={0.12}>
-            <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
-              <BentoCard accent="#6A5A8A" icon={ICON_SIM} label="GPA Simulator"
-                desc="Drop a grade in and watch your GPA recalculate live. Know exactly what you need on that final before you sit down to take it." />
-            </BorderGlow>
-          </Reveal>
+          {/* Left: editorial feature list — no boxes, typography carries the weight */}
+          <div>
+            {[
+              {
+                n: '01',
+                label: 'Your Academic Advisor',
+                accent: 'var(--purple)',
+                desc: 'Ask anything — "What should I focus on this week?" or "What do I need to improve before the final?" Real answers from an advisor that actually knows your academic history, not a generic chatbot.',
+              },
+              {
+                n: '02',
+                label: 'Smart Planner',
+                accent: 'var(--primary)',
+                desc: 'Deadlines and assignments surfaced by priority. No manual entry — ever. Just open it and know what matters today.',
+              },
+              {
+                n: '03',
+                label: 'What-If Simulator',
+                accent: '#A78BFA',
+                desc: 'Drop a hypothetical score in and see how your overall standing shifts instantly. Know exactly what you need before you sit down for that final.',
+              },
+              {
+                n: '04',
+                label: 'Your Roadmap',
+                accent: '#F59E0B',
+                desc: 'A 4-year plan built around your goals — course suggestions, milestones by grade, and college prep guidance, all in one place.',
+              },
+            ].map((feat, i) => (
+              <Reveal key={feat.n} delay={i * 0.06}>
+                <div
+                  onMouseEnter={() => setHoveredFeature(i)}
+                  onMouseLeave={() => setHoveredFeature(prev => prev === i ? null : prev)}
+                  style={{
+                    padding: '28px 24px',
+                    marginLeft: -24,
+                    marginRight: -24,
+                    borderTop: '1px solid var(--border)',
+                    borderRadius: 12,
+                    cursor: 'default',
+                    background: hoveredFeature === i ? 'rgba(255,255,255,0.03)' : 'transparent',
+                    transition: 'background 0.25s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 10 }}>
+                    <span style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 11.5,
+                      fontWeight: 500,
+                      color: 'var(--text-muted)',
+                      letterSpacing: '2.5px',
+                      flexShrink: 0,
+                    }}>
+                      {feat.n}
+                    </span>
+                    <h3 style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 'clamp(19px, 2vw, 25px)',
+                      fontWeight: 500,
+                      letterSpacing: '-0.5px',
+                      lineHeight: 1.15,
+                      color: feat.accent,
+                      margin: 0,
+                    }}>
+                      {feat.label}
+                    </h3>
+                  </div>
+                  <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', lineHeight: 1.75, margin: 0, paddingLeft: 40 }}>
+                    {feat.desc}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+          </div>
+
+          {/* Right: sticky preview frame — one feature detailed at a time, on hover */}
+          <div style={{ position: 'sticky', top: 100 }}>
+            <div style={{
+              position: 'relative',
+              minHeight: 640,
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 24,
+              padding: '44px 44px',
+              boxShadow: '0 30px 80px rgba(0,0,0,0.45)',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <div style={{
+                position: 'absolute', top: '-20%', left: '50%', transform: 'translateX(-50%)',
+                width: 620, height: 500, pointerEvents: 'none',
+                opacity: hoveredFeature !== null ? 1 : 0.4,
+                transition: 'opacity 0.4s ease',
+                background: 'radial-gradient(ellipse, rgba(41,121,255,0.16) 0%, rgba(124,58,237,0.09) 40%, transparent 72%)',
+              }} />
+
+              <AnimatePresence mode="wait">
+                {hoveredFeature === null && (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    style={{ position: 'relative', textAlign: 'center' }}
+                  >
+                    <span style={{
+                      display: 'inline-flex', width: 52, height: 52, borderRadius: 14, marginBottom: 20,
+                      background: 'var(--surface-2)', border: '1px solid rgba(255,255,255,0.08)',
+                      alignItems: 'center', justifyContent: 'center', padding: 10,
+                    }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.6 }} />
+                    </span>
+                    <p style={{ fontSize: 15, color: 'var(--text-muted)' }}>
+                      Hover a feature to see it in action
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Advisor — full mini conversation + suggestion chips */}
+                {hoveredFeature === 0 && (
+                  <motion.div
+                    key="advisor"
+                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.97 }}
+                    transition={{ duration: 0.35, ease: [0.19, 1, 0.22, 1] }}
+                    style={{ position: 'relative', width: '100%' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22 }}>
+                      <span style={{
+                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                        background: 'var(--surface-2)', border: '1px solid rgba(255,255,255,0.08)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6,
+                      }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      </span>
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>myFuturely AI</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Knows your academic history</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 18 }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <span style={{
+                          fontSize: 14, fontWeight: 500, color: '#fff',
+                          background: 'var(--primary)', borderRadius: '12px 12px 2px 12px',
+                          padding: '11px 17px', maxWidth: '78%', lineHeight: 1.45,
+                        }}>
+                          What should I focus on this week?
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex' }}>
+                        <span style={{
+                          fontSize: 14, color: 'var(--text-secondary)',
+                          background: 'var(--surface-2)', borderRadius: '12px 12px 12px 2px',
+                          padding: '12px 17px', lineHeight: 1.6, maxWidth: '85%',
+                        }}>
+                          Your chemistry report is due Monday — start it tonight so you have time to revise. Your SAT practice is also overdue by two days.
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <span style={{
+                          fontSize: 14, fontWeight: 500, color: '#fff',
+                          background: 'var(--primary)', borderRadius: '12px 12px 2px 12px',
+                          padding: '11px 17px', maxWidth: '78%', lineHeight: 1.45,
+                        }}>
+                          Am I ready for the chemistry unit test?
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex' }}>
+                        <span style={{
+                          fontSize: 14, color: 'var(--text-secondary)',
+                          background: 'var(--surface-2)', borderRadius: '12px 12px 12px 2px',
+                          padding: '12px 17px', lineHeight: 1.6, maxWidth: '85%',
+                        }}>
+                          You&apos;ve completed 4 of 5 assignments in this unit. Review chapters 4–5 tonight and you&apos;ll be in good shape.
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {['Study tips for finals', 'College prep advice', 'Help me plan my week'].map((chip, i) => (
+                        <span key={i} style={{
+                          fontSize: 12.5, color: 'var(--text-secondary)',
+                          background: 'var(--surface-2)', border: '1px solid var(--border)',
+                          borderRadius: 20, padding: '7px 14px',
+                        }}>
+                          {chip}
+                        </span>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Planner — full week, priority tags, stats */}
+                {hoveredFeature === 1 && (
+                  <motion.div
+                    key="planner"
+                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.97 }}
+                    transition={{ duration: 0.35, ease: [0.19, 1, 0.22, 1] }}
+                    style={{ position: 'relative', width: '100%' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+                      <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)' }}>This week</span>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#22d3ee', background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.25)', borderRadius: 7, padding: '3px 10px' }}>6 due</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#F87171', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 7, padding: '3px 10px' }}>2 high priority</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                      {[
+                        { day: 'Mon', date: '15', task: 'Chemistry lab report', subject: 'Chemistry', color: '#2979FF', priority: 'High' },
+                        { day: 'Tue', date: '16', task: 'Robotics club meeting prep', subject: 'Robotics Club', color: '#F59E0B', priority: null },
+                        { day: 'Wed', date: '17', task: 'Read Ch. 5–6', subject: 'English', color: '#22d3ee', priority: null },
+                        { day: 'Thu', date: '18', task: 'Practice SAT math section', subject: 'Test Prep', color: '#7C3AED', priority: 'High' },
+                        { day: 'Fri', date: '19', task: 'History reading response', subject: 'History', color: '#A78BFA', priority: null },
+                      ].map((t, i) => (
+                        <div key={i} style={{
+                          display: 'flex', alignItems: 'center', gap: 14,
+                          padding: '13px 0',
+                          borderTop: i > 0 ? '1px solid var(--border)' : 'none',
+                        }}>
+                          <div style={{ width: 36, flexShrink: 0, textAlign: 'center' }}>
+                            <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{t.day}</div>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{t.date}</div>
+                          </div>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.color, flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 14.5, color: 'var(--text)', lineHeight: 1.3 }}>{t.task}</div>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{t.subject}</div>
+                          </div>
+                          {t.priority && (
+                            <span style={{ fontSize: 10.5, fontWeight: 600, color: '#F87171', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.22)', borderRadius: 6, padding: '3px 8px', flexShrink: 0 }}>
+                              {t.priority}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
+                      Sorted by priority — automatically, no manual entry
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Simulator — multi-scenario bar comparison */}
+                {hoveredFeature === 2 && (
+                  <motion.div
+                    key="simulator"
+                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.97 }}
+                    transition={{ duration: 0.35, ease: [0.19, 1, 0.22, 1] }}
+                    style={{ position: 'relative', width: '100%' }}
+                  >
+                    <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 6 }}>What-if Simulator</span>
+                    <p style={{ fontSize: 13.5, color: 'var(--text-muted)', margin: '0 0 28px', lineHeight: 1.5 }}>
+                      Adding extra study sessions each week
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, height: 160, marginBottom: 16 }}>
+                      {[
+                        { label: 'Now', pct: null, h: 32, color: 'var(--surface-2)' },
+                        { label: '+1 / wk', pct: '+7%', h: 52, color: 'rgba(167,139,250,0.5)' },
+                        { label: '+2 / wk', pct: '+18%', h: 78, color: 'rgba(167,139,250,0.75)' },
+                        { label: '+3 / wk', pct: '+26%', h: 100, color: 'linear-gradient(180deg, #A78BFA 0%, #7C3AED 100%)' },
+                      ].map((b, i) => (
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flex: 1, height: '100%', justifyContent: 'flex-end' }}>
+                          {b.pct && <span style={{ fontSize: 13, fontWeight: 700, color: '#A78BFA' }}>{b.pct}</span>}
+                          <span style={{
+                            width: '100%', height: `${b.h}%`, borderRadius: 8,
+                            background: b.color,
+                          }} />
+                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{b.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                      Three extra sessions a week could shift your standing by as much as 26% over a semester — see the exact impact before you commit to it.
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Roadmap — full 4-year timeline */}
+                {hoveredFeature === 3 && (
+                  <motion.div
+                    key="roadmap"
+                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.97 }}
+                    transition={{ duration: 0.35, ease: [0.19, 1, 0.22, 1] }}
+                    style={{ position: 'relative', width: '100%' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+                      <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)' }}>Your Roadmap</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#F59E0B', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 7, padding: '3px 10px' }}>Class of 2028</span>
+                    </div>
+                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 0 }}>
+                      <div style={{ position: 'absolute', left: 15, top: 15, bottom: 15, width: 1, background: 'var(--border)' }} />
+                      {[
+                        { grade: '9', title: 'Explore interests', text: 'Try different clubs and subjects. Build strong foundations before specializing.', color: '#2979FF' },
+                        { grade: '10', title: 'Challenge yourself', text: 'Take on AP or Honors courses in subjects you enjoy most.', color: '#22d3ee' },
+                        { grade: '11', title: 'Build your college list', text: 'Start researching schools and narrowing down what matters to you.', color: '#A78BFA' },
+                        { grade: '12', title: 'Apply with confidence', text: 'Applications, essays, and decisions — all tracked in one place.', color: '#F59E0B' },
+                      ].map((s, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '11px 0', position: 'relative' }}>
+                          <span style={{
+                            width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+                            background: `rgba(${s.color === '#2979FF' ? '41,121,255' : s.color === '#22d3ee' ? '34,211,238' : s.color === '#A78BFA' ? '167,139,250' : '245,158,11'},0.16)`,
+                            border: `1px solid ${s.color}`, color: s.color,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 12.5, fontWeight: 700,
+                            position: 'relative', zIndex: 1,
+                          }}>{s.grade}</span>
+                          <div>
+                            <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{s.title}</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{s.text}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -404,7 +671,7 @@ export default function LandingPage() {
               <p style={{ fontSize: 11, fontWeight: 600, color: '#22C55E', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: 20 }}>
                 Privacy First
               </p>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 600, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 24 }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 500, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 24 }}>
                 Your data.<br />Not ours.
               </h2>
               <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 32 }}>
@@ -425,14 +692,14 @@ export default function LandingPage() {
               </div>
             </Reveal>
 
-            {/* Right: guarantee cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Right: guarantee list — borderless divided rows */}
+            <div>
               {[
                 {
                   icon: ICON_LOCK,
                   color: '#60A5FA',
-                  title: 'Credentials are encrypted, not exposed',
-                  body: 'Your HAC or PowerSchool login is encrypted with AES-256 and stored solely to keep your grades in sync in the background. It is never readable by our team and never sent to third parties.',
+                  title: 'Everything stays encrypted',
+                  body: 'Everything behind the scenes is encrypted with AES-256. It is never readable by our team and never sent to third parties.',
                 },
                 {
                   icon: ICON_EYE_OFF,
@@ -443,8 +710,8 @@ export default function LandingPage() {
                 {
                   icon: ICON_SHIELD,
                   color: '#34D399',
-                  title: 'Your grades aren\'t shared with anyone',
-                  body: 'We do not share, sell, or license your academic data to colleges, prep companies, or anyone else. Your transcript is private.',
+                  title: "Your data isn't shared with anyone",
+                  body: 'We do not share, sell, or license your academic data to colleges, prep companies, or anyone else. It stays private, always.',
                 },
                 {
                   icon: ICON_TRASH,
@@ -453,30 +720,25 @@ export default function LandingPage() {
                   body: 'Request account deletion and we remove every byte associated with your account from our servers. No holdbacks. No waiting period.',
                 },
               ].map((g, i) => (
-                <Reveal key={i} delay={i * 0.08}>
+                <Reveal key={i} delay={i * 0.07}>
                   <div style={{
-                    display: 'flex', gap: 16, alignItems: 'flex-start',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 16, padding: '20px 22px',
+                    display: 'flex',
+                    gap: 18,
+                    alignItems: 'flex-start',
+                    padding: '24px 0',
+                    borderTop: '1px solid var(--border)',
                   }}>
-                    <div style={{
-                      flexShrink: 0,
-                      width: 38, height: 38, borderRadius: 10,
-                      background: `rgba(${hexToRgbStr(g.color)},0.09)`,
-                      border: `1px solid rgba(${hexToRgbStr(g.color)},0.18)`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: g.color,
-                    }}>
+                    <div style={{ flexShrink: 0, color: g.color, marginTop: 2 }}>
                       {g.icon}
                     </div>
                     <div>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 5, lineHeight: 1.3 }}>{g.title}</p>
-                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>{g.body}</p>
+                      <p style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--text)', marginBottom: 6, lineHeight: 1.3 }}>{g.title}</p>
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.75, margin: 0 }}>{g.body}</p>
                     </div>
                   </div>
                 </Reveal>
               ))}
+              <div style={{ borderTop: '1px solid var(--border)' }} />
             </div>
           </div>
         </div>
@@ -489,50 +751,56 @@ export default function LandingPage() {
             <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#F59E0B', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: 16 }}>
               Why myFuturely
             </p>
-            <h2 style={{ fontFamily: 'var(--font-display)', textAlign: 'center', fontSize: 'clamp(30px, 4.5vw, 54px)', fontWeight: 600, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 16 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', textAlign: 'center', fontSize: 'clamp(30px, 4.5vw, 54px)', fontWeight: 500, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 72 }}>
               Built for you,{' '}
               <span style={{ color: '#F59E0B' }}>not the system.</span>
             </h2>
-            <p style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto 64px', lineHeight: 1.75 }}>
-              myFuturely is yours — not your school&apos;s, not an advertiser&apos;s.
-              We made three commitments before writing a single line of code.
-            </p>
           </Reveal>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          {/* Proof bar — three statements, typographic weight, no card chrome */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            borderTop: '1px solid var(--border)',
+            borderBottom: '1px solid var(--border)',
+          }}>
             {[
               {
-                color: '#F59E0B', icon: <GraduationCapIcon size={22}/>,
-                title: 'Your account, your data',
-                body: 'myFuturely belongs to you, not your school. It follows your academic journey and stays with you after you graduate.',
+                headline: 'Actually organized.',
+                sub: 'Assignments and deadlines sorted by priority, automatically — no manual entry, ever.',
+                color: '#F59E0B',
               },
               {
-                color: '#22C55E', icon: ICON_SHIELD,
-                title: 'Privacy-first, always',
-                body: 'We will never sell your data. No ad trackers, no data brokers, no exceptions.',
+                headline: 'Your data stays yours.',
+                sub: 'Your academic data is never sold, licensed, or shared. Not with colleges, not with advertisers.',
+                color: '#22C55E',
               },
               {
-                color: '#38bdf8', icon: <LightningBoltIcon size={22}/>,
-                title: 'Free for students',
-                body: 'No credit card, no trial period, no paywall. The core of myFuturely is free — forever.',
+                headline: 'Zero trackers.',
+                sub: 'No Pixel, no Analytics, no ad network. What happens in your account stays in your account.',
+                color: '#38bdf8',
               },
-            ].map((card, i) => (
-              <Reveal key={card.title} delay={i * 0.06}>
-                <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
-                  <div style={{ background: 'var(--surface)', borderRadius: 19, padding: '28px 24px', height: '100%' }}>
-                    <div style={{
-                      width: 44, height: 44, borderRadius: 12,
-                      background: `rgba(${hexToRgbStr(card.color)},0.09)`,
-                      border: `1px solid rgba(${hexToRgbStr(card.color)},0.18)`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: card.color, marginBottom: 18,
-                    }}>
-                      {card.icon}
-                    </div>
-                    <p style={{ fontSize: 15.5, fontWeight: 600, color: 'var(--text)', marginBottom: 8, lineHeight: 1.3 }}>{card.title}</p>
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.75, margin: 0 }}>{card.body}</p>
-                  </div>
-                </BorderGlow>
+            ].map((item, i) => (
+              <Reveal key={i} delay={i * 0.08}>
+                <div style={{
+                  padding: '48px 40px',
+                  borderRight: i < 2 ? '1px solid var(--border)' : 'none',
+                }}>
+                  <p style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 'clamp(20px, 2vw, 28px)',
+                    fontWeight: 500,
+                    letterSpacing: '-0.6px',
+                    lineHeight: 1.18,
+                    color: item.color,
+                    marginBottom: 14,
+                  }}>
+                    {item.headline}
+                  </p>
+                  <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, margin: 0 }}>
+                    {item.sub}
+                  </p>
+                </div>
               </Reveal>
             ))}
           </div>
@@ -546,49 +814,59 @@ export default function LandingPage() {
             <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--accent-blue)', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: 16 }}>
               Get started
             </p>
-            <h2 style={{ fontFamily: 'var(--font-display)', textAlign: 'center', fontSize: 'clamp(30px, 4vw, 50px)', fontWeight: 600, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 16 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', textAlign: 'center', fontSize: 'clamp(30px, 4vw, 50px)', fontWeight: 500, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.1, marginBottom: 16 }}>
               Up and running<br />in under a minute.
             </h2>
-            <p style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--text-secondary)', maxWidth: 460, margin: '0 auto 72px', lineHeight: 1.75 }}>
-              No setup. No configuration. Just your school login and a few seconds.
+            <p style={{ textAlign: 'center', fontSize: 15.5, color: 'var(--text-secondary)', maxWidth: 460, margin: '0 auto 80px', lineHeight: 1.75 }}>
+              No setup. No configuration. Just a few seconds and you&apos;re in.
             </p>
           </Reveal>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+
+          {/* Open steps — big display numbers, no box chrome */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderTop: '1px solid var(--border)' }}>
             {[
               {
                 n: '01',
                 title: 'Create your account',
-                desc: 'Sign up free with your email. No credit card, no trial period, no paywall. The core of myFuturely is free — forever.',
+                desc: 'Sign up with your email in under a minute — no forms, no approval, nothing to install.',
                 color: 'var(--primary)',
               },
               {
                 n: '02',
-                title: 'Connect your school portal',
-                desc: 'Enter your HAC or PowerSchool credentials. They\'re encrypted with AES-256 and used solely to pull your grades — nothing else.',
+                title: 'Your profile builds itself',
+                desc: 'Assignments, deadlines, and progress populate automatically — no manual entry, ever.',
                 color: '#60A5FA',
               },
               {
                 n: '03',
                 title: 'See your full picture',
-                desc: 'Every grade, GPA trend, due date, and AI insight — all in one place, automatically updated. You\'ll never log into a school portal again.',
+                desc: "Everything updates in real time, all in one place. You'll always know exactly where you stand.",
                 color: '#A78BFA',
               },
             ].map((s, i) => (
               <Reveal key={s.n} delay={i * 0.1}>
-                <BorderGlow edgeSensitivity={30} glowColor="40 80 80" backgroundColor="var(--surface)" borderRadius={20} glowRadius={40} glowIntensity={1} coneSpread={25} animated={false} colors={['#c084fc', '#f472b6', '#38bdf8']}>
+                <div style={{
+                  paddingTop: 48,
+                  paddingBottom: 48,
+                  paddingRight: i < 2 ? 48 : 0,
+                  paddingLeft: i > 0 ? 48 : 0,
+                  borderRight: i < 2 ? '1px solid var(--border)' : 'none',
+                }}>
                   <div style={{
-                    padding: '36px 28px', borderRadius: 19,
-                    height: '100%', position: 'relative', overflow: 'hidden',
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 'clamp(52px, 6vw, 80px)',
+                    fontWeight: 500,
+                    letterSpacing: '-3px',
+                    lineHeight: 1,
+                    color: s.color,
+                    marginBottom: 28,
+                    opacity: 0.4,
                   }}>
-                    <div style={{
-                      position: 'absolute', top: 0, left: '25%', right: '25%', height: 1,
-                      background: `linear-gradient(90deg, transparent, ${s.color}55, transparent)`,
-                    }} />
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', letterSpacing: '2px', marginBottom: 20 }}>{s.n}</div>
-                    <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.4px', marginBottom: 14, lineHeight: 1.25 }}>{s.title}</h3>
-                    <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', lineHeight: 1.8 }}>{s.desc}</p>
+                    {s.n}
                   </div>
-                </BorderGlow>
+                  <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.4px', marginBottom: 14, lineHeight: 1.25 }}>{s.title}</h3>
+                  <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', lineHeight: 1.8 }}>{s.desc}</p>
+                </div>
               </Reveal>
             ))}
           </div>
@@ -618,15 +896,12 @@ export default function LandingPage() {
             <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', letterSpacing: '2.5px', textTransform: 'uppercase', marginBottom: 20 }}>
               Start Today
             </p>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(36px, 5vw, 60px)', fontWeight: 600, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.06, marginBottom: 20 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(36px, 5vw, 60px)', fontWeight: 500, color: 'var(--text)', letterSpacing: '-1.5px', lineHeight: 1.06, marginBottom: 20 }}>
               You don&apos;t need to wait<br />for senior year.
             </h2>
-            <p style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.8, letterSpacing: '-0.05px', maxWidth: 480, margin: '0 auto 16px' }}>
+            <p style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 44, lineHeight: 1.8, letterSpacing: '-0.05px', maxWidth: 480, margin: '0 auto 44px' }}>
               The students who succeed in college started taking their academics seriously
               before they had to. myFuturely is where that starts.
-            </p>
-            <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 44, lineHeight: 1.6 }}>
-              Free to use. No credit card. No trial period. Just your grades and a plan.
             </p>
             <Link href="/login" style={{
               display: 'inline-flex', alignItems: 'center', gap: 10,
@@ -643,8 +918,8 @@ export default function LandingPage() {
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 32 }}>
               {[
                 'No setup required',
-                'Works with HAC & PowerSchool',
-                'AI advisor included',
+                'Real-time updates',
+                'Academic advisor included',
                 'Cancel anytime',
               ].map(t => (
                 <span key={t} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -678,61 +953,3 @@ export default function LandingPage() {
   )
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function hexToRgbStr(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `${r},${g},${b}`
-}
-
-// ── Bento card ────────────────────────────────────────────────────────────────
-function BentoCard({ accent, icon, label, desc, large = false }: {
-  accent: string; icon: React.ReactNode; label: string; desc: string; large?: boolean
-}) {
-  const rgb = hexToRgbStr(accent)
-  return (
-    <div style={{
-      background: 'var(--surface)',
-      borderRadius: 19,
-      padding: large ? '36px 32px' : '28px 26px',
-      height: '100%',
-      position: 'relative',
-      overflow: 'hidden',
-      boxShadow: '0 1px 4px rgba(26,21,14,0.05)',
-      transition: 'transform 0.25s, box-shadow 0.25s',
-    }}
-      onMouseEnter={e => {
-        const el = e.currentTarget as HTMLDivElement
-        el.style.transform = 'translateY(-2px)'
-        el.style.boxShadow = `0 12px 40px rgba(${rgb},0.10), 0 3px 10px rgba(${rgb},0.07)`
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget as HTMLDivElement
-        el.style.transform = 'translateY(0px)'
-        el.style.boxShadow = '0 1px 4px rgba(26,21,14,0.05)'
-      }}
-    >
-      <div style={{
-        position: 'absolute', top: -60, right: -60, width: 200, height: 200,
-        background: `radial-gradient(circle, rgba(${rgb},0.07) 0%, transparent 70%)`,
-        pointerEvents: 'none',
-      }} />
-      <div style={{
-        position: 'absolute', top: 0, left: '25%', right: '25%', height: 1,
-        background: `linear-gradient(90deg, transparent, rgba(${rgb},0.35), transparent)`,
-      }} />
-      <div style={{
-        width: 46, height: 46, borderRadius: 12,
-        background: `rgba(${rgb},0.08)`,
-        border: `1px solid rgba(${rgb},0.16)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: accent, marginBottom: 20, position: 'relative',
-      }}>
-        {icon}
-      </div>
-      <h3 style={{ fontSize: large ? 21 : 17, fontWeight: 600, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.3px', lineHeight: 1.25 }}>{label}</h3>
-      <p style={{ fontSize: large ? 14.5 : 13.5, color: 'var(--text-secondary)', lineHeight: 1.8 }}>{desc}</p>
-    </div>
-  )
-}

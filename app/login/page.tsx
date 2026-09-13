@@ -774,7 +774,7 @@ const styles: Record<string, React.CSSProperties> = {
   card:            { width: '100%', maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 40px rgba(26,21,14,0.08), 0 2px 10px rgba(26,21,14,0.05)' },
   pageCosmic:      { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#04040e', padding: 20, position: 'relative', overflow: 'hidden' },
   cardCosmic:      { position: 'relative', zIndex: 2, width: '100%', maxWidth: 440, background: 'rgba(18,16,32,0.72)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(180,160,255,0.16)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(180,160,255,0.05)' },
-  heading:         { fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 600, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 6 },
+  heading:         { fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 500, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 6 },
   subheading:      { color: 'var(--text-secondary)', marginBottom: 28, textAlign: 'center', fontSize: 14 },
   form:            { width: '100%', display: 'flex', flexDirection: 'column', gap: 14 },
   field:           { display: 'flex', flexDirection: 'column', gap: 6 },

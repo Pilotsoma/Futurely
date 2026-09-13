@@ -112,7 +112,7 @@ const S: Record<string, React.CSSProperties> = {
   heading: {
     fontFamily: 'var(--font-display)',
     fontSize: 24,
-    fontWeight: 700,
+    fontWeight: 500,
     color: 'var(--text)',
     margin: '0 0 14px',
   },
@@ -143,7 +143,7 @@ const S: Record<string, React.CSSProperties> = {
   dateValue: {
     fontFamily: 'var(--font-display)',
     fontSize: 20,
-    fontWeight: 600,
+    fontWeight: 500,
     color: 'var(--text)',
     margin: 0,
   },
