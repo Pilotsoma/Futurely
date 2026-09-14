@@ -1,4 +1,4 @@
-# NextStep Backend
+# NextStep Backend WSPP
 
 Express + TypeScript + Prisma (SQLite) API for the NextStep prototype.
 
