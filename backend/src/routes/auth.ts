@@ -362,7 +362,6 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
     const userRole = roleInput === 'PARENT' ? 'PARENT' : roleInput === 'TEACHER' ? 'TEACHER' : roleInput === 'COUNSELOR' ? 'COUNSELOR' : 'STUDENT'
-    const defaultTag = userRole === 'PARENT' ? 'Parent' : userRole === 'TEACHER' || userRole === 'COUNSELOR' ? 'Teacher' : 'Student'
 
     const consentTimestamp = new Date()
     const user = await prisma.$transaction(async (tx) => {
@@ -372,8 +371,6 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
           passwordHash,
           name: displayName,
           role: userRole,
-          tag: defaultTag,
-          tagColor: 'grey',
           emailVerified: true,
           tosAcceptedAt: consentTimestamp,
           privacyAcceptedAt: consentTimestamp,

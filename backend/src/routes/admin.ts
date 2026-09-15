@@ -10,11 +10,6 @@ import { logger } from '../common/logger'
 const router = Router()
 router.use(requireAdmin)
 
-function parseTagArr(raw: unknown): Array<{ tag: string; tagColor: string }> {
-  if (Array.isArray(raw)) return raw as Array<{ tag: string; tagColor: string }>
-  try { return JSON.parse(String(raw ?? '[]')) } catch { return [] }
-}
-
 // ── GET /admin/users/:id — look up any user by Futurely ID ──
 router.get('/users/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   const id = parseInt(req.params.id)
@@ -24,9 +19,7 @@ router.get('/users/:id', async (req: AuthRequest, res: Response): Promise<void> 
       where: { id },
       select: {
         id: true, name: true, hacName: true, email: true, role: true,
-        tag: true, tagColor: true, nameColor: true, avatarEffect: true,
-        coins: true, loginStreak: true,
-        chatBanned: true, marketplaceBanned: true, marketplaceAccess: true,
+        chatBanned: true,
         deletedAt: true, createdAt: true, lastSeenAt: true,
       },
     })
@@ -94,26 +87,6 @@ router.post('/educator-requests/:id/approve', async (req: AuthRequest, res: Resp
         where: { id: request.userId },
         data: { role: request.requestedRole },
       })
-
-      // If approving a counselor, also grant the Counselor display tag
-      if (request.requestedRole === 'COUNSELOR') {
-        const targetUser = await tx.user.findUnique({
-          where: { id: request.userId },
-          select: { allTags: true, tag: true },
-        })
-        if (targetUser) {
-          const tags = parseTagArr(targetUser.allTags)
-          if (!tags.some(t => t.tag === 'Counselor')) {
-            tags.push({ tag: 'Counselor', tagColor: '#8B5CF6' })
-            const tagUpdates: Record<string, unknown> = { allTags: JSON.stringify(tags) }
-            if (!targetUser.tag || targetUser.tag === 'Student' || targetUser.tag === 'Teacher') {
-              tagUpdates.tag = 'Counselor'
-              tagUpdates.tagColor = '#8B5CF6'
-            }
-            await tx.user.update({ where: { id: request.userId }, data: tagUpdates })
-          }
-        }
-      }
 
       await tx.complianceAuditLog.create({
         data: {
@@ -196,7 +169,6 @@ router.post('/educator-requests/:id/revoke', async (req: AuthRequest, res: Respo
     const updated = await prisma.$transaction(async (tx) => {
       // Delete all educator-created data
       await tx.classroom.deleteMany({ where: { educatorId: userId } }) // cascades memberships + assignments
-      await tx.educatorCoinGrant.deleteMany({ where: { educatorId: userId } })
       await tx.counselorStudentLink.deleteMany({ where: { counselorId: userId } })
       await tx.counselorCourseRecommendation.deleteMany({ where: { counselorId: userId } })
       await tx.counselorNote.deleteMany({ where: { counselorId: userId } })
@@ -204,22 +176,7 @@ router.post('/educator-requests/:id/revoke', async (req: AuthRequest, res: Respo
       await tx.counselorCourseComment.deleteMany({ where: { counselorId: userId } })
       await tx.counselorChatMessage.deleteMany({ where: { counselorId: userId } })
 
-      // Strip educator tags
-      const targetUser = await tx.user.findUnique({ where: { id: userId }, select: { allTags: true, tag: true, tagColor: true } })
-      if (targetUser) {
-        const tags = parseTagArr(targetUser.allTags).filter(t => t.tag !== 'Teacher' && t.tag !== 'Counselor')
-        const isEducatorPrimary = targetUser.tag === 'Teacher' || targetUser.tag === 'Counselor'
-        await tx.user.update({
-          where: { id: userId },
-          data: {
-            role: 'STUDENT',
-            allTags: JSON.stringify(tags),
-            ...(isEducatorPrimary ? { tag: 'Student', tagColor: '#6B7280' } : {}),
-          },
-        })
-      } else {
-        await tx.user.update({ where: { id: userId }, data: { role: 'STUDENT' } })
-      }
+      await tx.user.update({ where: { id: userId }, data: { role: 'STUDENT' } })
 
       const updatedRequest = await tx.educatorRoleRequest.update({
         where: { id },
@@ -245,7 +202,7 @@ router.post('/educator-requests/:id/revoke', async (req: AuthRequest, res: Respo
 })
 
 // ── POST /admin/educator-requests/:id/reinstate ──
-// Reinstates a DENIED educator — restores role and tags
+// Reinstates a DENIED educator — restores role
 router.post('/educator-requests/:id/reinstate', async (req: AuthRequest, res: Response): Promise<void> => {
   const id = parseInt(req.params.id)
   if (isNaN(id)) {
@@ -265,23 +222,6 @@ router.post('/educator-requests/:id/reinstate', async (req: AuthRequest, res: Re
     const userId = request.userId
     const updated = await prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: userId }, data: { role: request.requestedRole } })
-
-      // Re-grant appropriate tags
-      const targetUser = await tx.user.findUnique({ where: { id: userId }, select: { allTags: true, tag: true } })
-      if (targetUser) {
-        const tags = parseTagArr(targetUser.allTags)
-        const tagName = request.requestedRole === 'COUNSELOR' ? 'Counselor' : 'Teacher'
-        const tagColor = request.requestedRole === 'COUNSELOR' ? '#8B5CF6' : '#10B981'
-        if (!tags.some(t => t.tag === tagName)) tags.push({ tag: tagName, tagColor })
-        const isStudentPrimary = !targetUser.tag || targetUser.tag === 'Student'
-        await tx.user.update({
-          where: { id: userId },
-          data: {
-            allTags: JSON.stringify(tags),
-            ...(isStudentPrimary ? { tag: tagName, tagColor } : {}),
-          },
-        })
-      }
 
       const updatedRequest = await tx.educatorRoleRequest.update({
         where: { id },
@@ -306,58 +246,20 @@ router.post('/educator-requests/:id/reinstate', async (req: AuthRequest, res: Re
   }
 })
 
-// ── POST /admin/grant-market-access ──
-const grantMarketAccessSchema = z.object({
-  userId: z.number().int().positive(),
-})
-
-router.post('/grant-market-access', async (req: AuthRequest, res: Response): Promise<void> => {
-  const parse = grantMarketAccessSchema.safeParse(req.body)
-  if (!parse.success) {
-    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid request' } })
-    return
-  }
-  const { userId } = parse.data
+// ── GET /admin/stats ──
+router.get('/stats', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
-    if (!user) {
-      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
-      return
-    }
-    await prisma.user.update({ where: { id: userId }, data: { marketplaceAccess: true } })
-    logger.info('admin_market_access_granted', { adminId: req.userId, targetUserId: userId })
-    res.json({ data: { ok: true }, error: null })
-  } catch (err: unknown) {
-    logger.error('admin_grant_market_access_error', { adminId: req.userId, error: err instanceof Error ? err.message : String(err) })
-    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to grant market access' } })
-  }
-})
-
-// ── POST /admin/ban-marketplace ──
-const banMarketplaceSchema = z.object({
-  userId: z.number().int().positive(),
-  banned: z.boolean(),
-})
-
-router.post('/ban-marketplace', async (req: AuthRequest, res: Response): Promise<void> => {
-  const parse = banMarketplaceSchema.safeParse(req.body)
-  if (!parse.success) {
-    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid request' } })
-    return
-  }
-  const { userId, banned } = parse.data
-  try {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
-    if (!user) {
-      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
-      return
-    }
-    await prisma.user.update({ where: { id: userId }, data: { marketplaceBanned: banned } })
-    logger.info('admin_marketplace_ban', { adminId: req.userId, targetUserId: userId, banned })
-    res.json({ data: { ok: true }, error: null })
-  } catch (err: unknown) {
-    logger.error('admin_marketplace_ban_error', { adminId: req.userId, error: err instanceof Error ? err.message : String(err) })
-    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to update marketplace ban' } })
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000)
+    const [totalUsers, activeUsers, liveUsers] = await Promise.all([
+      prisma.user.count({ where: { deletedAt: null } }),
+      prisma.user.count({ where: { deletedAt: null, lastSeenAt: { gte: threeDaysAgo } } }),
+      prisma.user.count({ where: { deletedAt: null, lastSeenAt: { gte: tenMinAgo } } }),
+    ])
+    res.json({ data: { totalUsers, activeUsers, liveUsers } })
+  } catch (err) {
+    logger.error('[ADMIN_STATS]', { error: err instanceof Error ? err.message : String(err) })
+    res.status(500).json({ error: 'Internal server error' })
   }
 })
 

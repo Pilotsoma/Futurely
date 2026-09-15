@@ -110,7 +110,7 @@ router.post('/students', async (req: AuthRequest, res: Response): Promise<void> 
     try {
       const notif = await prisma.notification.create({
         data: { userId: studentId, fromUserId: req.userId!, type: 'COUNSELOR_LINKED', preview: null },
-        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
       })
       sendToUser(studentId, 'NOTIFICATION', notif)
     } catch { /* non-critical */ }
@@ -475,7 +475,7 @@ router.post('/students/:studentId/recommendations', async (req: AuthRequest, res
     try {
       const notif = await prisma.notification.create({
         data: { userId: studentId, fromUserId: req.userId!, type: 'COUNSELOR_RECOMMENDATION_ADDED', preview: parse.data.courseName },
-        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
       })
       sendToUser(studentId, 'NOTIFICATION', notif)
     } catch { /* non-critical */ }
@@ -570,7 +570,7 @@ router.post('/students/:studentId/notes', async (req: AuthRequest, res: Response
     try {
       const notif = await prisma.notification.create({
         data: { userId: studentId, fromUserId: req.userId!, type: 'COUNSELOR_NOTE_ADDED', preview: parse.data.body.slice(0, 120) },
-        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
       })
       sendToUser(studentId, 'NOTIFICATION', notif)
     } catch { /* non-critical */ }
@@ -696,7 +696,7 @@ router.post('/students/:studentId/action-items', async (req: AuthRequest, res: R
     try {
       const notif = await prisma.notification.create({
         data: { userId: studentId, fromUserId: req.userId!, type: 'ACTION_ITEM_CREATED', preview: parse.data.title },
-        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
       })
       sendToUser(studentId, 'NOTIFICATION', notif)
     } catch { /* non-critical */ }

@@ -10,20 +10,6 @@ import { sendToUser } from '../lib/websocket'
 
 const router = Router()
 
-const STREAK_MILESTONES: Array<{ days: number; tag: string; tagColor: string }> = [
-  { days: 7,   tag: 'Novice',   tagColor: '#22C55E' },
-  { days: 14,  tag: 'Pro',      tagColor: '#3B82F6' },
-  { days: 30,  tag: 'Veteran',  tagColor: '#F97316' },
-  { days: 50,  tag: 'Legend',   tagColor: '#EC4899' },
-  { days: 100, tag: 'GOAT',     tagColor: '#EAB308' },
-]
-
-function parseAllTags(raw: unknown): Array<{ tag: string; tagColor: string }> {
-  if (Array.isArray(raw)) return (raw as Array<{ tag?: unknown; tagColor?: unknown }>)
-    .filter(t => t?.tag).map(t => ({ tag: String(t.tag), tagColor: String(t.tagColor ?? 'grey') }))
-  try { return JSON.parse(String(raw ?? '[]')) as Array<{ tag: string; tagColor: string }> } catch { return [] }
-}
-
 function letterToPoints(letter: string): number {
   const map: Record<string, number> = {
     'A+': 4.0, 'A': 4.0, 'A-': 3.7,
@@ -210,36 +196,6 @@ router.patch('/me/avatar', requireAuth, async (req: AuthRequest, res: Response):
   }
 })
 
-router.post('/me/streak-reward', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
-  if (!req.userId) { res.status(401).json({ data: null, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }); return }
-  const { streak } = req.body as { streak?: number }
-  if (typeof streak !== 'number' || streak < 1) {
-    res.status(400).json({ data: null, error: { code: 'BAD_REQUEST', message: 'streak must be a positive number' } })
-    return
-  }
-  try {
-    const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { allTags: true } })
-    const existing = parseAllTags(user?.allTags)
-    const existingNames = new Set(existing.map(t => t.tag))
-
-    const newlyEarned = STREAK_MILESTONES.filter(m => streak >= m.days && !existingNames.has(m.tag))
-    if (newlyEarned.length === 0) {
-      res.json({ data: { newTags: [] } })
-      return
-    }
-
-    const updated = [...existing, ...newlyEarned.map(m => ({ tag: m.tag, tagColor: m.tagColor }))]
-    await prisma.user.update({
-      where: { id: req.userId },
-      data: { allTags: JSON.stringify(updated) },
-    })
-
-    res.json({ data: { newTags: newlyEarned } })
-  } catch {
-    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to award streak tag' } })
-  }
-})
-
 // ── POST /students/classrooms/join ──
 const joinClassroomSchema = z.object({
   inviteCode: z.string().length(6).regex(/^[A-Z0-9]{6}$/),
@@ -281,7 +237,7 @@ router.post('/classrooms/join', requireAuth, async (req: AuthRequest, res: Respo
     try {
       const notif = await prisma.notification.create({
         data: { userId: req.userId, fromUserId: classroom.educatorId, type: 'CLASSROOM_JOINED', preview: classroom.name },
-        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
       })
       sendToUser(req.userId, 'NOTIFICATION', notif)
     } catch { /* non-critical */ }
@@ -385,9 +341,6 @@ router.get('/classrooms/:id/posts', requireAuth, async (req: AuthRequest, res: R
           select: {
             id: true,
             name: true,
-            tag: true,
-            tagColor: true,
-            nameColor: true,
             avatarUrl: true,
           },
         },
@@ -435,9 +388,6 @@ router.post('/classrooms/:id/posts', requireAuth, async (req: AuthRequest, res: 
           select: {
             id: true,
             name: true,
-            tag: true,
-            tagColor: true,
-            nameColor: true,
             avatarUrl: true,
           },
         },

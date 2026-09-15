@@ -59,7 +59,7 @@ export async function enqueueJobsForToday(): Promise<void> {
   // doesn't scale with every consenting regular user.
   const consentedUsers = await prisma.user.findMany({
     where: { autonomousConsentAcceptedAt: { not: null }, deletedAt: null },
-    select: { id: true, role: true, tag: true, allTags: true },
+    select: { id: true, role: true },
   })
   const eligibleUsers = consentedUsers.filter(isDevPowerUser)
 

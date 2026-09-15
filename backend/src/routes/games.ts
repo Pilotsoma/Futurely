@@ -37,7 +37,7 @@ const sessionInclude = {
   host: { select: { id: true, name: true } },
   participants: {
     orderBy: { score: 'desc' as const },
-    include: { user: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+    include: { user: { select: { id: true, name: true, avatarUrl: true } } },
   },
 } as const
 
@@ -223,10 +223,10 @@ router.post('/:code/next', requireAuth, async (req: AuthRequest, res: Response):
     const nextIndex = session.currentQuestion + 1
     const allUserIds = [session.hostId, ...participantIds(session)]
     if (nextIndex >= questions.length) {
-      const updated = await prisma.gameSession.update({ where: { joinCode: code }, data: { status: 'FINISHED' }, include: { participants: { orderBy: { score: 'desc' }, include: { user: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } } } } })
+      const updated = await prisma.gameSession.update({ where: { joinCode: code }, data: { status: 'FINISHED' }, include: { participants: { orderBy: { score: 'desc' }, include: { user: { select: { id: true, name: true, avatarUrl: true } } } } } })
       sendToSession(allUserIds, 'GAME_ENDED', {
         sessionId: session.id,
-        leaderboard: updated.participants.map((p, rank) => ({ rank: rank + 1, userId: p.userId, name: p.user.name, score: p.score, tag: p.user.tag, tagColor: p.user.tagColor, nameColor: p.user.nameColor })),
+        leaderboard: updated.participants.map((p, rank) => ({ rank: rank + 1, userId: p.userId, name: p.user.name, score: p.score })),
       })
       res.json({ data: { status: 'FINISHED' }, error: null })
     } else {

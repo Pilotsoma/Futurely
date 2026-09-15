@@ -403,7 +403,7 @@ router.post(
             : `${newPayloads.length} new Canvas assignments added`
           const notif = await prisma.notification.create({
             data: { userId, fromUserId: userId, type: 'ASSIGNMENT_CREATED', preview },
-            include: { sender: { select: { id: true, name: true, email: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+            include: { sender: { select: { id: true, name: true, email: true, avatarUrl: true } } },
           })
           sendToUser(userId, 'NOTIFICATION', notif)
         } catch { /* non-critical */ }
