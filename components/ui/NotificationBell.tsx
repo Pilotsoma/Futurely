@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import { api, AppNotification } from '../../lib/api'
 import UserProfileModal from './UserProfileModal'
 import {
-  UserIcon, HeartFilledIcon, PartyPopperIcon, TagIcon, TradeArrowsIcon, BooksIcon,
+  UserIcon, HeartFilledIcon, BooksIcon,
   ClipboardIcon, SchoolBuildingIcon, HandshakeIcon, PencilIcon, SparklesIcon,
-  CheckCircleIcon, ChatBubbleIcon, BellIcon, ErrorCircleIcon,
-  CoinIcon, BarChartIcon,
+  CheckCircleIcon, ChatBubbleIcon, BellIcon,
+  BarChartIcon,
 } from '@/components/icons'
 
 // Module-level dedup set — shared across all instances so toasts fire only once
@@ -198,11 +198,6 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 const { icon, iconColor }: { icon: React.ReactNode; iconColor: string } =
                   n.type === 'FOLLOW' ? { icon: <UserIcon size={15}/>, iconColor: '#2D6A4F' } :
                   n.type === 'LIKE' ? { icon: <HeartFilledIcon size={15}/>, iconColor: '#EF4444' } :
-                  n.type === 'GIVEAWAY_WIN' ? { icon: <PartyPopperIcon size={15}/>, iconColor: '#EAB308' } :
-                  n.type === 'LISTING_SOLD' ? { icon: <TagIcon size={15}/>, iconColor: '#EAB308' } :
-                  n.type === 'TRADE_ACCEPTED' ? { icon: <TradeArrowsIcon size={15}/>, iconColor: '#22C55E' } :
-                  n.type === 'TRADE_DECLINED' ? { icon: <TradeArrowsIcon size={15}/>, iconColor: '#EF4444' } :
-                  n.type.startsWith('TRADE') ? { icon: <TradeArrowsIcon size={15}/>, iconColor: '#8B5CF6' } :
                   n.type === 'ASSIGNMENT_CREATED' ? { icon: <BooksIcon size={15}/>, iconColor: '#6366F1' } :
                   n.type === 'ASSIGNMENT_DUE_SOON' ? { icon: <BooksIcon size={15}/>, iconColor: '#F59E0B' } :
                   n.type === 'TEACHER_ASSIGNMENT' ? { icon: <ClipboardIcon size={15}/>, iconColor: '#6366F1' } :
@@ -211,18 +206,13 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                   n.type === 'COUNSELOR_NOTE_ADDED' ? { icon: <PencilIcon size={15}/>, iconColor: '#8B5CF6' } :
                   n.type === 'COUNSELOR_RECOMMENDATION_ADDED' ? { icon: <SparklesIcon size={15}/>, iconColor: '#EAB308' } :
                   n.type === 'ACTION_ITEM_CREATED' ? { icon: <CheckCircleIcon size={15}/>, iconColor: '#22C55E' } :
-                  n.type === 'COIN_RECEIVED' ? { icon: <CoinIcon size={15}/>, iconColor: '#EAB308' } :
                   n.type === 'GPA_CHECKIN' ? { icon: <BarChartIcon size={15}/>, iconColor: '#10B981' } :
                   { icon: <ChatBubbleIcon size={15}/>, iconColor: '#3B82F6' }
 
                 // Row-level navigation: where clicking the notification takes you
                 function handleRowClick() {
                   setShowPanel(false)
-                  if (n.type === 'LISTING_SOLD' || n.type === 'GIVEAWAY_WIN' || n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED') {
-                    router.push('/marketplace')
-                  } else if (n.type === 'COIN_RECEIVED') {
-                    router.push('/marketplace')
-                  } else if (n.type === 'ASSIGNMENT_CREATED' || n.type === 'ASSIGNMENT_DUE_SOON') {
+                  if (n.type === 'ASSIGNMENT_CREATED' || n.type === 'ASSIGNMENT_DUE_SOON') {
                     router.push('/planner')
                   } else if (n.type === 'TEACHER_ASSIGNMENT' || n.type === 'CLASSROOM_JOINED') {
                     router.push('/grades/classwork')
@@ -248,12 +238,6 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 if (n.type === 'FOLLOW')           body = <>{link(name)} started following you</>
                 else if (n.type === 'LIKE')        body = <>{link(name)} liked your post</>
                 else if (n.type === 'COMMENT')     body = n.preview ? <>{link(name)}: &quot;{n.preview}&quot;</> : <>{link(name)} commented</>
-                else if (n.type === 'GIVEAWAY_WIN') body = n.preview ?? 'You won a giveaway!'
-                else if (n.type === 'LISTING_SOLD') body = <>{link(name)} bought your listing</>
-                else if (n.type === 'TRADE_OFFER')    body = <>{link(name)} sent a trade offer</>
-                else if (n.type === 'TRADE_ACCEPTED') body = <>{link(name)} accepted your trade</>
-                else if (n.type === 'TRADE_DECLINED')    body = <>{link(name)} declined your trade</>
-                else if (n.type === 'COIN_RECEIVED') body = <>{link(name)} sent you {n.preview ?? 'coins'}!</>
                 else if (n.type === 'ASSIGNMENT_CREATED') body = n.preview ?? 'New assignment added'
                 else if (n.type === 'ASSIGNMENT_DUE_SOON') body = n.preview ?? 'An assignment is due soon'
                 else if (n.type === 'TEACHER_ASSIGNMENT') body = <>{link(name)} posted an assignment{n.preview ? <> — {n.preview}</> : null}</>
@@ -289,12 +273,6 @@ export default function NotificationBell({ showToasts = false, collapsed = false
                 case 'LIKE':             return { icon: <HeartFilledIcon size={20}/>, accent: '#EF4444', text: `${name} liked your post` }
                 case 'COMMENT':          return { icon: <ChatBubbleIcon size={20}/>, accent: '#3B82F6', text: `${name} commented on your post` }
                 case 'FOLLOW':           return { icon: <UserIcon size={20}/>, accent: '#2D6A4F', text: `${name} started following you` }
-                case 'GIVEAWAY_WIN':     return { icon: <PartyPopperIcon size={20}/>, accent: '#EAB308', text: t.notif.preview ?? 'You won a giveaway!' }
-                case 'TRADE_OFFER':      return { icon: <TradeArrowsIcon size={20}/>, accent: '#8B5CF6', text: `${name} sent you a trade offer` }
-                case 'TRADE_ACCEPTED':   return { icon: <CheckCircleIcon size={20}/>, accent: '#22C55E', text: `${name} accepted your trade` }
-                case 'TRADE_DECLINED':   return { icon: <ErrorCircleIcon size={20}/>, accent: '#EF4444', text: `${name} declined your trade` }
-                case 'LISTING_SOLD':        return { icon: <CoinIcon size={20}/>, accent: '#EAB308', text: `Your listing sold — ${t.notif.preview ?? ''}` }
-                case 'COIN_RECEIVED':       return { icon: <CoinIcon size={20}/>, accent: '#EAB308', text: `${name} sent you ${t.notif.preview ?? 'coins'}!` }
                 case 'ASSIGNMENT_CREATED':              return { icon: <BooksIcon size={20}/>, accent: '#6366F1', text: t.notif.preview ?? 'New assignment added' }
                 case 'ASSIGNMENT_DUE_SOON':             return { icon: <BooksIcon size={20}/>, accent: '#F59E0B', text: t.notif.preview ?? 'An assignment is due soon' }
                 case 'TEACHER_ASSIGNMENT':              return { icon: <ClipboardIcon size={20}/>, accent: '#6366F1', text: `${name} posted: ${t.notif.preview ?? 'New assignment'}` }

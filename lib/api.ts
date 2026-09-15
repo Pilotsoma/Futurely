@@ -291,11 +291,6 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(fields),
     }),
-  streakReward: (streak: number) =>
-    request<{ newTags: Array<{ days: number; tag: string; tagColor: string }> }>(
-      '/api/students/me/streak-reward',
-      { method: 'POST', body: JSON.stringify({ streak }) }
-    ),
   updateAvatarUrl: (avatarUrl: string | null) =>
     request<{ avatarUrl: string | null }>('/api/students/me/avatar', {
       method: 'PATCH',
@@ -540,7 +535,7 @@ export const api = {
     request<FeedUserProfile>(`/api/feed/users/${targetUserId}/profile`),
 
   feedSearchUsers: (q: string) =>
-    request<Array<{ id: number; name: string | null; tag: string | null; tagColor: string | null; avatarUrl?: string | null }>>(
+    request<Array<{ id: number; name: string | null; avatarUrl?: string | null }>>(
       `/api/feed/users/search?q=${encodeURIComponent(q)}`,
     ),
 
@@ -552,42 +547,6 @@ export const api = {
       pageSize: number
       hasMore: boolean
     }>(`/api/feed/users/${targetUserId}/posts?page=${page}&limit=${limit}`),
-
-  feedUpdateTag: (tag: string) =>
-    request<{ id: number; name: string | null; email: string; tag: string | null }>(
-      '/api/feed/users/me/tag',
-      {
-        method: 'PUT',
-        body: JSON.stringify({ tag }),
-      },
-    ),
-
-  feedAwardTag: (targetUserId: number, tag: string, tagColor?: string) =>
-    request<{ tag: string | null; tagColor: string | null; allTags: Array<{ tag: string; tagColor: string }> }>(
-      `/api/feed/users/${targetUserId}/tag`,
-      {
-        method: 'PUT',
-        body: JSON.stringify({ tag, ...(tagColor ? { tagColor } : {}) }),
-      },
-    ),
-
-  feedResetTag: (targetUserId: number) =>
-    request<{ tag: string | null; tagColor: string | null; allTags: Array<{ tag: string; tagColor: string }> }>(
-      `/api/feed/users/${targetUserId}/tag`,
-      { method: 'DELETE' },
-    ),
-
-  feedRemoveTagFromUser: (targetUserId: number, tagName: string) =>
-    request<{ tag: string | null; tagColor: string | null; allTags: Array<{ tag: string; tagColor: string }> }>(
-      `/api/feed/users/${targetUserId}/tags/${encodeURIComponent(tagName)}`,
-      { method: 'DELETE' },
-    ),
-
-  feedSetDisplayTag: (tag: string, tagColor: string) =>
-    request<{ tag: string | null; tagColor: string | null }>(
-      '/api/feed/users/me/display-tag',
-      { method: 'PUT', body: JSON.stringify({ tag, tagColor }) },
-    ),
 
   feedBanUser: (targetUserId: number, banned: boolean) =>
     request<{ banned: boolean }>(`/api/feed/users/${targetUserId}/ban`, {
@@ -609,31 +568,6 @@ export const api = {
 
   feedDeleteUser: (targetUserId: number) =>
     request<{ deleted: boolean }>(`/api/feed/users/${targetUserId}`, { method: 'DELETE' }),
-
-  feedDevStats: () =>
-    request<{ totalCoins: number; totalInventoryValue: number; userCount: number }>('/api/feed/dev-stats'),
-
-  feedAdjustCoins: (targetUserId: number, action: 'add' | 'remove' | 'zero', amount?: number) =>
-    request<{ coins: number }>(`/api/feed/users/${targetUserId}/coins`, {
-      method: 'PUT',
-      body: JSON.stringify({ action, amount }),
-    }),
-
-  feedCreateGiveaway: (data: { body: string; durationMinutes: number; giveawayTag?: string; giveawayTagColor?: string; giveawayCoinAmount?: number; giveawayItemType?: string; giveawayItemId?: string; giveawayItemRarity?: string }) =>
-    request<FeedPost>('/api/feed/posts/giveaway', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
-  feedEnterGiveaway: (postId: number) =>
-    request<{ entered: boolean; count: number }>(`/api/feed/posts/${postId}/giveaway/enter`, {
-      method: 'POST',
-    }),
-
-  feedDrawGiveaway: (postId: number) =>
-    request<{ winnerId: number; winnerName: string }>(`/api/feed/posts/${postId}/giveaway/draw`, {
-      method: 'POST',
-    }),
 
   feedPinPost: (postId: number) =>
     request<{ pinnedUntil: string | null }>(`/api/feed/posts/${postId}/pin`, { method: 'PUT' }),
@@ -824,136 +758,6 @@ export const api = {
   markAllNotificationsRead: () =>
     request<{ ok: boolean }>('/api/notifications/read-all', { method: 'POST' }),
 
-  // ── Marketplace ───────────────────────────────────────────────────────────────
-
-  marketplaceDailyClaim: (streak?: number) =>
-    request<{ coins: number; claimed: boolean; alreadyClaimed: boolean; coinBonus: number }>('/api/marketplace/daily-coins', {
-      method: 'POST',
-      body: JSON.stringify({ streak: streak ?? 1 }),
-    }),
-
-  marketplaceFreeSpin: () =>
-    request<{ coins: number; reward: number; rarity: string }>('/api/marketplace/free-spin', { method: 'POST' }),
-
-  marketplaceInventory: () =>
-    request<InventoryData>('/api/marketplace/inventory'),
-
-  marketplaceOpenBox: (boxType: string, quantity = 1) =>
-    request<BoxResult & { results?: Array<{ won: BoxResult['won']; alreadyHad: boolean }> }>('/api/marketplace/open-box', { method: 'POST', body: JSON.stringify({ boxType, quantity }) }),
-
-  marketplaceQuicksell: (itemType: 'tag' | 'name-color' | 'avatar', itemId: string) =>
-    request<{ coins: number; payout: number }>('/api/marketplace/quicksell', {
-      method: 'POST',
-      body: JSON.stringify({ itemType, itemId }),
-    }),
-
-  marketplaceQuicksellDuplicates: (exclude: string[] = []) =>
-    request<{ coins: number; sold: number; totalPayout: number }>('/api/marketplace/quicksell/duplicates', { method: 'POST', body: JSON.stringify({ exclude }), headers: { 'Content-Type': 'application/json' } }),
-
-  marketplaceEquip: (type: 'name-color' | 'avatar' | 'tag', itemId: string | null) =>
-    request<{ nameColor?: string | null; avatarEffect?: string | null }>('/api/marketplace/equip', {
-      method: 'PUT',
-      body: JSON.stringify({ type, itemId }),
-    }),
-
-  equipBadge: (itemId: string | null) =>
-    request<{ badge: string | null }>('/api/marketplace/equip', {
-      method: 'PUT',
-      body: JSON.stringify({ type: 'badge', itemId }),
-    }),
-
-  marketplaceAdminGrant: (payload: { type: 'coins'; amount: number } | { type: 'name-color' | 'avatar' | 'tag'; itemId: string }) =>
-    request<{ coins?: number; granted?: MarketplaceItem & { tag?: string; tagColor?: string }; tag?: string; tagColor?: string }>('/api/marketplace/admin/grant', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-
-  marketplaceGetListings: () =>
-    request<MarketplaceListing[]>('/api/marketplace/listings'),
-
-  marketplaceCreateListing: (payload: { itemType: string; itemId: string; price: number }) =>
-    request<{ listing: MarketplaceListing; listingFee: number }>('/api/marketplace/listings', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-
-  marketplaceCancelListing: (listingId: number) =>
-    request<{ ok: boolean }>(`/api/marketplace/listings/${listingId}`, { method: 'DELETE' }),
-
-  marketplaceBuyListing: (listingId: number) =>
-    request<{ ok: boolean; coins: number }>(`/api/marketplace/listings/${listingId}/buy`, { method: 'POST' }),
-
-  marketplaceGetUserInventory: (userId: number) =>
-    request<UserPublicInventory>(`/api/marketplace/users/${userId}/inventory`),
-
-  marketplaceCreateTrade: (payload: { receiverId: number; senderItems: TradeItem[]; receiverItems: TradeItem[]; note?: string }) =>
-    request<TradeOffer>('/api/marketplace/trades', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-
-  marketplaceGetIncomingTrades: () =>
-    request<TradeOffer[]>('/api/marketplace/trades/incoming'),
-
-  marketplaceGetSentTrades: () =>
-    request<TradeOffer[]>('/api/marketplace/trades/sent'),
-
-  marketplaceGetTradesHistory: () =>
-    request<TradeOffer[]>('/api/marketplace/trades/history'),
-
-  marketplaceAcceptTrade: (tradeId: number) =>
-    request<{ ok: boolean }>(`/api/marketplace/trades/${tradeId}/accept`, { method: 'POST' }),
-
-  marketplaceDeclineTrade: (tradeId: number) =>
-    request<{ ok: boolean }>(`/api/marketplace/trades/${tradeId}/decline`, { method: 'POST' }),
-
-  marketplaceCancelTrade: (tradeId: number) =>
-    request<{ ok: boolean }>(`/api/marketplace/trades/${tradeId}/cancel`, { method: 'POST' }),
-
-  getItemPrices: () =>
-    request<Record<string, number>>('/api/marketplace/prices'),
-
-  marketplaceItemHistory: (itemType: string, itemId: string) =>
-    request<ItemSalePoint[]>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/history`),
-
-  marketplaceItemOwners: (itemType: string, itemId: string) =>
-    request<ItemOwnersData>(`/api/marketplace/item/${itemType}/${encodeURIComponent(itemId)}/owners`),
-
-  marketplaceLeaderboard: () =>
-    request<LeaderboardData>('/api/marketplace/leaderboard'),
-
-  // ── Wandering Trader ──────────────────────────────────────────────────────────
-
-  traderStatus: () =>
-    request<{ sellsUsed: number; sellsRemaining: number; buysUsed: number; buysRemaining: number; tradesUsed: number; tradesRemaining: number }>('/api/marketplace/trader/status'),
-
-  traderCatalog: () =>
-    request<Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string; name: string; rarity: string; traderPrice: number; tag?: string; tagColor?: string; value?: string }>>('/api/marketplace/trader/catalog'),
-
-  traderSell: (itemType: 'tag' | 'name-color' | 'avatar', itemId: string) =>
-    request<{ ok: boolean; payout: number; sellsRemaining: number }>('/api/marketplace/trader/sell', {
-      method: 'POST',
-      body: JSON.stringify({ itemType, itemId }),
-    }),
-
-  traderBuy: (itemType: 'tag' | 'name-color' | 'avatar', itemId: string) =>
-    request<{ ok: boolean; price: number; buysRemaining: number }>('/api/marketplace/trader/buy', {
-      method: 'POST',
-      body: JSON.stringify({ itemType, itemId }),
-    }),
-
-  traderTrade: (
-    offerItems: Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string }>,
-    wantItems: Array<{ type: 'tag' | 'name-color' | 'avatar'; id: string }>,
-  ) =>
-    request<{ ok: boolean; tradesRemaining: number }>('/api/marketplace/trader/trade', {
-      method: 'POST',
-      body: JSON.stringify({ offerItems, wantItems }),
-    }),
-
-  spinStats: () =>
-    request<SpinStats>('/api/marketplace/spin-stats'),
-
   // ── Parent API ────────────────────────────────────────────────────────────────
 
   parentLinkStudent: (credentials: { districtUrl: string; username: string; password: string }) =>
@@ -983,16 +787,10 @@ export const api = {
     }, false, 65000),
 
   adminStats: () =>
-    request<{ totalUsers: number; activeUsers: number; liveUsers: number }>('/api/marketplace/admin/stats'),
+    request<{ totalUsers: number; activeUsers: number; liveUsers: number }>('/api/admin/stats'),
 
   adminLookupUser: (userId: number) =>
-    request<{ id: number; name: string | null; hacName: string | null; email: string; role: string; tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; coins: number; loginStreak: number; chatBanned: boolean; marketplaceBanned: boolean; marketplaceAccess: boolean; deletedAt: string | null; createdAt: string; lastSeenAt: string | null }>(`/api/admin/users/${userId}`),
-
-  adminGrantMarketAccess: (userId: number) =>
-    request<{ ok: boolean }>('/api/admin/grant-market-access', { method: 'POST', body: JSON.stringify({ userId }) }),
-
-  adminBanMarketplace: (userId: number, banned: boolean) =>
-    request<{ ok: boolean }>('/api/admin/ban-marketplace', { method: 'POST', body: JSON.stringify({ userId, banned }) }),
+    request<{ id: number; name: string | null; hacName: string | null; email: string; role: string; loginStreak: number; chatBanned: boolean; deletedAt: string | null; createdAt: string; lastSeenAt: string | null }>(`/api/admin/users/${userId}`),
 
   adminGetDobStatus: (userId: number) =>
     request<{
@@ -1013,9 +811,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ userId }),
     }),
-
-  sendCoins: (receiverId: number, amount: number) =>
-    request<{ ok: boolean; newBalance: number }>('/api/marketplace/coins/send', { method: 'POST', body: JSON.stringify({ receiverId, amount }) }),
 
   // ── Educator (Teacher + Counselor shared) ─────────────────────────────────
 
@@ -1047,12 +842,6 @@ export const api = {
     request<EducatorAssignment>(`/api/educator/classrooms/${classroomId}/assignments`, {
       method: 'POST',
       body: JSON.stringify(payload),
-    }),
-
-  educatorGrantCoins: (classroomId: number, studentId: number, coins: number, reason?: string) =>
-    request<{ ok: boolean }>(`/api/educator/classrooms/${classroomId}/coins`, {
-      method: 'POST',
-      body: JSON.stringify({ studentId, coins, reason }),
     }),
 
   educatorStudentDetail: (classroomId: number, studentId: number) =>
@@ -1631,11 +1420,6 @@ export interface CanvasGradesConnection {
 export interface FeedUser {
   id: number
   name: string | null
-  tag: string | null
-  tagColor: string | null
-  nameColor: string | null
-  avatarEffect: string | null
-  badge?: string | null
   avatarUrl?: string | null
 }
 
@@ -1647,28 +1431,11 @@ export interface FeedPost {
   updatedAt: string
   user: FeedUser
   likedByMe: boolean
-  enteredByMe: boolean
   type: string
   pinnedUntil: string | null
-  giveawayTag: string | null
-  giveawayTagColor: string | null
-  giveawayCoinAmount: number | null
-  giveawayEndsAt: string | null
-  giveawayWinnerId: number | null
-  giveawayWinner: { id: number; name: string | null; email: string } | null
-  giveawayItemType: string | null
-  giveawayItemId: string | null
-  giveawayItemRarity: string | null
-  unboxItemType: string | null
-  unboxItemId: string | null
-  unboxItemName: string | null
-  unboxItemValue: string | null
-  unboxItemRarity: string | null
-  unboxItemEstValue: number | null
-  unboxItemTagColor: string | null
   network: string
   isdCode: string | null
-  _count: { likes: number; comments: number; giveawayEntries: number }
+  _count: { likes: number; comments: number }
 }
 
 export interface FeedComment {
@@ -1686,11 +1453,6 @@ export interface FeedUserProfile {
   id: number
   name: string | null
   hacName?: string | null
-  tag: string | null
-  tagColor: string | null
-  nameColor: string | null
-  avatarEffect: string | null
-  badge?: string | null
   avatarUrl?: string | null
   role: string
   isFollowing: boolean
@@ -1698,129 +1460,9 @@ export interface FeedUserProfile {
   chatBanned: boolean
   chatMutedUntil: string | null
   deletedAt?: string | null
-  allTags: Array<{ tag: string; tagColor: string }>
   _count: { followers: number; following: number; posts: number }
-  coins?: number
   isdCode?: string | null
   isdDisplayName?: string | null
-}
-
-export interface MarketplaceItem {
-  id: string
-  name: string
-  value: string
-  rarity: string
-  weight: number
-}
-
-export interface TagInventoryItem {
-  id: string
-  tag: string
-  tagColor: string
-  rarity: string
-}
-
-export interface InventoryData {
-  name?: string | null
-  coins: number
-  canClaimToday: boolean
-  tag: string | null
-  tagColor: string | null
-  nameColor: string | null
-  avatarEffect: string | null
-  badge?: string | null
-  ownedTags: TagInventoryItem[]
-  ownedNameColors: MarketplaceItem[]
-  ownedAvatarEffects: MarketplaceItem[]
-  marketplaceAccess?: boolean
-  nextFreeSpin?: string | null
-  isdCode?: string | null
-  isdDisplayName?: string | null
-}
-
-export interface SpinStats {
-  spinCoinsSpent: number
-  spinTotalSpins: number
-  spinCommon: number
-  spinUncommon: number
-  spinRare: number
-  spinEpic: number
-  spinLegendary: number
-  spinMythic: number
-  spinCurse: number
-}
-
-export interface BoxResult {
-  coins: number
-  won: { id: string; name?: string; tag?: string; tagColor?: string; value?: string; rarity: string; type: string }
-  alreadyHad: boolean
-}
-
-export interface TradeItem {
-  type: 'tag' | 'name-color' | 'avatar'
-  id: string
-  tag?: string
-  tagColor?: string
-  name?: string
-  value?: string
-  rarity: string
-}
-
-export interface MarketplaceListing {
-  id: number
-  sellerId: number
-  itemType: string
-  itemId: string
-  itemName: string
-  itemValue: string
-  itemRarity: string
-  itemRarityRank: number
-  price: number
-  status: string
-  buyerId: number | null
-  createdAt: string
-  seller: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
-}
-
-export interface TradeOffer {
-  id: number
-  senderId: number
-  receiverId: number
-  senderItems: TradeItem[]
-  receiverItems: TradeItem[]
-  status: string
-  note?: string | null
-  createdAt: string
-  sender: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
-  receiver: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
-}
-
-export interface UserPublicInventory {
-  user: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; badge?: string | null }
-  tags: TagInventoryItem[]
-  nameColors: MarketplaceItem[]
-  avatarEffects: MarketplaceItem[]
-}
-
-export interface ItemSalePoint { price: number; soldAt: string }
-
-export interface ItemOwner {
-  rank: number; id: number; name: string | null
-  tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; badge?: string | null
-  qty: number
-}
-
-export interface ItemOwnersData { owners: ItemOwner[]; total: number }
-
-export interface LeaderboardEntry {
-  rank: number; id: number; name: string | null
-  tag: string | null; tagColor: string | null; nameColor: string | null; avatarEffect: string | null; badge?: string | null; value: number
-}
-
-export interface LeaderboardData {
-  coins: LeaderboardEntry[]
-  streak: LeaderboardEntry[]
-  inventory: LeaderboardEntry[]
 }
 
 // ── Parent API ─────────────────────────────────────────────────────────────────
@@ -1916,7 +1558,7 @@ export interface AppNotification {
   id: number
   userId: number
   fromUserId: number
-  type: 'FOLLOW' | 'LIKE' | 'COMMENT' | 'GIVEAWAY_WIN' | 'TRADE_OFFER' | 'TRADE_ACCEPTED' | 'TRADE_DECLINED' | 'LISTING_SOLD' | 'ASSIGNMENT_CREATED' | 'ASSIGNMENT_DUE_SOON' | 'TEACHER_ASSIGNMENT' | 'CLASSROOM_JOINED' | 'COUNSELOR_LINKED' | 'COUNSELOR_NOTE_ADDED' | 'COUNSELOR_RECOMMENDATION_ADDED' | 'ACTION_ITEM_CREATED' | 'COIN_RECEIVED' | 'GPA_CHECKIN'
+  type: 'FOLLOW' | 'LIKE' | 'COMMENT' | 'ASSIGNMENT_CREATED' | 'ASSIGNMENT_DUE_SOON' | 'TEACHER_ASSIGNMENT' | 'CLASSROOM_JOINED' | 'COUNSELOR_LINKED' | 'COUNSELOR_NOTE_ADDED' | 'COUNSELOR_RECOMMENDATION_ADDED' | 'ACTION_ITEM_CREATED' | 'GPA_CHECKIN'
   postId: number | null
   preview: string | null
   read: boolean
@@ -2071,9 +1713,6 @@ export interface ClassroomPost {
   author: {
     id: number
     name: string | null
-    tag: string | null
-    tagColor: string | null
-    nameColor: string | null
     avatarUrl: string | null
   }
 }
@@ -2174,7 +1813,7 @@ export interface GameParticipant {
   userId: number
   score: number
   joinedAt: string
-  user: { id: number; name: string | null; tag: string | null; tagColor: string | null; nameColor: string | null; avatarUrl: string | null }
+  user: { id: number; name: string | null; avatarUrl: string | null }
 }
 
 export interface GameSession {

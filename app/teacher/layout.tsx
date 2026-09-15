@@ -80,7 +80,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           </p>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 20px', marginBottom: 24, textAlign: 'left' }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>What you get after approval</p>
-            {['Create classrooms with invite codes', 'See all your students in one place', 'Assign homework & tasks', 'Reward up to 300 coins per student per day'].map(item => (
+            {['Create classrooms with invite codes', 'See all your students in one place', 'Assign homework & tasks'].map(item => (
               <p key={item} style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                 <CheckIcon size={14}/>{item}
               </p>
