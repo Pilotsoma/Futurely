@@ -8,11 +8,9 @@ ensureSchema().catch(err => console.error('[startup]', err))
 // The agent orchestrator runs a multi-step tool-use loop (up to 12 tool calls
 // by default, 15 hard cap) with one LLM round-trip per turn plus DB writes —
 // this can easily exceed the default 10-second limit on Hobby plans.
-// NOTE: this export follows the standard Vercel named-export convention. Whether
-// it is honoured by the "services" backend adapter (vs. Next.js API routes,
-// which always respect it) depends on the Vercel runtime version in use — hence
-// it's also set redundantly via vercel.json's services.backend.functions key.
-// Either way it has no effect on non-Vercel runtimes.
+// This is a classic @vercel/node function (see vercel.json's "builds"), which
+// honours this named export directly — no extra vercel.json config needed.
+// Has no effect on non-Vercel runtimes (local dev, Render).
 export const maxDuration = 60
 
 export default function handler(req: any, res: any): void {
