@@ -1,3 +1,12 @@
+// Loaded here, not in app.ts: this file is the entrypoint for local dev and
+// the Render deployment, both of which need a .env file read into
+// process.env before app.ts's module-level env checks run. The Vercel
+// deployment imports app.ts directly (see api/index.ts) and never loads this
+// file, so it gets its env vars from Vercel's own injection instead.
+import dotenv from 'dotenv'
+
+dotenv.config()
+
 import app from './app'
 import { logger } from './common/logger'
 import { WebSocketServer } from 'ws'

@@ -1,6 +1,13 @@
-import dotenv from 'dotenv'
-
-dotenv.config()
+// dotenv is deliberately NOT loaded here. This file is imported directly by
+// api/index.ts (the Vercel entrypoint), where env vars come from Vercel's own
+// injection — no .env file ever exists in that deployment, so dotenv would be
+// pure dead weight there. Twice now, Vercel's build for the "services" backend
+// has failed to bundle the dotenv package for this exact import chain ("Cannot
+// find module 'dotenv/config'", then "Cannot find module 'dotenv'" after
+// switching import styles) even though local @vercel/nft tracing said it
+// should resolve — so the only reliable fix is to not depend on it here at
+// all. Local dev and the Render deployment (both of which DO need a .env file
+// loaded) call dotenv.config() in index.ts, before app.ts is imported.
 
 // Crash fast in production if JWT_SECRET is missing or is the default dev value
 const DEFAULT_JWT_SECRET = 'nextstep-dev-secret-change-in-production'
