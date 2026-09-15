@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
+  SectionList,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -257,53 +258,66 @@ export default function SmartPlannerScreen(): React.JSX.Element {
         ) : error !== null ? (
           <ErrorView message={error} onRetry={() => void loadAssignments()} />
         ) : (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={() => void loadAssignments(true)}
-                tintColor={colors.primary}
-                colors={[colors.primary]}
-              />
-            }
-            contentContainerStyle={styles.scrollContent}
-          >
-            {plannerSections.length === 0 ? (
+          plannerSections.length === 0 ? (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={() => void loadAssignments(true)}
+                  tintColor={colors.primary}
+                  colors={[colors.primary]}
+                />
+              }
+              contentContainerStyle={styles.scrollContent}
+            >
               <EmptyView />
-            ) : (
-              plannerSections.map((section) => {
+            </ScrollView>
+          ) : (
+            <SectionList
+              sections={plannerSections.map((section) => {
                 const isCompleted = section.key === 'completed'
                 const isExpanded = !isCompleted || isCompletedExpanded
-                return (
-                  <View key={section.key} style={styles.section}>
-                    <SectionHeader
-                      label={section.label}
-                      count={section.assignments.length}
-                      accentColor={sectionAccentColor(section.key)}
-                      isCollapsible={isCompleted}
-                      isExpanded={isExpanded}
-                      onToggleExpand={() => setIsCompletedExpanded((e) => !e)}
-                    />
-                    {isExpanded &&
-                      section.assignments.map((a) => (
-                        <AssignmentCard
-                          key={a.id}
-                          title={a.title}
-                          subject={a.subject}
-                          estimatedMinutes={a.estimatedMinutes}
-                          dueDate={a.dueDate}
-                          completed={a.completed}
-                          accent={sectionAccent(section.key)}
-                          onToggle={() => onCardToggle(a.id, !a.completed)}
-                          isToggling={togglingIds.has(a.id)}
-                        />
-                      ))}
-                  </View>
-                )
-              })
-            )}
-          </ScrollView>
+                return { ...section, isCompleted, isExpanded, data: isExpanded ? section.assignments : [] }
+              })}
+              keyExtractor={(item) => item.id.toString()}
+              stickySectionHeadersEnabled={false}
+              renderSectionHeader={({ section }) => (
+                <View style={styles.section}>
+                  <SectionHeader
+                    label={section.label}
+                    count={section.assignments.length}
+                    accentColor={sectionAccentColor(section.key)}
+                    isCollapsible={section.isCompleted}
+                    isExpanded={section.isExpanded}
+                    onToggleExpand={() => setIsCompletedExpanded((e) => !e)}
+                  />
+                </View>
+              )}
+              renderItem={({ item: a, section }) => (
+                <AssignmentCard
+                  title={a.title}
+                  subject={a.subject}
+                  estimatedMinutes={a.estimatedMinutes}
+                  dueDate={a.dueDate}
+                  completed={a.completed}
+                  accent={sectionAccent(section.key)}
+                  onToggle={() => onCardToggle(a.id, !a.completed)}
+                  isToggling={togglingIds.has(a.id)}
+                />
+              )}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={() => void loadAssignments(true)}
+                  tintColor={colors.primary}
+                  colors={[colors.primary]}
+                />
+              }
+              contentContainerStyle={styles.scrollContent}
+            />
+          )
         )
       ) : (
         <AiPlanView

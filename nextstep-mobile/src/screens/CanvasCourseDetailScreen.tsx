@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   FlatList,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -306,8 +305,8 @@ function GradesTab({
   const badge = gradeBadge(course?.currentGrade ?? null)
   const assignments = course?.assignments ?? []
 
-  return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+  const header = (
+    <>
       {/* Overall grade hero */}
       <View style={styles.gradeHero}>
         <View style={[styles.gradeHeroBadge, { backgroundColor: badge.bg, borderColor: badge.text }]}>
@@ -324,28 +323,33 @@ function GradesTab({
           </Text>
         </View>
       </View>
+      {assignments.length > 0 && (
+        <View style={{ paddingHorizontal: 20 }}>
+          <Text variant="label" color={colors.textSecondary} style={styles.sectionLabel}>
+            Assignment Scores
+          </Text>
+        </View>
+      )}
+    </>
+  )
 
-      {/* Per-assignment scores */}
-      {assignments.length === 0 ? (
+  return (
+    <FlatList
+      data={assignments}
+      keyExtractor={item => item.id.toString()}
+      renderItem={({ item }) => <GradeScoreRow assignment={item} />}
+      ItemSeparatorComponent={() => <View style={styles.separator} />}
+      ListHeaderComponent={header}
+      ListEmptyComponent={
         <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
           <Text variant="body" color={colors.textMuted} style={{ textAlign: 'center' }}>
             No assignment scores available.
           </Text>
         </View>
-      ) : (
-        <View style={{ paddingHorizontal: 20 }}>
-          <Text variant="label" color={colors.textSecondary} style={styles.sectionLabel}>
-            Assignment Scores
-          </Text>
-          {assignments.map((assignment, i) => (
-            <React.Fragment key={assignment.id}>
-              <GradeScoreRow assignment={assignment} />
-              {i < assignments.length - 1 && <View style={styles.separator} />}
-            </React.Fragment>
-          ))}
-        </View>
-      )}
-    </ScrollView>
+      }
+      contentContainerStyle={{ paddingBottom: 40 }}
+      showsVerticalScrollIndicator={false}
+    />
   )
 }
 
@@ -622,6 +626,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
     paddingVertical: 12,
   },
   gradeAssignmentName: {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { API_BASE_URL } from '../constants/api'
 import {
   clearAllTokens,
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     }
   }
 
-  async function refreshSession(): Promise<boolean> {
+  const refreshSession = useCallback(async (): Promise<boolean> => {
     const refreshed = await tryRefresh(API_BASE_URL)
     if (!refreshed) return false
 
@@ -117,9 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     await setRefreshToken(refreshed.refreshToken)
     setTokenState(refreshed.token)
     return true
-  }
+  }, [])
 
-  async function login(email: string, password: string): Promise<void> {
+  const login = useCallback(async (email: string, password: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -136,9 +136,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     await setRefreshToken(data.refreshToken)
     setTokenState(data.token)
     setUser(data.user)
-  }
+  }, [])
 
-  async function sendOtp(email: string): Promise<void> {
+  const sendOtp = useCallback(async (email: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -149,9 +149,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       const body = (await res.json()) as { error?: { message?: string } }
       throw new Error(body.error?.message ?? 'Failed to send verification code')
     }
-  }
+  }, [])
 
-  async function register(
+  const register = useCallback(async (
     email: string,
     password: string,
     otp: string,
@@ -159,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     agreedPrivacy: boolean,
     agreedAge: boolean,
     name?: string,
-  ): Promise<void> {
+  ): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -176,9 +176,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     await setRefreshToken(data.refreshToken)
     setTokenState(data.token)
     setUser(data.user)
-  }
+  }, [])
 
-  async function logout(): Promise<void> {
+  const logout = useCallback(async (): Promise<void> => {
     const currentToken = token
     const refreshToken = await getRefreshToken()
 
@@ -197,10 +197,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         body: JSON.stringify({ refreshToken }),
       }).catch(() => { /* network error — local clear is sufficient */ })
     }
-  }
+  }, [token])
+
+  // Memoized so consumers that only care about one field (e.g. isLoading)
+  // don't re-render on every AuthProvider/SchoolSessionProvider render — this
+  // context wraps the entire app (see App.tsx).
+  const value = useMemo<AuthContextValue>(() => ({
+    user, token, isLoading, login, sendOtp, register, logout, refreshSession,
+  }), [user, token, isLoading, login, sendOtp, register, logout, refreshSession])
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, sendOtp, register, logout, refreshSession }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

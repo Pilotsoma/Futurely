@@ -7,8 +7,13 @@ const MONOREPO_ROOT = path.resolve(__dirname, '..')
 
 const config = getDefaultConfig(__dirname)
 
-// Allow Metro to resolve modules from the monorepo root (e.g. lib/legalText.ts)
-config.watchFolders = [MONOREPO_ROOT]
+// Only src/constants/legalText.ts re-exports from outside this package (from
+// the monorepo-root lib/legalText.ts, its canonical source — see that file).
+// Scope watchFolders to just that shared directory rather than the whole
+// monorepo root, so Metro's file watcher doesn't also cover the unrelated
+// Next.js web app, the Express backend, and their node_modules/.next output —
+// that bloats file-watch overhead and slows Metro startup/HMR for no benefit.
+config.watchFolders = [path.join(MONOREPO_ROOT, 'lib')]
 
 // Metro 0.84 (Expo SDK 56) changed context.resolveRequest to point to the
 // custom resolver itself, not Metro's built-in resolver. NativeWind's
