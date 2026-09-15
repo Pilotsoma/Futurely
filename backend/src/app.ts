@@ -1,4 +1,6 @@
-import 'dotenv/config'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 // Crash fast in production if JWT_SECRET is missing or is the default dev value
 const DEFAULT_JWT_SECRET = 'nextstep-dev-secret-change-in-production'
