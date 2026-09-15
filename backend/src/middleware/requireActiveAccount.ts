@@ -2,9 +2,9 @@ import { Response, NextFunction } from 'express'
 import { AccountStatus } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { liftExpiredBanIfNeeded } from '../lib/dobVerification'
-import { AuthRequest } from './auth'
 import { logger } from '../common/logger'
 import { isSchoolConnectAllowlisted } from './schoolConnectAllowlist'
+import { RequestWithAccountStatusPrefetch } from './requireConsent'
 
 /**
  * Enforces that the authenticated user's accountStatus is ACTIVE before
@@ -46,7 +46,7 @@ import { isSchoolConnectAllowlisted } from './schoolConnectAllowlist'
  * requireConsent shares the exact same allowlist for the exact same reason.
  */
 export async function requireActiveAccount(
-  req: AuthRequest,
+  req: RequestWithAccountStatusPrefetch,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
@@ -70,7 +70,11 @@ export async function requireActiveAccount(
   }
 
   try {
-    const user = await prisma.user.findUnique({
+    // requireConsent (always chained immediately before this middleware in
+    // app.ts) already fetched these two fields in its own query — reuse that
+    // instead of a second round trip. Fall back to a fresh query if this is
+    // ever reached without requireConsent having run first.
+    const user = req.accountStatusPrefetch ?? await prisma.user.findUnique({
       where: { id: userId },
       select: { accountStatus: true, bannedUntilDate: true },
     })

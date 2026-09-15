@@ -874,7 +874,7 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
     if (profile.chatBanned) { effectiveTag = 'BANNED'; effectiveTagColor = '#EF4444'; }
     else if (profile.chatMutedUntil && profile.chatMutedUntil > new Date()) { effectiveTag = 'MUTED'; effectiveTagColor = '#f97316'; }
 
-    const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, allTags: rawAllTags, schoolConnection: sc, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; allTags: string; schoolConnection?: { districtUrl: string } | null };
+    const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, allTags: rawAllTags, schoolConnection: sc, coins: _coins, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; allTags: string; schoolConnection?: { districtUrl: string } | null; coins: number };
     const isdCode = sc?.districtUrl ?? null;
     res.json({
       data: {

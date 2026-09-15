@@ -7,6 +7,10 @@ import { requireAdmin } from '../middleware/requireAdmin'
 import { checkDevCoinLimit } from '../lib/devCoinLimit'
 import { sendToUser, broadcast } from '../lib/websocket'
 
+// Sentinel thrown inside a $transaction to abort it when a conditional
+// balance-guarded update affects zero rows (see POST /coins/send).
+class InsufficientCoinsError extends Error {}
+
 // User-keyed limiter for coin-spending / inventory-mutating actions.
 const txLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -2266,11 +2270,29 @@ router.post('/coins/send', requireAuth, txLimiter, async (req: AuthRequest, res:
       res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'User not found' } })
       return
     }
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: senderId }, data: { coins: { decrement: totalCost } } }),
-      prisma.user.update({ where: { id: receiverId }, data: { coins: { increment: amount } } }),
-    ])
-    const updated = await prisma.user.findUnique({ where: { id: senderId }, select: { coins: true } })
+    // The upfront balance check above is a fast-path UX check only — it is not
+    // race-safe (two concurrent sends can both pass it before either commits,
+    // driving the balance negative). The conditional `updateMany` below is the
+    // real guard: it only debits if the balance is still sufficient *at commit
+    // time*, atomically, inside the same transaction as the credit.
+    let updated: { coins: number } | null = null
+    try {
+      updated = await prisma.$transaction(async tx => {
+        const debited = await tx.user.updateMany({
+          where: { id: senderId, coins: { gte: totalCost } },
+          data: { coins: { decrement: totalCost } },
+        })
+        if (debited.count === 0) throw new InsufficientCoinsError()
+        await tx.user.update({ where: { id: receiverId }, data: { coins: { increment: amount } } })
+        return tx.user.findUnique({ where: { id: senderId }, select: { coins: true } })
+      })
+    } catch (e) {
+      if (e instanceof InsufficientCoinsError) {
+        res.status(402).json({ data: null, error: { code: 'INSUFFICIENT_COINS', message: `Not enough coins (need ${totalCost}: ${amount} + ${tax} tax)` } })
+        return
+      }
+      throw e
+    }
 
     try {
       const notif = await prisma.notification.create({
