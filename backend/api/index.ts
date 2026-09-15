@@ -9,10 +9,10 @@ ensureSchema().catch(err => console.error('[startup]', err))
 // by default, 15 hard cap) with one LLM round-trip per turn plus DB writes —
 // this can easily exceed the default 10-second limit on Hobby plans.
 // NOTE: this export follows the standard Vercel named-export convention. Whether
-// it is honoured by the experimentalServices.backend adapter (vs. Next.js API
-// routes, which always respect it) depends on the Vercel runtime version in use.
-// If the platform does not pick it up, set maxDuration via vercel.json's
-// "functions" key instead. Either way it has no effect on non-Vercel runtimes.
+// it is honoured by the "services" backend adapter (vs. Next.js API routes,
+// which always respect it) depends on the Vercel runtime version in use — hence
+// it's also set redundantly via vercel.json's services.backend.functions key.
+// Either way it has no effect on non-Vercel runtimes.
 export const maxDuration = 60
 
 export default function handler(req: any, res: any): void {
