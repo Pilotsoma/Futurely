@@ -7,7 +7,6 @@
     "backend": {
       "root": "backend",
       "framework": "express",
-      "entrypoint": "api/index.ts",
       "functions": {
         "**": { "maxDuration": 60 }
       }
