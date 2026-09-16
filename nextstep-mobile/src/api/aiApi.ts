@@ -1,42 +1,7 @@
-import { apiFetch } from '../utils/api'
+import { api } from './client'
 
-export interface StudySession {
-  assignmentId: number
-  title: string
-  subject: string
-  dueDate: string
-  minutesToSpend: number
-  notes: string
-}
-
-export interface StudyPlanDay {
-  label: string
-  date: string
-  sessions: StudySession[]
-}
-
-export interface AiStudyPlan {
-  overview: string
-  days: StudyPlanDay[]
-}
-
-interface ChatResponse {
-  data: { reply: string }
-}
-
-interface StudyPlanResponse {
-  data: AiStudyPlan
-}
-
-export async function sendChatMessage(message: string): Promise<string> {
-  const res = await apiFetch<ChatResponse>('/ai/chat', {
-    method: 'POST',
-    body: JSON.stringify({ message }),
-  })
-  return res.data.reply
-}
-
-export async function fetchStudyPlan(): Promise<AiStudyPlan> {
-  const res = await apiFetch<StudyPlanResponse>('/ai/study-plan')
-  return res.data
+// Only the chat endpoint is wrapped — GET /ai/study-plan has no consuming
+// screen in this rebuild's scope, so no wrapper is built for it either.
+export async function sendChatMessage(message: string): Promise<{ reply: string }> {
+  return api.post('/ai/chat', { message })
 }

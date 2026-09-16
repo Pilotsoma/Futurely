@@ -1,791 +1,1670 @@
-/**
- * LoginScreen — handles sign-in, registration (3-step: form → OTP → consent), and forgot-password.
- *
- * Registration steps:
- *   1. 'register' — collect name / email / password / confirm-password
- *   2. 'otp'      — 6-digit email verification code
- *   3. 'consent'  — scrollable ToS + Privacy Policy with three agreement checkboxes
- *
- * Login and forgot-password paths are unchanged from the previous implementation.
- *
- * NOTE: Google OAuth (Firebase Sign-In with Google) is NOT implemented here.
- * The mobile project is missing google-services.json / GoogleService-Info.plist
- * and the Firebase Google Sign-In SDK. This is flagged as a blocked item for
- * DevOps / Integration to configure before Google Sign-In can be wired up.
- */
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
+  ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
+  Text,
+  TextInput,
   View,
 } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { Feather } from '@expo/vector-icons'
+
 import { useAuth } from '../context/AuthContext'
-import { colors } from '../constants/colors'
-import { API_BASE_URL } from '../constants/api'
+import * as authApi from '../api/authApi'
+import { ApiRequestError } from '../api/client'
+import { GoogleLogo } from '../components/ui/GoogleLogo'
 import {
-  LEGAL_EFFECTIVE_DATE,
-  TOS_INTRO,
-  TOS_SECTIONS,
-  PRIVACY_INTRO,
-  PRIVACY_SECTIONS,
-} from '../constants/legalText'
-import Button from '../components/ui/Button'
-import Input from '../components/ui/Input'
-import Text from '../components/ui/Text'
-import FuturelyLogo from '../components/ui/FuturelyLogo'
-import { CheckIcon } from '../components/icons'
+  elevation,
+  fonts,
+  spacing,
+} from '../theme/tokens'
 
-type AuthStackParamList = {
-  Login: undefined
-  SchoolLogin: undefined
-}
+type Mode = 'login' | 'register'
+type RegisterStep = 'dob' | 'account' | 'terms'
+type FeatherName = React.ComponentProps<typeof Feather>['name']
 
-type NavProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>
+const APP_LOGO = require('../../assets/logo.png')
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+const REGISTER_STEPS: {
+  key: RegisterStep
+  label: string
+}[] = [
+  { key: 'dob', label: 'Age' },
+  { key: 'account', label: 'Account' },
+  { key: 'terms', label: 'Finish' },
+]
 
-type Mode = 'login' | 'register' | 'otp' | 'consent' | 'forgot'
+function calculateAge(dateOfBirth: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return null
 
-// ─── Forgot-password API call ─────────────────────────────────────────────────
+  const dob = new Date(`${dateOfBirth}T00:00:00`)
+  if (Number.isNaN(dob.getTime())) return null
 
-async function requestPasswordReset(email: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  })
-  if (!res.ok) {
-    let message = 'Failed to send reset email. Please try again.'
-    try {
-      const body = (await res.json()) as { message?: string }
-      if (body.message) message = body.message
-    } catch {
-      // ignore parse error
-    }
-    throw new Error(message)
-  }
-}
+  const now = new Date()
+  let age = now.getFullYear() - dob.getFullYear()
+  const monthDifference = now.getMonth() - dob.getMonth()
 
-// ─── Forgot-password sub-screen ───────────────────────────────────────────────
-
-interface ForgotPanelProps {
-  onBack: () => void
-}
-
-function ForgotPanel({ onBack }: ForgotPanelProps): React.JSX.Element {
-  const [email, setEmail]         = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [sent, setSent]           = useState(false)
-  const [error, setError]         = useState<string | null>(null)
-
-  async function handleSend(): Promise<void> {
-    const trimmed = email.trim()
-    if (!trimmed) {
-      setError('Please enter your email address.')
-      return
-    }
-    setIsLoading(true)
-    setError(null)
-    try {
-      await requestPasswordReset(trimmed)
-      setSent(true)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.')
-    } finally {
-      setIsLoading(false)
-    }
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 && now.getDate() < dob.getDate())
+  ) {
+    age -= 1
   }
 
-  if (sent) {
-    return (
-      <View>
-        <Text variant="h3" style={styles.forgotTitle}>Check your inbox</Text>
-        <Text variant="body" color={colors.textSecondary} style={styles.forgotSubtitle}>
-          If an account exists for{' '}
-          <Text style={{ color: colors.textPrimary }}>{email.trim()}</Text>
-          , you will receive a password reset link shortly.
-        </Text>
-        <Button label="Back to Log In" onPress={onBack} />
-      </View>
-    )
-  }
+  return age
+}
+
+interface AuthFieldProps {
+  label: string
+  value: string
+  onChangeText: (value: string) => void
+  placeholder: string
+  icon: FeatherName
+  keyboardType?:
+    | 'default'
+    | 'email-address'
+    | 'number-pad'
+    | 'numbers-and-punctuation'
+  autoCapitalize?: 'none' | 'sentences' | 'words'
+  textContentType?:
+    | 'emailAddress'
+    | 'password'
+    | 'newPassword'
+    | 'name'
+    | 'oneTimeCode'
+  secureTextEntry?: boolean
+  rightAction?: React.ReactNode
+  maxLength?: number
+}
+
+function AuthField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  icon,
+  keyboardType = 'default',
+  autoCapitalize = 'sentences',
+  textContentType,
+  secureTextEntry,
+  rightAction,
+  maxLength,
+}: AuthFieldProps): React.JSX.Element {
+  const [focused, setFocused] = useState(false)
 
   return (
-    <View>
-      <Text variant="h3" style={styles.forgotTitle}>Reset your password</Text>
-      <Text variant="body" color={colors.textSecondary} style={styles.forgotSubtitle}>
-        Enter the email address associated with your account and we will send you a reset link.
+    <View style={styles.fieldWrap}>
+      <Text allowFontScaling={false} style={styles.fieldLabel}>
+        {label}
       </Text>
 
-      <Input
-        label="Email"
-        value={email}
-        onChangeText={(v) => { setEmail(v); setError(null) }}
-        placeholder="Enter your email"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        editable={!isLoading}
-        returnKeyType="done"
-        onSubmitEditing={() => void handleSend()}
-      />
-
-      {error !== null && (
-        <Text style={styles.errorText}>{error}</Text>
-      )}
-
-      <Button
-        label={isLoading ? 'Sending…' : 'Send Reset Link'}
-        onPress={() => void handleSend()}
-        isLoading={isLoading}
-      />
-
-      <TouchableOpacity
-        style={styles.backLink}
-        onPress={onBack}
-        accessibilityRole="button"
-        accessibilityLabel="Back to log in"
+      <View
+        style={[
+          styles.inputShell,
+          focused && styles.inputShellFocused,
+        ]}
       >
-        <Text style={styles.switchText}>← Back to Log In</Text>
-      </TouchableOpacity>
+        <View style={styles.inputIcon}>
+          <Feather
+            name={icon}
+            size={17}
+            color={focused ? '#A996FF' : '#71829C'}
+          />
+        </View>
+
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#566781"
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={false}
+          textContentType={textContentType}
+          secureTextEntry={secureTextEntry}
+          maxLength={maxLength}
+          style={styles.input}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+
+        {rightAction}
+      </View>
     </View>
   )
 }
 
-// ─── Checkbox row ─────────────────────────────────────────────────────────────
+interface ActionButtonProps {
+  label: string
+  onPress: () => void
+  loading?: boolean
+  disabled?: boolean
+  icon?: FeatherName
+  variant?: 'primary' | 'secondary' | 'ghost'
+}
+
+function ActionButton({
+  label,
+  onPress,
+  loading,
+  disabled,
+  icon,
+  variant = 'primary',
+}: ActionButtonProps): React.JSX.Element {
+  return (
+    <Pressable
+      disabled={disabled || loading}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionButton,
+        variant === 'primary' && styles.primaryButton,
+        variant === 'secondary' && styles.secondaryButton,
+        variant === 'ghost' && styles.ghostButton,
+        pressed && !disabled && !loading && styles.actionButtonPressed,
+        (disabled || loading) && styles.actionButtonDisabled,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      {loading ? (
+        <ActivityIndicator
+          size="small"
+          color={variant === 'primary' ? '#FFFFFF' : '#BFAFFF'}
+        />
+      ) : icon ? (
+        <Feather
+          name={icon}
+          size={16}
+          color={variant === 'primary' ? '#FFFFFF' : '#BFAFFF'}
+        />
+      ) : null}
+
+      <Text
+        allowFontScaling={false}
+        style={[
+          styles.actionButtonText,
+          variant !== 'primary' && styles.secondaryButtonText,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  )
+}
+
+interface ErrorBannerProps {
+  message: string
+}
+
+function ErrorBanner({ message }: ErrorBannerProps): React.JSX.Element {
+  return (
+    <View style={styles.errorBanner}>
+      <View style={styles.errorIcon}>
+        <Feather name="alert-circle" size={16} color="#FF8185" />
+      </View>
+      <Text style={styles.errorText}>{message}</Text>
+    </View>
+  )
+}
 
 interface CheckboxRowProps {
   checked: boolean
   onToggle: () => void
   label: string
-  accessibilityLabel: string
+  subtitle: string
 }
 
-function CheckboxRow({ checked, onToggle, label, accessibilityLabel }: CheckboxRowProps): React.JSX.Element {
+function CheckboxRow({
+  checked,
+  onToggle,
+  label,
+  subtitle,
+}: CheckboxRowProps): React.JSX.Element {
   return (
-    <TouchableOpacity
-      style={styles.checkboxRow}
+    <Pressable
       onPress={onToggle}
-      activeOpacity={0.75}
+      style={({ pressed }) => [
+        styles.checkboxRow,
+        pressed && styles.checkboxRowPressed,
+      ]}
       accessibilityRole="checkbox"
-      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked }}
+      accessibilityLabel={label}
     >
-      <View style={[styles.checkboxBox, checked && styles.checkboxBoxChecked]}>
-        {checked && <CheckIcon size={14} color={colors.background} />}
+      <View
+        style={[
+          styles.checkboxBox,
+          checked && styles.checkboxBoxChecked,
+        ]}
+      >
+        {checked ? (
+          <Feather name="check" size={14} color="#FFFFFF" />
+        ) : null}
       </View>
-      <Text style={styles.checkboxLabel}>{label}</Text>
-    </TouchableOpacity>
+
+      <View style={styles.checkboxCopy}>
+        <Text allowFontScaling={false} style={styles.checkboxLabel}>
+          {label}
+        </Text>
+        <Text style={styles.checkboxSubtitle}>{subtitle}</Text>
+      </View>
+    </Pressable>
   )
 }
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
 export default function LoginScreen(): React.JSX.Element {
-  const { login, sendOtp, register } = useAuth()
-  const navigation = useNavigation<NavProp>()
+  const { signIn, register, signInWithGoogle } = useAuth()
 
-  const [mode, setMode]                       = useState<Mode>('login')
-  const [email, setEmail]                     = useState('')
-  const [password, setPassword]               = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [name, setName]                       = useState('')
+  const [mode, setMode] = useState<Mode>('login')
 
-  // OTP step state
-  const [otpCode, setOtpCode]     = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const [loginLoading, setLoginLoading] = useState(false)
+
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [googleError, setGoogleError] = useState<string | null>(null)
+
+  const [registerStep, setRegisterStep] = useState<RegisterStep>('dob')
+  const [dateOfBirth, setDateOfBirth] = useState('')
+  const [coppaBlocked, setCoppaBlocked] = useState(false)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false)
+  const [otp, setOtp] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
   const [otpLoading, setOtpLoading] = useState(false)
-  const [otpError, setOtpError]   = useState<string | null>(null)
+  const [acceptedTos, setAcceptedTos] = useState(false)
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
+  const [registerError, setRegisterError] = useState<string | null>(null)
+  const [registerLoading, setRegisterLoading] = useState(false)
 
-  // Consent step state
-  const [agreedTos, setAgreedTos]         = useState(false)
-  const [agreedPrivacy, setAgreedPrivacy] = useState(false)
-  const [agreedAge, setAgreedAge]         = useState(false)
+  const registerStepIndex = useMemo(
+    () => REGISTER_STEPS.findIndex((step) => step.key === registerStep),
+    [registerStep],
+  )
 
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError]         = useState<string | null>(null)
+  function switchMode(nextMode: Mode): void {
+    setMode(nextMode)
+    setLoginError(null)
+    setRegisterError(null)
+    setGoogleError(null)
+  }
 
-  const isRegister = mode === 'register'
+  async function handleLogin(): Promise<void> {
+    const normalizedEmail = loginEmail.trim()
 
-  // ── Step 1 → Step 2: validate form, send OTP ────────────────────────────────
-
-  async function handleRegisterFormSubmit(): Promise<void> {
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter your email and password.')
-      return
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.')
+    if (!normalizedEmail || !loginPassword) {
+      setLoginError('Enter your email and password.')
       return
     }
 
-    setOtpLoading(true)
-    setError(null)
+    setLoginError(null)
+    setLoginLoading(true)
+
     try {
-      await sendOtp(email.trim())
-      setOtpCode('')
-      setOtpError(null)
-      setMode('otp')
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to send verification code.')
+      await signIn({
+        email: normalizedEmail,
+        password: loginPassword,
+      })
+    } catch (error) {
+      if (error instanceof ApiRequestError) {
+        if (error.code === 'ACCOUNT_LOCKED') {
+          const seconds = (
+            error.raw as { secondsRemaining?: number }
+          )?.secondsRemaining
+          const minutes = seconds ? Math.ceil(seconds / 60) : null
+
+          setLoginError(
+            minutes
+              ? `Account locked. Try again in ${minutes} minute(s).`
+              : error.message,
+          )
+        } else {
+          setLoginError(error.message)
+        }
+      } else {
+        setLoginError('Something went wrong. Please try again.')
+      }
     } finally {
-      setOtpLoading(false)
+      setLoginLoading(false)
     }
   }
 
-  // ── Resend OTP ──────────────────────────────────────────────────────────────
+  async function handleGoogleSignIn(): Promise<void> {
+    setGoogleError(null)
+    setGoogleLoading(true)
 
-  async function handleResendOtp(): Promise<void> {
-    setOtpLoading(true)
-    setOtpError(null)
     try {
-      await sendOtp(email.trim())
-    } catch (e) {
-      setOtpError(e instanceof Error ? e.message : 'Failed to resend code.')
-    } finally {
-      setOtpLoading(false)
-    }
-  }
+      await signInWithGoogle(mode === 'login' ? 'login' : 'signup')
+    } catch (error) {
+      if (
+        error instanceof ApiRequestError &&
+        error.code === 'OAUTH_CANCELLED'
+      ) {
+        return
+      }
 
-  // ── Step 2 → Step 3: validate OTP digits, advance to consent ────────────────
-
-  function handleVerifyOtp(): void {
-    const trimmed = otpCode.trim()
-    if (trimmed.length !== 6 || !/^\d{6}$/.test(trimmed)) {
-      setOtpError('Please enter the 6-digit code sent to your email.')
-      return
-    }
-    setAgreedTos(false)
-    setAgreedPrivacy(false)
-    setAgreedAge(false)
-    setMode('consent')
-  }
-
-  // ── Step 3: final registration call ─────────────────────────────────────────
-
-  async function handleConsentSubmit(): Promise<void> {
-    setIsLoading(true)
-    setError(null)
-    try {
-      await register(
-        email.trim(),
-        password,
-        otpCode.trim(),
-        agreedTos,
-        agreedPrivacy,
-        agreedAge,
-        name.trim() || undefined,
+      setGoogleError(
+        error instanceof ApiRequestError
+          ? error.message
+          : 'Google sign-in failed. Please try again.',
       )
-      // RootNavigator re-renders automatically when token is set in AuthContext
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
     } finally {
-      setIsLoading(false)
+      setGoogleLoading(false)
     }
   }
 
-  // ── Login submit ─────────────────────────────────────────────────────────────
+  function handleDobContinue(): void {
+    const age = calculateAge(dateOfBirth)
 
-  async function handleLoginSubmit(): Promise<void> {
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter your email and password.')
+    if (age === null) {
+      setRegisterError('Enter your date of birth as YYYY-MM-DD.')
       return
     }
-    setIsLoading(true)
-    setError(null)
+
+    if (age < 13) {
+      setCoppaBlocked(true)
+      setRegisterError(null)
+      return
+    }
+
+    setCoppaBlocked(false)
+    setRegisterError(null)
+    setRegisterStep('account')
+  }
+
+  async function handleSendOtp(): Promise<void> {
+    const normalizedEmail = email.trim()
+
+    if (!normalizedEmail || !password) {
+      setRegisterError('Enter your email and password first.')
+      return
+    }
+
+    if (password.length < 8) {
+      setRegisterError('Use a password with at least 8 characters.')
+      return
+    }
+
+    setRegisterError(null)
+    setOtpLoading(true)
+
     try {
-      await login(email.trim(), password)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
+      await authApi.sendOtp({ email: normalizedEmail })
+      setOtpSent(true)
+    } catch (error) {
+      setRegisterError(
+        error instanceof ApiRequestError
+          ? error.message
+          : 'Could not send code. Try again.',
+      )
     } finally {
-      setIsLoading(false)
+      setOtpLoading(false)
     }
   }
 
-  function switchMode(): void {
-    setMode(m => m === 'login' ? 'register' : 'login')
-    setError(null)
-    setEmail('')
-    setPassword('')
-    setConfirmPassword('')
-    setName('')
-    setOtpCode('')
-    setOtpError(null)
-    setAgreedTos(false)
-    setAgreedPrivacy(false)
-    setAgreedAge(false)
+  function handleAccountContinue(): void {
+    if (!otpSent || !otp.trim()) {
+      setRegisterError('Enter the verification code sent to your email.')
+      return
+    }
+
+    setRegisterError(null)
+    setRegisterStep('terms')
   }
 
-  const subtitleText =
-    mode === 'forgot'    ? 'Account Recovery'
-    : mode === 'otp'     ? 'Email Verification'
-    : mode === 'consent' ? 'Terms & Privacy'
-    : isRegister         ? 'Create your account'
-    :                      'Your academic companion'
+  async function handleRegisterSubmit(): Promise<void> {
+    if (!acceptedTos || !acceptedPrivacy) {
+      setRegisterError(
+        'You must accept the Terms of Service and Privacy Policy.',
+      )
+      return
+    }
 
-  const allConsentChecked = agreedTos && agreedPrivacy && agreedAge
+    setRegisterError(null)
+    setRegisterLoading(true)
+
+    try {
+      await register({
+        email: email.trim(),
+        password,
+        name: name.trim() || undefined,
+        otp: otp.trim(),
+        dateOfBirth,
+        agreedTos: true,
+        agreedPrivacy: true,
+        agreedAge: true,
+      })
+    } catch (error) {
+      if (error instanceof ApiRequestError) {
+        const messages: Record<string, string> = {
+          COPPA_BLOCK:
+            'You must be at least 13 years old to create an account.',
+          CONFLICT: 'An account with this email already exists.',
+          NAME_TAKEN: 'That display name is already taken.',
+          INVALID_OTP:
+            'That code is incorrect or has expired. Request a new one.',
+          OTP_REQUIRED:
+            'Enter the verification code sent to your email.',
+        }
+
+        setRegisterError(
+          (error.code && messages[error.code]) || error.message,
+        )
+      } else {
+        setRegisterError('Something went wrong. Please try again.')
+      }
+    } finally {
+      setRegisterLoading(false)
+    }
+  }
+
+  function goBackRegisterStep(): void {
+    setRegisterError(null)
+
+    if (registerStep === 'terms') {
+      setRegisterStep('account')
+      return
+    }
+
+    if (registerStep === 'account') {
+      setRegisterStep('dob')
+      return
+    }
+
+    switchMode('login')
+  }
+
+  const currentError =
+    mode === 'login' ? loginError || googleError : registerError || googleError
 
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* OTP and consent steps use a full-page ScrollView */}
-      {(mode === 'otp' || mode === 'consent') ? (
-        <ScrollView
-          style={styles.scrollOuter}
-          contentContainerStyle={styles.scrollInner}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Brand */}
-          <View style={styles.brand}>
-            <FuturelyLogo size={80} />
-            <Text variant="display" color={colors.primary} style={{ textAlign: 'center', marginTop: 16 }}>
+      <View pointerEvents="none" style={styles.backgroundTopAccent} />
+      <View pointerEvents="none" style={styles.backgroundBottomAccent} />
+
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.brandHeader}>
+          <View style={styles.logoShell}>
+            <Image
+              source={APP_LOGO}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+
+          <View style={styles.brandCopy}>
+            <Text allowFontScaling={false} style={styles.brandName}>
               myFuturely
             </Text>
-            <Text variant="body" color={colors.textSecondary} style={{ textAlign: 'center', marginTop: 8 }}>
-              {subtitleText}
+            <Text allowFontScaling={false} style={styles.brandTag}>
+              AI academic copilot
             </Text>
           </View>
 
-          {/* ── OTP step ── */}
-          {mode === 'otp' && (
-            <View>
-              <Text variant="body" color={colors.textSecondary} style={styles.otpInstructions}>
-                We sent a 6-digit verification code to{' '}
-                <Text style={{ color: colors.textPrimary }}>{email.trim()}</Text>.
-                Enter it below to continue.
+          <View style={styles.securePill}>
+            <Feather name="shield" size={12} color="#69DAB8" />
+            <Text allowFontScaling={false} style={styles.securePillText}>
+              Secure
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.hero}>
+          <Text allowFontScaling={false} style={styles.heroEyebrow}>
+            YOUR FUTURE, ONE STEP CLOSER
+          </Text>
+
+          <Text allowFontScaling={false} style={styles.heroTitle}>
+            Plan smarter.{'\n'}
+            <Text style={styles.heroTitleAccent}>Move forward.</Text>
+          </Text>
+
+          <Text style={styles.heroSubtitle}>
+            Keep grades, assignments, college planning and personalized AI
+            guidance together in one place.
+          </Text>
+        </View>
+
+        <View style={styles.featureRow}>
+          <View style={styles.featureChip}>
+            <Feather name="bar-chart-2" size={14} color="#62D9BB" />
+            <Text allowFontScaling={false} style={styles.featureChipText}>
+              Live grades
+            </Text>
+          </View>
+
+          <View style={styles.featureChip}>
+            <Feather name="calendar" size={14} color="#78AFFF" />
+            <Text allowFontScaling={false} style={styles.featureChipText}>
+              Smart planner
+            </Text>
+          </View>
+
+          <View style={styles.featureChip}>
+            <Feather name="zap" size={14} color="#B69AFF" />
+            <Text allowFontScaling={false} style={styles.featureChipText}>
+              AI guidance
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.authCard}>
+          <View style={styles.modeSwitch}>
+            <Pressable
+              onPress={() => switchMode('login')}
+              style={[
+                styles.modeButton,
+                mode === 'login' && styles.modeButtonActive,
+              ]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: mode === 'login' }}
+            >
+              <Text
+                allowFontScaling={false}
+                style={[
+                  styles.modeButtonText,
+                  mode === 'login' && styles.modeButtonTextActive,
+                ]}
+              >
+                Sign in
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => switchMode('register')}
+              style={[
+                styles.modeButton,
+                mode === 'register' && styles.modeButtonActive,
+              ]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: mode === 'register' }}
+            >
+              <Text
+                allowFontScaling={false}
+                style={[
+                  styles.modeButtonText,
+                  mode === 'register' && styles.modeButtonTextActive,
+                ]}
+              >
+                Create account
+              </Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.formHeader}>
+            <View style={styles.formHeaderCopy}>
+              <Text allowFontScaling={false} style={styles.formEyebrow}>
+                {mode === 'login' ? 'WELCOME BACK' : 'JOIN MYFUTURELY'}
               </Text>
 
-              <Input
-                label="Verification Code"
-                value={otpCode}
-                onChangeText={(v) => { setOtpCode(v.replace(/\D/g, '').slice(0, 6)); setOtpError(null) }}
-                placeholder="123456"
-                keyboardType="number-pad"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!otpLoading}
-                returnKeyType="done"
-                onSubmitEditing={handleVerifyOtp}
-                testID="otp-input"
-              />
+              <Text allowFontScaling={false} style={styles.formTitle}>
+                {mode === 'login'
+                  ? 'Continue your journey'
+                  : registerStep === 'dob'
+                    ? 'Let’s get started'
+                    : registerStep === 'account'
+                      ? 'Create your account'
+                      : 'Review and finish'}
+              </Text>
 
-              {otpError !== null && (
-                <Text style={styles.errorText}>{otpError}</Text>
-              )}
-
-              <Button
-                label="Verify & Continue"
-                onPress={handleVerifyOtp}
-                isLoading={otpLoading}
-                testID="otp-verify-button"
-              />
-
-              <TouchableOpacity
-                style={styles.switchLink}
-                onPress={() => void handleResendOtp()}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel="Resend verification code"
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                disabled={otpLoading}
-              >
-                <Text style={[styles.switchText, otpLoading && styles.disabledText]}>
-                  {otpLoading ? 'Sending…' : 'Resend code'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.backLink}
-                onPress={() => { setMode('register'); setOtpError(null) }}
-                accessibilityRole="button"
-                accessibilityLabel="Back to registration form"
-              >
-                <Text style={styles.switchText}>← Back</Text>
-              </TouchableOpacity>
+              <Text style={styles.formSubtitle}>
+                {mode === 'login'
+                  ? 'Sign in to access your academic command center.'
+                  : registerStep === 'dob'
+                    ? 'We use your age to keep your account safe.'
+                    : registerStep === 'account'
+                      ? 'Verify your email to protect your student profile.'
+                      : 'Confirm the final details before creating your account.'}
+              </Text>
             </View>
-          )}
 
-          {/* ── Consent step ── */}
-          {mode === 'consent' && (
-            <View>
-              {/* Legal text in a bounded scroll area */}
-              <View style={styles.legalScrollContainer}>
-                <ScrollView
-                  style={styles.legalScroll}
-                  nestedScrollEnabled
-                  accessibilityLabel="Terms of Service and Privacy Policy"
-                >
-                  <Text style={styles.legalMeta}>{LEGAL_EFFECTIVE_DATE}</Text>
-
-                  {/* Terms of Service */}
-                  <Text style={styles.legalTopHeading}>Terms of Service</Text>
-                  <Text style={styles.legalBody}>{TOS_INTRO}</Text>
-                  {TOS_SECTIONS.map((section) => (
-                    <View key={section.heading}>
-                      <Text style={styles.legalSectionHeading}>{section.heading}</Text>
-                      <Text style={styles.legalBody}>{section.body}</Text>
-                    </View>
-                  ))}
-
-                  {/* Privacy Policy */}
-                  <Text style={[styles.legalTopHeading, styles.legalTopHeadingSpaced]}>Privacy Policy</Text>
-                  <Text style={styles.legalBody}>{PRIVACY_INTRO}</Text>
-                  {PRIVACY_SECTIONS.map((section) => (
-                    <View key={section.heading}>
-                      <Text style={styles.legalSectionHeading}>{section.heading}</Text>
-                      <Text style={styles.legalBody}>{section.body}</Text>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-
-              {/* Consent checkboxes */}
-              <View style={styles.checkboxGroup}>
-                <CheckboxRow
-                  checked={agreedTos}
-                  onToggle={() => setAgreedTos(v => !v)}
-                  label="I have read and agree to the Terms of Service"
-                  accessibilityLabel="Agree to Terms of Service"
-                />
-                <CheckboxRow
-                  checked={agreedPrivacy}
-                  onToggle={() => setAgreedPrivacy(v => !v)}
-                  label="I have read and agree to the Privacy Policy"
-                  accessibilityLabel="Agree to Privacy Policy"
-                />
-                <CheckboxRow
-                  checked={agreedAge}
-                  onToggle={() => setAgreedAge(v => !v)}
-                  label="I am at least 13 years of age"
-                  accessibilityLabel="Confirm you are at least 13 years old"
-                />
-              </View>
-
-              {error !== null && (
-                <Text style={styles.errorText}>{error}</Text>
-              )}
-
-              <Button
-                label={isLoading ? 'Creating account…' : 'Create Account'}
-                onPress={() => void handleConsentSubmit()}
-                isLoading={isLoading}
-                disabled={!allConsentChecked || isLoading}
-                testID="consent-submit-button"
+            <View style={styles.formIcon}>
+              <Feather
+                name={mode === 'login' ? 'log-in' : 'user-plus'}
+                size={19}
+                color="#B9A5FF"
               />
-
-              <TouchableOpacity
-                style={styles.backLink}
-                onPress={() => { setMode('otp'); setError(null) }}
-                accessibilityRole="button"
-                accessibilityLabel="Back to OTP entry"
-              >
-                <Text style={styles.switchText}>← Back</Text>
-              </TouchableOpacity>
             </View>
-          )}
-        </ScrollView>
-      ) : (
-        <View style={styles.inner}>
-
-          {/* ── Brand ── */}
-          <View style={styles.brand}>
-            <FuturelyLogo size={80} />
-            <Text variant="display" color={colors.primary} style={{ textAlign: 'center', marginTop: 16 }}>
-              myFuturely
-            </Text>
-            <Text variant="body" color={colors.textSecondary} style={{ textAlign: 'center', marginTop: 8 }}>
-              {subtitleText}
-            </Text>
           </View>
 
-          {/* ── Forgot password panel ── */}
-          {mode === 'forgot' ? (
-            <ForgotPanel onBack={() => setMode('login')} />
-          ) : (
-            <View>
-              {/* Display name (register only) */}
-              {isRegister && (
-                <Input
-                  label="Display Name (optional)"
-                  value={name}
-                  onChangeText={(v) => { setName(v); setError(null) }}
-                  placeholder="Jane Doe"
-                  autoCapitalize="words"
-                  editable={!otpLoading}
-                  returnKeyType="next"
-                />
-              )}
+          {mode === 'register' ? (
+            <View style={styles.stepProgress}>
+              {REGISTER_STEPS.map((step, index) => {
+                const complete = index < registerStepIndex
+                const active = index === registerStepIndex
 
-              <Input
-                label="Email"
-                value={email}
-                onChangeText={(v) => { setEmail(v); setError(null) }}
-                placeholder="Enter your email"
+                return (
+                  <React.Fragment key={step.key}>
+                    <View style={styles.stepItem}>
+                      <View
+                        style={[
+                          styles.stepCircle,
+                          complete && styles.stepCircleComplete,
+                          active && styles.stepCircleActive,
+                        ]}
+                      >
+                        {complete ? (
+                          <Feather
+                            name="check"
+                            size={12}
+                            color="#FFFFFF"
+                          />
+                        ) : (
+                          <Text
+                            allowFontScaling={false}
+                            style={[
+                              styles.stepNumber,
+                              active && styles.stepNumberActive,
+                            ]}
+                          >
+                            {index + 1}
+                          </Text>
+                        )}
+                      </View>
+
+                      <Text
+                        allowFontScaling={false}
+                        style={[
+                          styles.stepLabel,
+                          active && styles.stepLabelActive,
+                        ]}
+                      >
+                        {step.label}
+                      </Text>
+                    </View>
+
+                    {index < REGISTER_STEPS.length - 1 ? (
+                      <View
+                        style={[
+                          styles.stepLine,
+                          complete && styles.stepLineComplete,
+                        ]}
+                      />
+                    ) : null}
+                  </React.Fragment>
+                )
+              })}
+            </View>
+          ) : null}
+
+          <Pressable
+            onPress={() => void handleGoogleSignIn()}
+            disabled={googleLoading}
+            style={({ pressed }) => [
+              styles.googleButton,
+              pressed && !googleLoading && styles.googleButtonPressed,
+              googleLoading && styles.actionButtonDisabled,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#12141D" />
+            ) : (
+              <GoogleLogo size={19} />
+            )}
+
+            <Text
+              allowFontScaling={false}
+              style={styles.googleButtonText}
+            >
+              {googleLoading
+                ? 'Opening Google…'
+                : mode === 'login'
+                  ? 'Sign in with Google'
+                  : 'Continue with Google'}
+            </Text>
+          </Pressable>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text allowFontScaling={false} style={styles.dividerText}>
+              OR CONTINUE WITH EMAIL
+            </Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {mode === 'login' ? (
+            <View style={styles.form}>
+              <AuthField
+                label="Email address"
+                value={loginEmail}
+                onChangeText={setLoginEmail}
+                placeholder="you@example.com"
+                icon="mail"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading && !otpLoading}
-                returnKeyType="next"
-                testID="email-input"
+                textContentType="emailAddress"
               />
 
-              <Input
+              <AuthField
                 label="Password"
-                value={password}
-                onChangeText={(v) => { setPassword(v); setError(null) }}
-                placeholder={isRegister ? 'At least 6 characters' : 'Enter your password'}
-                secureTextEntry
-                editable={!isLoading && !otpLoading}
-                returnKeyType={isRegister ? 'next' : 'done'}
-                onSubmitEditing={() => { if (!isRegister) void handleLoginSubmit() }}
-                testID="password-input"
-              />
-
-              {/* Forgot password link — login mode only */}
-              {!isRegister && (
-                <TouchableOpacity
-                  style={styles.forgotLink}
-                  onPress={() => { setError(null); setMode('forgot') }}
-                  activeOpacity={0.75}
-                  accessibilityRole="button"
-                  accessibilityLabel="Forgot your password?"
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Text style={styles.forgotLinkText}>Forgot password?</Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Confirm password (register only) */}
-              {isRegister && (
-                <Input
-                  label="Confirm Password"
-                  value={confirmPassword}
-                  onChangeText={(v) => { setConfirmPassword(v); setError(null) }}
-                  placeholder="Re-enter your password"
-                  secureTextEntry
-                  editable={!isLoading && !otpLoading}
-                  returnKeyType="done"
-                  onSubmitEditing={() => void handleRegisterFormSubmit()}
-                  error={error}
-                />
-              )}
-
-              {!isRegister && error !== null && (
-                <Text style={styles.errorText}>{error}</Text>
-              )}
-
-              <Button
-                label={
-                  otpLoading
-                    ? 'Sending code…'
-                    : isLoading
-                    ? (isRegister ? 'Creating account…' : 'Logging in…')
-                    : (isRegister ? 'Continue' : 'Log In')
+                value={loginPassword}
+                onChangeText={setLoginPassword}
+                placeholder="Enter your password"
+                icon="lock"
+                secureTextEntry={!showLoginPassword}
+                autoCapitalize="none"
+                textContentType="password"
+                rightAction={
+                  <Pressable
+                    onPress={() =>
+                      setShowLoginPassword((current) => !current)
+                    }
+                    style={styles.visibilityButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      showLoginPassword ? 'Hide password' : 'Show password'
+                    }
+                  >
+                    <Feather
+                      name={showLoginPassword ? 'eye-off' : 'eye'}
+                      size={17}
+                      color="#7D8EA7"
+                    />
+                  </Pressable>
                 }
-                onPress={() => void (isRegister ? handleRegisterFormSubmit() : handleLoginSubmit())}
-                isLoading={isLoading || otpLoading}
-                testID="login-button"
               />
 
-              {/* Mode switch */}
-              <TouchableOpacity
-                style={styles.switchLink}
-                onPress={switchMode}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel={isRegister ? 'Already have an account? Log In' : "Don't have an account? Create one"}
-              >
-                <Text style={styles.switchText}>
-                  {isRegister
-                    ? 'Already have an account? Log In'
-                    : "Don't have an account? Create one"}
-                </Text>
-              </TouchableOpacity>
+              {currentError ? <ErrorBanner message={currentError} /> : null}
 
-              {/* Student portal link — login mode only */}
-              {!isRegister && (
-                <TouchableOpacity
-                  style={styles.switchLink}
-                  onPress={() => navigation.navigate('SchoolLogin')}
-                  activeOpacity={0.75}
-                  accessibilityRole="button"
-                  accessibilityLabel="Student? Sign in with your school account"
-                >
-                  <Text style={[styles.switchText, { color: colors.textSecondary, fontWeight: '400' }]}>
-                    Student? <Text style={{ color: colors.primary, fontWeight: '600' }}>Sign in with school account</Text>
-                  </Text>
-                </TouchableOpacity>
-              )}
+              <ActionButton
+                label="Sign in"
+                icon="arrow-right"
+                onPress={() => void handleLogin()}
+                loading={loginLoading}
+              />
+
+              <View style={styles.trustRow}>
+                <Feather name="lock" size={12} color="#71839E" />
+                <Text style={styles.trustText}>
+                  Your academic data stays private and protected.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.form}>
+              {registerStep === 'dob' ? (
+                <>
+                  <AuthField
+                    label="Date of birth"
+                    value={dateOfBirth}
+                    onChangeText={(value) => {
+                      setDateOfBirth(value)
+                      setCoppaBlocked(false)
+                      setRegisterError(null)
+                    }}
+                    placeholder="YYYY-MM-DD"
+                    icon="calendar"
+                    keyboardType="numbers-and-punctuation"
+                    autoCapitalize="none"
+                    maxLength={10}
+                  />
+
+                  <View style={styles.infoBanner}>
+                    <View style={styles.infoIcon}>
+                      <Feather
+                        name="shield"
+                        size={16}
+                        color="#78AFFF"
+                      />
+                    </View>
+                    <Text style={styles.infoText}>
+                      Students must be at least 13 years old to create an
+                      account.
+                    </Text>
+                  </View>
+
+                  {coppaBlocked ? (
+                    <ErrorBanner message="You must be at least 13 years old. Please ask a parent or guardian for help." />
+                  ) : currentError ? (
+                    <ErrorBanner message={currentError} />
+                  ) : null}
+
+                  <ActionButton
+                    label="Continue"
+                    icon="arrow-right"
+                    onPress={handleDobContinue}
+                    disabled={coppaBlocked}
+                  />
+                </>
+              ) : null}
+
+              {registerStep === 'account' ? (
+                <>
+                  <AuthField
+                    label="Display name"
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="What should we call you?"
+                    icon="user"
+                    autoCapitalize="words"
+                    textContentType="name"
+                  />
+
+                  <AuthField
+                    label="Email address"
+                    value={email}
+                    onChangeText={(value) => {
+                      setEmail(value)
+                      setOtpSent(false)
+                      setOtp('')
+                    }}
+                    placeholder="you@example.com"
+                    icon="mail"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    textContentType="emailAddress"
+                  />
+
+                  <AuthField
+                    label="Password"
+                    value={password}
+                    onChangeText={(value) => {
+                      setPassword(value)
+                      setOtpSent(false)
+                      setOtp('')
+                    }}
+                    placeholder="At least 8 characters"
+                    icon="lock"
+                    secureTextEntry={!showRegisterPassword}
+                    autoCapitalize="none"
+                    textContentType="newPassword"
+                    rightAction={
+                      <Pressable
+                        onPress={() =>
+                          setShowRegisterPassword((current) => !current)
+                        }
+                        style={styles.visibilityButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          showRegisterPassword
+                            ? 'Hide password'
+                            : 'Show password'
+                        }
+                      >
+                        <Feather
+                          name={
+                            showRegisterPassword ? 'eye-off' : 'eye'
+                          }
+                          size={17}
+                          color="#7D8EA7"
+                        />
+                      </Pressable>
+                    }
+                  />
+
+                  <View style={styles.passwordHint}>
+                    <View
+                      style={[
+                        styles.passwordDot,
+                        password.length >= 8 && styles.passwordDotComplete,
+                      ]}
+                    />
+                    <Text style={styles.passwordHintText}>
+                      Use at least 8 characters
+                    </Text>
+                  </View>
+
+                  {otpSent ? (
+                    <AuthField
+                      label="Verification code"
+                      value={otp}
+                      onChangeText={setOtp}
+                      placeholder="6-digit code"
+                      icon="key"
+                      keyboardType="number-pad"
+                      autoCapitalize="none"
+                      textContentType="oneTimeCode"
+                      maxLength={6}
+                    />
+                  ) : null}
+
+                  {otpSent ? (
+                    <View style={styles.codeSentBanner}>
+                      <Feather
+                        name="check-circle"
+                        size={15}
+                        color="#5ED6AE"
+                      />
+                      <Text style={styles.codeSentText}>
+                        Verification code sent to {email.trim()}.
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {currentError ? <ErrorBanner message={currentError} /> : null}
+
+                  <ActionButton
+                    label={
+                      otpSent
+                        ? 'Resend verification code'
+                        : 'Send verification code'
+                    }
+                    icon={otpSent ? 'refresh-cw' : 'send'}
+                    onPress={() => void handleSendOtp()}
+                    loading={otpLoading}
+                    variant="secondary"
+                  />
+
+                  <ActionButton
+                    label="Continue"
+                    icon="arrow-right"
+                    onPress={handleAccountContinue}
+                    disabled={!otpSent || otp.trim().length === 0}
+                  />
+                </>
+              ) : null}
+
+              {registerStep === 'terms' ? (
+                <>
+                  <View style={styles.summaryCard}>
+                    <View style={styles.summaryIcon}>
+                      <Feather name="user" size={19} color="#B9A5FF" />
+                    </View>
+                    <View style={styles.summaryCopy}>
+                      <Text
+                        allowFontScaling={false}
+                        style={styles.summaryTitle}
+                      >
+                        {name.trim() || 'New myFuturely student'}
+                      </Text>
+                      <Text
+                        allowFontScaling={false}
+                        style={styles.summaryEmail}
+                      >
+                        {email.trim()}
+                      </Text>
+                    </View>
+                    <Feather name="check-circle" size={18} color="#5ED6AE" />
+                  </View>
+
+                  <CheckboxRow
+                    checked={acceptedTos}
+                    onToggle={() => setAcceptedTos((current) => !current)}
+                    label="Terms of Service"
+                    subtitle="I agree to use myFuturely responsibly."
+                  />
+
+                  <CheckboxRow
+                    checked={acceptedPrivacy}
+                    onToggle={() =>
+                      setAcceptedPrivacy((current) => !current)
+                    }
+                    label="Privacy Policy"
+                    subtitle="I understand how my information is handled."
+                  />
+
+                  {currentError ? <ErrorBanner message={currentError} /> : null}
+
+                  <ActionButton
+                    label="Create my account"
+                    icon="check"
+                    onPress={() => void handleRegisterSubmit()}
+                    loading={registerLoading}
+                    disabled={!acceptedTos || !acceptedPrivacy}
+                  />
+                </>
+              ) : null}
+
+              <ActionButton
+                label={
+                  registerStep === 'dob'
+                    ? 'Back to sign in'
+                    : 'Back'
+                }
+                icon="arrow-left"
+                onPress={goBackRegisterStep}
+                variant="ghost"
+              />
             </View>
           )}
-
         </View>
-      )}
+
+        <Text style={styles.footerText}>
+          By continuing, you’re joining a student-first platform designed
+          to help you make confident academic decisions.
+        </Text>
+      </ScrollView>
     </KeyboardAvoidingView>
   )
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  screen: {
+  flex: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#02040B',
   },
-  inner: {
-    flex: 1,
+  backgroundTopAccent: {
+    position: 'absolute',
+    top: -120,
+    right: -145,
+    width: 310,
+    height: 310,
+    borderRadius: 155,
+    backgroundColor: '#14103A',
+    opacity: 0.72,
+  },
+  backgroundBottomAccent: {
+    position: 'absolute',
+    bottom: -170,
+    left: -180,
+    width: 340,
+    height: 340,
+    borderRadius: 170,
+    backgroundColor: '#071D2B',
+    opacity: 0.62,
+  },
+  scroll: {
+    flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: Platform.OS === 'android' ? 34 : 22,
+    paddingBottom: 30,
+    gap: 18,
   },
-  // OTP and consent steps use a full-page scroll
-  scrollOuter: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollInner: {
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  brand: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  // OTP step
-  otpInstructions: {
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  // Consent step — bounded legal text scroll area
-  legalScrollContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    maxHeight: 320,
-    marginBottom: 20,
-  },
-  legalScroll: {
-    padding: 16,
-  },
-  legalMeta: {
-    fontSize: 11,
-    color: colors.textMuted,
-    marginBottom: 12,
-  },
-  legalTopHeading: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginTop: 4,
-    marginBottom: 6,
-  },
-  legalTopHeadingSpaced: {
-    marginTop: 20,
-  },
-  legalSectionHeading: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  legalBody: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  // Checkboxes
-  checkboxGroup: {
-    marginBottom: 16,
-    gap: 12,
-  },
-  checkboxRow: {
+
+  brandHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    // paddingVertical + text height brings total touch area to ≥ 44pt
-    paddingVertical: 10,
+    alignItems: 'center',
     gap: 10,
   },
-  checkboxBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
+  logoShell: {
+    width: 48,
+    height: 48,
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 1,
+    borderRadius: 15,
+    backgroundColor: '#071528',
+    borderWidth: 1,
+    borderColor: '#1A4D6B',
+    ...elevation.sm,
   },
-  checkboxBoxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+  logo: {
+    width: 38,
+    height: 38,
   },
-  checkboxLabel: {
+  brandCopy: {
     flex: 1,
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
+    minWidth: 0,
   },
-  // Forgot-password panel
-  forgotTitle: {
-    marginBottom: 8,
-    textAlign: 'center',
+  brandName: {
+    color: '#F4F6FF',
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
-  forgotSubtitle: {
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
+  brandTag: {
+    marginTop: 1,
+    color: '#71839F',
+    fontFamily: fonts.regular,
+    fontSize: 9.5,
+    lineHeight: 13,
   },
-  forgotLink: {
-    alignSelf: 'flex-end',
-    marginTop: -4,
-    marginBottom: 12,
-    // paddingVertical 8 + hitSlop 12 each side = 8+16+12+12 ≥ 44pt tap target
-    paddingVertical: 8,
-  },
-  forgotLinkText: {
-    fontSize: 13,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  backLink: {
-    marginTop: 16,
+  securePill: {
+    minHeight: 29,
+    flexDirection: 'row',
     alignItems: 'center',
-    // paddingVertical 14 ensures ≥ 44pt touch target (14 + ~16 text + 14)
-    paddingVertical: 14,
+    gap: 5,
+    paddingHorizontal: 9,
+    borderRadius: 10,
+    backgroundColor: 'rgba(16,185,129,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.25)',
   },
-  // Wrapper provides the 44pt touch target
-  switchLink: {
-    marginTop: 20,
-    paddingVertical: 14,
+  securePillText: {
+    color: '#69DAB8',
+    fontFamily: fonts.bold,
+    fontSize: 8.5,
+    fontWeight: '700',
+  },
+
+  hero: {
+    gap: 6,
+  },
+  heroEyebrow: {
+    color: '#7D92BA',
+    fontFamily: fonts.bold,
+    fontSize: 8.5,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  heroTitle: {
+    color: '#F5F7FF',
+    fontFamily: fonts.bold,
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: '700',
+    letterSpacing: -0.8,
+  },
+  heroTitleAccent: {
+    color: '#A78BFA',
+  },
+  heroSubtitle: {
+    maxWidth: 345,
+    color: '#8B9AB0',
+    fontFamily: fonts.regular,
+    fontSize: 11.5,
+    lineHeight: 17,
+  },
+
+  featureRow: {
+    flexDirection: 'row',
+    gap: 7,
+  },
+  featureChip: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 36,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 6,
+    borderRadius: 11,
+    backgroundColor: '#0B1422',
+    borderWidth: 1,
+    borderColor: '#1D3049',
   },
-  switchText: {
-    fontSize: 13,
-    color: colors.primary,
-    textAlign: 'center',
+  featureChipText: {
+    color: '#A4B1C5',
+    fontFamily: fonts.semiBold,
+    fontSize: 8.2,
     fontWeight: '600',
   },
-  disabledText: {
-    opacity: 0.4,
+
+  authCard: {
+    gap: 16,
+    padding: 15,
+    borderRadius: 22,
+    backgroundColor: '#0C1422',
+    borderWidth: 1,
+    borderColor: '#263B58',
+    ...elevation.md,
+  },
+  modeSwitch: {
+    minHeight: 44,
+    flexDirection: 'row',
+    padding: 4,
+    borderRadius: 14,
+    backgroundColor: '#070D17',
+    borderWidth: 1,
+    borderColor: '#1D2B40',
+  },
+  modeButton: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+  modeButtonActive: {
+    backgroundColor: '#21184A',
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.35)',
+  },
+  modeButtonText: {
+    color: '#71819A',
+    fontFamily: fonts.bold,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  modeButtonTextActive: {
+    color: '#D1C5FF',
+  },
+
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  formHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  formEyebrow: {
+    color: '#7892BB',
+    fontFamily: fonts.bold,
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  formTitle: {
+    marginTop: 2,
+    color: '#F4F6FF',
+    fontFamily: fonts.bold,
+    fontSize: 19,
+    lineHeight: 23,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  formSubtitle: {
+    marginTop: 4,
+    color: '#7D8DA5',
+    fontFamily: fonts.regular,
+    fontSize: 9.8,
+    lineHeight: 14,
+  },
+  formIcon: {
+    width: 39,
+    height: 39,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+    backgroundColor: '#21184A',
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.30)',
+  },
+
+  stepProgress: {
+    minHeight: 47,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  stepCircle: {
+    width: 25,
+    height: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+    backgroundColor: '#111B2B',
+    borderWidth: 1,
+    borderColor: '#2A3C56',
+  },
+  stepCircleActive: {
+    backgroundColor: '#6741DE',
+    borderColor: '#8D6BFF',
+  },
+  stepCircleComplete: {
+    backgroundColor: '#168765',
+    borderColor: '#34B38D',
+  },
+  stepNumber: {
+    color: '#71819A',
+    fontFamily: fonts.bold,
+    fontSize: 8.5,
+    fontWeight: '700',
+  },
+  stepNumberActive: {
+    color: '#FFFFFF',
+  },
+  stepLabel: {
+    color: '#64758F',
+    fontFamily: fonts.medium,
+    fontSize: 7.5,
+    fontWeight: '500',
+  },
+  stepLabelActive: {
+    color: '#C7B9FF',
+  },
+  stepLine: {
+    flex: 1,
+    height: 1,
+    maxWidth: 58,
+    minWidth: 36,
+    marginHorizontal: 7,
+    marginBottom: 16,
+    backgroundColor: '#24354D',
+  },
+  stepLineComplete: {
+    backgroundColor: '#2FA67F',
+  },
+
+  googleButton: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 9,
+    paddingHorizontal: 13,
+    borderRadius: 14,
+    backgroundColor: '#F8F9FC',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  googleButtonPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.99 }],
+  },
+  googleButtonText: {
+    color: '#12141D',
+    fontFamily: fonts.bold,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#22324A',
+  },
+  dividerText: {
+    color: '#60718C',
+    fontFamily: fonts.bold,
+    fontSize: 7.5,
+    fontWeight: '700',
+    letterSpacing: 0.65,
+  },
+
+  form: {
+    gap: 13,
+  },
+  fieldWrap: {
+    gap: 6,
+  },
+  fieldLabel: {
+    color: '#8798B2',
+    fontFamily: fonts.bold,
+    fontSize: 8.5,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
+  inputShell: {
+    minHeight: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderRadius: 14,
+    backgroundColor: '#080F1A',
+    borderWidth: 1,
+    borderColor: '#263954',
+  },
+  inputShellFocused: {
+    borderColor: '#7555E8',
+    backgroundColor: '#0A1120',
+  },
+  inputIcon: {
+    width: 43,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    height: 50,
+    paddingVertical: 0,
+    paddingRight: 10,
+    color: '#F1F4FC',
+    fontFamily: fonts.regular,
+    fontSize: 12,
+  },
+  visibilityButton: {
+    width: 43,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  actionButton: {
+    minHeight: 47,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingHorizontal: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  primaryButton: {
+    backgroundColor: '#7048F4',
+    borderColor: '#8565FF',
+  },
+  secondaryButton: {
+    backgroundColor: '#151F31',
+    borderColor: '#304764',
+  },
+  ghostButton: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+  },
+  actionButtonPressed: {
+    opacity: 0.86,
+    transform: [{ scale: 0.99 }],
+  },
+  actionButtonDisabled: {
+    opacity: 0.55,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bold,
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  secondaryButtonText: {
+    color: '#C3B5FA',
+  },
+
+  errorBanner: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    padding: 10,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,99,103,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,99,103,0.25)',
+  },
+  errorIcon: {
+    width: 29,
+    height: 29,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,99,103,0.10)',
   },
   errorText: {
-    fontSize: 13,
-    color: colors.error,
+    flex: 1,
+    color: '#E7A1A4',
+    fontFamily: fonts.regular,
+    fontSize: 9.5,
+    lineHeight: 13.5,
+  },
+
+  infoBanner: {
+    minHeight: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    padding: 10,
+    borderRadius: 13,
+    backgroundColor: 'rgba(59,130,246,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(59,130,246,0.22)',
+  },
+  infoIcon: {
+    width: 31,
+    height: 31,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: 'rgba(59,130,246,0.10)',
+  },
+  infoText: {
+    flex: 1,
+    color: '#91A5C2',
+    fontFamily: fonts.regular,
+    fontSize: 9.2,
+    lineHeight: 13.5,
+  },
+
+  passwordHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 2,
+  },
+  passwordDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#485B76',
+  },
+  passwordDotComplete: {
+    backgroundColor: '#36C595',
+  },
+  passwordHintText: {
+    color: '#6F809A',
+    fontFamily: fonts.regular,
+    fontSize: 8.5,
+  },
+
+  codeSentBanner: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(16,185,129,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.22)',
+  },
+  codeSentText: {
+    flex: 1,
+    color: '#8FC9B5',
+    fontFamily: fonts.regular,
+    fontSize: 8.8,
+    lineHeight: 12,
+  },
+
+  summaryCard: {
+    minHeight: 65,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 11,
+    borderRadius: 14,
+    backgroundColor: '#141F33',
+    borderWidth: 1,
+    borderColor: '#2A4160',
+  },
+  summaryIcon: {
+    width: 38,
+    height: 38,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: '#21184A',
+  },
+  summaryCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  summaryTitle: {
+    color: '#EDF1FA',
+    fontFamily: fonts.semiBold,
+    fontSize: 10.5,
+    fontWeight: '600',
+  },
+  summaryEmail: {
+    color: '#7C8EA8',
+    fontFamily: fonts.regular,
+    fontSize: 8.8,
+  },
+
+  checkboxRow: {
+    minHeight: 63,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderRadius: 13,
+    backgroundColor: '#101A2A',
+    borderWidth: 1,
+    borderColor: '#273D59',
+  },
+  checkboxRowPressed: {
+    opacity: 0.86,
+  },
+  checkboxBox: {
+    width: 23,
+    height: 23,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 7,
+    backgroundColor: '#09111D',
+    borderWidth: 1,
+    borderColor: '#3A4C65',
+  },
+  checkboxBoxChecked: {
+    backgroundColor: '#7048F4',
+    borderColor: '#8D71FF',
+  },
+  checkboxCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  checkboxLabel: {
+    color: '#EBEFF8',
+    fontFamily: fonts.semiBold,
+    fontSize: 10.5,
+    fontWeight: '600',
+  },
+  checkboxSubtitle: {
+    color: '#71829A',
+    fontFamily: fonts.regular,
+    fontSize: 8.5,
+    lineHeight: 12,
+  },
+
+  trustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  trustText: {
+    color: '#667791',
+    fontFamily: fonts.regular,
+    fontSize: 8.2,
+    lineHeight: 11,
     textAlign: 'center',
-    marginBottom: 8,
+  },
+
+  footerText: {
+    maxWidth: 330,
+    alignSelf: 'center',
+    color: '#586A84',
+    fontFamily: fonts.regular,
+    fontSize: 8.2,
+    lineHeight: 12,
+    textAlign: 'center',
   },
 })

@@ -1,85 +1,60 @@
-import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, View } from 'react-native'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
+// RootNavigator — top-level auth gate.
+//
+// Three-state routing (avoids flash of wrong screen on cold launch):
+//   'initializing'                                  -> loading indicator
+//   'unauthenticated'                                -> AuthNavigator (Login + Register)
+//   'authenticated' + hasPortalConnection === null   -> loading indicator (status check in flight)
+//   'authenticated' + hasPortalConnection === false  -> ConnectSchoolNavigator
+//   'authenticated' + hasPortalConnection === true   -> MainNavigator (Drawer)
+//
+// No imperative navigation calls — all transitions are reactive on AuthContext
+// state, so any async update (token restore, portal check, markPortalConnected)
+// automatically renders the correct screen without a flash.
+
+import React from 'react'
+import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { NavigationContainer } from '@react-navigation/native'
 import { useAuth } from '../context/AuthContext'
-import { useSchoolSession } from '../context/SchoolSessionContext'
-import LoginScreen from '../screens/LoginScreen'
-import SchoolLoginScreen from '../screens/SchoolLoginScreen'
-import UserAgreementScreen from '../screens/UserAgreementScreen'
-import AppNavigator from './AppNavigator'
-import { colors } from '../constants/colors'
-
-const AGREEMENT_KEY = 'nextstep_agreement_accepted'
-
-type AuthStackParamList = {
-  SchoolLogin: undefined
-  Login: undefined
-}
-
-const AuthStack = createNativeStackNavigator<AuthStackParamList>()
-
-function AuthNavigator(): React.JSX.Element {
-  return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Login">
-      <AuthStack.Screen name="Login" component={LoginScreen} />
-      <AuthStack.Screen name="SchoolLogin" component={SchoolLoginScreen} />
-    </AuthStack.Navigator>
-  )
-}
-
-function SplashView(): React.JSX.Element {
-  return (
-    <View className="flex-1 items-center justify-center bg-[#07080F]">
-      <ActivityIndicator size="large" color={colors.primary} />
-    </View>
-  )
-}
+import AuthNavigator from './AuthNavigator'
+import ConnectSchoolNavigator from './ConnectSchoolNavigator'
+import MainNavigator from './MainNavigator'
+import AccountRestrictionScreen from '../screens/AccountRestrictionScreen'
+import { linking } from './linking'
+import { colors } from '../theme/tokens'
 
 export default function RootNavigator(): React.JSX.Element {
-  const { token, isLoading: authLoading } = useAuth()
-  const { hasSchoolSession, isLoaded: schoolLoaded } = useSchoolSession()
+  const { status, user, hasPortalConnection } = useAuth()
 
-  const [hasAgreed, setHasAgreed] = useState(false)
-  const [agreementLoaded, setAgreementLoaded] = useState(false)
+  const isLoading =
+    status === 'initializing' ||
+    (
+      status === 'authenticated' &&
+      user?.accountStatus === 'ACTIVE' &&
+      hasPortalConnection === null
+    )
 
-  useEffect(() => {
-    async function checkAgreement(): Promise<void> {
-      if (!token) {
-        setAgreementLoaded(true)
-        return
-      }
-      try {
-        const val = await AsyncStorage.getItem(AGREEMENT_KEY)
-        setHasAgreed(val === 'true')
-      } catch {
-        setHasAgreed(false)
-      } finally {
-        setAgreementLoaded(true)
-      }
-    }
-    void checkAgreement()
-  }, [token])
-
-  async function handleAgree(): Promise<void> {
-    try {
-      await AsyncStorage.setItem(AGREEMENT_KEY, 'true')
-    } finally {
-      setHasAgreed(true)
-    }
+  if (isLoading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator color={colors.primary} size="small" />
+      </View>
+    )
   }
 
-  // Wait for all async checks to complete
-  if (authLoading || !schoolLoaded || !agreementLoaded) return <SplashView />
-
-  // Neither a NextStep JWT nor a school session — show auth flow
-  if (token === null && !hasSchoolSession) return <AuthNavigator />
-
-  // NextStep parent account logged in but hasn't agreed to terms
-  if (token !== null && !hasAgreed) {
-    return <UserAgreementScreen onAgree={() => void handleAgree()} />
+  let navigator: React.JSX.Element
+  if (status === 'unauthenticated') {
+    navigator = <AuthNavigator />
+  } else if (user?.accountStatus !== 'ACTIVE') {
+    navigator = <AccountRestrictionScreen />
+  } else if (hasPortalConnection === false) {
+    navigator = <ConnectSchoolNavigator />
+  } else {
+    navigator = <MainNavigator />
   }
 
-  // Either JWT token (parent) or school session (student) — show the app
-  return <AppNavigator />
+  return <NavigationContainer linking={linking}>{navigator}</NavigationContainer>
 }
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+})

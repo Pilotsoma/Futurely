@@ -1,23 +1,47 @@
 import React from 'react'
-import { Image } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
+import { colors, fonts } from '../../theme/tokens'
 
-interface Props {
+interface FuturelyLogoProps {
   size?: number
 }
 
-// Source aspect ratio (width / height) of assets/futurely-logo.png — the
-// graduation-cap-over-"F" mark also used on web (public/logo.png). `size`
-// controls the rendered height; width is derived to preserve the ratio.
-const LOGO_ASPECT_RATIO = 426 / 512
-
-export default function FuturelyLogo({ size = 40 }: Props): React.JSX.Element {
+// Rounded square, brand blue bg, cyan accent stripe, white "F" glyph — per DESIGN_SYSTEM.md.
+// Pure View/Text, no external asset or SVG package required.
+export function FuturelyLogo({ size = 40 }: FuturelyLogoProps): React.JSX.Element {
   return (
-    <Image
-      source={require('../../../assets/futurely-logo.png')}
-      style={{ width: Math.round(size * LOGO_ASPECT_RATIO), height: size }}
-      resizeMode="contain"
-      accessibilityRole="image"
-      accessibilityLabel="myFuturely logo"
-    />
+    <View
+      style={[styles.container, { width: size, height: size, borderRadius: size * 0.22 }]}
+      accessibilityLabel="Futurely logo"
+    >
+      <View
+        style={[
+          styles.stripe,
+          { height: size * 0.18, borderTopLeftRadius: size * 0.22, borderTopRightRadius: size * 0.22 },
+        ]}
+      />
+      <Text style={[styles.glyph, { fontSize: size * 0.5 }]}>F</Text>
+    </View>
   )
 }
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  stripe: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.info,
+  },
+  glyph: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bold,
+    fontWeight: '700',
+  },
+})

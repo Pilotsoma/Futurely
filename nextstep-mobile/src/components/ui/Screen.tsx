@@ -1,40 +1,61 @@
-import React from 'react'
-import { ScrollView, View } from 'react-native'
-import { SafeAreaView, type Edge } from 'react-native-safe-area-context'
+import React, { useEffect } from 'react'
+import { StyleSheet, ViewStyle } from 'react-native'
+import { Edge, SafeAreaView } from 'react-native-safe-area-context'
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated'
+import { animation, colors, spacing } from '../../theme/tokens'
+import { useDisplayPreferences } from '../../preferences/displayPreferences'
 
 interface ScreenProps {
   children: React.ReactNode
-  scroll?: boolean
-  noPadding?: boolean
-  edges?: Edge[]
+  padded?: boolean
+  /** Screens rendered under a navigator header already get top-inset handling from the header itself. */
+  edges?: readonly Edge[]
+  style?: ViewStyle
 }
 
-export default function Screen({
+export function Screen({
   children,
-  scroll = false,
-  noPadding = false,
-  edges = ['top', 'left', 'right', 'bottom'],
+  padded = true,
+  edges = ['left', 'right', 'bottom'],
+  style,
 }: ScreenProps): React.JSX.Element {
-  const inner = scroll ? (
-    <ScrollView
-      className="flex-1"
-      contentContainerStyle={{
-        flexGrow: 1,
-        paddingHorizontal: noPadding ? 0 : 20,
-        paddingBottom: 24,
-      }}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      {children}
-    </ScrollView>
-  ) : (
-    <View className={noPadding ? 'flex-1' : 'flex-1 px-5'}>{children}</View>
-  )
+  const systemReduceMotion = useReducedMotion()
+  const { reduceMotion: preferenceReduceMotion } = useDisplayPreferences()
+  const reduceMotion = systemReduceMotion || preferenceReduceMotion
+  const progress = useSharedValue(reduceMotion ? 1 : 0)
+
+  useEffect(() => {
+    if (reduceMotion) {
+      progress.value = 1
+      return
+    }
+    // One-shot mount entrance, mirroring web's `.fade-up` page-entrance animation.
+    progress.value = withTiming(1, { duration: animation.durSlow, easing: Easing.out(Easing.cubic) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ translateY: (1 - progress.value) * 12 }],
+  }))
 
   return (
-    <SafeAreaView className="flex-1 bg-[#07080F]" edges={edges}>
-      {inner}
+    <SafeAreaView style={styles.safe} edges={edges}>
+      <Animated.View role="main" style={[styles.container, padded && styles.padded, animatedStyle, style]}>
+        {children}
+      </Animated.View>
     </SafeAreaView>
   )
 }
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1 },
+  padded: { paddingHorizontal: spacing.screenPadding },
+})
