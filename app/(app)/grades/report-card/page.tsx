@@ -32,6 +32,7 @@ function CourseTable({ courses, empty }: { courses: RCCourse[]; empty: string })
     return <p style={{ padding: '20px 16px', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' as const }}>{empty}</p>
   }
   return (
+    <div className="ns-table-scroll">
     <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
       <thead>
         <tr>
@@ -69,6 +70,7 @@ function CourseTable({ courses, empty }: { courses: RCCourse[]; empty: string })
         })}
       </tbody>
     </table>
+    </div>
   )
 }
 

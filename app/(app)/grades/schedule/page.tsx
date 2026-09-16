@@ -180,6 +180,7 @@ export default function SchedulePage() {
           </div>
 
           <div className="ns-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="ns-table-scroll">
             <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
               <thead>
                 <tr>
@@ -208,6 +209,7 @@ export default function SchedulePage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}

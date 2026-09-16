@@ -420,7 +420,7 @@ export default function DashboardPage() {
       <div className="db-curtain-item" style={S.pageHeader}>
         <div>
           <p style={S.greeting}>Good {getTimeOfDay()},</p>
-          <h1 style={S.name}>{firstName}</h1>
+          <h1 className="ns-db-name" style={S.name}>{firstName}</h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={S.dateChip}>{formatDate()}</span>
@@ -438,7 +438,7 @@ export default function DashboardPage() {
       </div>
 
       {/* GPA + Due Today */}
-      <motion.div className="db-curtain-item" style={S.topRow} {...staggerItem(0)}>
+      <motion.div className="db-curtain-item ns-db-top-row" style={S.topRow} {...staggerItem(0)}>
         <div className="ns-card" style={{ ...S.card, flex: 1, cursor: 'pointer' }} onClick={() => router.push('/grades/what-if')}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ ...S.cardLabel, marginBottom: 0 }}>GPA</p>
@@ -455,12 +455,12 @@ export default function DashboardPage() {
           </div>
           <div style={S.gpaRow}>
             <div style={S.gpaBlock}>
-              <div style={{ ...S.gpaNum, ...(hideGpa ? { filter: 'blur(8px)', userSelect: 'none' } : {}) }}>{animUGpa}</div>
+              <div className="ns-db-gpa-num" style={{ ...S.gpaNum, ...(hideGpa ? { filter: 'blur(8px)', userSelect: 'none' } : {}) }}>{animUGpa}</div>
               <div style={S.gpaTag}>Unweighted</div>
             </div>
             <div style={S.gpaDivider} />
             <div style={S.gpaBlock}>
-              <div style={{ ...S.gpaNum, ...gradientStyle, ...(hideGpa ? { filter: 'blur(8px)', userSelect: 'none' } : {}) }}>{animWGpa}</div>
+              <div className="ns-db-gpa-num" style={{ ...S.gpaNum, ...gradientStyle, ...(hideGpa ? { filter: 'blur(8px)', userSelect: 'none' } : {}) }}>{animWGpa}</div>
               <div style={S.gpaTag}>Weighted</div>
             </div>
           </div>
@@ -498,21 +498,21 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Stat row */}
-      <div className="db-curtain-item" style={S.statsRow}>
+      <div className="db-curtain-item ns-stats-grid" style={S.statsRow}>
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/grades/schedule')} {...staggerItem(1)}>
-          <div style={S.statNum}>{animCourses}</div>
+          <div className="ns-db-stat-num" style={S.statNum}>{animCourses}</div>
           <div style={S.statLabel}>Courses · {semesterLabel || 'This Semester'}</div>
         </motion.div>
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/planner')} {...staggerItem(2)}>
-          <div style={S.statNum}>{animDueWeek}</div>
+          <div className="ns-db-stat-num" style={S.statNum}>{animDueWeek}</div>
           <div style={S.statLabel}>Due This Week</div>
         </motion.div>
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => router.push('/planner')} {...staggerItem(3)}>
-          <div style={S.statNum}>{animPending}</div>
+          <div className="ns-db-stat-num" style={S.statNum}>{animPending}</div>
           <div style={S.statLabel}>Pending</div>
         </motion.div>
         <motion.div className="ns-card" style={{ ...S.statCard, cursor: 'pointer' }} onClick={() => setShowStreakPopup(true)} {...staggerItem(4)}>
-          <div style={S.statNum}>{animStreak}</div>
+          <div className="ns-db-stat-num" style={S.statNum}>{animStreak}</div>
           <div style={{ ...S.statLabel, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>Day Streak <FlameIcon size={13} color="#F97316"/></div>
         </motion.div>
       </div>
@@ -520,7 +520,7 @@ export default function DashboardPage() {
       {/* Quick Access */}
       <div className="db-curtain-item">
         <motion.p style={{ ...S.cardLabel, marginBottom: 14 }} {...staggerItem(5)}>Quick Access</motion.p>
-        <div style={S.quickAccessRow}>
+        <div className="ns-quick-grid" style={S.quickAccessRow}>
           {QUICK_ACCESS_LINKS.map((link, i) => (
             <motion.button
               key={link.href}
@@ -723,14 +723,14 @@ const gradientStyle: React.CSSProperties = {
 const S: Record<string, React.CSSProperties> = {
   pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36 },
   greeting:   { fontSize: 15, color: 'var(--text-secondary)', marginBottom: 4 },
-  name:       { fontSize: 38, fontWeight: 800, letterSpacing: '-0.8px', color: 'var(--text)' },
+  name:       { fontWeight: 800, letterSpacing: '-0.8px', color: 'var(--text)' },
   dateChip:   { fontSize: 13, color: 'var(--primary)', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 20, padding: '6px 14px', marginTop: 4 },
-  topRow:     { display: 'flex', gap: 20, marginBottom: 20 },
+  topRow:     { marginBottom: 20 },
   card:       { padding: 28, marginBottom: 20 },
   cardLabel:  { fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)' },
   gpaRow:     { display: 'flex', gap: 0, marginTop: 18, alignItems: 'center' },
   gpaBlock:   { flex: 1, textAlign: 'center' as const },
-  gpaNum:     { fontSize: 48, fontWeight: 800, letterSpacing: '-1.5px', lineHeight: 1 },
+  gpaNum:     { fontWeight: 800, letterSpacing: '-1.5px', lineHeight: 1 },
   gpaTag:     { fontSize: 13, color: 'var(--text-secondary)', marginTop: 6 },
   gpaDivider: { width: 1, height: 56, background: 'var(--border)', flexShrink: 0 },
   countPill:  { background: 'var(--error)', color: '#fff', borderRadius: 100, padding: '3px 10px', fontSize: 12, fontWeight: 700 },
@@ -740,12 +740,12 @@ const S: Record<string, React.CSSProperties> = {
   dueTitle:   { fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
   dueSub:     { fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 },
   dueTime:    { fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 },
-  statsRow:   { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 },
+  statsRow:   { gap: 16, marginBottom: 20 },
   statCard:   { padding: '22px', textAlign: 'center' as const },
-  statNum:    { fontSize: 34, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6 },
+  statNum:    { fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6 },
   statLabel:  { fontSize: 13, color: 'var(--text-secondary)' },
   statSub:    { fontSize: 12, color: 'var(--text-muted)', marginTop: 5, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
-  quickAccessRow:   { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 },
+  quickAccessRow:   { gap: 16, marginBottom: 20 },
   quickAccessTile:  { display: 'flex', alignItems: 'center', gap: 10, padding: '16px 18px', cursor: 'pointer', textAlign: 'left' as const, width: '100%' },
   quickAccessLabel: { fontSize: 14, fontWeight: 700, color: 'var(--text)' },
   aiBarWrap:  { paddingBottom: 24 },

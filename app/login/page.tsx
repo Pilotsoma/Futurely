@@ -317,12 +317,12 @@ function LoginPageInner() {
   return (
     <div style={isDesktop ? styles.pageCosmic : styles.page}>
       {isDesktop && <CosmicScene />}
-      <div style={isDesktop ? styles.cardCosmic : styles.card}>
+      <div className="ns-login-card" style={isDesktop ? styles.cardCosmic : styles.card}>
         {/* Logo — icon + live text wordmark (logo2.png has "Futurely" baked into the pixels) */}
         <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <Image src="/logo.png" alt="" width={64} height={64} style={{ objectFit: 'contain' }} />
-          <span style={{
-            fontSize: 30, fontWeight: 800, letterSpacing: '-0.5px',
+          <span className="ns-login-brand-title" style={{
+            fontWeight: 800, letterSpacing: '-0.5px',
             backgroundImage: 'linear-gradient(90deg, #22d3ee 0%, var(--primary) 45%, var(--purple) 100%)',
             WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
           }}>myFuturely</span>

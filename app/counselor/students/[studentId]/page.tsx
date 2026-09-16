@@ -253,6 +253,7 @@ function GradesTab({ studentId }: { studentId: number }) {
 
   return (
     <div className="ns-card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="ns-table-scroll">
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
@@ -321,6 +322,7 @@ function GradesTab({ studentId }: { studentId: number }) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

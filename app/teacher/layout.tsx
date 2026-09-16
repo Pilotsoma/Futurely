@@ -26,6 +26,17 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const [userName, setUserName] = useState('Teacher')
   const [requestStatus, setRequestStatus] = useState<string | null>(null)
   const [requestedRole, setRequestedRole] = useState<string | null>(null)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+  // Close mobile nav on route change
+  useEffect(() => { setMobileNavOpen(false) }, [pathname])
+
+  // Close mobile nav on Escape key
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) { if (e.key === 'Escape') setMobileNavOpen(false) }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   useEffect(() => {
     async function checkAuth() {
@@ -96,7 +107,25 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
 
   return (
     <div className="ns-scale-shell" style={{ display: 'flex', minHeight: 'calc(100vh / var(--ui-zoom, 1))' }}>
-      <aside style={S.sidebar}>
+      {/* Hamburger — visible only below lg via CSS */}
+      <button
+        className="ns-hamburger-btn"
+        aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+        aria-expanded={mobileNavOpen}
+        onClick={() => setMobileNavOpen(o => !o)}
+      >
+        {mobileNavOpen
+          ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        }
+      </button>
+
+      {/* Backdrop — only rendered when mobile nav open; CSS hides at lg+ */}
+      {mobileNavOpen && (
+        <div className="ns-sidebar-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />
+      )}
+
+      <aside className={`ns-sidebar-shell${mobileNavOpen ? ' ns-sidebar-open' : ''}`} style={S.sidebar}>
         {/* Logo */}
         <div style={S.logoRow}>
           <a href="/teacher/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -136,7 +165,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         </div>
       </aside>
 
-      <main style={S.main}>{children}</main>
+      <main className="ns-main-shell" style={S.main}>{children}</main>
     </div>
   )
 }
