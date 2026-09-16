@@ -4,7 +4,7 @@ import { AuthRequest } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { logger } from '../common/logger'
 import { writeAuditLog } from '../lib/auditLog'
-import { searchByName, ScorecardSchool } from '../integrations/scorecard/scorecardClient'
+import { searchByName, fetchByUnitId, ScorecardSchool } from '../integrations/scorecard/scorecardClient'
 import { computeLikelihoodScore } from '../services/collegeScoring'
 import { rankSearchResults } from '../services/collegeSearchRanking'
 import { getOrGenerateInsights } from '../services/collegeInsights'
@@ -386,7 +386,36 @@ router.get('/:id/insights', async (req: AuthRequest, res: Response): Promise<voi
       return
     }
 
-    if (item.scorecardData === null || item.scorecardData.admissionRate === null) {
+    let scorecardData = item.scorecardData
+
+    // Cache miss (or a record with no admission rate yet) — resolve live from
+    // the Scorecard API before giving up, rather than failing immediately.
+    // This is the same cache-warming pattern already used for legacy items on
+    // the list endpoint above, but blocking here since the student is
+    // actively waiting on insights for this one college right now.
+    if (scorecardData === null || scorecardData.admissionRate === null) {
+      const resolved = item.scorecardUnitId
+        ? await fetchByUnitId(item.scorecardUnitId)
+        : (await searchByName(item.name))[0] ?? null
+
+      if (resolved !== null) {
+        await upsertScorecardBatch([resolved])
+        if (item.scorecardUnitId !== resolved.unitId) {
+          await prisma.collegeListItem.update({
+            where: { id: item.id },
+            data: { scorecardUnitId: resolved.unitId },
+          }).catch((err: unknown) => {
+            logger.warn('Failed to backfill scorecardUnitId while resolving insights', {
+              itemId: item.id,
+              error: err instanceof Error ? err.message : String(err),
+            })
+          })
+        }
+        scorecardData = await prisma.collegeScorecardCache.findUnique({ where: { unitId: resolved.unitId } })
+      }
+    }
+
+    if (scorecardData === null || scorecardData.admissionRate === null) {
       await writeAuditLog({
         userId,
         resourceType: 'CollegeInsights',
@@ -407,9 +436,9 @@ router.get('/:id/insights', async (req: AuthRequest, res: Response): Promise<voi
       studentSAT,
       studentGPA,
       college: {
-        admissionRate: item.scorecardData.admissionRate,
-        sat25th: item.scorecardData.sat25th,
-        sat75th: item.scorecardData.sat75th,
+        admissionRate: scorecardData.admissionRate,
+        sat25th: scorecardData.sat25th,
+        sat75th: scorecardData.sat75th,
       },
     }
 
@@ -418,7 +447,7 @@ router.get('/:id/insights', async (req: AuthRequest, res: Response): Promise<voi
       userId,
       collegeName: item.name,
       scoringInput,
-      admissionRate: item.scorecardData.admissionRate,
+      admissionRate: scorecardData.admissionRate,
       ipAddress: getIpAddress(req),
     })
 
