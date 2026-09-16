@@ -455,7 +455,7 @@ export default function PlannerPage() {
   return (
     <div className="fade-up" style={{ maxWidth: 1280, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div className="ns-planner-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px' }}>Planner</h1>
           <button
@@ -479,7 +479,7 @@ export default function PlannerPage() {
             {aiSorting ? 'Scoring…' : '✦ AI Sorted'}
           </button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="ns-planner-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <AgentPanel
             module="PLANNER"
             buttonLabel="Ask AI Agent"

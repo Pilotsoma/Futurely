@@ -258,6 +258,15 @@ body {
   .ns-db-stat-num { font-size: 20px; }
 }
 
+/* ── Planner header — the title row and the action-button row (AI Sort,
+   Ask AI Agent, List/Calendar toggle, Canvas, + New Task) are both fixed
+   flex rows with 4-5 controls; they overflow well before 768px if they
+   can't wrap. */
+@media (max-width: 767.98px) {
+  .ns-planner-header { flex-wrap: wrap; row-gap: 10px; }
+  .ns-planner-actions { flex-wrap: wrap; row-gap: 8px; }
+}
+
 /* ── Planner calendar month-grid cells — shrink when shown below md (the ────
    planner defaults phone-width first-visits to list view instead; this only
    matters if a mobile user manually switches to calendar view) */
