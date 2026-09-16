@@ -101,7 +101,6 @@ export default function DashboardPage() {
   const [courseCount, setCourseCount] = useState<number | null>(null)
   const [semesterLabel, setSemesterLabel] = useState<string>('')
   const [dayStreak, setDayStreak] = useState(0)
-  const [coins, setCoins] = useState<number | null>(null)
   const [showStreakPopup, setShowStreakPopup] = useState(false)
   const [streakMilestone, setStreakMilestone] = useState<typeof STREAK_MILESTONES[0] | null>(null)
   const [showResyncPopup, setShowResyncPopup] = useState(false)
@@ -218,13 +217,6 @@ export default function DashboardPage() {
       }
     }
 
-    // Claim daily coins + award any streak milestone tags (silent — no UI display)
-    if (currentStreak > 0) {
-      api.streakReward(currentStreak).catch(() => {})
-    }
-    api.marketplaceDailyClaim(currentStreak)
-      .then(r => setCoins(r.coins))
-      .catch(() => {})
     const prefetch = consumeStudentPrefetch()
     const dataPromise = prefetch ?? api.me().catch(() => null)
     dataPromise.then(d => { if (d) setData(d); else api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed')) })

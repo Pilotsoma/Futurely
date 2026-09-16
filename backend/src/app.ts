@@ -47,7 +47,6 @@ import feedRouter from './routes/feed'
 import parentRouter from './routes/parent'
 import notificationsRouter from './routes/notifications'
 import collegesRouter from './routes/colleges'
-import marketplaceRouter from './routes/marketplace'
 import educatorRouter from './routes/educator'
 import counselorRouter from './routes/counselor'
 import adminRouter from './routes/admin'
@@ -359,7 +358,6 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/integrations/canvas', devBypass, requireConsent, requireActiveAccount, canvasRouter)
   app.use('/integrations/classlink', devBypass, requireConsent, requireActiveAccount, classlinkRouter)
   app.use('/colleges', devBypass, requireConsent, requireActiveAccount, collegesRouter)
-  app.use('/marketplace', devBypass, requireConsent, requireActiveAccount, marketplaceRouter)
   app.use('/educator', devBypass, requireConsent, requireActiveAccount, educatorRouter)
   app.use('/counselor', devBypass, requireConsent, requireActiveAccount, counselorRouter)
   app.use('/admin', devBypass, requireConsent, requireActiveAccount, adminRouter)
@@ -381,7 +379,6 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/integrations/canvas', requireAuth, requireConsent, requireActiveAccount, canvasRouter)
   app.use('/integrations/classlink', requireAuth, requireConsent, requireActiveAccount, classlinkRouter)
   app.use('/colleges', requireAuth, requireConsent, requireActiveAccount, collegesRouter)
-  app.use('/marketplace', requireAuth, requireConsent, requireActiveAccount, marketplaceRouter)
   app.use('/educator', requireAuth, requireConsent, requireActiveAccount, educatorRouter)
   app.use('/counselor', requireAuth, requireConsent, requireActiveAccount, counselorRouter)
   app.use('/admin', requireAuth, requireConsent, requireActiveAccount, adminRouter)
@@ -409,6 +406,19 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   console.error('[GLOBAL ERROR HANDLER]', { message, stack })
 
   if (!res.headersSent) {
+    // The CORS origin callback (above) throws a plain Error on a rejected
+    // origin so the rejection reason is logged server-side — without this
+    // special case it fell through to a generic 500, which is misleading
+    // (the request was correctly rejected, nothing is actually broken) and
+    // gives the client no way to distinguish "misconfigured origin" from
+    // a real server fault.
+    if (message.startsWith('CORS:')) {
+      res.status(403).json({
+        data: null,
+        error: { code: 'CORS_REJECTED', message: 'This origin is not permitted to access the API.' },
+      })
+      return
+    }
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' },

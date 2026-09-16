@@ -37,9 +37,6 @@ export async function createAndSendNotification(input: CreateNotificationInput):
           select: {
             id: true,
             name: true,
-            tag: true,
-            tagColor: true,
-            nameColor: true,
             avatarUrl: true,
           },
         },

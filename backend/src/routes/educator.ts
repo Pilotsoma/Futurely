@@ -5,17 +5,11 @@ import { AuthRequest, requireAuth } from '../middleware/auth'
 import { requireEducator } from '../middleware/requireAdmin'
 import { generateUniqueInviteCode } from '../lib/inviteCode'
 import { writeAuditLog } from '../lib/auditLog'
-import { grantCoinsToStudent } from '../services/educatorService'
 import { logger } from '../common/logger'
 import { sendToUser } from '../lib/websocket'
 import { formatDueDateForPreview } from '../lib/dateFormat'
 
 const router = Router()
-
-function parseTagArr(raw: unknown): Array<{ tag: string; tagColor: string }> {
-  if (Array.isArray(raw)) return raw as Array<{ tag: string; tagColor: string }>
-  try { return JSON.parse(String(raw ?? '[]')) } catch { return [] }
-}
 
 // ── POST /educator/request-role ── (requireAuth only — user is still STUDENT)
 const requestRoleSchema = z.object({
@@ -37,24 +31,6 @@ router.post('/request-role', requireAuth, async (req: AuthRequest, res: Response
         institution: parse.data.institution,
       },
     })
-
-    // Give Teacher tag immediately on request submission regardless of approval status
-    const user = await prisma.user.findUnique({
-      where: { id: req.userId! },
-      select: { allTags: true, tag: true },
-    })
-    if (user) {
-      const tags = parseTagArr(user.allTags)
-      if (!tags.some(t => t.tag === 'Teacher')) {
-        tags.push({ tag: 'Teacher', tagColor: '#10B981' })
-        const tagUpdates: Record<string, unknown> = { allTags: JSON.stringify(tags) }
-        if (!user.tag || user.tag === 'Student') {
-          tagUpdates.tag = 'Teacher'
-          tagUpdates.tagColor = '#10B981'
-        }
-        await prisma.user.update({ where: { id: req.userId! }, data: tagUpdates })
-      }
-    }
 
     logger.info('educator_role_request_submitted', { userId: req.userId, requestedRole: parse.data.requestedRole })
     res.status(201).json({ data: request, error: null })
@@ -263,7 +239,7 @@ router.post('/classrooms/:classroomId/assignments', async (req: AuthRequest, res
       await Promise.all(memberships.map(async m => {
         const notif = await prisma.notification.create({
           data: { userId: m.studentId, fromUserId: req.userId!, type: 'TEACHER_ASSIGNMENT', preview: `${parse.data.title} — due ${due}` },
-          include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+          include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
         })
         sendToUser(m.studentId, 'NOTIFICATION', notif)
       }))
@@ -301,56 +277,6 @@ router.get('/classrooms/:classroomId/assignments', async (req: AuthRequest, res:
   } catch (err: unknown) {
     logger.error('educator_assignments_list_error', { educatorId: req.userId, classroomId, error: err instanceof Error ? err.message : String(err) })
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch assignments' } })
-  }
-})
-
-// ── POST /educator/classrooms/:classroomId/coins ──
-const grantCoinsSchema = z.object({
-  studentId: z.number().int().positive(),
-  coins: z.number().int().min(1).max(300),
-  reason: z.string().max(200).optional(),
-})
-
-router.post('/classrooms/:classroomId/coins', async (req: AuthRequest, res: Response): Promise<void> => {
-  const classroomId = parseInt(req.params.classroomId)
-  if (isNaN(classroomId)) {
-    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Invalid classroomId' } })
-    return
-  }
-  const parse = grantCoinsSchema.safeParse(req.body)
-  if (!parse.success) {
-    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: parse.error.errors[0]?.message ?? 'Invalid request' } })
-    return
-  }
-  const { studentId, coins } = parse.data
-  try {
-    const classroom = await prisma.classroom.findUnique({ where: { id: classroomId }, select: { educatorId: true } })
-    if (!classroom) {
-      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Classroom not found' } })
-      return
-    }
-    if (classroom.educatorId !== req.userId!) {
-      res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'You do not own this classroom' } })
-      return
-    }
-    const membership = await prisma.classroomMembership.findUnique({
-      where: { classroomId_studentId: { classroomId, studentId } },
-    })
-    if (!membership) {
-      res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Student is not in this classroom' } })
-      return
-    }
-    await grantCoinsToStudent(req.userId!, studentId, coins)
-    logger.info('coins_granted', { educatorId: req.userId, studentId, coins, classroomId })
-    res.json({ data: { granted: true, coins }, error: null })
-  } catch (err: unknown) {
-    const e = err as { code?: string }
-    if (e.code === 'COIN_CAP_EXCEEDED') {
-      res.status(422).json({ data: null, error: { code: 'COIN_CAP_EXCEEDED', message: 'Daily coin limit of 300 reached for this student.' } })
-      return
-    }
-    logger.error('coins_grant_error', { educatorId: req.userId, studentId, error: err instanceof Error ? err.message : String(err) })
-    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to grant coins' } })
   }
 })
 

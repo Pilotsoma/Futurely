@@ -7,8 +7,6 @@
     "start": "next start & cd backend && npm start"
   },
   "dependencies": {
-    "@livekit/components-react": "^2.9.21",
-    "@livekit/components-styles": "^1.2.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tailwindcss/postcss": "^4.3.1",
     "@types/dompurify": "^3.0.5",
@@ -18,9 +16,7 @@
     "expo": "^56.0.12",
     "framer-motion": "^12.40.0",
     "jose": "^6.2.3",
-    "livekit-client": "^2.20.0",
     "next": "^16.2.9",
-    "prisma": "^5.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "tailwindcss": "^4.3.1",

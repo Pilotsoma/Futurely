@@ -362,7 +362,6 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
     const userRole = roleInput === 'PARENT' ? 'PARENT' : roleInput === 'TEACHER' ? 'TEACHER' : roleInput === 'COUNSELOR' ? 'COUNSELOR' : 'STUDENT'
-    const defaultTag = userRole === 'PARENT' ? 'Parent' : userRole === 'TEACHER' || userRole === 'COUNSELOR' ? 'Teacher' : 'Student'
 
     const consentTimestamp = new Date()
     const user = await prisma.$transaction(async (tx) => {
@@ -372,8 +371,6 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
           passwordHash,
           name: displayName,
           role: userRole,
-          tag: defaultTag,
-          tagColor: 'grey',
           emailVerified: true,
           tosAcceptedAt: consentTimestamp,
           privacyAcceptedAt: consentTimestamp,
@@ -1323,36 +1320,6 @@ router.post('/send-otp', otpLimiter, async (req: Request, res: Response): Promis
   })
 
   res.json({ data: { sent: true } })
-})
-
-// ── GET /auth/test-email ─────────────────────────────────────────────────────
-// Temporary diagnostic endpoint — remove once email delivery is confirmed.
-router.get('/test-email', async (req: Request, res: Response): Promise<void> => {
-  const to = (req.query.to as string) || 'srikar.vattem@gmail.com'
-
-  const env = {
-    RESEND_API_KEY: process.env.RESEND_API_KEY ? '✓ set' : '✗ missing',
-    SMTP_HOST: process.env.SMTP_HOST ?? '✗ missing',
-    SMTP_PASS: process.env.SMTP_PASS ? `✓ set (starts with ${(process.env.SMTP_PASS ?? '').slice(0, 6)}...)` : '✗ missing',
-    SMTP_FROM: process.env.SMTP_FROM ?? '✗ missing',
-    APP_URL: process.env.APP_URL ?? '✗ missing',
-  }
-
-  // DB diagnostic — find what's breaking login
-  let dbResult: string
-  try {
-    const user = await prisma.user.findFirst({ select: { id: true, email: true, name: true, hacName: true, emailVerified: true, loginStreak: true, lastSeenAt: true, failedLoginAttempts: true, lockedUntil: true } })
-    dbResult = user ? `✓ DB query OK (user id=${user.id})` : '✓ DB query OK (no users found)'
-  } catch (e) {
-    dbResult = `✗ DB error: ${e instanceof Error ? e.message : String(e)}`
-  }
-
-  try {
-    await sendEmail({ to, subject: 'myFuturely email test', html: '<p>If you see this, email delivery works!</p>' })
-    res.json({ data: { status: 'sent', to, db: dbResult, env } })
-  } catch (e) {
-    res.status(500).json({ data: null, error: { message: e instanceof Error ? e.message : String(e) }, db: dbResult, env })
-  }
 })
 
 export default router

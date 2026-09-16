@@ -24,7 +24,6 @@ interface GameResults {
 
 interface FinalLeaderboard {
   rank: number; userId: number; name: string | null; score: number
-  tag?: string | null; tagColor?: string | null; nameColor?: string | null
 }
 
 type Phase = 'lobby' | 'question' | 'results' | 'finished'
@@ -61,14 +60,14 @@ function OptionBtn({ label, text, color, selected, correct, revealed, onClick }:
 }
 
 // ── Leaderboard row ──────────────────────────────────────────────────────────
-function LbRow({ entry, myId }: { entry: { rank: number; userId: number; name: string | null; score: number; nameColor?: string | null }; myId: number | null }) {
+function LbRow({ entry, myId }: { entry: { rank: number; userId: number; name: string | null; score: number }; myId: number | null }) {
   const isMe = entry.userId === myId
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: isMe ? 'var(--primary-dim)' : 'transparent', borderRadius: 10, border: isMe ? '1px solid var(--primary-glow)' : '1px solid transparent' }}>
       <span style={{ width: 28, fontWeight: 800, fontSize: 16, color: entry.rank <= 3 ? ['#fbbf24','#94a3b8','#cd7f32'][entry.rank-1] : 'var(--text-muted)', textAlign: 'center', flexShrink: 0 }}>
         {entry.rank === 1 ? <GoldMedalIcon size={18}/> : entry.rank === 2 ? <SilverMedalIcon size={18}/> : entry.rank === 3 ? <BronzeMedalIcon size={18}/> : `#${entry.rank}`}
       </span>
-      <span style={{ flex: 1, fontSize: 14, fontWeight: isMe ? 700 : 500, color: entry.nameColor ?? 'var(--text)' }}>{entry.name ?? 'Player'}{isMe ? ' (you)' : ''}</span>
+      <span style={{ flex: 1, fontSize: 14, fontWeight: isMe ? 700 : 500, color: 'var(--text)' }}>{entry.name ?? 'Player'}{isMe ? ' (you)' : ''}</span>
       <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>{entry.score.toLocaleString()}</span>
     </div>
   )
@@ -174,7 +173,7 @@ export default function GameRoomPage() {
         if (s.status === 'FINISHED') {
           const board = [...s.participants]
             .sort((a, b) => b.score - a.score)
-            .map((p, i) => ({ rank: i + 1, userId: p.userId, name: p.user.name, score: p.score, tag: p.user.tag, tagColor: p.user.tagColor, nameColor: p.user.nameColor }))
+            .map((p, i) => ({ rank: i + 1, userId: p.userId, name: p.user.name, score: p.score }))
           setFinalBoard(board)
           setPhase('finished')
           if (timerRef.current) clearInterval(timerRef.current)
@@ -332,7 +331,7 @@ export default function GameRoomPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {session.participants.map(p => (
               <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, background: p.userId === myId ? 'var(--primary-dim)' : 'var(--surface-2)', border: `1px solid ${p.userId === myId ? 'var(--primary-glow)' : 'var(--border)'}` }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: p.user.nameColor ?? 'var(--text)' }}>{p.user.name ?? 'Player'}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{p.user.name ?? 'Player'}</span>
               </div>
             ))}
           </div>
@@ -468,7 +467,7 @@ export default function GameRoomPage() {
 
   // ── FINISHED ────────────────────────────────────────────────────────────
   if (phase === 'finished') {
-    const board = finalBoard.length > 0 ? finalBoard : session.participants.sort((a,b) => b.score - a.score).map((p,i) => ({ rank: i+1, userId: p.userId, name: p.user.name, score: p.score, nameColor: p.user.nameColor, tag: p.user.tag, tagColor: p.user.tagColor }))
+    const board = finalBoard.length > 0 ? finalBoard : session.participants.sort((a,b) => b.score - a.score).map((p,i) => ({ rank: i+1, userId: p.userId, name: p.user.name, score: p.score }))
     const myEntry = board.find(e => e.userId === myId)
     return (
       <div style={{ padding: '32px 28px', maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
