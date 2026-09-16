@@ -10,6 +10,7 @@ import { clearWebAuth } from '../../../lib/authState'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import { CHANGELOG, CURRENT_VERSION } from '../../../lib/changelog'
 import { setReducedMotionEnabled } from '../../../lib/performanceMode'
+import PortalResyncButton from '../../../components/ui/PortalResyncButton'
 
 function DeleteAccountModal({ onClose, hasPassword }: { onClose: () => void; hasPassword: boolean }) {
   const router = useRouter()
@@ -114,9 +115,6 @@ export default function SettingsPage() {
   const [portalSelectedIsd, setPortalSelectedIsd] = useState<(typeof SORTED_ISD_LIST)[0] | null>(null)
   const [portalCustomUrl, setPortalCustomUrl]   = useState(false)
   const portalIsdRef = useRef<HTMLDivElement>(null)
-  const [syncing, setSyncing]             = useState(false)
-  const [syncMsg, setSyncMsg]             = useState<string | null>(null)
-
   // Editable academic fields
   const [satScore, setSatScore]         = useState('')
   const [actScore, setActScore]         = useState('')
@@ -335,25 +333,6 @@ export default function SettingsPage() {
     finally { setPortalConnecting(false) }
   }
 
-  async function handleSyncProfile() {
-    setSyncing(true); setSyncMsg(null)
-    try {
-      await api.portalSyncProfile()
-      setSyncMsg('Profile synced from HAC!')
-      // Refresh the user data to reflect the updated profile
-      const fresh = await api.me()
-      setData(fresh)
-      setSatScore(fresh.profile?.satScore?.toString() ?? '')
-      setActScore(fresh.profile?.actScore?.toString() ?? '')
-      setFuturePlan(fresh.profile?.futureDecision ?? '')
-    } catch (err) {
-      setSyncMsg(err instanceof Error ? err.message : 'Sync failed')
-    } finally {
-      setSyncing(false)
-      setTimeout(() => setSyncMsg(null), 4000)
-    }
-  }
-
   async function handleSaveScores() {
     setSaving(true); setSaveMsg(null)
     const sat = satScore.trim() ? parseInt(satScore.trim(), 10) : null
@@ -504,57 +483,19 @@ export default function SettingsPage() {
                   </p>
                 )}
 
-                {/* Re-sync profile — refreshes counselor, graduation year, name */}
-                {portalStatus.systemType === 'HAC' && (
-                  <div style={{ marginTop: 12 }}>
-                    <button
-                      className="ns-btn-ghost"
-                      style={{
-                        height: 36,
-                        padding: '0 16px',
-                        fontSize: 13,
-                        color: 'var(--primary)',
-                        borderColor: 'rgba(43,74,142,0.3)',
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 6,
-                      }}
-                      onClick={handleSyncProfile}
-                      disabled={syncing}
-                    >
-                      {syncing ? (
-                        <>
-                          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
-                          Syncing…
-                        </>
-                      ) : (
-                        <>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 2v6h-6"/>
-                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
-                            <path d="M3 22v-6h6"/>
-                            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-                          </svg>
-                          Re-sync
-                        </>
-                      )}
-                    </button>
-                    {syncMsg && (
-                      <p style={{
-                        fontSize: 12,
-                        color: syncMsg.includes('fail') || syncMsg.includes('Error') ? 'var(--error)' : '#22C55E',
-                        marginTop: 6,
-                        textAlign: 'center',
-                      }}>
-                        {syncMsg}
-                      </p>
-                    )}
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, textAlign: 'center' }}>
-                      Fetches counselor & graduation year from your school portal
-                    </p>
-                  </div>
+                {/* Re-sync from the connected portal — works for every supported portal type */}
+                {portalStatus.systemType && (
+                  <PortalResyncButton
+                    portalType={portalStatus.systemType}
+                    onSynced={async () => {
+                      // Refresh the user data to reflect the updated profile
+                      const fresh = await api.me()
+                      setData(fresh)
+                      setSatScore(fresh.profile?.satScore?.toString() ?? '')
+                      setActScore(fresh.profile?.actScore?.toString() ?? '')
+                      setFuturePlan(fresh.profile?.futureDecision ?? '')
+                    }}
+                  />
                 )}
 
                 <button className="ns-btn-ghost" style={{ ...S.disconnectBtn, marginTop: 14 }}

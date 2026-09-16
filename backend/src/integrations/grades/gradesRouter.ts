@@ -1280,24 +1280,56 @@ router.post('/sync-profile', asyncHandler(async (req: AuthRequest, res: Response
   // autoRelogin uses stored encrypted credentials to get a brand-new HAC session.
   const connection = await prisma.schoolConnection.findUnique({ where: { userId } })
   if (!connection) {
-    res.status(401).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No school portal connected. Go to Settings to connect your HAC account.' } })
+    res.status(401).json({ data: null, error: { code: 'NOT_CONNECTED', message: 'No school portal connected. Go to Settings to connect your school account.' } })
     return
   }
-  if (connection.systemType !== 'HAC') {
-    res.status(400).json({ data: null, error: { code: 'UNSUPPORTED', message: 'Profile sync is only available for HAC districts' } })
+  if (connection.systemType !== 'HAC' && connection.systemType !== 'PowerSchool') {
+    res.status(400).json({ data: null, error: { code: 'UNSUPPORTED', message: `Profile sync is not available for ${connection.systemType} connections` } })
     return
   }
   if (!connection.encryptedPassword) {
-    res.status(401).json({ data: null, error: { code: 'NO_CREDENTIALS', message: 'No saved credentials. Go to Settings and sign in to your HAC account again to enable automatic re-sync.' } })
+    res.status(401).json({ data: null, error: { code: 'NO_CREDENTIALS', message: 'No saved credentials. Go to Settings and sign in to your school account again to enable automatic re-sync.' } })
     return
   }
 
   const reloginResult = await autoRelogin(userId)
   if (!reloginResult?.session) {
-    res.status(401).json({ data: null, error: { code: 'RELOGIN_FAILED', message: 'Could not sign in to HAC with your saved credentials. Your password may have changed — go to Settings to reconnect.' } })
+    res.status(401).json({ data: null, error: { code: 'RELOGIN_FAILED', message: 'Could not sign in to your school portal with your saved credentials. Your password may have changed — go to Settings to reconnect.' } })
     return
   }
   const entry = reloginResult.session
+
+  // ── PowerSchool: recompute + persist GPA from live grades ────────────────
+  // (PowerSchool has no counselor/graduation-year/DOB fields to sync — GPA is
+  // the only thing worth re-fetching, unlike the richer HAC transcript sync below.)
+  if (connection.systemType === 'PowerSchool') {
+    try {
+      touchSession(userId)
+      console.log('[GRADES ROUTER] Re-syncing profile from PowerSchool for userId:', userId)
+
+      const ps = await psGrades(entry.token)
+      const gpa = computeGPA(ps.map(c => ({ average: c.grade })))
+
+      let syncedProfile: Record<string, unknown> | null = null
+      if (gpa !== null) {
+        syncedProfile = await prisma.profile.upsert({
+          where: { userId },
+          create: { userId, weightedGpa: gpa, unweightedGpa: gpa },
+          update: { weightedGpa: gpa, unweightedGpa: gpa },
+        }) as Record<string, unknown>
+      }
+
+      await prisma.schoolConnection.update({
+        where: { userId },
+        data: { lastSynced: new Date() },
+      }).catch(() => { /* non-fatal */ })
+
+      res.json({ data: { synced: true, systemType: 'PowerSchool', profile: syncedProfile, courseCount: ps.length } })
+    } catch (err: unknown) {
+      sendError(res, 'SYNC_PROFILE_PS', err, 'SYNC_ERROR')
+    }
+    return
+  }
 
   try {
     touchSession(userId)

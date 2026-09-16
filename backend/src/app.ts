@@ -211,6 +211,21 @@ const registerLimiter = rateLimit({
   },
 })
 
+// Portal credential + scrape endpoints: each request triggers a live login or
+// scrape against a school portal, so throttle harder than the global limiter.
+const portalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+  message: { data: null, error: { code: 'RATE_LIMITED', message: 'Too many portal requests, please wait before retrying.' } },
+  handler: (req, res, _next, options) => {
+    logger.warn('rate_limit_hit', { type: 'portal', ip: req.ip, path: req.originalUrl })
+    res.status(options.statusCode).json(options.message)
+  },
+})
+
 
 // ── Request logger — never log sensitive fields ──────────────────────────────
 const SENSITIVE_FIELDS = new Set(['password', 'token', 'refreshToken', 'newPassword', 'currentPassword'])
@@ -298,6 +313,11 @@ app.use('/auth', authLimiter, authRoutes)
 // requireActiveAccount below — a DOB_MISMATCH_LOCKED user must be able to
 // reach this endpoint to correct their DOB and unlock the account.
 app.use('/auth/dob', authLimiter, requireAuth, dobRouter)
+
+// Portal login + forced re-sync hit the school portal directly — strict limit.
+app.use('/integrations/grades/hac/login', portalLimiter)
+app.use('/integrations/grades/powerschool/login', portalLimiter)
+app.use('/integrations/grades/sync-profile', portalLimiter)
 app.use('/schools', schoolsRouter)
 app.use('/grades', requireAuth, requireConsent, requireActiveAccount, gradesRoutes)
 
