@@ -2,10 +2,12 @@
 
 import React from 'react'
 import { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { api, ApiError, type CollegeInsights, type CollegeInsightsStep, type CollegeListItem, type CollegeSearchResult, type StudentData, type RoadmapData } from '../../../lib/api'
 import { GraduationCapIcon } from '@/components/icons'
 import PageLoader from '../../../components/ui/PageLoader'
-import AgentPanel from '../../../components/agent/AgentPanel'
+
+const AgentPanel = dynamic(() => import('../../../components/agent/AgentPanel'))
 
 // ── Display helpers ────────────────────────────────────────────────────────────
 

@@ -5,9 +5,11 @@ import { ArrowLeftIcon } from '@/components/icons'
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { api } from '../../../../lib/api'
-import WhatIfScorer from '../../../../components/ui/WhatIfScorer'
 import PageLoader from '../../../../components/ui/PageLoader'
+
+const WhatIfScorer = dynamic(() => import('../../../../components/ui/WhatIfScorer'))
 
 interface Assignment {
   name: string
