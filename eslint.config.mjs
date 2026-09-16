@@ -19,6 +19,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // nextstep-mobile/ is a separate Expo/React Native app with its own
+    // eslint config (`npm run lint` inside nextstep-mobile/) — these
+    // Next.js/web rules (jsx-a11y DOM checks, etc.) don't apply to it.
+    "nextstep-mobile/**",
   ]),
 ]);
 

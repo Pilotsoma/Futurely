@@ -1,44 +1,37 @@
-import { apiFetch } from '../utils/api'
+import { api, requestEnvelope } from './client'
+import type {
+  Assignment,
+  CreateAssignmentRequest,
+  ListAssignmentsMeta,
+  ListAssignmentsParams,
+} from '../types/assignments'
 
-export interface Assignment {
-  id: number
-  userId: number
-  title: string
-  subject: string
-  dueDate: string
-  estimatedMinutes: number
-  completed: boolean
-  completedAt: string | null
-  source: string
-  createdAt: string
-  updatedAt: string
-}
-
-interface ListAssignmentsResponse {
+export interface ListAssignmentsResult {
   data: Assignment[]
-  meta: {
-    nextCursor: number | null
-    hasNextPage: boolean
-    count: number
-  }
+  meta: ListAssignmentsMeta
 }
 
-interface ToggleCompleteResponse {
-  data: Assignment
-}
+export async function listAssignments(params: ListAssignmentsParams = {}): Promise<ListAssignmentsResult> {
+  const query: Record<string, string | number> = {}
+  if (params.status) query.status = params.status
+  if (params.cursor !== undefined) query.cursor = params.cursor
+  if (params.limit !== undefined) query.limit = params.limit
 
-export async function fetchAssignments(): Promise<Assignment[]> {
-  const res = await apiFetch<ListAssignmentsResponse>('/assignments')
-  return res.data
-}
-
-export async function toggleAssignmentComplete(
-  id: number,
-  completed: boolean,
-): Promise<Assignment> {
-  const res = await apiFetch<ToggleCompleteResponse>(`/assignments/${id}/complete`, {
-    method: 'PATCH',
-    body: JSON.stringify({ completed }),
+  const { data, meta } = await requestEnvelope<Assignment[], ListAssignmentsMeta>('/assignments', {
+    method: 'GET',
+    query,
   })
-  return res.data
+  return { data, meta: meta ?? { nextCursor: null, hasNextPage: false, count: data.length } }
+}
+
+export async function createAssignment(payload: CreateAssignmentRequest): Promise<Assignment> {
+  return api.post('/assignments', payload)
+}
+
+export async function completeAssignment(id: number, completed: boolean): Promise<Assignment> {
+  return api.patch(`/assignments/${id}/complete`, { completed })
+}
+
+export async function deleteAssignment(id: number): Promise<{ deleted: true }> {
+  return api.delete(`/assignments/${id}`)
 }

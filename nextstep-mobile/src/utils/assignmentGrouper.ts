@@ -1,4 +1,4 @@
-import type { Assignment } from '../api/assignmentsApi'
+import type { Assignment } from '../types/assignments'
 
 export type SectionKey = 'overdue' | 'today' | 'tomorrow' | 'thisWeek' | 'later' | 'completed'
 

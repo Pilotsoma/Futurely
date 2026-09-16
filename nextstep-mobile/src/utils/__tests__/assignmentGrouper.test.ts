@@ -1,4 +1,4 @@
-import type { Assignment } from '../../api/assignmentsApi'
+import type { Assignment } from '../../types/assignments'
 import { groupAssignments, type SectionKey } from '../assignmentGrouper'
 
 // All dates use the local Date constructor so boundaries and due times
@@ -16,10 +16,12 @@ function makeAssignment(id: number, dueDate: Date, completed = false): Assignmen
     title: `Assignment ${id}`,
     subject: 'Math',
     dueDate: dueDate.toISOString(),
+    dueTime: null,
     estimatedMinutes: 30,
     completed,
     completedAt: completed ? new Date().toISOString() : null,
     source: 'SEED',
+    priority: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }

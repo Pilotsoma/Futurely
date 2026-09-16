@@ -1,48 +1,89 @@
 import React from 'react'
-import { ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native'
-import Text from './Text'
-import { shadows } from '../../constants/shadows'
+import { ActivityIndicator, Pressable, StyleSheet, Text, ViewStyle } from 'react-native'
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
+import { animation, colors, elevation, radii, touchTarget, typography } from '../../theme/tokens'
+
+type ButtonVariant = 'primary' | 'secondary' | 'destructive'
 
 interface ButtonProps {
   label: string
   onPress: () => void
-  isLoading?: boolean
+  variant?: ButtonVariant
   disabled?: boolean
-  accessibilityLabel?: string
-  testID?: string
+  loading?: boolean
+  style?: ViewStyle
 }
 
-export default function Button({
+export function Button({
   label,
   onPress,
-  isLoading = false,
-  disabled = false,
-  accessibilityLabel,
-  testID,
+  variant = 'primary',
+  disabled,
+  loading,
+  style,
 }: ButtonProps): React.JSX.Element {
-  const isInert = isLoading || disabled
+  const isDisabled = disabled === true || loading === true
+  const scale = useSharedValue(1)
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }))
 
   return (
-    <TouchableOpacity
-      className={`rounded-2xl min-h-[48px] px-4 items-center justify-center bg-[#2979FF] ${isInert ? 'opacity-40' : ''}`}
-      style={isInert ? undefined : styles.raised}
+    // `style` is applied to both layers: the outer Pressable needs it for
+    // layout props (flex:1 for equal-width button rows — the Pressable is the
+    // actual flex item), and the inner Animated.View needs it too since several
+    // callers override the default height/padding (e.g. compact 36px action
+    // buttons) and that override must win over `styles.base`, applied after it.
+    <Pressable
       onPress={onPress}
-      disabled={isInert}
-      activeOpacity={0.8}
+      onPressIn={() => {
+        if (!isDisabled) scale.value = withSpring(0.96, animation.spring)
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, animation.spring)
+      }}
+      disabled={isDisabled}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled: isInert, busy: isLoading }}
-      testID={testID}
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      style={style}
     >
-      {isLoading ? (
-        <ActivityIndicator color="#FFFFFF" />
-      ) : (
-        <Text className="text-white text-[16px] font-semibold">{label}</Text>
-      )}
-    </TouchableOpacity>
+      <Animated.View
+        style={[styles.base, variantStyles[variant], isDisabled && styles.disabled, animatedStyle, style]}
+      >
+        {loading ? (
+          <ActivityIndicator color={variant === 'secondary' ? colors.primary : '#FFFFFF'} size="small" />
+        ) : (
+          <Text style={[styles.label, textColor[variant]]}>{label}</Text>
+        )}
+      </Animated.View>
+    </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
-  raised: shadows.raised,
+  base: {
+    height: 48,
+    minWidth: touchTarget,
+    minHeight: touchTarget,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  disabled: { opacity: 0.4 },
+  label: { ...typography.h3 },
 })
+
+const variantStyles: Record<ButtonVariant, ViewStyle> = {
+  primary: { backgroundColor: colors.primary, ...elevation.sm },
+  secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.buttonSecondaryBorder },
+  destructive: { backgroundColor: colors.error, ...elevation.sm },
+}
+
+const textColor: Record<ButtonVariant, { color: string }> = {
+  primary: { color: '#FFFFFF' },
+  secondary: { color: colors.text },
+  destructive: { color: '#FFFFFF' },
+}
