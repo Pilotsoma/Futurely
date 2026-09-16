@@ -3,11 +3,13 @@
 import React from 'react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import {
   BarChartIcon, ClipboardIcon, ClockIcon, CalculatorIcon, EnvelopeIcon,
   TrendingUpIcon, DocumentIcon, CalendarIcon,
 } from '@/components/icons'
-import AgentPanel from '../../../components/agent/AgentPanel'
+
+const AgentPanel = dynamic(() => import('../../../components/agent/AgentPanel'))
 
 const CARDS: Array<{ href: string; title: string; desc: string; icon: React.ReactNode; iconBg: string; iconColor: string }> = [
   {

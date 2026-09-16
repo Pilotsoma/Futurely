@@ -2,7 +2,7 @@
 
 import React from 'react'
 import DOMPurify from 'dompurify'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DocumentIcon, ImageIcon, VideoIcon, AudioIcon, ArchiveIcon, PencilIcon, BarChartIcon,
   FolderIcon, QuestionMarkIcon, ChatBubbleIcon, LinkIcon, WrenchIcon, ReplyIcon,
@@ -1617,13 +1617,20 @@ function FilesTab({ courseId, canvasInstanceUrl }: { courseId: number; canvasIns
 }
 
 function GradesTab({ courseGrades, onSelectAssignment }: { courseGrades: CanvasGradesCourse | undefined; onSelectAssignment: (id: number) => void }) {
-  if (!courseGrades) return <Empty text="No grade data available." />
+  const buckets = useMemo(() => {
+    if (!courseGrades) return null
+    return {
+      graded: courseGrades.assignments.filter(a => a.submission?.workflow_state === 'graded' && a.submission.score !== null),
+      submitted: courseGrades.assignments.filter(a => a.submission?.workflow_state === 'submitted' && !a.submission?.missing),
+      missing: courseGrades.assignments.filter(a => a.submission?.missing),
+      unsubmitted: courseGrades.assignments.filter(a => !a.submission || (a.submission.workflow_state === 'unsubmitted' && !a.submission.missing)),
+    }
+  }, [courseGrades])
+
+  if (!courseGrades || !buckets) return <Empty text="No grade data available." />
 
   const score = courseGrades.currentScore
-  const graded = courseGrades.assignments.filter(a => a.submission?.workflow_state === 'graded' && a.submission.score !== null)
-  const submitted = courseGrades.assignments.filter(a => a.submission?.workflow_state === 'submitted' && !a.submission?.missing)
-  const missing = courseGrades.assignments.filter(a => a.submission?.missing)
-  const unsubmitted = courseGrades.assignments.filter(a => !a.submission || (a.submission.workflow_state === 'unsubmitted' && !a.submission.missing))
+  const { graded, submitted, missing, unsubmitted } = buckets
 
   function AssignmentRow({ a, last }: { a: CanvasGradesAssignment; last: boolean }) {
     const pct = a.points_possible && a.submission?.score !== null && a.submission?.score !== undefined

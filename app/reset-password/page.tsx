@@ -4,9 +4,13 @@ import React from 'react'
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { LinkIcon, CheckCircleIcon, CheckIcon } from '@/components/icons'
 import { api, ApiError } from '../../lib/api'
-import CosmicScene from '../login/CosmicScene'
+
+// Desktop-only decorative background — not needed until the isDesktop media
+// query resolves client-side (same treatment as app/login/LoginForm.tsx).
+const CosmicScene = dynamic(() => import('../login/CosmicScene'))
 
 function ResetPasswordForm() {
   const router = useRouter()
