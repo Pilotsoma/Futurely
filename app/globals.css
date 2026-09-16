@@ -898,7 +898,8 @@ a:focus-visible > .ns-nav-link { box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.45);
 .reduce-motion .box-mythic,
 .reduce-motion .legendary-text,
 .reduce-motion .mythic-text,
-.reduce-motion .ai-dot {
+.reduce-motion .ai-dot,
+.reduce-motion .ns-sidebar-shell {
   animation: none !important;
   transition: none !important;
 }
