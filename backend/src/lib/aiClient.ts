@@ -4,7 +4,7 @@ import { logger } from '../common/logger'
 import { shouldSkipPrimaryModel, markFallbackUsed } from './aiRequestContext'
 
 // Provider-agnostic LLM client. Switch providers for local testing via
-// AI_PROVIDER=openrouter|nvidia — defaults to openrouter (production).
+// AI_PROVIDER=openrouter|nvidia|gemini — defaults to openrouter (production).
 interface ProviderConfig {
   baseURL: string
   apiKeyEnv: string
@@ -12,7 +12,7 @@ interface ProviderConfig {
   defaultModel: string
 }
 
-const PROVIDERS: Record<'openrouter' | 'nvidia', ProviderConfig> = {
+const PROVIDERS: Record<'openrouter' | 'nvidia' | 'gemini', ProviderConfig> = {
   openrouter: {
     baseURL: 'https://openrouter.ai/api/v1',
     apiKeyEnv: 'OPENROUTER_API_KEY',
@@ -29,10 +29,19 @@ const PROVIDERS: Record<'openrouter' | 'nvidia', ProviderConfig> = {
     // following and tutoring-quality output.
     defaultModel: 'meta/llama-3.1-70b-instruct',
   },
+  gemini: {
+    // Google AI Studio exposes an OpenAI-compatible endpoint, so it drops
+    // into the same OpenAI SDK client as the other providers.
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    apiKeyEnv: 'GEMINI_API_KEY',
+    modelEnv: 'GEMINI_MODEL',
+    defaultModel: 'gemini-2.5-flash',
+  },
 }
 
 function activeProvider(): ProviderConfig {
-  const name = process.env.AI_PROVIDER === 'nvidia' ? 'nvidia' : 'openrouter'
+  const raw = process.env.AI_PROVIDER
+  const name = raw === 'nvidia' || raw === 'gemini' ? raw : 'openrouter'
   return PROVIDERS[name]
 }
 
@@ -97,6 +106,38 @@ function getBasicTierModel(): string {
 
 function getAdvancedTierModel(): string {
   return process.env.NVIDIA_MODEL ?? PROVIDERS.nvidia.defaultModel
+}
+
+function getGeminiClient(): OpenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) return null
+  return new OpenAI({ apiKey, baseURL: PROVIDERS.gemini.baseURL, timeout: 30000, maxRetries: 0 })
+}
+
+function getGeminiModel(): string {
+  return process.env.GEMINI_MODEL ?? PROVIDERS.gemini.defaultModel
+}
+
+// Last-resort failsafe shared by every AI feature (chat, roadmap insights,
+// college insights, parent AI, GPA check-in, the agent orchestrator — they
+// all funnel through this file). If whatever provider/tier a call was
+// configured for fails outright (bad key, dead model, outage), and a Gemini
+// key is present, retry once against Gemini rather than surfacing a 500 to
+// the feature. If GEMINI_API_KEY is unset this is a no-op passthrough.
+async function withGeminiFailsafe(
+  params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'>,
+  attempt: () => Promise<ChatCompletion>
+): Promise<ChatCompletion> {
+  try {
+    return await attempt()
+  } catch (err) {
+    const geminiClient = getGeminiClient()
+    if (!geminiClient) throw err
+    logger.warn('AI call failed on all configured providers, falling back to Gemini failsafe', {
+      errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
+    })
+    return await geminiClient.chat.completions.create({ ...params, model: getGeminiModel() })
+  }
 }
 
 const NVIDIA_RELIABLE_FALLBACK_MODEL = PROVIDERS.nvidia.defaultModel // meta/llama-3.1-70b-instruct
@@ -169,47 +210,69 @@ export async function createChatCompletion(
   const isNvidia = process.env.AI_PROVIDER === 'nvidia'
   const hasFallback = isNvidia && primaryModel !== NVIDIA_RELIABLE_FALLBACK_MODEL
 
-  if (hasFallback && (isCircuitOpen() || shouldSkipPrimaryModel())) {
-    markFallbackUsed()
-    return await client.chat.completions.create({ ...rest, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
-  }
-
-  try {
-    const primaryOptions = hasFallback ? { timeout: PRIMARY_FAIL_FAST_TIMEOUT_MS } : undefined
-    const result = await client.chat.completions.create({ ...rest, model: primaryModel }, primaryOptions)
-    if (hasFallback) circuitOpenUntil = 0 // primary recovered — close the circuit
-    return result
-  } catch (err) {
-    if (hasFallback) {
-      circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS
+  return withGeminiFailsafe(rest, async () => {
+    if (hasFallback && (isCircuitOpen() || shouldSkipPrimaryModel())) {
       markFallbackUsed()
-      logger.warn('AI call failed on configured NVIDIA model, opening circuit breaker', {
-        errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
-        retrying: retryOnFailure,
-        cooldownMs: CIRCUIT_COOLDOWN_MS,
-      })
-      if (retryOnFailure) {
-        return await client.chat.completions.create({ ...rest, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
-      }
+      return await client.chat.completions.create({ ...rest, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
     }
-    throw err
-  }
+
+    try {
+      const primaryOptions = hasFallback ? { timeout: PRIMARY_FAIL_FAST_TIMEOUT_MS } : undefined
+      const result = await client.chat.completions.create({ ...rest, model: primaryModel }, primaryOptions)
+      if (hasFallback) circuitOpenUntil = 0 // primary recovered — close the circuit
+      return result
+    } catch (err) {
+      if (hasFallback) {
+        circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS
+        markFallbackUsed()
+        logger.warn('AI call failed on configured NVIDIA model, opening circuit breaker', {
+          errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
+          retrying: retryOnFailure,
+          cooldownMs: CIRCUIT_COOLDOWN_MS,
+        })
+        if (retryOnFailure) {
+          return await client.chat.completions.create({ ...rest, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
+        }
+      }
+      throw err
+    }
+  })
 }
 
 // ── Tier-specific completion helpers ──────────────────────────────────────
 
+// AI_PROVIDER=gemini opts the tiered helpers (basic/advanced) into Gemini as
+// the primary too, not just the failsafe — otherwise, with OpenRouter/NVIDIA
+// both down, every tiered call would still burn a full timeout against a
+// dead provider before withGeminiFailsafe rescues it.
+function isGeminiPrimary(): boolean {
+  return process.env.AI_PROVIDER === 'gemini'
+}
+
 async function createBasicTierCompletion(
   params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'>
 ): Promise<ChatCompletion> {
-  const client = getBasicTierClient()
-  const model = getBasicTierModel()
-  return client.chat.completions.create({ ...params, model })
+  if (isGeminiPrimary()) {
+    const geminiClient = getGeminiClient()
+    if (geminiClient) return geminiClient.chat.completions.create({ ...params, model: getGeminiModel() })
+  }
+
+  return withGeminiFailsafe(params, async () => {
+    const client = getBasicTierClient()
+    const model = getBasicTierModel()
+    return client.chat.completions.create({ ...params, model })
+  })
 }
 
 async function createAdvancedTierCompletion(
   params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'>,
   options?: { retryOnFailure?: boolean }
 ): Promise<ChatCompletion> {
+  if (isGeminiPrimary()) {
+    const geminiClient = getGeminiClient()
+    if (geminiClient) return geminiClient.chat.completions.create({ ...params, model: getGeminiModel() })
+  }
+
   const advancedClient = getAdvancedTierClient()
   if (advancedClient === null) {
     // NVIDIA key is absent — this is a permanent config gap, not a transient
@@ -222,31 +285,33 @@ async function createAdvancedTierCompletion(
   const primaryModel = getAdvancedTierModel()
   const hasFallback = primaryModel !== NVIDIA_RELIABLE_FALLBACK_MODEL
 
-  if (hasFallback && (advancedTierCircuitOpenUntil > Date.now() || shouldSkipPrimaryModel())) {
-    markFallbackUsed()
-    return advancedClient.chat.completions.create({ ...params, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
-  }
-
-  try {
-    const primaryOptions = hasFallback ? { timeout: PRIMARY_FAIL_FAST_TIMEOUT_MS } : undefined
-    const result = await advancedClient.chat.completions.create({ ...params, model: primaryModel }, primaryOptions)
-    if (hasFallback) advancedTierCircuitOpenUntil = 0
-    return result
-  } catch (err) {
-    if (hasFallback) {
-      advancedTierCircuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS
+  return withGeminiFailsafe(params, async () => {
+    if (hasFallback && (advancedTierCircuitOpenUntil > Date.now() || shouldSkipPrimaryModel())) {
       markFallbackUsed()
-      logger.warn('AI call failed on configured NVIDIA model, opening circuit breaker', {
-        errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
-        retrying: options?.retryOnFailure !== false,
-        cooldownMs: CIRCUIT_COOLDOWN_MS,
-      })
-      if (options?.retryOnFailure !== false) {
-        return await advancedClient.chat.completions.create({ ...params, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
-      }
+      return advancedClient.chat.completions.create({ ...params, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
     }
-    throw err
-  }
+
+    try {
+      const primaryOptions = hasFallback ? { timeout: PRIMARY_FAIL_FAST_TIMEOUT_MS } : undefined
+      const result = await advancedClient.chat.completions.create({ ...params, model: primaryModel }, primaryOptions)
+      if (hasFallback) advancedTierCircuitOpenUntil = 0
+      return result
+    } catch (err) {
+      if (hasFallback) {
+        advancedTierCircuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS
+        markFallbackUsed()
+        logger.warn('AI call failed on configured NVIDIA model, opening circuit breaker', {
+          errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
+          retrying: options?.retryOnFailure !== false,
+          cooldownMs: CIRCUIT_COOLDOWN_MS,
+        })
+        if (options?.retryOnFailure !== false) {
+          return await advancedClient.chat.completions.create({ ...params, model: NVIDIA_RELIABLE_FALLBACK_MODEL })
+        }
+      }
+      throw err
+    }
+  })
 }
 
 /**
