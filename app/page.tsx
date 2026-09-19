@@ -8,6 +8,7 @@ import LandingNav from './LandingNav'
 import ParticlesLayer from './ParticlesLayer'
 import Hero from './Hero'
 import FeatureShowcase from './FeatureShowcase'
+import FAQ from './FAQ'
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
 const ICON_LOCK = (
@@ -287,6 +288,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── FAQ ──────────────────────────────────────────────────────────── */}
+      <FAQ />
 
       {/* ── Final CTA ─────────────────────────────────────────────────────── */}
       <section style={{ padding: '80px 28px 140px', position: 'relative', overflow: 'hidden' }}>

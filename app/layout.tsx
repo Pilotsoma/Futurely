@@ -18,8 +18,8 @@ const clashGrotesk = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'myFuturely — AI Academic Companion',
-  description: 'myFuturely helps high school students track grades, plan assignments, and prepare for college.',
+  title: 'myFuturely - AI Academic Planner for High School Students',
+  description: 'myFuturely is a free AI academic advisor for high schoolers. Track grades, plan your 4-year roadmap, and test what-if GPA scenarios instantly.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
