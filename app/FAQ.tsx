@@ -63,7 +63,7 @@ export default function FAQ() {
               <details className="ns-faq-item" style={{ borderTop: '1px solid var(--border)', padding: '22px 0' }}>
                 <summary style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>
                   {item.question}
-                  <svg className="ns-faq-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
+                  <svg className="ns-faq-chevron" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
                     <path d="M6 9l6 6 6-6" />
                   </svg>
                 </summary>
