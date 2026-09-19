@@ -60,6 +60,9 @@ const PORTAL_DATA_WITH_COURSES = {
   ],
   transcriptSummary: 'Most recent semester...',
   attendanceSummary: 'September 2025: 1 absence(s), 0 excused, 0 tardy(ies)',
+  // Empty by default — existing tests below exercise courseSubjects/GPA
+  // logic independent of credit sourcing, which is covered separately below.
+  courseCredits: [] as Array<{ name: string; credits: number; passed: boolean }>,
 }
 
 const PASSING_COURSE = {
@@ -247,7 +250,7 @@ describe('gatherRoadmapCore() — credit calculations', () => {
     jest.clearAllMocks()
   })
 
-  it('counts credits only for passing courses', async () => {
+  it('counts credits only for passing courses (Course table fallback, no HAC sync)', async () => {
     mockProfileFindUnique.mockResolvedValue(BASE_PROFILE)
     mockGetPortalData.mockResolvedValue(null)
     mockCourseFindMany.mockResolvedValue([PASSING_COURSE, FAILING_COURSE])
@@ -256,6 +259,44 @@ describe('gatherRoadmapCore() — credit calculations', () => {
 
     expect(result.creditsCompleted).toBe(1)
     expect(result.creditsRequired).toBe(CREDITS_REQUIRED)
+  })
+
+  // Regression: gatherRoadmapCore previously always sourced credits from the
+  // Course/Grade tables, which the current HAC sync flow never populates —
+  // students with a fully synced transcript still saw 0% graduation progress
+  // and the "connect your school account" empty state. Credits must come
+  // from the real transcript (portalData.courseCredits) whenever it's
+  // available, even if the (empty/stale) Course table also has rows.
+  it('prefers real HAC transcript credits over the Course table when both are present', async () => {
+    mockProfileFindUnique.mockResolvedValue(BASE_PROFILE)
+    mockGetPortalData.mockResolvedValue({
+      ...PORTAL_DATA_WITH_COURSES,
+      courseCredits: [
+        { name: 'AP Chemistry', credits: 1, passed: true },
+        { name: 'AP Chemistry', credits: 1, passed: true }, // fall + spring semester
+        { name: 'Algebra 2', credits: 0.5, passed: false }, // failed — excluded
+        { name: 'US History', credits: 1, passed: true },
+      ],
+    })
+    // Stale/empty Course table — must be ignored in favor of the transcript above.
+    mockCourseFindMany.mockResolvedValue([PASSING_COURSE])
+
+    const result = await gatherRoadmapCore(1)
+
+    expect(result.creditsCompleted).toBe(3) // 1 + 1 + 1, Algebra 2 excluded (failed)
+    expect(result.creditsByCategory.Science).toBe(2) // both AP Chemistry entries
+    expect(result.creditsByCategory['Social Studies']).toBe(1) // US History
+    expect(result.creditsByCategory.Math).toBe(0) // Algebra 2 was failed, not counted
+  })
+
+  it('falls back to the Course table when portalData has no credit history yet', async () => {
+    mockProfileFindUnique.mockResolvedValue(BASE_PROFILE)
+    mockGetPortalData.mockResolvedValue({ ...PORTAL_DATA_WITH_COURSES, courseCredits: [] })
+    mockCourseFindMany.mockResolvedValue([PASSING_COURSE, FAILING_COURSE])
+
+    const result = await gatherRoadmapCore(1)
+
+    expect(result.creditsCompleted).toBe(1)
   })
 
   it('returns the full RoadmapCore shape with all required fields', async () => {

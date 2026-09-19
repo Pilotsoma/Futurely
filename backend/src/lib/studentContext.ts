@@ -13,6 +13,12 @@ export interface PortalData {
   courseList: string[]
   transcriptSummary: string
   attendanceSummary: string
+  // One entry per semester-course from the full HAC transcript history (not
+  // just the most recent semester) — a year-long course naturally appears
+  // twice, once per semester, each earning its own credit value. Used to
+  // compute real graduation-credit progress instead of the separate, often-
+  // empty Course/Grade tables.
+  courseCredits: Array<{ name: string; credits: number; passed: boolean }>
 }
 
 // Read all available portal data from the HAC/PowerSchool cache
@@ -49,6 +55,17 @@ export async function getPortalData(userId: number): Promise<PortalData | null> 
       }
     }
 
+    // Credit history — every semester-course entry across the full transcript,
+    // not just the most recent one. A year-long course earns credit once per
+    // semester, so summing every entry gives real total credits earned.
+    const courseCredits: PortalData['courseCredits'] = (transcript?.semesters ?? []).flatMap(sem =>
+      sem.courses.map(c => ({
+        name: c.name,
+        credits: parseFloat(c.credits) || 0,
+        passed: c.grade?.trim().toUpperCase() !== 'F',
+      }))
+    )
+
     // Current course grades
     let courseList: string[] = []
     const classworkKey = Object.keys(cache).find(k => k.startsWith('classwork:'))
@@ -78,7 +95,7 @@ export async function getPortalData(userId: number): Promise<PortalData | null> 
       attendanceSummary = `${month}: ${s.absences} absence(s), ${s.excused} excused, ${s.tardies} tardy(ies)`
     }
 
-    return { weightedGpa, unweightedGpa, classRank, courseList, transcriptSummary, attendanceSummary }
+    return { weightedGpa, unweightedGpa, classRank, courseList, transcriptSummary, attendanceSummary, courseCredits }
   } catch { return null }
 }
 

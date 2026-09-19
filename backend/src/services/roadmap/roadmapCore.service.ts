@@ -68,14 +68,29 @@ export async function gatherRoadmapCore(userId: number): Promise<RoadmapCore> {
     Language: 0, 'Fine Arts': 0, 'PE / Health': 0, Electives: 0,
   }
 
+  // Prefer the real HAC transcript's credit history over the separate
+  // Course/Grade tables, which aren't populated by the current HAC sync flow
+  // and were the reason graduation progress showed 0% / "connect your school
+  // account" even for students with a fully synced transcript. Only fall back
+  // to the Course table when no HAC sync exists yet.
   let creditsCompleted = 0
-  for (const c of courses) {
-    const grade = c.grades[0]
-    const passed = grade !== undefined && grade.letterGrade !== 'F'
-    if (passed) {
-      creditsCompleted += c.creditHours
-      const cat = categorize(c.name)
-      creditsByCategory[cat] = (creditsByCategory[cat] ?? 0) + c.creditHours
+  if (portalData && portalData.courseCredits.length > 0) {
+    for (const c of portalData.courseCredits) {
+      if (c.passed) {
+        creditsCompleted += c.credits
+        const cat = categorize(c.name)
+        creditsByCategory[cat] = (creditsByCategory[cat] ?? 0) + c.credits
+      }
+    }
+  } else {
+    for (const c of courses) {
+      const grade = c.grades[0]
+      const passed = grade !== undefined && grade.letterGrade !== 'F'
+      if (passed) {
+        creditsCompleted += c.creditHours
+        const cat = categorize(c.name)
+        creditsByCategory[cat] = (creditsByCategory[cat] ?? 0) + c.creditHours
+      }
     }
   }
 
