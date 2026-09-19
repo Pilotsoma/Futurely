@@ -47,6 +47,7 @@ import feedRouter from './routes/feed'
 import parentRouter from './routes/parent'
 import notificationsRouter from './routes/notifications'
 import collegesRouter from './routes/colleges'
+import marketplaceRouter from './routes/marketplace'
 import educatorRouter from './routes/educator'
 import counselorRouter from './routes/counselor'
 import adminRouter from './routes/admin'
@@ -358,6 +359,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/integrations/canvas', devBypass, requireConsent, requireActiveAccount, canvasRouter)
   app.use('/integrations/classlink', devBypass, requireConsent, requireActiveAccount, classlinkRouter)
   app.use('/colleges', devBypass, requireConsent, requireActiveAccount, collegesRouter)
+  app.use('/marketplace', devBypass, requireConsent, requireActiveAccount, marketplaceRouter)
   app.use('/educator', devBypass, requireConsent, requireActiveAccount, educatorRouter)
   app.use('/counselor', devBypass, requireConsent, requireActiveAccount, counselorRouter)
   app.use('/admin', devBypass, requireConsent, requireActiveAccount, adminRouter)
@@ -379,6 +381,7 @@ if (ENABLE_DEV_INTEGRATION_AUTH_BYPASS) {
   app.use('/integrations/canvas', requireAuth, requireConsent, requireActiveAccount, canvasRouter)
   app.use('/integrations/classlink', requireAuth, requireConsent, requireActiveAccount, classlinkRouter)
   app.use('/colleges', requireAuth, requireConsent, requireActiveAccount, collegesRouter)
+  app.use('/marketplace', requireAuth, requireConsent, requireActiveAccount, marketplaceRouter)
   app.use('/educator', requireAuth, requireConsent, requireActiveAccount, educatorRouter)
   app.use('/counselor', requireAuth, requireConsent, requireActiveAccount, counselorRouter)
   app.use('/admin', requireAuth, requireConsent, requireActiveAccount, adminRouter)
@@ -403,7 +406,7 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   const stack   = err instanceof Error ? err.stack   : undefined
 
   // Full error logged server-side.
-  console.error('[GLOBAL ERROR HANDLER]', { message, stack })
+  logger.error('global_error_handler', { message, stack })
 
   if (!res.headersSent) {
     // The CORS origin callback (above) throws a plain Error on a rejected
@@ -419,6 +422,37 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
       })
       return
     }
+
+    // body-parser (express.json / express.urlencoded) attaches a numeric
+    // `status` / `statusCode` property to the thrown Error for client-caused
+    // failures: 400 for malformed JSON (entity.parse.failed) and 413 for
+    // payloads that exceed the configured size limit (entity.too.large).
+    // Returning 500 for these cases is misleading — the server is healthy,
+    // the request was simply malformed or oversized.
+    const errWithStatus = err as { status?: unknown; statusCode?: unknown }
+    const httpStatus =
+      typeof errWithStatus.status === 'number'
+        ? errWithStatus.status
+        : typeof errWithStatus.statusCode === 'number'
+          ? errWithStatus.statusCode
+          : null
+
+    if (httpStatus === 400) {
+      res.status(400).json({
+        data: null,
+        error: { code: 'VALIDATION_ERROR', message: 'Malformed request body.' },
+      })
+      return
+    }
+
+    if (httpStatus === 413) {
+      res.status(413).json({
+        data: null,
+        error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body too large.' },
+      })
+      return
+    }
+
     res.status(500).json({
       data: null,
       error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' },

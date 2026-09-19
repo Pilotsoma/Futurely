@@ -10,37 +10,31 @@
  * are unaffected by any of this.
  */
 
-import { markWebAuthed, clearWebAuthed, isWebAuthed } from './api'
-
-const BASE = () => process.env.NEXT_PUBLIC_API_URL ?? ''
+import { markWebAuthed, clearWebAuthed, isWebAuthed, silentRefresh } from './api'
 
 // BroadcastChannel for cross-tab logout signalling (replaces storage-event on ns_token)
 const authChannel = typeof BroadcastChannel !== 'undefined'
   ? new BroadcastChannel('ns_auth')
   : null
 
-/** Call once on app boot. Returns true if a valid session was found. */
+/**
+ * Call once on app boot. Returns true if a valid session was found.
+ *
+ * Delegates to silentRefresh() from api.ts so both the mount-time check and
+ * the reactive 401-retry path share the same in-flight dedup lock
+ * (_refreshPromise). This prevents the race where two concurrent refreshes
+ * each present the same refresh token to the backend: the backend rotates
+ * tokens on use, so the second caller arrives with an already-revoked token
+ * and gets INVALID_TOKEN, causing cookies to be cleared and the user to be
+ * bounced to /login.
+ *
+ * Fail-closed guarantee: silentRefresh() calls clearWebAuthed() on any
+ * failure (network error, HTTP error, revoked token) and returns false. The
+ * caller (AppShell.checkAuth) redirects to /login on false.
+ */
 export async function initWebAuth(): Promise<boolean> {
   if (isWebAuthed()) return true
-
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 30000)
-  try {
-    const res = await fetch(`${BASE()}/api/auth/refresh`, {
-      method: 'POST',
-      signal: controller.signal,
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', 'X-Client-Platform': 'web' },
-    })
-    if (!res.ok) return false
-
-    markWebAuthed()
-    return true
-  } catch {
-    return false
-  } finally {
-    clearTimeout(timeout)
-  }
+  return silentRefresh()
 }
 
 /** Mark the session authenticated after a successful login / register. */

@@ -6,7 +6,7 @@ import { api, FeedUserProfile } from '@/lib/api'
 import { TrashIcon } from '@/components/icons'
 
 export function DevAdminPanel({
-  profile, userId, currentUserId, onUpdateBan, onUpdateMute, onUpdateRole, onDeleted,
+  profile, userId, currentUserId, onUpdateBan, onUpdateMute, onUpdateRole, onDeleted, onUpdateTag,
 }: {
   profile: FeedUserProfile
   userId: number
@@ -15,6 +15,7 @@ export function DevAdminPanel({
   onUpdateMute: (mutedUntil: string | null) => void
   onUpdateRole: (role: string) => void
   onDeleted: () => void
+  onUpdateTag?: (u: { tag: string | null; tagColor: string | null; allTags: Array<{ tag: string; tagColor: string }> }) => void
 }) {
   const [saving, setSaving] = useState(false)
   const [muteMinutes, setMuteMinutes] = useState('60')

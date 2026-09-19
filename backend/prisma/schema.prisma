@@ -22,7 +22,18 @@ model User {
   passwordHash                String?
   name                        String?                         @unique
   hacName                     String?
+  tag                         String                          @default("Student")
+  tagColor                    String?                         @default("grey")
+  allTags                     Json                            @default("[]")
+  coins                       Int                             @default(0)
+  lastCoinClaim               DateTime?
+  lastFreeSpin                DateTime?
+  nameColor                   String?
+  avatarEffect                String?
+  badge                       String?
   avatarUrl                   String?
+  ownedNameColors             Json                            @default("[]")
+  ownedAvatarEffects          Json                            @default("[]")
   role                        String                          @default("STUDENT")
   chatBanned                  Boolean                         @default(false)
   chatMutedUntil              DateTime?
@@ -33,6 +44,9 @@ model User {
   emailVerificationToken      String?                         @unique
   emailVerificationExpiry     DateTime?
   lastSeenAt                  DateTime?
+  loginStreak                 Int                             @default(0)
+  marketplaceAccess           Boolean                         @default(false)
+  marketplaceBanned           Boolean                         @default(false)
   tosAcceptedAt               DateTime?
   privacyAcceptedAt           DateTime?
   ageConfirmedAt              DateTime?
@@ -46,9 +60,11 @@ model User {
   Grade                       Grade[]
   likes                       Like[]
   commentLikes                CommentLike[]
+  giveawayEntries             GiveawayEntry[]
   parentLinks                 ParentStudentLink[]             @relation("ParentLinks")
   studentLinks                ParentStudentLink[]             @relation("StudentLinks")
   posts                       Post[]
+  giveawayWins                Post[]                          @relation("GiveawayWinner")
   schoolConnection            SchoolConnection?
   StudentProfile              StudentProfile?
   profile                     Profile?
@@ -56,6 +72,10 @@ model User {
   notificationsSent           Notification[]                  @relation("NotifSender")
   collegeList                 CollegeListItem[]
   parentPortalConnections     ParentPortalConnection[]
+  tradesSent                  TradeOffer[]                    @relation("TradesSent")
+  tradesReceived              TradeOffer[]                    @relation("TradesReceived")
+  marketplaceListings         MarketplaceListing[]            @relation("ListingsSold")
+  listingsPurchased           MarketplaceListing[]            @relation("ListingsBought")
   canvasConnections           CanvasConnection[]
   refreshTokens               RefreshToken[]
   passwordResetTokens         PasswordResetToken[]
@@ -65,6 +85,8 @@ model User {
   classroomsAsEducator        Classroom[]                     @relation("ClassroomEducator")
   classroomMemberships        ClassroomMembership[]           @relation("StudentMemberships")
   educatorAssignmentsCreated  EducatorAssignment[]            @relation("EducatorAssignmentCreator")
+  coinGrantsGiven             EducatorCoinGrant[]             @relation("CoinGrantEducator")
+  coinGrantsReceived          EducatorCoinGrant[]             @relation("CoinGrantStudent")
   counselorLinks              CounselorStudentLink[]          @relation("CounselorLinks")
   counseledBy                 CounselorStudentLink[]          @relation("CounseledStudents")
   counselorRecommendations    CounselorCourseRecommendation[] @relation("CounselorRecommendations")
@@ -82,6 +104,21 @@ model User {
   questionSetsCreated         QuestionSet[]                   @relation("QuestionSetCreator")
   gameSessionsHosted          GameSession[]                   @relation("GameSessionHost")
   gameParticipations          GameParticipant[]               @relation("GameParticipants")
+  traderSellCount             Int                             @default(0)
+  traderSellDate              String                          @default("")
+  traderBuyCount              Int                             @default(0)
+  traderBuyDate               String                          @default("")
+  traderTradeCount            Int                             @default(0)
+  traderTradeDate             String                          @default("")
+  spinCoinsSpent              Int                             @default(0)
+  spinTotalSpins              Int                             @default(0)
+  spinCommon                  Int                             @default(0)
+  spinUncommon                Int                             @default(0)
+  spinRare                    Int                             @default(0)
+  spinEpic                    Int                             @default(0)
+  spinLegendary               Int                             @default(0)
+  spinMythic                  Int                             @default(0)
+  spinCurse                   Int                             @default(0)
   // ── COPPA / agentic-consent fields ──────────────────────────────────────────
   // dateOfBirth and coppaParentEmail are encrypted at rest via AES-256-GCM
   // using the same CREDENTIAL_ENCRYPTION_KEY as school credentials.
@@ -215,18 +252,35 @@ model Assignment {
 }
 
 model Post {
-  id          Int       @id @default(autoincrement())
-  userId      Int
-  body        String
-  type        String    @default("NORMAL")
-  network     String    @default("global")
-  isdCode     String?
-  pinnedUntil DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  comments    Comment[]
-  likes       Like[]
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 Int             @id @default(autoincrement())
+  userId             Int
+  body               String
+  type               String          @default("NORMAL")
+  giveawayTag        String?
+  giveawayTagColor   String?
+  giveawayCoinAmount Int?
+  giveawayEndsAt     DateTime?
+  giveawayWinnerId   Int?
+  giveawayItemType   String?
+  giveawayItemId     String?
+  giveawayItemRarity String?
+  unboxItemType      String?
+  unboxItemId        String?
+  unboxItemName      String?
+  unboxItemValue     String?
+  unboxItemRarity    String?
+  unboxItemEstValue  Int?
+  unboxItemTagColor  String?
+  network            String          @default("global")
+  isdCode            String?
+  pinnedUntil        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  comments           Comment[]
+  likes              Like[]
+  giveawayEntries    GiveawayEntry[]
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  giveawayWinner     User?           @relation("GiveawayWinner", fields: [giveawayWinnerId], references: [id])
 }
 
 model Comment {
@@ -259,6 +313,17 @@ model CommentLike {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([commentId, userId])
+}
+
+model GiveawayEntry {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
 }
 
 model Follow {
@@ -351,6 +416,38 @@ model StudentProfile {
   User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model TradeOffer {
+  id            Int      @id @default(autoincrement())
+  senderId      Int
+  receiverId    Int
+  senderItems   Json
+  receiverItems Json
+  status        String   @default("PENDING")
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  sender        User     @relation("TradesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver      User     @relation("TradesReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+model MarketplaceListing {
+  id             Int      @id @default(autoincrement())
+  sellerId       Int
+  itemType       String
+  itemId         String
+  itemName       String
+  itemValue      String
+  itemRarity     String
+  itemRarityRank Int      @default(0)
+  price          Int
+  status         String   @default("ACTIVE")
+  buyerId        Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  seller         User     @relation("ListingsSold", fields: [sellerId], references: [id], onDelete: Cascade)
+  buyer          User?    @relation("ListingsBought", fields: [buyerId], references: [id])
+}
+
 model CollegeScorecardCache {
   id               Int               @id @default(autoincrement())
   unitId           String            @unique
@@ -393,6 +490,15 @@ model CollegeInsightsCache {
   collegeListItem CollegeListItem @relation(fields: [collegeListItemId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model ItemPrice {
+  id       Int    @id @default(autoincrement())
+  itemType String
+  itemId   String
+  price    Int
+
+  @@unique([itemType, itemId])
 }
 
 model CanvasConnection {
@@ -500,6 +606,20 @@ model ClassroomPost {
   createdAt   DateTime  @default(now())
   classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   author      User      @relation("ClassroomPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model EducatorCoinGrant {
+  id         Int      @id @default(autoincrement())
+  educatorId Int
+  studentId  Int
+  coins      Int
+  grantDate  String
+  createdAt  DateTime @default(now())
+  educator   User     @relation("CoinGrantEducator", fields: [educatorId], references: [id], onDelete: Cascade)
+  student    User     @relation("CoinGrantStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, grantDate])
+  @@index([educatorId])
 }
 
 model CounselorStudentLink {

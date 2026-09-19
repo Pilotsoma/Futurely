@@ -126,6 +126,7 @@ export default function SettingsPage() {
   const [dirty, setDirty]               = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [avatarUrl, setAvatarUrl]             = useState('')
+  const [meError, setMeError]                 = useState(false)
 
   // Canvas state
   const [canvasStatus, setCanvasStatus]       = useState<CanvasStatus | null>(null)
@@ -207,7 +208,8 @@ export default function SettingsPage() {
     ([g, c]) => c === DEFAULT_GRADE_COLORS[g as keyof typeof DEFAULT_GRADE_COLORS]
   )
 
-  useEffect(() => {
+  function loadMeData() {
+    setMeError(false)
     api.me().then(d => {
       setData(d)
       setSatScore(d.profile?.satScore?.toString() ?? '')
@@ -217,7 +219,11 @@ export default function SettingsPage() {
         setDevStatsLoading(true)
         api.adminStats().then(setDevStats).catch(() => null).finally(() => setDevStatsLoading(false))
       }
-    }).catch(() => null)
+    }).catch(() => setMeError(true))
+  }
+
+  useEffect(() => {
+    loadMeData()
     api.portalStatus().then(status => {
       setPortalStatus(status)
       if (!status.connected) {
@@ -296,7 +302,8 @@ export default function SettingsPage() {
   }
 
   function handleLogout() {
-    localStorage.removeItem('ns_token')
+    api.logout().catch(() => null)
+    clearWebAuth()
     localStorage.removeItem('ns_user')
     router.push('/login')
   }
@@ -393,6 +400,14 @@ export default function SettingsPage() {
       <div style={S.layout}>
         {/* Left column */}
         <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Profile load error — shown when api.me() fails (network error, expired session) */}
+          {meError && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', marginBottom: 12, borderRadius: 10, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: 'var(--error)', fontSize: 13, fontWeight: 500 }}>
+              <span>Couldn&apos;t load your settings. Please check your connection and try again.</span>
+              <button className="ns-btn-ghost" style={{ flexShrink: 0, fontSize: 13, padding: '6px 14px', height: 34 }} onClick={loadMeData}>Retry</button>
+            </div>
+          )}
+
           {/* Profile card */}
           <div className="ns-card" style={S.profileCard}>
             <div style={S.avatar}>{initials(data?.name ?? null)}</div>

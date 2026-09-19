@@ -268,10 +268,14 @@ async function createAdvancedTierCompletion(
   params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'>,
   options?: { retryOnFailure?: boolean }
 ): Promise<ChatCompletion> {
-  if (isGeminiPrimary()) {
-    const geminiClient = getGeminiClient()
-    if (geminiClient) return geminiClient.chat.completions.create({ ...params, model: getGeminiModel() })
-  }
+  // NVIDIA NIM's free tier has proven unreliable in practice — models get
+  // sunset without notice (410 Gone) and even "live" ones can hang for
+  // minutes with no timeout error, unlike a clean failure. Rather than pay
+  // that latency on every advanced-tier call, prefer Gemini directly
+  // whenever it's configured; NVIDIA is now only the fallback if Gemini
+  // isn't set up.
+  const geminiClient = getGeminiClient()
+  if (geminiClient) return geminiClient.chat.completions.create({ ...params, model: getGeminiModel() })
 
   const advancedClient = getAdvancedTierClient()
   if (advancedClient === null) {

@@ -21,6 +21,24 @@ jest.mock('@vercel/functions', () => ({
   waitUntil: (...args: unknown[]) => mockWaitUntil(...args),
 }))
 
+// ── Mock: requireAdmin (gates /ai/agent via requirePremiumAiAccess) ───────────
+// This suite tests waitUntil/session-contract behavior, not premium gating —
+// always allow through so the underlying route logic is what's exercised.
+
+jest.mock('../../middleware/requireAdmin', () => ({
+  hasDevPowers: jest.fn(() => Promise.resolve(true)),
+  isDevPowerUser: jest.fn(() => true),
+  hasModOrDevPowers: jest.fn(() => Promise.resolve(true)),
+  hasPremiumAiAccess: jest.fn(() => Promise.resolve(true)),
+  requireAdmin: jest.fn((_req: unknown, _res: unknown, next: () => void) => next()),
+  requireMod: jest.fn((_req: unknown, _res: unknown, next: () => void) => next()),
+  requireParent: jest.fn((_req: unknown, _res: unknown, next: () => void) => next()),
+  requireTeacher: jest.fn((_req: unknown, _res: unknown, next: () => void) => next()),
+  requireCounselor: jest.fn((_req: unknown, _res: unknown, next: () => void) => next()),
+  requireEducator: jest.fn((_req: unknown, _res: unknown, next: () => void) => next()),
+  requirePremiumAiAccess: jest.fn((_req: unknown, _res: unknown, next: () => void) => next()),
+}))
+
 // ── Mock: Prisma ──────────────────────────────────────────────────────────────
 
 jest.mock('../../lib/prisma', () => ({
@@ -118,6 +136,7 @@ jest.mock('../../lib/studentContext', () => ({
 
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
+import { AccountStatus } from '@prisma/client'
 import app from '../../app'
 import { prisma } from '../../lib/prisma'
 
@@ -133,6 +152,8 @@ const FAKE_CONSENTED_USER = {
   tosAcceptedAt: new Date('2024-01-01'),
   privacyAcceptedAt: new Date('2024-01-01'),
   ageConfirmedAt: new Date('2024-01-01'),
+  accountStatus: AccountStatus.ACTIVE,
+  bannedUntilDate: null,
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

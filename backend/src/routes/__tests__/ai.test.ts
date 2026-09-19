@@ -61,6 +61,7 @@ jest.mock('../../lib/studentContext', () => ({
 
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
+import { AccountStatus } from '@prisma/client'
 import app from '../../app'
 import { createTieredChatCompletion, resolveTierForScore } from '../../lib/aiClient'
 import { chatIntentRouter } from '../../services/ai/intentRouter'
@@ -75,14 +76,17 @@ import type { IntentAnalysis } from '../../services/ai/intentRouter'
 const TEST_JWT_SECRET = 'test-secret-for-jest-suite'
 const TEST_USER_ID = 42
 
-// Placeholder user that satisfies both requireConsent (tos/privacy/age fields)
-// and handlePersonalizedChat (name field) without any real PII.
+// Placeholder user that satisfies requireConsent (tos/privacy/age fields),
+// requireActiveAccount (accountStatus = ACTIVE), and handlePersonalizedChat
+// (name field) without any real PII.
 const FAKE_CONSENTED_USER = {
   id: TEST_USER_ID,
   name: 'Test Student',
   tosAcceptedAt: new Date('2024-01-01'),
   privacyAcceptedAt: new Date('2024-01-01'),
   ageConfirmedAt: new Date('2024-01-01'),
+  accountStatus: AccountStatus.ACTIVE,
+  bannedUntilDate: null,
 }
 
 // ---------------------------------------------------------------------------

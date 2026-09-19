@@ -1,5 +1,5 @@
-// prompt-version: 1.0
-// last-updated: 2026-07-14
+// prompt-version: 1.1
+// last-updated: 2026-09-19
 // author: ai-engineer
 //
 // PII policy: NO student names, emails, IDs, raw GPA values, or raw per-category
@@ -9,6 +9,17 @@
 // qualitatively ('on track in Math, significantly behind in Science').
 // futureDecision (free-text, unconstrained) is normalized to the three-value
 // enum 'college' | 'trade' | 'undecided' before entering the prompt.
+//
+// courseSubjects (added v1.1): course SUBJECT NAMES only (e.g. "AP Chemistry",
+// "Pre-Calculus") sourced from the HAC-synced portal via roadmapCore.service.ts.
+// Architect-approved compliance boundary (2026-09-19): subject names may enter
+// the prompt; numeric grades, letter grades, percentages, GPA values, or any
+// score attached to a course name must NEVER enter the prompt. The source field
+// is pre-stripped of grade suffixes before reaching this layer (see
+// roadmapCore.service.ts courseSubjects comment), but this layer must not
+// reintroduce grades. When courseSubjects is empty or absent (no HAC sync yet),
+// the line is omitted entirely — the prompt does not reveal the absence.
+//
 // See COMPLIANCE.md for the full data-handling policy.
 
 import { z } from 'zod'
@@ -32,6 +43,12 @@ export interface RoadmapInsightsInput {
   weightedGpa: number
   unweightedGpa: number
   futureDecision: string | null          // free-text, unconstrained — normalized internally
+  /**
+   * HAC-synced course subject names, grade-stripped (e.g. "AP Chemistry").
+   * Optional — empty array or absent when the student has no HAC sync yet.
+   * Compliance rule: names only, never grades/scores attached (see PII policy).
+   */
+  courseSubjects?: string[]
 }
 
 export interface RoadmapMilestone {
@@ -113,6 +130,7 @@ function normalizePathway(futureDecision: string | null): Pathway {
 // Approximate per-category credit minimums for a standard 26-credit graduation
 // plan. Used only to determine qualitative gap labels — never passed as raw
 // numbers. Electives have no hard minimum and are excluded.
+// TODO(Phase 3): replace with district-specific GraduationRequirements model
 const CATEGORY_MINIMUMS: Record<string, number> = {
   English:          4,
   Math:             4,
@@ -198,14 +216,20 @@ function buildUserPrompt(
   gpaStanding: GpaStanding,
   creditProgressPct: number,
   creditGaps: string,
+  courseSubjects?: string[],
 ): string {
+  const courseSubjectsLine =
+    courseSubjects && courseSubjects.length > 0
+      ? `\nCurrent courses: ${courseSubjects.join(', ')}`
+      : ''
+
   return `Generate a personalized 4-milestone roadmap for this student:
 
 Current grade level: ${gradeLevel}
 Stated pathway: ${pathway}
 Academic standing: GPA is ${gpaStanding} compared to typical high school peers
 Overall credit progress: approximately ${creditProgressPct}% of required credits completed
-Credit standing by subject area: ${creditGaps}
+Credit standing by subject area: ${creditGaps}${courseSubjectsLine}
 
 Pathway guidance: ${buildPathwayHint(pathway)}
 
@@ -232,7 +256,7 @@ async function generateMilestonesFromLlm(
         { role: 'system', content: buildSystemPrompt() },
         {
           role: 'user',
-          content: buildUserPrompt(input.gradeLevel, pathway, gpaStanding, creditPct, creditGaps),
+          content: buildUserPrompt(input.gradeLevel, pathway, gpaStanding, creditPct, creditGaps, input.courseSubjects),
         },
       ],
     })

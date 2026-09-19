@@ -76,6 +76,9 @@ const mockHasDevPowers = jest.fn()
 
 jest.mock('../../middleware/requireAdmin', () => ({
   hasDevPowers: (...args: unknown[]) => mockHasDevPowers(...args),
+  isDevPowerUser: jest.fn(() => false),
+  hasModOrDevPowers: jest.fn(() => Promise.resolve(false)),
+  hasPremiumAiAccess: jest.fn(() => Promise.resolve(true)),
   requireAdmin: jest.fn(
     (_req: unknown, _res: unknown, next: () => void) => next(),
   ),
@@ -92,6 +95,9 @@ jest.mock('../../middleware/requireAdmin', () => ({
     (_req: unknown, _res: unknown, next: () => void) => next(),
   ),
   requireEducator: jest.fn(
+    (_req: unknown, _res: unknown, next: () => void) => next(),
+  ),
+  requirePremiumAiAccess: jest.fn(
     (_req: unknown, _res: unknown, next: () => void) => next(),
   ),
 }))
@@ -155,6 +161,7 @@ jest.mock('../../lib/studentContext', () => ({
 
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
+import { AccountStatus } from '@prisma/client'
 import app from '../../app'
 import { prisma } from '../../lib/prisma'
 
@@ -164,11 +171,17 @@ const TEST_JWT_SECRET = 'test-secret-for-jest-suite'
 const TEST_USER_ID = 42
 
 // Fully-consented user returned by requireConsent middleware's findUnique call.
+// requireConsent selects {tosAcceptedAt, privacyAcceptedAt, ageConfirmedAt,
+// accountStatus, bannedUntilDate} in one query and stashes it on
+// req.accountStatusPrefetch — requireActiveAccount reuses that prefetch
+// instead of querying again, so this stub must satisfy both middlewares.
 const CONSENTED_USER_STUB = {
   id: TEST_USER_ID,
   tosAcceptedAt: new Date('2024-01-01'),
   privacyAcceptedAt: new Date('2024-01-01'),
   ageConfirmedAt: new Date('2024-01-01'),
+  accountStatus: AccountStatus.ACTIVE,
+  bannedUntilDate: null,
 }
 
 // User record returned by the handler's COPPA check with null DOB (the
