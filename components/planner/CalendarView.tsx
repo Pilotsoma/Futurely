@@ -176,6 +176,7 @@ export default function CalendarView({ items, selectedDate, onSelectDate, onResc
                 return (
                   <div
                     key={i}
+                    className="ns-cal-cell"
                     onClick={() => onSelectDate(cell.date)}
                     onDragOver={e => { e.preventDefault(); setDragOverDay(dayKey) }}
                     onDragLeave={() => setDragOverDay(prev => (prev === dayKey ? null : prev))}

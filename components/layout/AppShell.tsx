@@ -2,7 +2,7 @@
 
 import React from 'react'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -92,9 +92,47 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [showHidden, setShowHidden] = useState(false)
   const [isDemoAccount, setIsDemoAccount] = useState(false)
 
-  const isExpanded  = pinnedExpanded || hoverExpanded
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+  const hamburgerRef = useRef<HTMLButtonElement>(null)
+  const drawerRef    = useRef<HTMLElement>(null)
+  const mainRef      = useRef<HTMLElement>(null)
+  const didMountRef  = useRef(false)
+
+  const isExpanded  = pinnedExpanded || hoverExpanded || mobileNavOpen
   const sideW       = isExpanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED
   const mainMargin  = pinnedExpanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED
+
+  // Close mobile nav on route change
+  useEffect(() => { setMobileNavOpen(false) }, [pathname])
+
+  // Close mobile nav on Escape key
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) { if (e.key === 'Escape') setMobileNavOpen(false) }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  // Focus management: on open move focus into drawer; on close return it to the hamburger
+  useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return }
+    if (mobileNavOpen) {
+      const first = drawerRef.current?.querySelector<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+      first?.focus()
+    } else {
+      hamburgerRef.current?.focus()
+    }
+  }, [mobileNavOpen])
+
+  // Focus trap: inert the main content while the drawer is open so Tab cannot reach it
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    if (mobileNavOpen) { el.setAttribute('inert', '') }
+    else { el.removeAttribute('inert') }
+  }, [mobileNavOpen])
 
   useEffect(() => {
     // AbortController lets us cancel the in-flight auth/prefetch sequence when
@@ -210,7 +248,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AiChatProvider>
     <div className="ns-scale-shell" style={{ display: 'flex', minHeight: 'calc(100vh / var(--ui-zoom, 1))' }}>
+      {/* Hamburger — visible only below lg via CSS */}
+      <button
+        ref={hamburgerRef}
+        className="ns-hamburger-btn"
+        aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+        aria-expanded={mobileNavOpen}
+        onClick={() => setMobileNavOpen(o => !o)}
+      >
+        {mobileNavOpen
+          ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        }
+      </button>
+
+      {/* Backdrop — only rendered when mobile nav open; CSS hides at lg+ */}
+      {mobileNavOpen && (
+        <div className="ns-sidebar-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />
+      )}
+
       <motion.aside
+        ref={drawerRef as React.RefObject<HTMLElement>}
+        className={`ns-sidebar-shell${mobileNavOpen ? ' ns-sidebar-open' : ''}`}
         animate={{ width: sideW }}
         transition={springTransition}
         onMouseEnter={() => setHoverExpanded(true)}
@@ -469,6 +528,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content — only shifts when sidebar is pinned open */}
       <motion.main
+        ref={mainRef as React.RefObject<HTMLElement>}
+        className="ns-main-shell"
         animate={{ marginLeft: mainMargin }}
         transition={springTransition}
         style={S.main}

@@ -122,11 +122,16 @@ export default function PlannerPage() {
 
   // View mode: list (grouped by due date) or calendar (month grid).
   // Lazy-init from localStorage (ns_planner_view) so the last-chosen view
-  // is restored without a flash on load. Defaults to 'calendar' on first visit.
+  // is restored without a flash on load. Defaults to 'calendar' on first visit,
+  // except on phone-width screens with no saved preference yet — the calendar's
+  // drag-and-drop 7-column month grid doesn't fit or work (no touch DnD) below
+  // md, so first-time mobile visitors land on the list view instead. Still just
+  // a default: the toggle below switches either way, and any saved choice wins.
   const [view, setView] = useState<'list' | 'calendar'>(() => {
     if (typeof window === 'undefined') return 'calendar'
     const saved = localStorage.getItem('ns_planner_view')
-    return saved === 'list' || saved === 'calendar' ? saved : 'calendar'
+    if (saved === 'list' || saved === 'calendar') return saved
+    return window.innerWidth < 768 ? 'list' : 'calendar'
   })
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date())
 
@@ -457,7 +462,7 @@ export default function PlannerPage() {
   return (
     <div className="fade-up" style={{ maxWidth: 1280, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div className="ns-planner-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.5px' }}>Planner</h1>
           <button
@@ -481,7 +486,7 @@ export default function PlannerPage() {
             {aiSorting ? 'Scoring…' : '✦ AI Sorted'}
           </button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="ns-planner-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <AgentPanel
             module="PLANNER"
             buttonLabel="Ask AI Agent"

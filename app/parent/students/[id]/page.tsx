@@ -175,7 +175,7 @@ export default function ParentStudentDetailPage() {
       {/* ── OVERVIEW ── */}
       {tab === 'overview' && (
         <div>
-          <div style={S.statsGrid}>
+          <div className="ns-stats-grid-5" style={S.statsGrid}>
             {[
               { v: String(data.stats.totalCourses), l: 'Courses' },
               { v: String(data.stats.pendingAssignments), l: 'Pending', highlight: data.stats.pendingAssignments > 3 },
@@ -299,6 +299,7 @@ export default function ParentStudentDetailPage() {
             )}
 
             {!periodLoading && hacClasses.length > 0 && (
+              <div className="ns-table-scroll">
               <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
                 <thead>
                   <tr>
@@ -332,7 +333,7 @@ export default function ParentStudentDetailPage() {
                             <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.4px', marginBottom: 10 }}>
                               Assignments ({c.scores.length})
                             </div>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: 12.5 }}>
+                            <div className="ns-table-scroll"><table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: 12.5 }}>
                               <thead>
                                 <tr>{['Assignment', 'Category', 'Due', 'Score'].map(h => (
                                   <th key={h} style={{ textAlign: 'left' as const, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase' as const }}>{h}</th>
@@ -352,7 +353,7 @@ export default function ParentStudentDetailPage() {
                                   </tr>
                                 ))}
                               </tbody>
-                            </table>
+                            </table></div>
                           </td>
                         </tr>
                       ),
@@ -360,6 +361,7 @@ export default function ParentStudentDetailPage() {
                   })}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>
@@ -371,6 +373,7 @@ export default function ParentStudentDetailPage() {
           {data.assignments.length === 0 ? (
             <p style={{ color: 'var(--text-secondary)', padding: 24, fontSize: 13 }}>No assignments on file.</p>
           ) : (
+            <div className="ns-table-scroll">
             <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
               <thead>
                 <tr>
@@ -401,6 +404,7 @@ export default function ParentStudentDetailPage() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -470,7 +474,7 @@ const S: Record<string, React.CSSProperties> = {
   tabBar:       { display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 24 },
   tabBtn:       { background: 'none', border: 'none', padding: '10px 20px', fontSize: 13.5, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 0.15s' },
   tabBtnActive: { color: 'var(--primary)', borderBottom: '2px solid var(--primary)', fontWeight: 600 },
-  statsGrid:    { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 },
+  statsGrid:    { gap: 12, marginBottom: 20 },
   cardLabel:    { fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 14 },
   bigNum:       { fontSize: 30, fontWeight: 800, letterSpacing: '-1px', lineHeight: 1, marginBottom: 6 },
   th:           { textAlign: 'left' as const, padding: '14px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' },
