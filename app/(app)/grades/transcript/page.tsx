@@ -86,6 +86,7 @@ export default function TranscriptPage() {
       {(data?.semesters ?? []).map((sem, i) => (
         <div key={i} className="ns-card" style={S.semCard}>
           <p style={S.semTitle}>{sem.year || 'N/A'} — Semester {sem.semester || String(i + 1)}</p>
+          <div className="ns-table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
             <thead>
               <tr>
@@ -110,6 +111,7 @@ export default function TranscriptPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       ))}
     </div>

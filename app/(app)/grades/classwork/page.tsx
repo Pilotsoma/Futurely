@@ -168,6 +168,7 @@ export default function ClassworkPage() {
 
       {!periodLoading && courses.length > 0 && (
         <div className="ns-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="ns-table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
             <thead>
               <tr>
@@ -222,7 +223,7 @@ export default function ClassworkPage() {
                         </div>
                         {c.scores.length === 0
                           ? <p style={{ color: 'var(--text-muted)', fontSize: 12.5 }}>No assignments found.</p>
-                          : <table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: 12.5 }}>
+                          : <div className="ns-table-scroll"><table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: 12.5 }}>
                               <thead><tr>{['Assignment','Category','Due','Score'].map(h => <th key={h} style={{ textAlign: 'left' as const, padding: '4px 8px', color: 'var(--text-muted)', fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase' as const }}>{h}</th>)}</tr></thead>
                               <tbody>{c.scores.map((a, j) => (
                                 <tr key={j} style={{ borderTop: '1px solid var(--border)' }}>
@@ -236,7 +237,7 @@ export default function ClassworkPage() {
                                   </td>
                                 </tr>
                               ))}</tbody>
-                            </table>}
+                            </table></div>}
                       </td>
                     </tr>
                   ),
@@ -244,6 +245,7 @@ export default function ClassworkPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

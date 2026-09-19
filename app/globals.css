@@ -120,6 +120,176 @@ body {
   min-height: 100%;
 }
 
+/* ── Responsive breakpoints (mobile-first additions layered via max-width so desktop is never affected) ──
+   ≤639px   phone
+   640–767px  phone-lg (sm)
+   768–1023px tablet (md)
+   ≥1024px  desktop (lg) — PIXEL-IDENTICAL TO CURRENT PRODUCTION ABOVE THIS LINE, do not modify unguarded rules
+   ≥1280px  wide desktop (xl)
+   Convention: use `@media (max-width: 1023.98px)` for "below lg" (phone+tablet) rules,
+   and `@media (max-width: 767.98px)` for "phone-only" rules. Never use bare min-width rules
+   for mobile — this file already uses min-width additively for the >=1600px desktop zoom
+   rules (.ns-scale-shell) further down; don't confuse the two directions. */
+
+/* Reduce the global page gutter on phones and tablets */
+@media (max-width: 767.98px) { :root { --page-px: 16px; } }
+@media (max-width: 1023.98px) and (min-width: 768px) { :root { --page-px: 24px; } }
+
+/* ── Mobile hamburger button (hidden on desktop via CSS) ──────────────────── */
+.ns-hamburger-btn {
+  display: none; /* hidden on desktop */
+}
+@media (max-width: 1023.98px) {
+  .ns-hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    box-shadow: var(--neo-raised);
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 60;
+    flex-shrink: 0;
+  }
+}
+
+/* ── Mobile sidebar + main shell overrides (strictly below lg) ────────────── */
+@media (max-width: 1023.98px) {
+  .ns-sidebar-shell {
+    transform: translateX(-100%);
+    transition: transform var(--dur-base) var(--ease-out-quart);
+    width: 280px !important;
+  }
+  .ns-sidebar-shell.ns-sidebar-open {
+    transform: translateX(0);
+  }
+  .ns-main-shell {
+    margin-left: 0 !important;
+    /* Decoupled from each layout's own desktop padding value (32px fixed on the
+       role-portal shells, var(--page-px) on the main app shell) so this can't
+       drift from whatever those files set at lg+ — top clears the hamburger,
+       sides/bottom get a phone/tablet-appropriate gutter regardless of source. */
+    padding: 68px 24px 24px !important;
+  }
+  .ns-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 49;
+  }
+}
+@media (max-width: 767.98px) {
+  .ns-main-shell {
+    padding: 68px 16px 16px !important;
+  }
+}
+@media (min-width: 1024px) {
+  .ns-sidebar-backdrop { display: none; }
+}
+
+/* ── Responsive grids ─────────────────────────────────────────────────────── */
+/* Default (desktop): 4-column grid — identical to the inline repeat(4,1fr) */
+.ns-stats-grid,
+.ns-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+/* 5-column variant for parent portal stat rows */
+.ns-stats-grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+@media (max-width: 1023.98px) {
+  .ns-stats-grid,
+  .ns-quick-grid { grid-template-columns: repeat(2, 1fr); }
+  .ns-stats-grid-5 { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 479.98px) {
+  .ns-stats-grid,
+  .ns-quick-grid { grid-template-columns: 1fr; }
+  .ns-stats-grid-5 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Scrollable table wrapper (safe unscoped — no-op when content fits) ────── */
+.ns-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Responsive heading scale (for pages touched in this pass) ────────────── */
+.ns-heading-xl {
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+}
+@media (max-width: 767.98px) {
+  .ns-heading-xl { font-size: 26px; }
+}
+
+/* ── Dashboard top row (GPA + Due Today) — stack on phones ───────────────── */
+.ns-db-top-row { display: flex; gap: 20px; margin-bottom: 20px; }
+@media (max-width: 767.98px) {
+  .ns-db-top-row { flex-direction: column; }
+}
+
+/* ── Dashboard responsive typography ─────────────────────────────────────── */
+.ns-db-name    { font-size: 38px; }
+.ns-db-gpa-num { font-size: 48px; }
+.ns-db-stat-num { font-size: 34px; }
+@media (max-width: 1023.98px) {
+  .ns-db-name    { font-size: 28px; }
+  .ns-db-gpa-num { font-size: 34px; }
+  .ns-db-stat-num { font-size: 24px; }
+}
+@media (max-width: 767.98px) {
+  .ns-db-name    { font-size: 24px; }
+  .ns-db-gpa-num { font-size: 28px; }
+  .ns-db-stat-num { font-size: 20px; }
+}
+
+/* ── Planner header — the title row and the action-button row (AI Sort,
+   Ask AI Agent, List/Calendar toggle, Canvas, + New Task) are both fixed
+   flex rows with 4-5 controls; they overflow well before 768px if they
+   can't wrap. */
+@media (max-width: 767.98px) {
+  .ns-planner-header { flex-wrap: wrap; row-gap: 10px; }
+  .ns-planner-actions { flex-wrap: wrap; row-gap: 8px; }
+}
+
+/* ── Planner calendar month-grid cells — shrink when shown below md (the ────
+   planner defaults phone-width first-visits to list view instead; this only
+   matters if a mobile user manually switches to calendar view) */
+@media (max-width: 1023.98px) and (min-width: 768px) {
+  .ns-cal-cell { min-height: 110px !important; }
+}
+@media (max-width: 767.98px) {
+  .ns-cal-cell { min-height: 74px !important; }
+}
+
+/* ── Login page responsive tweaks (phone only, not the desktop cosmic layout) ── */
+.ns-login-brand-title { font-size: 30px; }
+@media (max-width: 767.98px) {
+  .ns-login-card {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    padding-top: 36px !important;
+    padding-bottom: 36px !important;
+    border-radius: 16px !important;
+  }
+  .ns-login-brand-title { font-size: 22px; }
+}
+
 /* ── Cross-platform size normalization ──────────────────────────────────────
    Our px-based UI is tuned to look right on a MacBook's ~1440–1512 logical-px
    display. Windows monitors are typically wider at 100% OS scaling (1920,
@@ -737,7 +907,8 @@ a:focus-visible > .ns-nav-link { box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.45);
 .reduce-motion .box-mythic,
 .reduce-motion .legendary-text,
 .reduce-motion .mythic-text,
-.reduce-motion .ai-dot {
+.reduce-motion .ai-dot,
+.reduce-motion .ns-sidebar-shell {
   animation: none !important;
   transition: none !important;
 }
