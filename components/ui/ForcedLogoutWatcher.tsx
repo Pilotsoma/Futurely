@@ -24,13 +24,30 @@ export default function ForcedLogoutWatcher() {
   // WebSocket — catches cross-device logout (FORCE_LOGOUT server event). Auth
   // happens server-side via the httpOnly cookie sent automatically on the
   // handshake, so there's no token for this client to hold or transmit.
+  //
+  // The production backend (backend/api/index.ts, a stateless Vercel
+  // function) has no WebSocket server — only the local-dev/persistent-server
+  // entrypoint (backend/src/index.ts) does. Falling back to a URL derived
+  // from NEXT_PUBLIC_API_URL (or worse, a hardcoded localhost default) meant
+  // every deployed tab endlessly retried a connection to nothing, every 3s,
+  // forever. Only attempt the connection when an explicit NEXT_PUBLIC_WS_URL
+  // is configured, or we're actually running on localhost (dev, where the
+  // real WS server is up on :3001) — and cap retries instead of looping
+  // forever against a target that isn't coming back.
   useEffect(() => {
+    const explicitWsUrl = process.env.NEXT_PUBLIC_WS_URL
+    const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    if (!explicitWsUrl && !isLocalhost) return
+
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-    const wsBase = process.env.NEXT_PUBLIC_WS_URL ?? apiUrl.replace(/^http/, 'ws')
-    let ws: WebSocket, dead = false
+    const wsBase = explicitWsUrl ?? apiUrl.replace(/^http/, 'ws')
+    const MAX_ATTEMPTS = 5
+    let ws: WebSocket, dead = false, attempts = 0
     function connect() {
-      if (dead) return
+      if (dead || attempts >= MAX_ATTEMPTS) return
+      attempts++
       ws = new WebSocket(wsBase)
+      ws.onopen = () => { attempts = 0 }
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data as string) as { event: string }

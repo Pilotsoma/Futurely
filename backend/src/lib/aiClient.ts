@@ -254,7 +254,16 @@ async function createBasicTierCompletion(
 ): Promise<ChatCompletion> {
   if (isGeminiPrimary()) {
     const geminiClient = getGeminiClient()
-    if (geminiClient) return geminiClient.chat.completions.create({ ...params, model: getGeminiModel() })
+    if (geminiClient) {
+      try {
+        return await geminiClient.chat.completions.create({ ...params, model: getGeminiModel() })
+      } catch (err) {
+        logger.warn('AI call failed on Gemini (basic tier primary), falling back to configured basic tier client', {
+          errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
+        })
+        // Fall through to the basic-tier client below.
+      }
+    }
   }
 
   return withGeminiFailsafe(params, async () => {
@@ -273,9 +282,23 @@ async function createAdvancedTierCompletion(
   // minutes with no timeout error, unlike a clean failure. Rather than pay
   // that latency on every advanced-tier call, prefer Gemini directly
   // whenever it's configured; NVIDIA is now only the fallback if Gemini
-  // isn't set up.
+  // isn't set up. IMPORTANT: this must stay wrapped in try/catch — a bare
+  // call here previously threw straight through on any transient Gemini
+  // failure (rate limit, capacity, timeout) with zero fallback, even though
+  // a working NVIDIA client and circuit breaker were sitting right below,
+  // unused. That surfaced in production as "LLM call failed" in agent mode
+  // and occasional chat failures whenever Gemini so much as hiccuped.
   const geminiClient = getGeminiClient()
-  if (geminiClient) return geminiClient.chat.completions.create({ ...params, model: getGeminiModel() })
+  if (geminiClient) {
+    try {
+      return await geminiClient.chat.completions.create({ ...params, model: getGeminiModel() })
+    } catch (err) {
+      logger.warn('AI call failed on Gemini (advanced tier primary), falling back to NVIDIA/basic', {
+        errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
+      })
+      // Fall through to the NVIDIA/basic-tier logic below.
+    }
+  }
 
   const advancedClient = getAdvancedTierClient()
   if (advancedClient === null) {

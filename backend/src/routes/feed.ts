@@ -581,12 +581,13 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
     });
     if (!profile) return res.status(404).json({ error: 'User not found' });
 
-    const [totalLikes, isFollowingRow] = await Promise.all([
+    const [totalLikes, isFollowingRow, viewerIsDev] = await Promise.all([
       prisma.like.count({ where: { post: { userId: targetId } } }),
       prisma.follow.findFirst({ where: { followerId: userId, followingId: targetId } }),
+      hasDevPowers(userId),
     ]);
 
-    const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, schoolConnection: sc, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; schoolConnection?: { districtUrl: string } | null };
+    const { passwordHash, email: _email, failedLoginAttempts: _fla, lockedUntil: _lu, schoolConnection: sc, lastSeenAt, ...rest } = profile as typeof profile & { passwordHash: string; email: string; failedLoginAttempts: number; lockedUntil: Date | null; schoolConnection?: { districtUrl: string } | null; lastSeenAt: Date | null };
     const isdCode = sc?.districtUrl ?? null;
     res.json({
       data: {
@@ -594,6 +595,8 @@ router.get('/users/:id/profile', async (req: Request, res: Response) => {
         totalLikes,
         isFollowing: !!isFollowingRow,
         ...(isSelf ? { isdCode, isdDisplayName: isdCode ? isdCode.split('.')[0].replace(/isd$/i, ' ISD').replace(/^(.)/, (c: string) => c.toUpperCase()).trim() : null } : {}),
+        // Dev/mod-only — other users' last-active time isn't shown to regular users.
+        ...(viewerIsDev ? { lastSeenAt } : {}),
       },
     });
   } catch (err) {

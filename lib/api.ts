@@ -1703,6 +1703,9 @@ export interface FeedUserProfile {
   coins?: number
   isdCode?: string | null
   isdDisplayName?: string | null
+  // Present only when the viewer has dev/mod powers — omitted entirely for
+  // regular users, not just hidden client-side.
+  lastSeenAt?: string | null
 }
 
 // ── Marketplace types ──────────────────────────────────────────────────────────

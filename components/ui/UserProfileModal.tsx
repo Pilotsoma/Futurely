@@ -111,6 +111,9 @@ export default function UserProfileModal({ userId, currentUserId, onClose }: Pro
                 <div style={S.name}>
                   {displayName(profile)}
                 </div>
+                {profile.lastSeenAt && (
+                  <div style={S.lastSeen}>Last active {timeAgo(profile.lastSeenAt)}</div>
+                )}
               </div>
               <button style={S.closeBtn} onClick={onClose}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -183,6 +186,7 @@ const S: Record<string, React.CSSProperties> = {
   header:     { display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid var(--border)' },
   avatar:     { width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0 },
   name:       { fontSize: 19, fontWeight: 800, color: 'var(--text)', marginBottom: 3 },
+  lastSeen:   { fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 },
   closeBtn:   { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center', flexShrink: 0 },
   stats:      { display: 'flex', justifyContent: 'space-around', padding: '14px 0', borderBottom: '1px solid var(--border)', marginBottom: 16 },
   postsTitle: { fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 },

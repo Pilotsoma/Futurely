@@ -331,4 +331,35 @@ describe('createTieredChatCompletion', () => {
 
     expect(result.choices[0]?.message?.content).toBe('fallback response from open circuit')
   })
+
+  // (f) Regression: Gemini configured as the advanced-tier primary previously
+  // had zero fallback protection — a bare, unguarded call meant any transient
+  // Gemini failure threw straight through even though a working NVIDIA
+  // fallback client sat right below it, unused. This surfaced in production
+  // as "LLM call failed" in agent mode and occasional chat failures whenever
+  // Gemini so much as hiccuped.
+  it('(f) advanced tier with GEMINI_API_KEY set: a Gemini failure falls back to NVIDIA instead of throwing', async () => {
+    restoreEnv = setEnv({
+      GEMINI_API_KEY: 'gemini-test-key',
+      NVIDIA_API_KEY: 'nvapi-test-key',
+      NVIDIA_MODEL: 'meta/llama-3.1-70b-instruct',
+      OPENROUTER_API_KEY: 'or-test-key',
+    })
+
+    const geminiCreate = jest.fn().mockRejectedValue(new Error('Gemini capacity exceeded'))
+    const nvidiaCreate = jest.fn().mockResolvedValue(makeFakeChatCompletion('nvidia fallback response'))
+
+    MockOpenAI.mockImplementation((opts) => {
+      if (opts?.baseURL === 'https://generativelanguage.googleapis.com/v1beta/openai/') {
+        return makeClientStub(geminiCreate)
+      }
+      return makeClientStub(nvidiaCreate)
+    })
+
+    const result = await createTieredChatCompletion('advanced', BASIC_PARAMS)
+
+    expect(geminiCreate).toHaveBeenCalledTimes(1)
+    expect(nvidiaCreate).toHaveBeenCalled()
+    expect(result.choices[0]?.message?.content).toBe('nvidia fallback response')
+  })
 })
