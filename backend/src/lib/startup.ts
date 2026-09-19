@@ -5,19 +5,9 @@ const PATCHES: string[] = [
   // ── User columns ─────────────────────────────────────────────────────
   `ALTER TABLE "User"
     ADD COLUMN IF NOT EXISTS "hacName"                  TEXT,
-    ADD COLUMN IF NOT EXISTS "coins"                    INTEGER      NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "lastCoinClaim"            TIMESTAMP(3),
-    ADD COLUMN IF NOT EXISTS "nameColor"                TEXT,
-    ADD COLUMN IF NOT EXISTS "avatarEffect"             TEXT,
     ADD COLUMN IF NOT EXISTS "avatarUrl"                TEXT,
-    ADD COLUMN IF NOT EXISTS "ownedNameColors"          JSONB        NOT NULL DEFAULT '[]',
-    ADD COLUMN IF NOT EXISTS "ownedAvatarEffects"       JSONB        NOT NULL DEFAULT '[]',
-    ADD COLUMN IF NOT EXISTS "allTags"                  JSONB        NOT NULL DEFAULT '[]',
-    ADD COLUMN IF NOT EXISTS "loginStreak"              INTEGER      NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "marketplaceAccess"        BOOLEAN      NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS "lastSeenAt"               TIMESTAMP(3),
     ADD COLUMN IF NOT EXISTS "chatBanned"               BOOLEAN      NOT NULL DEFAULT false,
-    ADD COLUMN IF NOT EXISTS "marketplaceBanned"        BOOLEAN      NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS "chatMutedUntil"           TIMESTAMP(3),
     ADD COLUMN IF NOT EXISTS "failedLoginAttempts"      INTEGER      NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS "lockedUntil"              TIMESTAMP(3),
@@ -32,21 +22,6 @@ const PATCHES: string[] = [
   // ── Post columns ─────────────────────────────────────────────────────
   `ALTER TABLE "Post"
     ADD COLUMN IF NOT EXISTS "type"                TEXT  NOT NULL DEFAULT 'NORMAL',
-    ADD COLUMN IF NOT EXISTS "giveawayTag"         TEXT,
-    ADD COLUMN IF NOT EXISTS "giveawayTagColor"    TEXT,
-    ADD COLUMN IF NOT EXISTS "giveawayCoinAmount"  INTEGER,
-    ADD COLUMN IF NOT EXISTS "giveawayEndsAt"      TIMESTAMP(3),
-    ADD COLUMN IF NOT EXISTS "giveawayWinnerId"    INTEGER,
-    ADD COLUMN IF NOT EXISTS "giveawayItemType"    TEXT,
-    ADD COLUMN IF NOT EXISTS "giveawayItemId"      TEXT,
-    ADD COLUMN IF NOT EXISTS "giveawayItemRarity"  TEXT,
-    ADD COLUMN IF NOT EXISTS "unboxItemType"       TEXT,
-    ADD COLUMN IF NOT EXISTS "unboxItemId"         TEXT,
-    ADD COLUMN IF NOT EXISTS "unboxItemName"       TEXT,
-    ADD COLUMN IF NOT EXISTS "unboxItemValue"      TEXT,
-    ADD COLUMN IF NOT EXISTS "unboxItemRarity"     TEXT,
-    ADD COLUMN IF NOT EXISTS "unboxItemEstValue"   INTEGER,
-    ADD COLUMN IF NOT EXISTS "unboxItemTagColor"   TEXT,
     ADD COLUMN IF NOT EXISTS "pinnedUntil"         TIMESTAMP(3)`,
 
   // ── Unique constraint on User.name ───────────────────────────────────
@@ -69,13 +44,6 @@ const PATCHES: string[] = [
   `ALTER TABLE "User" ADD CONSTRAINT IF NOT EXISTS "User_name_key" UNIQUE ("name")`,
 
   // ── Tables ───────────────────────────────────────────────────────────
-  `CREATE TABLE IF NOT EXISTS "GiveawayEntry" (
-    "id"        SERIAL PRIMARY KEY,
-    "postId"    INTEGER NOT NULL REFERENCES "Post"("id") ON DELETE CASCADE,
-    "userId"    INTEGER NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "GiveawayEntry_postId_userId_key" UNIQUE ("postId", "userId")
-  )`,
   `CREATE TABLE IF NOT EXISTS "CommentLike" (
     "id"        SERIAL PRIMARY KEY,
     "commentId" INTEGER NOT NULL REFERENCES "Comment"("id") ON DELETE CASCADE,
@@ -100,18 +68,6 @@ const PATCHES: string[] = [
     "usedAt"    TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
-
-  // ── Spin stats columns ───────────────────────────────────────────────
-  `ALTER TABLE "User"
-    ADD COLUMN IF NOT EXISTS "spinCoinsSpent"  INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "spinTotalSpins"  INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "spinCommon"      INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "spinUncommon"    INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "spinRare"        INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "spinEpic"        INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "spinLegendary"   INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "spinMythic"      INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "spinCurse"       INTEGER NOT NULL DEFAULT 0`,
 
   // ── ToS/Privacy/age consent columns ──────────────────────────────────
   `ALTER TABLE "User"
@@ -249,36 +205,6 @@ const PATCHES: string[] = [
 // Data-level repairs that are always idempotent and safe to re-run on every cold start.
 // These fix rows that became inconsistent before code-level guards were in place.
 const DATA_REPAIRS: string[] = [
-  // Clear stale badge values: user sold their verified tag without un-equipping it.
-  `UPDATE "User"
-   SET badge = NULL
-   WHERE badge IN ('verified-yellow', 'verified-blue')
-     AND NOT EXISTS (
-       SELECT 1 FROM jsonb_array_elements(
-         CASE
-           WHEN jsonb_typeof("allTags") = 'string' THEN ("allTags"#>>'{}')::jsonb
-           WHEN jsonb_typeof("allTags") = 'array'  THEN "allTags"
-           ELSE '[]'::jsonb
-         END
-       ) AS t
-       WHERE t->>'tagColor' = "User".badge
-     )`,
-
-  // Clear stale equipped tagColor / tag values for the same reason.
-  `UPDATE "User"
-   SET tag = 'Student', "tagColor" = NULL
-   WHERE "tagColor" IN ('verified-yellow', 'verified-blue')
-     AND NOT EXISTS (
-       SELECT 1 FROM jsonb_array_elements(
-         CASE
-           WHEN jsonb_typeof("allTags") = 'string' THEN ("allTags"#>>'{}')::jsonb
-           WHEN jsonb_typeof("allTags") = 'array'  THEN "allTags"
-           ELSE '[]'::jsonb
-         END
-       ) AS t
-       WHERE t->>'tagColor' = "User"."tagColor"
-     )`,
-
   // Fix "dateOfBirth" column type: it was created as a native DATE/TIMESTAMP
   // column by an earlier (pre-encryption) version of this field, before the
   // schema switched it to an encrypted TEXT ciphertext. The ADD COLUMN IF
@@ -329,13 +255,12 @@ export function ensureSchema(): Promise<void> {
     // Probe checks the newest schema additions. If all exist, schema patches are skipped.
     // IMPORTANT: update this probe whenever a new column/table is added to PATCHES above —
     // a stale probe silently skips every patch added after it, even ones further down the
-    // list (this caused a production outage: loginStreak/tosAcceptedAt/privacyAcceptedAt/
-    // ageConfirmedAt were in PATCHES but never applied because the probe still only checked
-    // spinCoinsSpent + EmailOTP, both already present from an earlier patch run).
+    // list (this caused a production outage: tosAcceptedAt/privacyAcceptedAt/ageConfirmedAt
+    // were in PATCHES but never applied because the probe still only checked EmailOTP,
+    // already present from an earlier patch run).
     try {
-      await prisma.$queryRawUnsafe(`SELECT "spinCoinsSpent" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT 1 FROM "EmailOTP" LIMIT 0`)
-      await prisma.$queryRawUnsafe(`SELECT "loginStreak", "tosAcceptedAt", "privacyAcceptedAt", "ageConfirmedAt" FROM "User" LIMIT 0`)
+      await prisma.$queryRawUnsafe(`SELECT "tosAcceptedAt", "privacyAcceptedAt", "ageConfirmedAt" FROM "User" LIMIT 0`)
       await prisma.$queryRawUnsafe(`SELECT "startDate", "reminderSentAt" FROM "Assignment" LIMIT 0`)
       // Agentic + reminder schema additions — probe updated 2026-07-17
       await prisma.$queryRawUnsafe(`SELECT "coppaConsentStatus", "autonomousConsentAcceptedAt" FROM "User" LIMIT 0`)

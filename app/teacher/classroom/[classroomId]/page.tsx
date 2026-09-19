@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { api, ApiError, type EducatorClassroomDetail, type EducatorAssignment } from '../../../../lib/api'
-
-interface CoinState {
-  [studentId: number]: { amount: string; loading: boolean; error: string | null; success: boolean }
-}
+import { api, type EducatorClassroomDetail, type EducatorAssignment } from '../../../../lib/api'
 
 export default function TeacherClassroomPage() {
   const router = useRouter()
@@ -25,9 +21,6 @@ export default function TeacherClassroomPage() {
   const [aDueDate, setADueDate]     = useState('')
   const [aSubmitting, setASubmitting] = useState(false)
   const [aError, setAError]         = useState<string | null>(null)
-
-  // Coin state per student
-  const [coinState, setCoinState] = useState<CoinState>({})
 
   // Delete
   const [deleting, setDeleting] = useState(false)
@@ -67,29 +60,6 @@ export default function TeacherClassroomPage() {
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete classroom')
       setDeleting(false)
-    }
-  }
-
-  async function handleGrantCoins(studentId: number) {
-    const s = coinState[studentId]
-    const coins = Number(s?.amount ?? 0)
-    if (!coins || coins < 1 || coins > 300) {
-      setCoinState(prev => ({ ...prev, [studentId]: { ...prev[studentId], error: 'Enter a value between 1 and 300.' } }))
-      return
-    }
-    setCoinState(prev => ({ ...prev, [studentId]: { ...prev[studentId], loading: true, error: null, success: false } }))
-    try {
-      await api.educatorGrantCoins(classroomId, studentId, coins)
-      setCoinState(prev => ({ ...prev, [studentId]: { amount: '', loading: false, error: null, success: true } }))
-      setTimeout(() => {
-        setCoinState(prev => ({ ...prev, [studentId]: { ...prev[studentId], success: false } }))
-      }, 2500)
-    } catch (err) {
-      const isCapExceeded = err instanceof ApiError && err.code === 'COIN_CAP_EXCEEDED'
-      const msg = isCapExceeded
-        ? 'Daily limit of 300 coins reached for this student.'
-        : err instanceof Error ? err.message : 'Failed to grant coins'
-      setCoinState(prev => ({ ...prev, [studentId]: { ...prev[studentId], loading: false, error: msg } }))
     }
   }
 
@@ -221,9 +191,7 @@ export default function TeacherClassroomPage() {
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {classroom.memberships.map(({ student }) => {
-              const cs = coinState[student.id] ?? { amount: '', loading: false, error: null, success: false }
-              return (
+            {classroom.memberships.map(({ student }) => (
                 <div key={student.id} style={S.studentRow}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{student.name ?? student.email}</div>
@@ -231,35 +199,8 @@ export default function TeacherClassroomPage() {
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{student.email}</div>
                     )}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    <input
-                      type="number"
-                      min={1}
-                      max={300}
-                      value={cs.amount}
-                      onChange={e => setCoinState(prev => ({ ...prev, [student.id]: { ...prev[student.id] ?? { loading: false, error: null, success: false }, amount: e.target.value } }))}
-                      placeholder="Coins"
-                      disabled={cs.loading}
-                      aria-label="Coins to grant"
-                      style={{ ...S.coinInput }}
-                    />
-                    <button
-                      className="ns-btn-primary"
-                      style={{ height: 36, padding: '0 14px', fontSize: 13, opacity: cs.loading || !cs.amount ? 0.6 : 1 }}
-                      onClick={() => void handleGrantCoins(student.id)}
-                      disabled={cs.loading || !cs.amount}
-                    >
-                      {cs.loading ? '…' : 'Grant'}
-                    </button>
-                  </div>
-                  {(cs.error || cs.success) && (
-                    <div style={{ width: '100%', fontSize: 12, marginTop: 4, color: cs.success ? 'var(--primary)' : 'var(--error)' }}>
-                      {cs.success ? 'Coins granted!' : cs.error}
-                    </div>
-                  )}
                 </div>
-              )
-            })}
+            ))}
           </div>
         )}
       </div>
@@ -355,7 +296,6 @@ const S: Record<string, React.CSSProperties> = {
   sectionTitle: { fontSize: 16, fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 },
   countBadge:  { background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', color: 'var(--primary)', borderRadius: 20, padding: '1px 8px', fontSize: 11, fontWeight: 700 },
   studentRow:  { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', flexWrap: 'wrap', boxShadow: 'var(--neo-raised)' },
-  coinInput:   { width: 80, height: 36, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '0 10px', fontSize: 14, color: 'var(--text)', textAlign: 'center' as const },
   inviteChip:  { display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 8, padding: '6px 12px' },
   inviteLabel: { fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: 'var(--primary)' },
   inviteCode:  { fontFamily: 'monospace', fontSize: 15, fontWeight: 800, letterSpacing: '3px', color: 'var(--primary)' },

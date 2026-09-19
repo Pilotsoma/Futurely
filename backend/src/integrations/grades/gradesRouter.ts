@@ -734,9 +734,7 @@ router.post('/hac/login', asyncHandler(async (req: AuthRequest, res: Response): 
         await prisma.user.update({
           where: { id: userId },
           data: {
-            role: 'ADMIN',
-            tag: 'DEV',
-            tagColor: 'lightblue',
+            role: 'DEV',
           },
         })
         console.log('[GRADES ROUTER] Auto-assigned DEV role + tag for HAC user:', username)

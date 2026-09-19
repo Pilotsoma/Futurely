@@ -171,14 +171,9 @@ export default function ClassroomDetailPage() {
                     }
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: p.author.nameColor ?? 'var(--text)' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
                       {p.author.name ?? 'Student'}
                     </span>
-                    {p.author.tag && (
-                      <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-                        {p.author.tag}
-                      </span>
-                    )}
                   </div>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{timeAgo(p.createdAt)}</span>
                 </div>

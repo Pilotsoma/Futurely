@@ -1,477 +1,734 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import {
-  ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
+  Text,
+  TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import type { CompositeNavigationProp } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import Text from '../components/ui/Text'
-import Skeleton from '../components/ui/Skeleton'
-import Button from '../components/ui/Button'
-import { colors } from '../constants/colors'
-import { fetchStudentData, type StudentData, type Assignment } from '../api/studentApi'
-import {
-  getSyncStatus,
-  getPortalStatus,
-  getPortalGpa,
-  type SyncStatus,
-  type PortalGpa,
-} from '../api/portalApi'
-import {
-  ArrowRightIcon,
-  FlameIcon,
-} from '../components/icons'
-import type { AppParamList } from '../navigation/AppNavigator'
-import type { MainTabParamList } from '../navigation/MainTabNavigator'
-import { shadows } from '../constants/shadows'
+import { Feather } from '@expo/vector-icons'
 import { useAuth } from '../context/AuthContext'
+import * as studentsApi from '../api/studentsApi'
+import * as gradesApi from '../api/gradesApi'
+import { ApiRequestError } from '../api/client'
+import { Screen } from '../components/ui/Screen'
+import { ActionTile } from '../components/ui/ActionTile'
+import { GpaOverviewCard } from '../components/grades/GpaOverviewCard'
+import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
+import { ErrorRetryBlock } from '../components/ui/ErrorRetryBlock'
+import { useCountUp } from '../hooks/useCountUp'
+import { useDisplayPreferences } from '../preferences/displayPreferences'
+import {
+  formatAssignmentDueTime,
+  getAssignmentDestination,
+  getDueTodayAssignments,
+} from '../features/assignments/dueToday'
+import type { StudentMe } from '../types/student'
+import type { Assignment } from '../types/assignments'
+import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
+import type { MainTabParamList } from '../navigation/MainNavigator'
+import { colors, fonts, spacing, typography } from '../theme/tokens'
 
-// ─── Navigation ───────────────────────────────────────────────────────────────
+type Nav = BottomTabNavigationProp<MainTabParamList>
 
-type NavProp = CompositeNavigationProp<
-  BottomTabNavigationProp<MainTabParamList, 'Home'>,
-  NativeStackNavigationProp<AppParamList>
->
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const SUBJECT_PALETTE = [
-  colors.purple,
-  colors.info,
-  colors.warning,
-  colors.orange,
-  colors.success,
-  colors.error,
-  colors.lavender,
-]
-
-function subjectColor(subject: string): string {
-  let hash = 0
-  for (const ch of subject) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffff
-  return SUBJECT_PALETTE[hash % SUBJECT_PALETTE.length] ?? colors.textMuted
+function getTimeOfDay(): string {
+  const hour = new Date().getHours()
+  return hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
 }
 
-function greeting(): string {
-  const h = new Date().getHours()
-  if (h < 12) return 'Good morning,'
-  if (h < 17) return 'Good afternoon,'
-  return 'Good evening,'
+function formatDate(): string {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
 }
-
-function formatToday(): string {
-  return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-}
-
-function ordinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0])
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-}
-
-function isYesterday(candidate: Date, reference: Date): boolean {
-  const prev = new Date(reference)
-  prev.setDate(prev.getDate() - 1)
-  return isSameDay(candidate, prev)
-}
-
-// ─── Streak helpers (mirrors web dashboard logic) ─────────────────────────────
-
-async function computeStreak(uid: number): Promise<number> {
-  const streakKey = `ns_streak_${uid}`
-  const visitKey = `ns_lastVisit_${uid}`
-
-  const [streakRaw, visitRaw] = await AsyncStorage.multiGet([streakKey, visitKey])
-  const storedStreak = parseInt(streakRaw[1] ?? '0', 10) || 0
-  const storedVisit = visitRaw[1] ? new Date(visitRaw[1]) : null
-
-  const now = new Date()
-
-  if (storedVisit === null) {
-    // First visit ever
-    await AsyncStorage.multiSet([[streakKey, '1'], [visitKey, now.toISOString()]])
-    return 1
-  }
-
-  if (isSameDay(storedVisit, now)) {
-    // Already counted today
-    return storedStreak
-  }
-
-  if (isYesterday(storedVisit, now)) {
-    // Consecutive day — extend streak
-    const next = storedStreak + 1
-    await AsyncStorage.multiSet([[streakKey, String(next)], [visitKey, now.toISOString()]])
-    return next
-  }
-
-  // Missed a day — reset
-  await AsyncStorage.multiSet([[streakKey, '1'], [visitKey, now.toISOString()]])
-  return 1
-}
-
-// ─── Loading skeleton ─────────────────────────────────────────────────────────
-
-function LoadingSkeleton(): React.JSX.Element {
-  return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} scrollEnabled={false}>
-      {/* Header */}
-      <Skeleton width={120} height={14} style={{ marginBottom: 6, marginTop: 24 }} />
-      <Skeleton width={200} height={28} style={{ marginBottom: 6 }} />
-      <Skeleton width={100} height={12} style={{ marginBottom: 16 }} />
-      {/* GPA card */}
-      <View style={[styles.card, { marginBottom: 0 }]}>
-        <Skeleton width="60%" height={11} style={{ marginBottom: 16 }} />
-        <Skeleton width="90%" height={44} />
-      </View>
-      {/* Today card */}
-      <View style={[styles.card, { marginTop: 12 }]}>
-        <Skeleton width="50%" height={15} style={{ marginBottom: 12 }} />
-        <Skeleton width="100%" height={40} style={{ marginBottom: 8 }} />
-        <Skeleton width="100%" height={40} />
-      </View>
-    </ScrollView>
-  )
-}
-
-// ─── Error state ──────────────────────────────────────────────────────────────
-
-function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => void }): React.JSX.Element {
-  const isAuthError = message.startsWith('401') || message.toLowerCase().includes('unauthorized')
-  return (
-    <View style={styles.centerState}>
-      <Text variant="h3" color={colors.error} style={{ marginBottom: 8, textAlign: 'center' }}>
-        Unable to Load Dashboard
-      </Text>
-      <Text variant="body" color={colors.textSecondary} style={{ marginBottom: 24, textAlign: 'center' }}>
-        {isAuthError
-          ? 'Sign in to your myFuturely account to view your dashboard.'
-          : message}
-      </Text>
-      <Button label="Try Again" onPress={onRetry} />
-    </View>
-  )
-}
-
-// ─── Sync banner ──────────────────────────────────────────────────────────────
-
-function SyncBanner({ syncStatus }: { syncStatus: SyncStatus | null }): React.JSX.Element | null {
-  if (!syncStatus || syncStatus.status === 'complete' || syncStatus.status === 'idle') return null
-  if (syncStatus.status === 'syncing') {
-    return (
-      <View style={styles.syncBanner}>
-        <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
-        <Text variant="caption" color={colors.primary}>Syncing your grades…</Text>
-      </View>
-    )
-  }
-  if (syncStatus.status === 'error') {
-    return (
-      <View style={[styles.syncBanner, { backgroundColor: colors.error + '18', borderColor: colors.error + '44' }]}>
-        <Text variant="caption" color={colors.error}>
-          Grade sync failed: {syncStatus.errorMessage ?? 'Unknown error'}
-        </Text>
-      </View>
-    )
-  }
-  return null
-}
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function DashboardScreen(): React.JSX.Element {
-  const navigation = useNavigation<NavProp>()
+  const navigation = useNavigation<Nav>()
   const { user } = useAuth()
+  const { hideGpa } = useDisplayPreferences()
+  const { height, width } = useWindowDimensions()
+  const compact = height < 810
+  const veryCompact = height < 710
 
-  const [data, setData] = useState<StudentData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [student, setStudent] = useState<StudentMe | null>(null)
+  const [gpa, setGpa] = useState<GpaSummary | null>(null)
+  const [courses, setCourses] = useState<CurrentGradeCourse[]>([])
+  const [gpaError, setGpaError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
-  const [streak, setStreak] = useState(0)
-  const [portalGpa, setPortalGpa] = useState<PortalGpa | null>(null)
-  const [hideGpa, setHideGpa] = useState(false)
-  const syncPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
 
-  const stopSyncPoll = useCallback((): void => {
-    if (syncPollRef.current !== null) {
-      clearInterval(syncPollRef.current)
-      syncPollRef.current = null
+  const load = useCallback(async () => {
+    setError(null)
+    setGpaError(null)
+
+    const [studentResult, gpaResult, coursesResult] = await Promise.allSettled([
+      studentsApi.getMe(),
+      gradesApi.getGpa(),
+      gradesApi.getCurrentGrades(),
+    ])
+
+    if (studentResult.status === 'fulfilled') {
+      setStudent(studentResult.value)
+    } else {
+      setError(
+        studentResult.reason instanceof ApiRequestError
+          ? studentResult.reason.message
+          : 'Could not load your dashboard.',
+      )
     }
+
+    if (gpaResult.status === 'fulfilled') {
+      setGpa(gpaResult.value)
+    } else {
+      setGpa(null)
+      setGpaError(
+        gpaResult.reason instanceof ApiRequestError
+          ? gpaResult.reason.message
+          : 'Your GPA could not be loaded.',
+      )
+    }
+
+    if (coursesResult.status === 'fulfilled') {
+      setCourses(coursesResult.value.grades)
+    } else {
+      setCourses([])
+    }
+
+    setLoading(false)
   }, [])
 
-  const checkSyncStatus = useCallback(async (): Promise<void> => {
-    try {
-      const s = await getSyncStatus()
-      setSyncStatus(s)
-      if (s.status === 'complete' || s.status === 'error' || s.status === 'idle') {
-        stopSyncPoll()
-        if (s.status === 'complete') {
-          const d = await fetchStudentData().catch(() => null)
-          if (d) setData(d)
-        }
-      }
-    } catch {
-      stopSyncPoll()
-    }
-  }, [stopSyncPoll])
+  useFocusEffect(
+    useCallback(() => {
+      void load()
+    }, [load]),
+  )
 
-  const startSyncPoll = useCallback((): void => {
-    stopSyncPoll()
-    void checkSyncStatus()
-    syncPollRef.current = setInterval(() => { void checkSyncStatus() }, 3000)
-    setTimeout(stopSyncPoll, 5 * 60 * 1000)
-  }, [checkSyncStatus, stopSyncPoll])
+  async function handleResync(): Promise<void> {
+    setSyncing(true)
+    setGpaError(null)
 
-  const load = useCallback(async (): Promise<void> => {
-    setIsLoading(true)
-    setError(null)
     try {
-      if (user) {
-        void computeStreak(user.id).then(setStreak).catch(() => undefined)
-      }
-      const [d, status] = await Promise.all([
-        fetchStudentData(),
-        getPortalStatus().catch((): null => null),
-      ])
-      setData(d)
-      if (status?.connected === true) {
-        const pg = await getPortalGpa().catch((): null => null)
-        setPortalGpa(pg)
-      } else {
-        setPortalGpa(null)
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load dashboard.')
+      await gradesApi.syncProfile()
+      await load()
+    } catch (err) {
+      setGpaError(err instanceof ApiRequestError ? err.message : 'Sync failed. Please try again.')
     } finally {
-      setIsLoading(false)
+      setSyncing(false)
     }
-  }, [user])
-
-  useEffect(() => {
-    startSyncPoll()
-    return stopSyncPoll
-  }, [startSyncPoll, stopSyncPoll])
-
-  useFocusEffect(useCallback(() => { void load() }, [load]))
-
-  useFocusEffect(useCallback(() => {
-    const key = `settings_hideGpa_${user?.id ?? 'anon'}`
-    AsyncStorage.getItem(key)
-      .then(raw => { setHideGpa(raw === 'true') })
-      .catch(() => undefined)
-  }, [user]))
-
-  if (isLoading) return <LoadingSkeleton />
-  if (error !== null) return <ErrorScreen message={error} onRetry={() => void load()} />
-
-  const profile = data?.profile ?? null
-  const assignments = data?.assignments ?? []
-  const stats = data?.stats ?? {
-    totalCourses: 0,
-    completedAssignments: 0,
-    pendingAssignments: 0,
-    assignmentsDueToday: 0,
-    assignmentsDueThisWeek: 0,
   }
 
-  const now = new Date()
-  const dueToday = assignments.filter(a => {
-    if (a.completed) return false
-    return isSameDay(new Date(a.dueDate), now)
-  })
+  function handleAskAI(): void {
+    const prompt = aiPrompt.trim()
+    navigation.navigate(
+      'AIChat',
+      prompt ? { initialPrompt: prompt, requestId: Date.now() } : undefined,
+    )
+    setAiPrompt('')
+  }
 
-  const firstName = data?.name?.split(' ')[0] ?? 'Student'
-  const gradeLevel = profile?.gradeLevel ?? null
-  const uGpa = (portalGpa?.unweightedGpa ?? portalGpa?.gpa ?? profile?.unweightedGpa ?? 0).toFixed(2)
-  const wGpa = (portalGpa?.weightedGpa ?? portalGpa?.gpa ?? profile?.weightedGpa ?? 0).toFixed(2)
-  const courseCount = portalGpa?.courseCount ?? stats.totalCourses
+  const dueToday: Assignment[] = useMemo(() => {
+    return getDueTodayAssignments(student?.assignments ?? [])
+  }, [student])
+
+  const animCourses = useCountUp(student?.stats.totalCourses ?? 0)
+  const animDueToday = useCountUp(dueToday.length)
+  const animPending = useCountUp(student?.stats.pendingAssignments ?? 0)
+
+  if (loading) {
+    return (
+      <Screen edges={['top', 'left', 'right', 'bottom']}>
+        <LoadingSkeleton rows={4} />
+      </Screen>
+    )
+  }
+
+  if (error && !student) {
+    return (
+      <Screen edges={['top', 'left', 'right', 'bottom']}>
+        <ErrorRetryBlock
+          message={error}
+          onRetry={() => {
+            setLoading(true)
+            void load()
+          }}
+        />
+      </Screen>
+    )
+  }
+
+  const displayName = (student?.name ?? user?.name ?? 'Student').split(' ')[0]
+  const dueItemsPerRow = width >= 700 ? 2 : 1
+  const dueRows = Array.from(
+    { length: Math.ceil(dueToday.length / dueItemsPerRow) },
+    (_, index) => dueToday.slice(index * dueItemsPerRow, index * dueItemsPerRow + dueItemsPerRow),
+  )
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <SyncBanner syncStatus={syncStatus} />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <Text variant="body" color={colors.textSecondary}>{greeting()}</Text>
-        <Text style={styles.nameText}>{firstName}</Text>
-        <Text style={styles.dateText}>{formatToday()}</Text>
-        {gradeLevel !== null && (
-          <View style={styles.gradeBadge}>
-            <Text style={styles.gradeBadgeText}>{ordinal(gradeLevel)} Grade</Text>
-          </View>
-        )}
+    <Screen edges={['top', 'left', 'right', 'bottom']}>
+      <View pointerEvents="none" style={styles.decorativeLayer}>
+        <View style={styles.glowOrbTop} />
+        <View style={styles.glowOrbLeft} />
+        <View style={styles.decorativeDotOne} />
+        <View style={styles.decorativeDotTwo} />
       </View>
 
-      {/* GPA Card */}
-      <TouchableOpacity
-        style={[styles.card, styles.gpaCard]}
-        onPress={() => navigation.navigate('MainTabs', { screen: 'Grades' })}
-        activeOpacity={0.75}
-        accessibilityRole="button"
-        accessibilityLabel="View grade portal"
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.page,
+          compact && styles.pageCompact,
+          veryCompact && styles.pageVeryCompact,
+        ]}
       >
-        <Text variant="label" color={colors.textSecondary} style={{ marginBottom: 12 }}>
-          Current GPA
-        </Text>
-        <View style={styles.gpaRow}>
-          <View style={styles.gpaCol}>
-            <Text style={styles.gpaValue}>{hideGpa ? '•  •  •' : uGpa}</Text>
-            <Text variant="caption">Unweighted</Text>
+        <View style={styles.headerRow}>
+          <View style={styles.headerCopy}>
+            <Text style={styles.greetingLine}>Good {getTimeOfDay()},</Text>
+            <Text style={[styles.greetingName, compact && styles.greetingNameCompact]}>
+              {displayName}
+            </Text>
+            {!veryCompact ? (
+              <Text style={styles.headerSubtitle}>Your academic command center</Text>
+            ) : null}
           </View>
-          <View style={styles.gpaDivider} />
-          <View style={styles.gpaCol}>
-            <Text style={[styles.gpaValue, { color: colors.primary }]}>{hideGpa ? '•  •  •' : wGpa}</Text>
-            <Text variant="caption">Weighted</Text>
+
+          <View style={styles.headerActions}>
+            <View style={styles.dateChip}>
+              <Feather name="calendar" size={12} color="#7AB4FF" />
+              <Text style={styles.dateChipText} numberOfLines={1}>
+                {formatDate()}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Notifications"
+              style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+            >
+              <Feather name="bell" size={17} color="#B9C6DD" />
+              <View style={styles.notificationDot} />
+            </Pressable>
           </View>
         </View>
-      </TouchableOpacity>
 
-      {/* Today Card — merges due-today items with a courses/streak summary line */}
-      <View style={[styles.card, { marginTop: 12 }]}>
-        <View style={styles.cardHeaderRow}>
-          <Text variant="h3">Today</Text>
-          {dueToday.length > 0 && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{dueToday.length}</Text>
+        <GpaOverviewCard
+          summary={gpa}
+          courses={courses}
+          error={gpaError}
+          syncing={syncing}
+          hidden={hideGpa}
+          onPress={() => navigation.navigate('Grades', { screen: 'GpaSimulator' })}
+          onSync={() => void handleResync()}
+          testID="dashboard-gpa-card"
+        />
+
+        <View style={styles.dueSection} testID="dashboard-due-today">
+          <View style={styles.dueHeadingRow}>
+            <View>
+              <Text style={styles.sectionEyebrow}>TODAY</Text>
+              <Text style={[styles.cardTitle, compact && styles.cardTitleCompact]}>Due today</Text>
+            </View>
+            <View style={styles.calendarBadge}>
+              <Feather name="calendar" size={17} color="#68A9FF" />
+            </View>
+          </View>
+
+          {dueToday.length === 0 ? (
+            <View style={styles.clearState} testID="dashboard-due-empty">
+              <View style={styles.clearIcon}>
+                <Feather name="check" size={16} color="#20D3A0" />
+              </View>
+              <View style={styles.clearTextWrap}>
+                <Text style={styles.clearTitle}>All clear for today</Text>
+                {!veryCompact ? (
+                  <Text style={styles.clearSubtitle}>You are fully caught up.</Text>
+                ) : null}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.dueGrid}>
+              {dueRows.map((row, rowIndex) => (
+                <View key={`due-row-${rowIndex}`} style={styles.dueTileRow}>
+                  {row.map((assignment) => {
+                    const destination = getAssignmentDestination(assignment.id)
+                    const priority = assignment.priority?.trim()
+                    const source = assignment.source?.trim()
+
+                    return (
+                      <ActionTile
+                        key={assignment.id}
+                        title={assignment.title}
+                        subtitle={assignment.subject || 'No subject'}
+                        meta={`Due ${formatAssignmentDueTime(assignment)}${source ? ` · ${source}` : ''}`}
+                        badge={priority || 'Due today'}
+                        icon="clipboard"
+                        color={priority?.toUpperCase() === 'HIGH' ? '#FF777A' : '#FFC547'}
+                        iconBackground="rgba(245,158,11,0.15)"
+                        disabled={destination === null}
+                        onPress={() => {
+                          if (destination) navigation.navigate('Planner', destination)
+                        }}
+                        accessibilityHint={
+                          destination
+                            ? `Open ${assignment.title} in Planner`
+                            : 'This assignment has no valid destination'
+                        }
+                        testID={`dashboard-due-tile-${assignment.id}`}
+                      />
+                    )
+                  })}
+                </View>
+              ))}
             </View>
           )}
         </View>
-        {dueToday.length === 0 ? (
-          <Text variant="body" color={colors.textSecondary} style={{ textAlign: 'center', paddingVertical: 16 }}>
-            Nothing due today!
-          </Text>
-        ) : (
-          dueToday.slice(0, 3).map((a) => <DueTodayRow key={a.id} assignment={a} />)
-        )}
-        <TouchableOpacity
-          style={styles.viewAllRow}
-          onPress={() => navigation.navigate('MainTabs', { screen: 'Planner' })}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel="View all assignments in Planner"
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-            <Text style={styles.viewAllText}>View all</Text>
-            <ArrowRightIcon size={12} color={colors.primary} />
-          </View>
-        </TouchableOpacity>
 
-        <View style={styles.todayFooter}>
-          <Text variant="caption" color={colors.textSecondary}>
-            {courseCount} {courseCount === 1 ? 'course' : 'courses'}
-          </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <FlameIcon size={12} color={colors.warning} />
-            <Text variant="caption" color={colors.textSecondary}>
-              {streak} day{streak === 1 ? '' : 's'} streak
-            </Text>
+        <View style={[styles.statsRow, compact && styles.statsRowCompact]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.statCard,
+              compact && styles.statCardCompact,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => navigation.navigate('Grades')}
+          >
+            <View style={[styles.statIcon, { backgroundColor: 'rgba(59, 130, 246, 0.14)' }]}>
+              <Feather name="book-open" size={16} color="#65A5FF" />
+            </View>
+            <Text style={styles.statValue}>{animCourses}</Text>
+            <Text style={styles.statLabel} numberOfLines={1}>Courses</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.statCard,
+              compact && styles.statCardCompact,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => navigation.navigate('Planner')}
+          >
+            <View style={[styles.statIcon, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+              <Feather name="clock" size={16} color="#9A77FF" />
+            </View>
+            <Text style={styles.statValue}>{animDueToday}</Text>
+            <Text style={styles.statLabel} numberOfLines={1}>Due today</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.statCard,
+              compact && styles.statCardCompact,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => navigation.navigate('Planner')}
+          >
+            <View style={[styles.statIcon, { backgroundColor: 'rgba(245, 158, 11, 0.14)' }]}>
+              <Feather name="inbox" size={16} color="#F6AE2D" />
+            </View>
+            <Text style={styles.statValue}>{animPending}</Text>
+            <Text style={styles.statLabel} numberOfLines={1}>Pending</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.aiSection}>
+          {!veryCompact ? (
+            <View style={styles.aiLabelRow}>
+              <Text style={styles.sectionEyebrow}>YOUR AI COPILOT</Text>
+              <Feather name="zap" size={14} color="#9D82FF" />
+            </View>
+          ) : null}
+
+          <View style={[styles.aiComposer, compact && styles.aiComposerCompact]}>
+            <View pointerEvents="none" style={styles.aiComposerGlow} />
+            <View style={styles.aiAvatar}>
+              <Feather name="message-circle" size={18} color="#FFFFFF" />
+            </View>
+            <TextInput
+              value={aiPrompt}
+              onChangeText={setAiPrompt}
+              placeholder="Ask myFuturely AI..."
+              placeholderTextColor="#71819A"
+              style={styles.aiInput}
+              returnKeyType="send"
+              onSubmitEditing={handleAskAI}
+              accessibilityLabel="Ask myFuturely AI"
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Send question to myFuturely AI"
+              onPress={handleAskAI}
+              style={({ pressed }) => [styles.sendButton, pressed && styles.sendButtonPressed]}
+            >
+              <Feather name="send" size={17} color="#FFFFFF" />
+            </Pressable>
           </View>
         </View>
-      </View>
 
-      <View style={{ height: 40 }} />
-    </ScrollView>
+        {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+      </ScrollView>
+    </Screen>
   )
 }
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function DueTodayRow({ assignment }: { assignment: Assignment }): React.JSX.Element {
-  return (
-    <View style={styles.dueTodayRow}>
-      <View style={[styles.dot, { backgroundColor: subjectColor(assignment.subject) }]} />
-      <View style={{ flex: 1 }}>
-        <Text variant="body">{assignment.title}</Text>
-        <Text variant="caption">{assignment.subject}</Text>
-      </View>
-      <Text variant="caption">{assignment.estimatedMinutes}m</Text>
-    </View>
-  )
-}
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { paddingHorizontal: 20 },
-  centerState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  syncBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary + '18',
-    borderWidth: 1,
-    borderColor: colors.primary + '44',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginTop: 12,
-    marginBottom: 4,
+  page: {
+    flexGrow: 1,
+    width: '100%',
+    gap: 14,
+    paddingTop: 8,
+    paddingBottom: 118,
   },
-  // Header
-  header: { paddingTop: 24, paddingBottom: 16 },
-  nameText: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
-  dateText: { fontSize: 13, color: colors.textMuted, marginBottom: 10 },
-  gradeBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary,
-    borderRadius: 100,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  pageCompact: {
+    gap: 12,
+    paddingTop: 5,
   },
-  gradeBadgeText: { fontSize: 11, fontWeight: '700', color: colors.white },
-  // Cards
-  card: {
-    ...shadows.raised,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
+  pageVeryCompact: {
+    gap: 10,
+    paddingTop: 3,
   },
-  gpaCard: { borderLeftWidth: 3, borderLeftColor: colors.primary },
-  gpaRow: { flexDirection: 'row', alignItems: 'center' },
-  gpaCol: { flex: 1, alignItems: 'center' },
-  gpaValue: { fontSize: 40, fontWeight: '700', color: colors.textPrimary },
-  gpaDivider: { width: 1, height: 40, backgroundColor: colors.border },
-  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  countBadge: {
-    backgroundColor: colors.error,
-    borderRadius: 100,
-    minWidth: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
+  decorativeLayer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
   },
-  countBadgeText: { fontSize: 11, fontWeight: '700', color: colors.white },
-  viewAllRow: { alignItems: 'flex-end', marginTop: 8 },
-  viewAllText: { fontSize: 13, color: colors.primary, fontWeight: '500' },
-  // Due today
-  dueTodayRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  // Today card footer — courses count + streak, replaces the old 4-tile stats row
-  todayFooter: {
+  glowOrbTop: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(84, 49, 255, 0.10)',
+    top: -142,
+    right: -118,
+  },
+  glowOrbLeft: {
+    position: 'absolute',
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: 'rgba(0, 150, 255, 0.045)',
+    top: 340,
+    left: -145,
+  },
+  decorativeDotOne: {
+    position: 'absolute',
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(91, 138, 255, 0.46)',
+    top: 104,
+    right: 39,
+  },
+  decorativeDotTwo: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(143, 98, 255, 0.45)',
+    top: 130,
+    right: 76,
+  },
+  headerRow: {
+    minHeight: 76,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  headerCopy: {
+    flex: 1,
+  },
+  greetingLine: {
+    ...typography.body,
+    color: '#8FB5EA',
+    fontSize: 14,
+  },
+  greetingName: {
+    ...typography.display,
+    color: '#F3F6FF',
+    fontSize: 31,
+    lineHeight: 36,
+    letterSpacing: -0.8,
+  },
+  greetingNameCompact: {
+    fontSize: 28,
+    lineHeight: 32,
+  },
+  headerSubtitle: {
+    ...typography.caption,
+    color: '#697892',
+    marginTop: 1,
+    fontSize: 10,
+  },
+  headerActions: {
+    alignItems: 'flex-end',
+    gap: 6,
+    maxWidth: '54%',
+  },
+  dateChip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    gap: 5,
+    backgroundColor: 'rgba(19, 37, 64, 0.90)',
+    borderWidth: 1,
+    borderColor: 'rgba(47, 112, 203, 0.36)',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  dateChipText: {
+    ...typography.caption,
+    color: '#7AB4FF',
+    flexShrink: 1,
+    fontSize: 10,
+  },
+  notificationButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 27, 47, 0.84)',
+    borderWidth: 1,
+    borderColor: 'rgba(86, 111, 148, 0.20)',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#7C5CFF',
+    borderWidth: 1,
+    borderColor: '#0A1220',
+  },
+  dueSection: {
+    width: '100%',
+    gap: 11,
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: 'rgba(17, 31, 52, 0.94)',
+    borderWidth: 1,
+    borderColor: 'rgba(72, 100, 139, 0.30)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  dueHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionEyebrow: {
+    ...typography.label,
+    color: '#8299BA',
+    letterSpacing: 1.05,
+    fontSize: 9,
+  },
+  cardTitle: {
+    ...typography.h2,
+    color: '#EDF3FF',
+    marginTop: 1,
+    fontSize: 19,
+  },
+  cardTitleCompact: {
+    fontSize: 17,
+  },
+  calendarBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(56, 134, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(77, 149, 255, 0.16)',
+  },
+  clearState: {
+    minHeight: 57,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    backgroundColor: 'rgba(7, 31, 36, 0.50)',
+    borderWidth: 1,
+    borderColor: 'rgba(21, 214, 160, 0.12)',
+  },
+  clearIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(21, 214, 160, 0.12)',
+  },
+  clearTextWrap: {
+    flex: 1,
+  },
+  clearTitle: {
+    ...typography.body,
+    color: '#67E1BD',
+    fontFamily: fonts.bold,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  clearSubtitle: {
+    ...typography.caption,
+    color: '#688083',
+    marginTop: 1,
+    fontSize: 10,
+  },
+  dueGrid: {
+    width: '100%',
+    gap: 10,
+  },
+  dueTileRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
+  },
+  statsRow: {
+    width: '100%',
+    minHeight: 98,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    justifyContent: 'space-between',
+  },
+  statsRowCompact: {
+    minHeight: 88,
+  },
+  statCard: {
+    width: '31.5%',
+    minHeight: 98,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 10,
+    borderRadius: 17,
+    backgroundColor: '#111F34',
+    borderWidth: 1,
+    borderColor: 'rgba(91, 126, 176, 0.36)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.18,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  statCardCompact: {
+    minHeight: 88,
+    paddingVertical: 8,
+  },
+  statIcon: {
+    width: 33,
+    height: 33,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statValue: {
+    ...typography.h2,
+    color: '#F4F7FF',
+    fontSize: 21,
+    lineHeight: 23,
+  },
+  statLabel: {
+    ...typography.caption,
+    color: '#95A3B9',
+    textAlign: 'center',
+    fontSize: 10,
+    lineHeight: 12,
+  },
+  aiSection: {
+    width: '100%',
+    gap: 5,
+  },
+  aiLabelRow: {
+    minHeight: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  aiComposer: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 7,
+    borderRadius: 19,
+    backgroundColor: 'rgba(20, 38, 64, 0.98)',
+    borderWidth: 1,
+    borderColor: 'rgba(87, 129, 189, 0.34)',
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
+  },
+  aiComposerCompact: {
+    minHeight: 52,
+    padding: 6,
+  },
+  aiComposerGlow: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    right: -82,
+    top: -77,
+    backgroundColor: 'rgba(91, 66, 255, 0.14)',
+  },
+  aiAvatar: {
+    width: 39,
+    height: 39,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6347F5',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.13)',
+  },
+  aiInput: {
+    flex: 1,
+    minHeight: 40,
+    color: '#F4F6FC',
+    fontSize: 13,
+    paddingHorizontal: 3,
+    paddingVertical: 0,
+  },
+  sendButton: {
+    width: 39,
+    height: 39,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2769CF',
+    borderWidth: 1,
+    borderColor: 'rgba(116, 173, 255, 0.30)',
+  },
+  sendButtonPressed: {
+    opacity: 0.78,
+    transform: [{ scale: 0.96 }],
+  },
+  pressed: {
+    opacity: 0.80,
+    transform: [{ scale: 0.987 }],
+  },
+  inlineError: {
+    ...typography.caption,
+    color: colors.error,
+    textAlign: 'center',
+    fontSize: 10,
   },
 })

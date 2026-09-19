@@ -110,7 +110,7 @@ router.post('/students', async (req: AuthRequest, res: Response): Promise<void> 
     try {
       const notif = await prisma.notification.create({
         data: { userId: studentId, fromUserId: req.userId!, type: 'COUNSELOR_LINKED', preview: null },
-        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
       })
       sendToUser(studentId, 'NOTIFICATION', notif)
     } catch { /* non-critical */ }
@@ -145,20 +145,24 @@ router.get('/students', async (req: AuthRequest, res: Response): Promise<void> =
       },
       orderBy: { createdAt: 'asc' },
     })
-    const unreadCounts = await Promise.all(
-      links.map(async l => {
-        const count = await prisma.counselorChatMessage.count({
-          where: {
-            counselorId,
-            studentId: l.studentId,
-            senderId: l.studentId,
-            ...(l.counselorLastReadAt ? { createdAt: { gt: l.counselorLastReadAt } } : {}),
-          },
+    // Single batched query instead of one COUNT per linked student (was N+1 —
+    // counselors can have 500+ students, meaning 500+ concurrent round trips
+    // to Postgres on every dashboard load).
+    const studentIds = links.map(l => l.studentId)
+    const lastReadByStudent = new Map(links.map(l => [l.studentId, l.counselorLastReadAt]))
+    const studentMessages = studentIds.length > 0
+      ? await prisma.counselorChatMessage.findMany({
+          where: { counselorId, studentId: { in: studentIds } },
+          select: { studentId: true, senderId: true, createdAt: true },
         })
-        return { studentId: l.studentId, count }
-      })
-    )
-    const unreadMap = Object.fromEntries(unreadCounts.map(u => [u.studentId, u.count]))
+      : []
+    const unreadMap: Record<number, number> = {}
+    for (const m of studentMessages) {
+      if (m.senderId !== m.studentId) continue // only messages sent by the student count as unread
+      const lastRead = lastReadByStudent.get(m.studentId)
+      if (lastRead && m.createdAt <= lastRead) continue
+      unreadMap[m.studentId] = (unreadMap[m.studentId] ?? 0) + 1
+    }
     const data = links.map(l => {
       const { courses, ...studentWithoutCourses } = l.student
       const gradeInputs = courses.flatMap(c =>
@@ -471,7 +475,7 @@ router.post('/students/:studentId/recommendations', async (req: AuthRequest, res
     try {
       const notif = await prisma.notification.create({
         data: { userId: studentId, fromUserId: req.userId!, type: 'COUNSELOR_RECOMMENDATION_ADDED', preview: parse.data.courseName },
-        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
       })
       sendToUser(studentId, 'NOTIFICATION', notif)
     } catch { /* non-critical */ }
@@ -566,7 +570,7 @@ router.post('/students/:studentId/notes', async (req: AuthRequest, res: Response
     try {
       const notif = await prisma.notification.create({
         data: { userId: studentId, fromUserId: req.userId!, type: 'COUNSELOR_NOTE_ADDED', preview: parse.data.body.slice(0, 120) },
-        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
       })
       sendToUser(studentId, 'NOTIFICATION', notif)
     } catch { /* non-critical */ }
@@ -692,7 +696,7 @@ router.post('/students/:studentId/action-items', async (req: AuthRequest, res: R
     try {
       const notif = await prisma.notification.create({
         data: { userId: studentId, fromUserId: req.userId!, type: 'ACTION_ITEM_CREATED', preview: parse.data.title },
-        include: { sender: { select: { id: true, name: true, tag: true, tagColor: true, nameColor: true, avatarUrl: true } } },
+        include: { sender: { select: { id: true, name: true, avatarUrl: true } } },
       })
       sendToUser(studentId, 'NOTIFICATION', notif)
     } catch { /* non-critical */ }

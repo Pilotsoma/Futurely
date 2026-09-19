@@ -13,6 +13,7 @@
  */
 
 import { Router, Request, Response } from 'express'
+import { timingSafeEqual } from 'crypto'
 import { logger } from '../common/logger'
 import { checkAndSendReminders } from '../services/assignmentReminder.service'
 import { runDailyCheckins } from '../services/agent/autonomousJobScheduler.service'
@@ -24,6 +25,15 @@ const CRON_SECRET_MISSING_MSG =
 
 if (!process.env.CRON_SECRET) {
   logger.warn('cron_secret_missing', { message: CRON_SECRET_MISSING_MSG })
+}
+
+// Constant-time comparison — a plain `!==` leaks timing information about how
+// many leading bytes of the secret an attacker's guess got right.
+function isValidCronSecret(authHeader: string | undefined, secret: string): boolean {
+  const expected = Buffer.from(`Bearer ${secret}`)
+  const actual = Buffer.from(authHeader ?? '')
+  if (actual.length !== expected.length) return false
+  return timingSafeEqual(actual, expected)
 }
 
 /**
@@ -53,7 +63,7 @@ router.get('/assignment-reminders', async (req: Request, res: Response): Promise
   const secret = process.env.CRON_SECRET
   const authHeader = req.headers.authorization
 
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!secret || !isValidCronSecret(authHeader, secret)) {
     logger.warn('cron_unauthorized', {
       path: req.originalUrl,
       hasAuthHeader: Boolean(authHeader),
@@ -106,7 +116,7 @@ router.get('/gpa-checkins', async (req: Request, res: Response): Promise<void> =
   const secret = process.env.CRON_SECRET
   const authHeader = req.headers.authorization
 
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!secret || !isValidCronSecret(authHeader, secret)) {
     logger.warn('cron_unauthorized', {
       path: req.originalUrl,
       hasAuthHeader: Boolean(authHeader),

@@ -1,9 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc *)",
-      "Bash(npx eslint *)",
-      "Bash(vercel logs*)"
+      "Bash(npm *)",
+      "Bash(git merge *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

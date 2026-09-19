@@ -101,7 +101,6 @@ export default function DashboardPage() {
   const [courseCount, setCourseCount] = useState<number | null>(null)
   const [semesterLabel, setSemesterLabel] = useState<string>('')
   const [dayStreak, setDayStreak] = useState(0)
-  const [coins, setCoins] = useState<number | null>(null)
   const [showStreakPopup, setShowStreakPopup] = useState(false)
   const [streakMilestone, setStreakMilestone] = useState<typeof STREAK_MILESTONES[0] | null>(null)
   const [showResyncPopup, setShowResyncPopup] = useState(false)
@@ -218,13 +217,6 @@ export default function DashboardPage() {
       }
     }
 
-    // Claim daily coins + award any streak milestone tags (silent — no UI display)
-    if (currentStreak > 0) {
-      api.streakReward(currentStreak).catch(() => {})
-    }
-    api.marketplaceDailyClaim(currentStreak)
-      .then(r => setCoins(r.coins))
-      .catch(() => {})
     const prefetch = consumeStudentPrefetch()
     const dataPromise = prefetch ?? api.me().catch(() => null)
     dataPromise.then(d => { if (d) setData(d); else api.me().then(setData).catch(e => setError(e instanceof Error ? e.message : 'Failed')) })
@@ -248,6 +240,16 @@ export default function DashboardPage() {
         gpaNeedsResync.current = true
       })
 
+    // Fire these concurrently with portalStatus() instead of nesting them in its
+    // .then() — neither needs portalStatus()'s result to be called, only to decide
+    // (below) whether their results should be acted on. Avoids an avoidable fetch
+    // waterfall on the dashboard's core data load; the connected-gating behavior is
+    // unchanged since the resolved results are only read inside the same guard.
+    const portalSyncStatusPromise = api.portalSyncStatus().catch(() => null)
+    const portalGradesPromise = api.portalGrades()
+      .then(g => ({ ok: true as const, g }))
+      .catch(err => ({ ok: false as const, err }))
+
     api.portalStatus().then(status => {
       if (!status.connected) return
       const now = new Date()
@@ -257,28 +259,28 @@ export default function DashboardPage() {
       // Check whether the portal itself is down (UNREACHABLE for 2+ consecutive
       // background sync cycles). This is evaluated independently of portalGrades()
       // so the timer can distinguish a genuine outage from a credentials problem.
-      api.portalSyncStatus()
-        .then(syncStatus => {
-          if (syncStatus.portalDown) {
-            portalDownDetected.current = true
-          }
-        })
-        .catch(() => { /* non-fatal — best-effort status enrichment */ })
+      portalSyncStatusPromise.then(syncStatus => {
+        if (syncStatus?.portalDown) {
+          portalDownDetected.current = true
+        }
+      })
 
-      api.portalGrades()
-        .then(g => { setCourseCount(new Set(g.grades.map(c => c.name)).size) })
-        .catch((err) => {
-          gpaNeedsResync.current = true
-          // Distinguish hard case (broken/missing credentials) from soft case (transient
-          // session expiry). The same error codes that handleResync() checks are also
-          // thrown by portalGrades() when the stored credentials can't be used. Setting
-          // this ref here — before the popup gate runs — lets the timer bypass the
-          // "don't show again" suppression for genuinely broken credentials.
-          const code = (err as { code?: string }).code
-          if (code === 'NOT_CONNECTED' || code === 'NO_CREDENTIALS' || code === 'RELOGIN_FAILED') {
-            needsReconnectAtLoad.current = true
-          }
-        })
+      portalGradesPromise.then(result => {
+        if (result.ok) {
+          setCourseCount(new Set(result.g.grades.map(c => c.name)).size)
+          return
+        }
+        gpaNeedsResync.current = true
+        // Distinguish hard case (broken/missing credentials) from soft case (transient
+        // session expiry). The same error codes that handleResync() checks are also
+        // thrown by portalGrades() when the stored credentials can't be used. Setting
+        // this ref here — before the popup gate runs — lets the timer bypass the
+        // "don't show again" suppression for genuinely broken credentials.
+        const code = (result.err as { code?: string }).code
+        if (code === 'NOT_CONNECTED' || code === 'NO_CREDENTIALS' || code === 'RELOGIN_FAILED') {
+          needsReconnectAtLoad.current = true
+        }
+      })
     }).catch(() => {})
 
     const resyncTimer = setTimeout(() => {

@@ -211,6 +211,35 @@ export async function searchByName(query: string): Promise<ScorecardSchool[]> {
 }
 
 /**
+ * Fetch one page of "common" institutions — currently operating, predominantly
+ * bachelor's-degree-granting schools (Scorecard code 3 for
+ * school.degrees_awarded.predominant) — sorted by enrollment size, descending,
+ * so the most-searched/well-known schools land in the earliest pages.
+ *
+ * Used to bulk-seed CollegeScorecardCache (see scripts/seedCollegeScorecardCache.ts)
+ * so common colleges have admissions data available without waiting on a live
+ * per-search API call. `page` is 0-indexed, matching the Scorecard API itself.
+ *
+ * Returns an empty array once past the last page, or on any failure — the
+ * caller's pagination loop treats an empty page as "done".
+ */
+export async function fetchCommonInstitutionsPage(page: number): Promise<{ schools: ScorecardSchool[]; total: number }> {
+  const response = await fetchFromScorecard({
+    'school.operating': 1,
+    'school.degrees_awarded.predominant': 3,
+    sort: 'latest.student.size:desc',
+    per_page: MAX_SEARCH_RESULTS,
+    page,
+  })
+
+  if (!response || !Array.isArray(response.results)) {
+    return { schools: [], total: 0 }
+  }
+
+  return { schools: response.results.map(normalizeResult), total: response.metadata.total }
+}
+
+/**
  * Fetch a single school by its College Scorecard unit ID.
  * Returns the normalized school record, or null if not found or on any failure.
  */

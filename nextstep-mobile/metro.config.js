@@ -1,16 +1,10 @@
-const path = require('path')
 const { getDefaultConfig } = require('expo/metro-config')
 const { withNativeWind } = require('nativewind/metro')
 const { resolve } = require('metro-resolver')
 
-const MONOREPO_ROOT = path.resolve(__dirname, '..')
-
 const config = getDefaultConfig(__dirname)
 
-// Allow Metro to resolve modules from the monorepo root (e.g. lib/legalText.ts)
-config.watchFolders = [MONOREPO_ROOT]
-
-// Metro 0.84 (Expo SDK 56) changed context.resolveRequest to point to the
+// Metro 0.83 (Expo SDK 54) has context.resolveRequest point to the
 // custom resolver itself, not Metro's built-in resolver. NativeWind's
 // resolveRequest does `originalResolver ?? context.resolveRequest` — without
 // a pre-set originalResolver it recurses infinitely. We break the cycle by

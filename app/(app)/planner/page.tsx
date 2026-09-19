@@ -1,13 +1,19 @@
 'use client'
 
 import React from 'react'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import { api, type PlannerItem, type CanvasStatus } from '../../../lib/api'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import PageLoader from '../../../components/ui/PageLoader'
 import { CheckIcon, SparklesIcon, XMarkIcon, CalendarIcon, LinkIcon } from '@/components/icons'
-import CalendarView from '../../../components/planner/CalendarView'
-import AgentPanel from '../../../components/agent/AgentPanel'
+
+const CalendarView = dynamic(() => import('../../../components/planner/CalendarView'))
+const AgentPanel = dynamic(() => import('../../../components/agent/AgentPanel'))
+
+// Static — never depends on component state, so it's computed once at module
+// load instead of on every render of the whole page.
+const CANVAS_DISTRICTS = SORTED_ISD_LIST.filter(d => d.canvasUrl)
 
 type StudyPlan = {
   overview: string
@@ -180,11 +186,12 @@ export default function PlannerPage() {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  const canvasDistricts = SORTED_ISD_LIST.filter(d => d.canvasUrl)
-  const filteredDistricts = canvasDistricts.filter(d =>
-    d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
-    d.state.toLowerCase().includes(districtSearch.toLowerCase())
-  )
+  const filteredDistricts = useMemo(() => (
+    CANVAS_DISTRICTS.filter(d =>
+      d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
+      d.state.toLowerCase().includes(districtSearch.toLowerCase())
+    )
+  ), [districtSearch])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()

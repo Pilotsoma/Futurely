@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ export function SchoolSessionProvider({
     void load()
   }, [])
 
-  const signIn = async (info: SchoolInfo): Promise<void> => {
+  const signIn = useCallback(async (info: SchoolInfo): Promise<void> => {
     await AsyncStorage.multiSet([
       [KEY_ACTIVE, 'true'],
       [KEY_DISTRICT, info.district],
@@ -79,23 +79,26 @@ export function SchoolSessionProvider({
       [KEY_SYSTEM_TYPE, info.systemType],
     ])
     setSchoolInfo(info)
-  }
+  }, [])
 
-  const signOut = async (): Promise<void> => {
+  const signOut = useCallback(async (): Promise<void> => {
     await AsyncStorage.multiRemove([...ALL_KEYS])
     setSchoolInfo(null)
-  }
+  }, [])
+
+  // Memoized so consumers that only care about one field (e.g. hasSchoolSession)
+  // don't re-render on every AuthProvider/SchoolSessionProvider render — this
+  // context wraps the entire app (see App.tsx).
+  const value = useMemo<SchoolSessionContextValue>(() => ({
+    hasSchoolSession: schoolInfo !== null,
+    schoolInfo,
+    isLoaded,
+    signIn,
+    signOut,
+  }), [schoolInfo, isLoaded, signIn, signOut])
 
   return (
-    <SchoolSessionContext.Provider
-      value={{
-        hasSchoolSession: schoolInfo !== null,
-        schoolInfo,
-        isLoaded,
-        signIn,
-        signOut,
-      }}
-    >
+    <SchoolSessionContext.Provider value={value}>
       {children}
     </SchoolSessionContext.Provider>
   )

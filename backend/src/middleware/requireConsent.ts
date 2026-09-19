@@ -1,8 +1,23 @@
 import { Response, NextFunction } from 'express'
+import { AccountStatus } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { AuthRequest } from './auth'
 import { logger } from '../common/logger'
 import { isSchoolConnectAllowlisted } from './schoolConnectAllowlist'
+
+// requireConsent is chained immediately before requireActiveAccount on every
+// mount point in app.ts. Rather than each middleware issuing its own
+// `prisma.user.findUnique` (two serial round trips to Postgres on every
+// authenticated request), requireConsent fetches both middlewares' fields in
+// one query and stashes the account-status fields here for
+// requireActiveAccount to reuse.
+export interface AccountStatusPrefetch {
+  accountStatus: AccountStatus
+  bannedUntilDate: Date | null
+}
+export interface RequestWithAccountStatusPrefetch extends AuthRequest {
+  accountStatusPrefetch?: AccountStatusPrefetch
+}
 
 /**
  * Enforces that the authenticated user has accepted ToS, Privacy Policy, and
@@ -32,7 +47,7 @@ import { isSchoolConnectAllowlisted } from './schoolConnectAllowlist'
  * portal credentials a second time.
  */
 export async function requireConsent(
-  req: AuthRequest,
+  req: RequestWithAccountStatusPrefetch,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
@@ -58,7 +73,10 @@ export async function requireConsent(
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { tosAcceptedAt: true, privacyAcceptedAt: true, ageConfirmedAt: true },
+      select: {
+        tosAcceptedAt: true, privacyAcceptedAt: true, ageConfirmedAt: true,
+        accountStatus: true, bannedUntilDate: true,
+      },
     })
 
     if (
@@ -78,6 +96,7 @@ export async function requireConsent(
       return
     }
 
+    req.accountStatusPrefetch = { accountStatus: user.accountStatus, bannedUntilDate: user.bannedUntilDate }
     next()
   } catch (e) {
     logger.error('middleware.requireConsent.error', {

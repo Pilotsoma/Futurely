@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "nextstep-mobile",
-    "slug": "nextstep-mobile",
+    "name": "Futurely",
+    "slug": "futurely-mobile",
     "version": "1.0.0",
+    "scheme": "futurely",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -21,10 +22,14 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "entryPoint": "./index.ts",
+    "updates": {
+      "enabled": false
+    },
     "plugins": [
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      "expo-web-browser",
+      "expo-secure-store"
     ]
   }
 }

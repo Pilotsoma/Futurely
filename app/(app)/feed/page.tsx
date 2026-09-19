@@ -4,13 +4,11 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification } from '@/lib/api'
-import CoinIcon from '@/components/ui/CoinIcon'
-import VerifiedBadge from '@/components/ui/VerifiedBadge'
 import { DevAdminPanel, ModPanel } from '@/components/ui/DevAdminPanel'
 import {
-  UserIcon, HeartFilledIcon, HeartOutlineIcon, PartyPopperIcon, TagIcon, TradeArrowsIcon, BooksIcon,
-  ChatBubbleIcon, CheckIcon, GiftIcon, CrownIcon, StarIcon, TrophyIcon, BanIcon, MuteIcon,
-  GlobeIcon, SchoolBuildingIcon, ArrowRightIcon, SparklesIcon, PaintPaletteIcon, ImageIcon,
+  UserIcon, HeartFilledIcon, HeartOutlineIcon, BooksIcon,
+  ChatBubbleIcon, BanIcon, MuteIcon,
+  GlobeIcon, SchoolBuildingIcon, ArrowRightIcon,
 } from '@/components/icons'
 
 function timeAgo(dateStr: string): string {
@@ -47,117 +45,15 @@ function initials(user: { name: string | null; hacName?: string | null }): strin
     : n.slice(0, 2).toUpperCase()
 }
 
-const AVATAR_BORDER_MAP: Record<string, string> = {
-  'border-green': '#22C55E', 'border-blue': '#3B82F6', 'border-red': '#EF4444',
-  'border-navy': '#1D4ED8', 'border-teal': '#14B8A6', 'border-orange': '#F97316',
-  'border-violet': '#7C3AED', 'border-cyan': '#06B6D4', 'border-hotpink': '#EC4899',
-  'border-gold': '#D97706', 'border-lime': '#84CC16',
-  'border-yellow': '#EAB308', 'border-pink': '#F472B6', 'border-gray': '#6B7280',
-  'border-brown': '#92400E', 'border-rose': '#F43F5E', 'border-sky': '#0EA5E9',
-  'border-silver': '#C0C0C0',
-}
-const AVATAR_GLOW_MAP: Record<string, [string, string]> = {
-  'glow-pink':   ['#EC4899', '#EC489955'],
-  'glow-purple': ['#8B5CF6', '#8B5CF655'],
-  'glow-blue':   ['#3B82F6', '#3B82F655'],
-  'glow-orange': ['#F97316', '#F9731655'],
-}
-function avatarStyle(effect: string | null | undefined): React.CSSProperties {
-  if (!effect) return {}
-  if (effect === 'rainbow') return { background: '#ff0000', border: '3px solid #ff0000', boxShadow: '0 0 14px #ff000088', color: '#fff' }
-  if (effect === 'glow-gold')          return {}
-  if (effect === 'frame-black')        return {}
-  if (effect === 'fill-white')         return {}
-  if (effect === 'unobtainable-curse') return { background: 'transparent' }
-  if (AVATAR_BORDER_MAP[effect]) return { border: `2px solid ${AVATAR_BORDER_MAP[effect]}` }
-  if (AVATAR_GLOW_MAP[effect]) return { border: `2px solid ${AVATAR_GLOW_MAP[effect][0]}`, boxShadow: `0 0 12px ${AVATAR_GLOW_MAP[effect][1]}` }
-  return {}
-}
-function avatarClass(effect: string | null | undefined): string {
-  if (effect === 'rainbow')           return 'avatar-rainbow'
-  if (effect === 'glow-gold')         return 'avatar-gold-fill'
-  if (effect === 'frame-black')       return 'avatar-void-fill'
-  if (effect === 'fill-white')        return 'avatar-white-fill'
-  if (effect === 'unobtainable-curse') return 'avatar-curse'
-  return ''
-}
-
-const GW_NAME_COLOR_ITEMS = [
-  { id: 'forest-green', name: 'Forest Green', value: '#15803D', rarity: 'Common' },
-  { id: 'navy-blue',    name: 'Navy Blue',    value: '#1D4ED8', rarity: 'Common' },
-  { id: 'dark-red',     name: 'Dark Red',     value: '#991B1B', rarity: 'Common' },
-  { id: 'slate-blue',   name: 'Slate Blue',   value: '#4338CA', rarity: 'Common' },
-  { id: 'teal',         name: 'Teal',         value: '#0F766E', rarity: 'Common' },
-  { id: 'maroon',       name: 'Maroon',       value: '#7F1D1D', rarity: 'Common' },
-  { id: 'olive',        name: 'Olive',        value: '#713F12', rarity: 'Common' },
-  { id: 'brown',        name: 'Brown',        value: '#78350F', rarity: 'Common' },
-  { id: 'steel',        name: 'Steel',        value: '#334155', rarity: 'Common' },
-  { id: 'midnight',     name: 'Midnight',     value: '#0F172A', rarity: 'Common' },
-  { id: 'bright-orange',name: 'Bright Orange',value: '#EA580C', rarity: 'Uncommon' },
-  { id: 'violet',       name: 'Violet',       value: '#7C3AED', rarity: 'Uncommon' },
-  { id: 'cyan',         name: 'Cyan',         value: '#0891B2', rarity: 'Uncommon' },
-  { id: 'coral',        name: 'Coral',        value: '#F97066', rarity: 'Uncommon' },
-  { id: 'mint',         name: 'Mint',         value: '#6EE7B7', rarity: 'Uncommon' },
-  { id: 'amber',        name: 'Amber',        value: '#D97706', rarity: 'Uncommon' },
-  { id: 'hot-pink',     name: 'Hot Pink',     value: '#DB2777', rarity: 'Rare' },
-  { id: 'gold',         name: 'Gold',         value: '#D97706', rarity: 'Rare' },
-  { id: 'lime-green',   name: 'Lime Green',   value: '#65A30D', rarity: 'Rare' },
-  { id: 'crimson',      name: 'Crimson',      value: '#DC2626', rarity: 'Rare' },
-  { id: 'sky-blue',     name: 'Sky Blue',     value: '#0EA5E9', rarity: 'Rare' },
-  { id: 'electric-blue',name: 'Electric Blue',value: '#2563EB', rarity: 'Epic' },
-  { id: 'magenta',      name: 'Magenta',      value: '#C026D3', rarity: 'Epic' },
-  { id: 'rose',         name: 'Rose',         value: '#F43F5E', rarity: 'Epic' },
-  { id: 'pure-white',   name: 'Pure White',   value: '#F8FAFC', rarity: 'Legendary' },
-  { id: 'black',        name: 'Black',        value: '#111111', rarity: 'Legendary' },
-  { id: 'rainbow',      name: 'Rainbow RGB',  value: 'rainbow', rarity: 'Mythic' },
-]
-const GW_AVATAR_ITEMS = [
-  { id: 'border-green',  name: 'Green Border',    value: 'border-green',   rarity: 'Epic' },
-  { id: 'border-blue',   name: 'Blue Border',     value: 'border-blue',    rarity: 'Common' },
-  { id: 'border-red',    name: 'Red Border',      value: 'border-red',     rarity: 'Common' },
-  { id: 'border-navy',   name: 'Navy Border',     value: 'border-navy',    rarity: 'Common' },
-  { id: 'border-teal',   name: 'Teal Border',     value: 'border-teal',    rarity: 'Common' },
-  { id: 'glow-purple',   name: 'Purple Glow',     value: 'glow-purple',    rarity: 'Common' },
-  { id: 'border-yellow', name: 'Yellow Border',   value: 'border-yellow',  rarity: 'Common' },
-  { id: 'border-pink',   name: 'Pink Border',     value: 'border-pink',    rarity: 'Common' },
-  { id: 'border-gray',   name: 'Gray Border',     value: 'border-gray',    rarity: 'Common' },
-  { id: 'border-brown',  name: 'Brown Border',    value: 'border-brown',   rarity: 'Common' },
-  { id: 'border-orange', name: 'Orange Border',   value: 'border-orange',  rarity: 'Uncommon' },
-  { id: 'border-violet', name: 'Violet Border',   value: 'border-violet',  rarity: 'Uncommon' },
-  { id: 'border-cyan',   name: 'Cyan Border',     value: 'border-cyan',    rarity: 'Uncommon' },
-  { id: 'border-rose',   name: 'Rose Border',     value: 'border-rose',    rarity: 'Uncommon' },
-  { id: 'border-sky',    name: 'Sky Border',      value: 'border-sky',     rarity: 'Uncommon' },
-  { id: 'border-hotpink',name: 'Hot Pink Border', value: 'border-hotpink', rarity: 'Rare' },
-  { id: 'border-gold',   name: 'Gold Border',     value: 'border-gold',    rarity: 'Rare' },
-  { id: 'border-lime',   name: 'Lime Border',     value: 'border-lime',    rarity: 'Rare' },
-  { id: 'border-silver', name: 'Silver Border',   value: 'border-silver',  rarity: 'Rare' },
-  { id: 'glow-blue',     name: 'Blue Glow',       value: 'glow-blue',      rarity: 'Rare' },
-  { id: 'glow-pink',     name: 'Pink Glow',       value: 'glow-pink',      rarity: 'Epic' },
-  { id: 'glow-orange',   name: 'Orange Glow',     value: 'glow-orange',    rarity: 'Epic' },
-  { id: 'glow-gold',     name: 'Gold Fill',       value: 'glow-gold',      rarity: 'Legendary' },
-  { id: 'frame-black',   name: 'Void Fill',       value: 'frame-black',    rarity: 'Legendary' },
-  { id: 'rainbow',       name: 'Rainbow Animated',value: 'rainbow',        rarity: 'Mythic' },
-]
-
 function avatarContent(user: { name: string | null; avatarUrl?: string | null }): React.ReactNode {
   if (user.avatarUrl) return <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
   return initials(user)
-}
-function nameColorStyle(color: string | null | undefined): React.CSSProperties {
-  if (!color || color === 'rainbow' || color === 'curse') return {}
-  if (color === '#111111') return { color, textShadow: '0 0 6px rgba(180,180,180,0.65)' }
-  if (color === '#C0C0C0') return { color: '#E8E8FF', textShadow: '0 0 4px rgba(255,255,255,1), 0 0 8px rgba(255,255,255,0.95), 0 0 18px rgba(255,255,255,0.7), 0 0 35px rgba(210,220,255,0.35)' }
-  return { color }
-}
-function nameColorClass(color: string | null | undefined): string {
-  return color === 'rainbow' ? 'name-rainbow' : color === 'curse' ? 'name-curse' : ''
 }
 
 // ── Notification row with clickable sender name ───────────────────────────────
 
 function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenProfile: (id: number) => void; onClose: () => void }) {
   const name = parseHacName(n.sender.name) || 'User'
-  const isRainbowName = n.sender.nameColor === 'rainbow'
 
   function handleNameClick(e: React.MouseEvent) {
     e.stopPropagation()
@@ -167,8 +63,7 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
 
   const nameEl = (
     <button
-      className={isRainbowName ? 'name-rainbow' : n.sender.nameColor === 'curse' ? 'name-curse' : ''}
-      style={{ background: 'none', border: 'none', padding: 0, color: (isRainbowName || n.sender.nameColor === 'curse') ? undefined : (n.sender.nameColor ?? 'var(--primary)'), fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
+      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
       onClick={handleNameClick}
     >
       {name}
@@ -179,19 +74,11 @@ function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenPro
   if (n.type === 'FOLLOW') content = <>{nameEl} started following you</>
   else if (n.type === 'LIKE') content = <>{nameEl} liked your post</>
   else if (n.type === 'COMMENT') content = n.preview ? <>{nameEl}: &quot;{n.preview}&quot;</> : <>{nameEl} commented on your post</>
-  else if (n.type === 'GIVEAWAY_WIN') content = n.preview ? <>{n.preview}</> : <>You won a giveaway!</>
-  else if (n.type === 'LISTING_SOLD') content = n.preview ? <>{nameEl} bought your {n.preview}</> : <>{nameEl} bought your listing</>
-  else if (n.type === 'TRADE_OFFER') content = <>{nameEl} sent you a trade offer</>
-  else if (n.type === 'TRADE_ACCEPTED') content = <>{nameEl} accepted your trade</>
-  else if (n.type === 'TRADE_DECLINED')    content = <>{nameEl} declined your trade</>
   else if (n.type === 'ASSIGNMENT_CREATED') content = <>{n.preview ?? 'New assignment added'}</>
   else content = null
 
   const icon: React.ReactNode = n.type === 'FOLLOW' ? <UserIcon size={15}/>
     : n.type === 'LIKE' ? <HeartFilledIcon size={15}/>
-    : n.type === 'GIVEAWAY_WIN' ? <PartyPopperIcon size={15}/>
-    : n.type === 'LISTING_SOLD' ? <TagIcon size={15}/>
-    : n.type === 'TRADE_OFFER' || n.type === 'TRADE_ACCEPTED' || n.type === 'TRADE_DECLINED' ? <TradeArrowsIcon size={15}/>
     : n.type === 'ASSIGNMENT_CREATED' ? <BooksIcon size={15}/>
     : <ChatBubbleIcon size={15}/>
 
@@ -230,9 +117,6 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
   const [following, setFollowing] = useState(false)
   const [postsLoading, setPostsLoading] = useState(true)
   const [postsError, setPostsError] = useState(false)
-  const [sendCoinAmount, setSendCoinAmount] = useState('')
-  const [sendCoinBusy, setSendCoinBusy] = useState(false)
-  const [sendCoinMsg, setSendCoinMsg] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -261,10 +145,6 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
     } catch { /* ignore */ }
   }
 
-  const isDevTag = profile?.tag === 'DEV'
-  const isGodTag = profile?.tag === 'GOAT'
-  const isMythicTag = profile?.tag === 'VIP'
-
   return createPortal(
     <div style={O.overlay} onClick={onClose}>
       <div style={O.panel} onClick={e => e.stopPropagation()}>
@@ -275,29 +155,17 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
         ) : (
           <>
             <div style={O.header}>
-              <div className={avatarClass(profile.avatarEffect)} style={{ ...O.avatar, ...avatarStyle(profile.avatarEffect), ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(profile)}</div>
+              <div style={{ ...O.avatar, ...(profile.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(profile)}</div>
               <div style={{ flex: 1 }}>
-                <div className={nameColorClass(profile.nameColor)} style={{ ...O.name, ...nameColorStyle(profile.nameColor) }}>{displayName(profile)}</div>
+                <div style={O.name}>{displayName(profile)}</div>
                 {profile.hacName && parseHacName(profile.hacName) !== displayName(profile) && (
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>{parseHacName(profile.hacName)}</div>
                 )}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 3 }}>
-                  {(profile.chatBanned || (profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())) && (
-                    <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, display: 'inline-block', ...(profile.chatBanned ? { color: '#EF4444', background: '#EF444422', border: '1px solid #EF4444' } : { color: '#f97316', background: '#f9731622', border: '1px solid #f97316' }) }}>
-                      {profile.chatBanned ? 'BANNED' : 'MUTED'}
-                    </span>
-                  )}
-                  {profile.tag && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
-                    profile.tagColor === 'verified-yellow' || profile.tagColor === 'verified-blue'
-                      ? <VerifiedBadge variant={profile.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
-                      : <span className={tagCssClass(profile.tag, profile.tagColor)} style={isAnimatedTag(profile.tag) ? { ...O.tag } : profile.tagColor === 'curse' ? { ...O.tag, border: '1px solid #ff0000' } : { ...O.tag, color: profile.tagColor === 'grey' || !profile.tagColor ? 'var(--text-secondary)' : profile.tagColor, background: profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.12)' : `${profile.tagColor}22`, border: `1px solid ${profile.tagColor === 'grey' || !profile.tagColor ? 'rgba(128,128,128,0.4)' : profile.tagColor}` }}>
-                          {profile.tag}
-                        </span>
-                  )}
-                  {(profile.badge === 'verified-yellow' || profile.badge === 'verified-blue') && !profile.chatBanned && !(profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date()) && (
-                    <VerifiedBadge variant={profile.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
-                  )}
-                </div>
+                {(profile.chatBanned || (profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())) && (
+                  <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, display: 'inline-block', ...(profile.chatBanned ? { color: '#EF4444', background: '#EF444422', border: '1px solid #EF4444' } : { color: '#f97316', background: '#f9731622', border: '1px solid #f97316' }) }}>
+                    {profile.chatBanned ? 'BANNED' : 'MUTED'}
+                  </span>
+                )}
               </div>
               <button style={O.closeBtn} onClick={onClose}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -321,56 +189,11 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
               </div>
             )}
 
-            {/* Send Coins — visible to all users on other profiles */}
-            {userId !== currentUserId && (() => {
-              const amt = parseInt(sendCoinAmount)
-              const tax = (!isNaN(amt) && amt > 0) ? Math.ceil(amt * 0.05) : 0
-              return (
-                <div style={{ marginBottom: 20, padding: '12px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#EAB308', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}><CoinIcon size={12}/> Send Coins</div>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <input
-                      className="ns-input"
-                      style={{ flex: 1, height: 34, fontSize: 13 }}
-                      type="number"
-                      min="1"
-                      placeholder="Amount"
-                      value={sendCoinAmount}
-                      onChange={e => { setSendCoinAmount(e.target.value); setSendCoinMsg('') }}
-                    />
-                    <button
-                      style={{ background: '#EAB308', color: '#000', border: 'none', borderRadius: 6, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: sendCoinBusy ? 'not-allowed' : 'pointer', opacity: sendCoinBusy ? 0.6 : 1 }}
-                      disabled={sendCoinBusy}
-                      onClick={async () => {
-                        if (isNaN(amt) || amt <= 0 || sendCoinBusy) return
-                        setSendCoinBusy(true); setSendCoinMsg('')
-                        try {
-                          await api.sendCoins(userId, amt)
-                          setSendCoinMsg(`✓ Sent ${amt} coins (−${tax} tax)`)
-                          setSendCoinAmount('')
-                        } catch (e: unknown) {
-                          const msg = (e instanceof Error ? e.message : '') || 'Failed'
-                          setSendCoinMsg(msg.includes('INSUFFICIENT') ? 'Not enough coins' : 'Failed')
-                        } finally { setSendCoinBusy(false) }
-                      }}
-                    >{sendCoinBusy ? '…' : 'Send'}</button>
-                  </div>
-                  {tax > 0 && !sendCoinMsg && (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5 }}>
-                      5% tax — you pay <strong style={{ color: '#EAB308' }}>{amt + tax}</strong> total ({amt} + {tax} tax)
-                    </div>
-                  )}
-                  {sendCoinMsg && <div style={{ fontSize: 11, color: sendCoinMsg.startsWith('✓') ? '#22C55E' : '#EF4444', fontWeight: 600, marginTop: 6, display: 'flex', alignItems: 'center', gap: 3 }}>{sendCoinMsg.startsWith('✓') && <CheckIcon size={11} color='#22C55E'/>}{sendCoinMsg.startsWith('✓') ? sendCoinMsg.slice(2) : sendCoinMsg}</div>}
-                </div>
-              )
-            })()}
-
             {/* DEV/Admin panel */}
             <DevAdminPanel
               profile={profile}
               userId={userId}
               currentUserId={currentUserId}
-              onUpdateTag={updated => setProfile(prev => prev ? { ...prev, tag: updated.tag, tagColor: updated.tagColor, allTags: updated.allTags ?? prev.allTags } : prev)}
               onUpdateBan={banned => setProfile(prev => prev ? { ...prev, chatBanned: banned } : prev)}
               onUpdateMute={mu => setProfile(prev => prev ? { ...prev, chatMutedUntil: mu } : prev)}
               onUpdateRole={role => setProfile(prev => prev ? { ...prev, role } : prev)}
@@ -415,70 +238,25 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
 
 // ── Post Card ────────────────────────────────────────────────────────────────
 
-function GiveawayCountdown({ endsAt }: { endsAt: string }) {
-  const [label, setLabel] = useState('')
-  useEffect(() => {
-    function update() {
-      const diff = Math.max(0, new Date(endsAt).getTime() - Date.now())
-      if (diff === 0) { setLabel('Ended'); return }
-      const s = Math.floor(diff / 1000)
-      if (s < 60) { setLabel(`${s}s left`); return }
-      const m = Math.floor(s / 60)
-      if (m < 60) { setLabel(`${m}m left`); return }
-      const h = Math.floor(m / 60)
-      if (h < 24) { setLabel(`${h}h ${m % 60}m left`); return }
-      setLabel(`${Math.floor(h / 24)}d left`)
-    }
-    update()
-    const t = setInterval(update, 5000)
-    return () => clearInterval(t)
-  }, [endsAt])
-  return <span>{label}</span>
-}
-
-function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFollow, onEnterGiveaway, onDrawGiveaway, onPin, currentUserId, followedUsers, isDevUser, isModUser }: {
+function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFollow, onPin, currentUserId, followedUsers, isDevUser, isModUser }: {
   post: FeedPost
   onLike: (id: number) => void
   onDelete: (id: number) => void
   onOpenComments: (id: number) => void
   onOpenProfile: (userId: number) => void
   onFollow: (userId: number) => void
-  onEnterGiveaway: (id: number) => void
-  onDrawGiveaway: (id: number) => void
   onPin: (id: number, currentlyPinned: boolean) => void
   currentUserId: number
   followedUsers: Set<number>
   isDevUser: boolean
   isModUser: boolean
 }) {
-  const [showLikeRequired, setShowLikeRequired] = useState(false)
-
-  const tagColor = (post.user as { tagColor?: string }).tagColor || 'grey'
-  const isDevTag = post.user.tag === 'DEV'
-  const isGodTag = post.user.tag === 'GOAT'
-  const isMythicTag = post.user.tag === 'VIP'
   const isFollowing = followedUsers.has(post.userId)
   const canDelete = post.userId === currentUserId || isDevUser || isModUser
   const isPinned = !!post.pinnedUntil && new Date(post.pinnedUntil) > new Date()
-  const isGiveaway = post.type === 'giveaway'
-  const isUnbox = post.type === 'UNBOX'
-  const isCoinGiveaway = isGiveaway && !!post.giveawayCoinAmount
-  const isNameColorGiveaway = isGiveaway && post.giveawayItemType === 'name-color'
-  const isPfpGiveaway = isGiveaway && post.giveawayItemType === 'avatar'
-  const isItemGiveaway = isNameColorGiveaway || isPfpGiveaway
-  const giveawayEnded = !!post.giveawayEndsAt && new Date(post.giveawayEndsAt) <= new Date()
-  const giveawayTagColor = post.giveawayTagColor || 'gold'
-  const giveawayRainbow = isNameColorGiveaway && post.giveawayTagColor === 'rainbow'
-  const giveawayAccent = isCoinGiveaway
-    ? '#EAB308'
-    : isNameColorGiveaway && !giveawayRainbow
-      ? (post.giveawayTagColor ?? '#6B7280')
-      : isPfpGiveaway
-        ? '#8B5CF6'
-        : giveawayTagColor
 
   return (
-    <div className="ns-card" style={{ padding: 16, marginBottom: 12, ...(isGiveaway ? { border: `1px solid ${giveawayAccent}55`, background: `${giveawayAccent}08` } : {}), ...(isPinned && !isGiveaway ? { border: '1px solid rgba(43,74,142,0.3)' } : {}) }}>
+    <div className="ns-card" style={{ padding: 16, marginBottom: 12, ...(isPinned ? { border: '1px solid rgba(43,74,142,0.3)' } : {}) }}>
       {/* Pinned banner */}
       {isPinned && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--primary)', marginBottom: 8 }}>
@@ -489,18 +267,10 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <div className={avatarClass(post.user.avatarEffect)} style={{ ...P.avatar, ...avatarStyle(post.user.avatarEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(post.user)}</div>
+        <div style={{ ...P.avatar, ...(post.user.avatarUrl ? { background: 'none', padding: 0 } : {}) }}>{avatarContent(post.user)}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
-            <span className={nameColorClass(post.user.nameColor)} style={{ ...P.authorName, ...nameColorStyle(post.user.nameColor) }} onClick={() => onOpenProfile(post.user.id)}>{displayName(post.user)}</span>
-            {post.user.tag && (
-              tagColor === 'verified-yellow' || tagColor === 'verified-blue'
-                ? <VerifiedBadge variant={tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
-                : <span className={tagCssClass(post.user.tag, tagColor)} style={isAnimatedTag(post.user.tag) ? { ...P.tag } : tagColor === 'curse' ? { ...P.tag, border: '1px solid #ff0000' } : { ...P.tag, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }}>
-                    {post.user.tag}
-                  </span>
-            )}
-            {(post.user.badge === 'verified-yellow' || post.user.badge === 'verified-blue') && <VerifiedBadge variant={post.user.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />}
+            <span style={P.authorName} onClick={() => onOpenProfile(post.user.id)}>{displayName(post.user)}</span>
             {post.userId !== currentUserId && (
               <button
                 style={{ ...P.followBtn, ...(isFollowing ? { background: 'var(--primary)', color: '#FFFFFF', border: '1px solid var(--primary)' } : {}) }}
@@ -522,207 +292,6 @@ function PostCard({ post, onLike, onDelete, onOpenComments, onOpenProfile, onFol
 
       {/* Body */}
       <div style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--text)', marginBottom: 14, whiteSpace: 'pre-wrap' as const }}>{post.body}</div>
-
-      {/* Unbox section */}
-      {isUnbox && post.unboxItemName && (
-        (() => {
-          const unboxAccent = '#EAB308'
-          return (
-        <div style={{ border: `1px solid ${unboxAccent}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${unboxAccent}0d` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>{post.unboxItemRarity === 'Mythic' ? <CrownIcon size={20}/> : <StarIcon size={20}/>}</span>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: unboxAccent, letterSpacing: '0.5px' }}>
-                {post.unboxItemType === 'tag' ? 'TAG SPIN' : post.unboxItemType === 'name-color' ? 'NAME COLOR SPIN' : 'AVATAR SPIN'}
-              </div>
-            </div>
-            <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, color: unboxAccent, background: `${unboxAccent}18`, border: `1px solid ${unboxAccent}44` }}>
-              {post.unboxItemRarity}
-            </span>
-          </div>
-
-          {/* Item preview card - profile-like preview of the won item */}
-          <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)' }}>
-            {/* Avatar: avatar type uses won effect, others use default */}
-            {post.unboxItemType === 'avatar' ? (
-              <div className={avatarClass(post.unboxItemValue)} style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, ...avatarStyle(post.unboxItemValue) }}>U</div>
-            ) : (
-              <div style={{ width: 42, height: 42, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>U</div>
-            )}
-            {/* Name + tag row */}
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
-              {post.unboxItemType === 'avatar' && (
-                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-muted)' }}>
-                  {post.unboxItemValue === 'rainbow' ? 'RGB' : post.unboxItemName}
-                </span>
-              )}
-              <span
-                className={post.unboxItemType === 'name-color' ? nameColorClass(post.unboxItemValue) : ''}
-                style={{ fontSize: 13, fontWeight: 800, ...(post.unboxItemType === 'name-color' ? nameColorStyle(post.unboxItemValue) : { color: 'var(--text)' }) }}
-              >Username</span>
-              {post.unboxItemType === 'tag' ? (
-                post.unboxItemTagColor === 'verified-yellow' || post.unboxItemTagColor === 'verified-blue'
-                  ? <VerifiedBadge variant={post.unboxItemTagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={18} />
-                  : <span
-                      className={tagCssClass(post.unboxItemName, post.unboxItemTagColor)}
-                      style={isAnimatedTag(post.unboxItemName) ? { ...P.tag } : post.unboxItemTagColor === 'curse' ? { ...P.tag, border: '1px solid #ff0000' } : { ...P.tag, color: post.unboxItemTagColor || '#6B7280', border: `1px solid ${post.unboxItemTagColor || '#6B7280'}`, background: post.unboxItemTagColor ? `${post.unboxItemTagColor}22` : 'rgba(107,114,128,0.12)' }}
-                    >
-                      {post.unboxItemName}
-                    </span>
-              ) : (
-                <span style={{ ...P.tag, color: '#6B7280', border: '1px solid rgba(107,114,128,0.4)', background: 'rgba(107,114,128,0.12)' }}>TAG</span>
-              )}
-            </div>
-          </div>
-
-          {/* Estimated value */}
-          {post.unboxItemEstValue != null && post.unboxItemEstValue > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-              <CoinIcon size={13}/>
-              <span>Est. value: <strong style={{ color: unboxAccent }}><CoinIcon size={13} style={{ marginRight: 2 }} />{post.unboxItemEstValue?.toLocaleString()}</strong></span>
-            </div>
-          )}
-        </div>
-          )
-        })()
-      )}
-
-      {/* Giveaway section */}
-      {isGiveaway && (
-        <div style={{ border: `1px solid ${giveawayAccent}44`, borderRadius: 8, padding: 12, marginBottom: 12, background: `${giveawayAccent}0d` }}>
-          {/* Header: icon + label + prize bubble inline */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' as const }}>
-            <GiftIcon size={16}/>
-            <span style={{ fontSize: 12, fontWeight: 800, color: giveawayAccent, letterSpacing: '0.5px' }}>
-              {isCoinGiveaway ? 'COIN GIVEAWAY' : isNameColorGiveaway ? 'NAME COLOR GIVEAWAY' : isPfpGiveaway ? 'AVATAR GIVEAWAY' : 'TAG GIVEAWAY'}
-            </span>
-            {isCoinGiveaway ? (
-              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(234,179,8,0.15)', color: '#EAB308', border: '1px solid rgba(234,179,8,0.5)' }}>
-                <CoinIcon size={12} style={{ marginRight: 3 }} />{post.giveawayCoinAmount?.toLocaleString()} coins
-              </span>
-            ) : isNameColorGiveaway && post.giveawayTag ? (
-              <span className={giveawayRainbow ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 800, padding: '2px 8px', borderRadius: 4, background: 'var(--surface-2)', border: '1px solid var(--border)', ...(giveawayRainbow ? {} : { color: post.giveawayTagColor ?? '#6B7280' }) }}>
-                {post.giveawayTag}
-              </span>
-            ) : isPfpGiveaway && post.giveawayTag ? (
-              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: 'rgba(139,92,246,0.15)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.5)' }}>
-                {post.giveawayTag}
-              </span>
-            ) : post.giveawayTag ? (
-              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: `${giveawayTagColor}22`, color: giveawayTagColor, border: `1px solid ${giveawayTagColor}` }}>
-                {post.giveawayTag}
-              </span>
-            ) : null}
-          </div>
-
-          {/* Item preview for name-color / avatar giveaways */}
-          {isItemGiveaway && post.giveawayTag && (
-            <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)' }}>
-              {isPfpGiveaway ? (
-                <div className={avatarClass(post.giveawayTagColor)} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, ...avatarStyle(post.giveawayTagColor) }}>U</div>
-              ) : (
-                <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>U</div>
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
-                  <span className={isNameColorGiveaway && giveawayRainbow ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(isNameColorGiveaway && !giveawayRainbow ? { color: post.giveawayTagColor ?? 'var(--text)' } : !isNameColorGiveaway ? { color: 'var(--text)' } : {}) }}>
-                    Username
-                  </span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>[Student]</span>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                  Preview of the {isNameColorGiveaway ? 'name color' : 'Avatar effect'} <SparklesIcon size={12}/>
-                </div>
-              </div>
-              {post.giveawayItemRarity && (
-                <span style={{ fontSize: 10, fontWeight: 700, color: giveawayAccent, background: `${giveawayAccent}18`, padding: '2px 7px', borderRadius: 99, border: `1px solid ${giveawayAccent}44`, flexShrink: 0 }}>
-                  {post.giveawayItemRarity}
-                </span>
-              )}
-            </div>
-          )}
-
-          {post.giveawayWinnerId ? (
-            /* Winner announced */
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 6 }}>
-              <TrophyIcon size={18}/>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#22C55E' }}>Winner!</div>
-                <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                  {post.giveawayWinner ? displayName(post.giveawayWinner) : 'Someone'} won{' '}
-                  {isCoinGiveaway
-                    ? <strong style={{ color: '#EAB308' }}><CoinIcon size={13} style={{ marginRight: 3 }} />{post.giveawayCoinAmount?.toLocaleString()} coins</strong>
-                    : isNameColorGiveaway
-                      ? <><strong className={giveawayRainbow ? 'name-rainbow' : ''} style={giveawayRainbow ? {} : { color: post.giveawayTagColor ?? 'var(--text)' }}>{post.giveawayTag}</strong> name color</>
-                      : isPfpGiveaway
-                        ? <><strong style={{ color: '#8B5CF6' }}>{post.giveawayTag}</strong> Avatar effect</>
-                        : <>the <strong style={{ color: giveawayTagColor }}>{post.giveawayTag}</strong> tag</>
-                  }!
-                </div>
-              </div>
-            </div>
-          ) : giveawayEnded ? (
-            /* Ended, no winner drawn yet */
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-              Giveaway ended · {post._count.giveawayEntries} {post._count.giveawayEntries === 1 ? 'entry' : 'entries'}
-              {isDevUser && post._count.giveawayEntries > 0 && (
-                <button
-                  style={{ marginLeft: 10, background: giveawayAccent, color: '#000', border: 'none', borderRadius: 5, padding: '3px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
-                  onClick={() => onDrawGiveaway(post.id)}
-                >
-                  Draw Winner
-                </button>
-              )}
-            </div>
-          ) : (
-            /* Active giveaway */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  {post._count.giveawayEntries} {post._count.giveawayEntries === 1 ? 'entry' : 'entries'} ·{' '}
-                  {post.giveawayEndsAt && <GiveawayCountdown endsAt={post.giveawayEndsAt} />}
-                </span>
-                <div style={{ marginLeft: 'auto' }}>
-                  {post.enteredByMe ? (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', padding: '6px 14px', border: '1px solid #22C55E', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckIcon size={11} color='#22C55E'/> Entered</span>
-                  ) : (
-                    <button
-                      style={{ background: giveawayAccent, color: '#000', border: 'none', borderRadius: 6, padding: '6px 16px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
-                      onClick={() => {
-                        if (!post.likedByMe) { setShowLikeRequired(true); return }
-                        onEnterGiveaway(post.id)
-                      }}
-                    >
-                      Enter Giveaway
-                    </button>
-                  )}
-                </div>
-              </div>
-              {!post.enteredByMe && (
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}><HeartFilledIcon size={11}/> You must like this post to enter</div>
-              )}
-              {showLikeRequired && createPortal(
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowLikeRequired(false)}>
-                  <div style={{ background: 'var(--surface)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 16, padding: 28, width: '90%', maxWidth: 360, textAlign: 'center', boxShadow: 'var(--neo-raised), var(--shadow-xl)' }} onClick={e => e.stopPropagation()}>
-                    <div style={{ marginBottom: 12 }}><BanIcon size={36}/></div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--error)', marginBottom: 8 }}>Entry Denied</div>
-                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
-                      You must like this post before you can enter the giveaway.
-                    </div>
-                    <button
-                      style={{ width: '100%', padding: '10px 0', borderRadius: 9, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
-                      onClick={() => setShowLikeRequired(false)}
-                    >
-                      Got it
-                    </button>
-                  </div>
-                </div>,
-                document.body
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 4, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
@@ -826,8 +395,7 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
             {/* Post body */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
               <div
-                className={avatarClass(post.user.avatarEffect)}
-                style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, cursor: 'pointer', ...avatarStyle(post.user.avatarEffect), ...(post.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, cursor: 'pointer', ...(post.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                 onClick={() => { onClose(); onOpenProfile(post.user.id) }}
               >
                 {avatarContent(post.user)}
@@ -835,8 +403,7 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <button
-                    className={nameColorClass(post.user.nameColor)}
-                    style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', ...nameColorStyle(post.user.nameColor) }}
+                    style={{ background: 'none', border: 'none', padding: 0, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: 'var(--text)' }}
                     onClick={() => { onClose(); onOpenProfile(post.user.id) }}
                   >{displayName(post.user)}</button>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{timeAgo(post.createdAt)}</span>
@@ -858,13 +425,11 @@ function PostDetailModal({ postId, onClose, currentUserId, onOpenProfile }: {
                 <div key={c.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <div
-                      className={avatarClass(c.user.avatarEffect)}
-                      style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...avatarStyle(c.user.avatarEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                      style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                       onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                     >{avatarContent(c.user)}</div>
                     <button
-                      className={nameColorClass(c.user.nameColor)}
-                      style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, cursor: 'pointer', ...nameColorStyle(c.user.nameColor) }}
+                      style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: 'var(--text)' }}
                       onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                     >{displayName(c.user)}</button>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{timeAgo(c.createdAt)}</span>
@@ -977,44 +542,21 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
           ) : sorted.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No comments yet. Be the first!</div>
-          ) : sorted.map(c => {
-            const isDevTag = c.user.tag === 'DEV'
-            const isGodTag = c.user.tag === 'GOAT'
-            const isMythicTag = c.user.tag === 'VIP'
-            const tagColor = c.user.tagColor || 'grey'
-            return (
+          ) : sorted.map(c => (
               <div key={c.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                   <div
-                    className={avatarClass(c.user.avatarEffect)}
-                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...avatarStyle(c.user.avatarEffect), ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
+                    style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 10, flexShrink: 0, cursor: 'pointer', ...(c.user.avatarUrl ? { background: 'none', padding: 0, overflow: 'hidden' } : {}) }}
                     onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                   >
                     {avatarContent(c.user)}
                   </div>
                   <button
-                    className={nameColorClass(c.user.nameColor)}
-                    style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, ...nameColorStyle(c.user.nameColor) }}
+                    style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, color: 'var(--text)' }}
                     onClick={() => { onClose(); onOpenProfile(c.user.id) }}
                   >
                     {displayName(c.user)}
                   </button>
-                  {c.user.tag && (
-                    tagColor === 'verified-yellow' || tagColor === 'verified-blue'
-                      ? <VerifiedBadge variant={tagColor === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />
-                      : <span
-                          className={tagCssClass(c.user.tag, tagColor)}
-                          style={isAnimatedTag(c.user.tag)
-                            ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }
-                            : tagColor === 'curse'
-                            ? { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, border: '1px solid #ff0000' }
-                            : { fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: tagColor, border: `1px solid ${tagColor}`, background: tagColor === 'grey' ? 'rgba(128,128,128,0.1)' : `${tagColor}22` }
-                          }
-                        >
-                          {c.user.tag}
-                        </span>
-                  )}
-                  {(c.user.badge === 'verified-yellow' || c.user.badge === 'verified-blue') && <VerifiedBadge variant={c.user.badge === 'verified-yellow' ? 'yellow' : 'blue'} size={16} />}
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>{timeAgo(c.createdAt)}</span>
                 </div>
                 <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text)', marginBottom: 6 }}>{c.body}</div>
@@ -1027,7 +569,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                 </button>
               </div>
             )
-          })}
+          )}
         </div>
         {isMuted ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 8 }}>
@@ -1069,7 +611,7 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
 
 function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: { currentUserId: number; onOpenProfile: (userId: number) => void; followedUsers: Set<number>; onFollow: (userId: number) => void }) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Array<{ id: number; name: string | null; tag: string | null; tagColor: string | null; avatarUrl?: string | null; badge?: string | null }>>([])
+  const [results, setResults] = useState<Array<{ id: number; name: string | null; avatarUrl?: string | null }>>([])
   const [searching, setSearching] = useState(false)
 
   useEffect(() => {
@@ -1096,18 +638,7 @@ function UserSearch({ currentUserId, onOpenProfile, followedUsers, onFollow }: {
             {avatarContent(u)}
           </div>
           <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => onOpenProfile(u.id)}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 14, fontWeight: 600 }}>{displayName(u)}</span>
-              {u.tag && (
-                u.tagColor === 'verified-yellow' || u.tagColor === 'verified-blue'
-                  ? <VerifiedBadge variant={u.tagColor === 'verified-yellow' ? 'yellow' : 'blue'} />
-                  : <span
-                      className={tagCssClass(u.tag, u.tagColor)}
-                      style={isAnimatedTag(u.tag) ? { ...P.tag } : u.tagColor === 'curse' ? { ...P.tag } : { ...P.tag, color: u.tagColor || 'grey', border: `1px solid ${u.tagColor || 'grey'}`, background: u.tagColor ? `${u.tagColor}22` : 'rgba(128,128,128,0.1)' }}
-                    >{u.tag}</span>
-              )}
-              {(u.badge === 'verified-yellow' || u.badge === 'verified-blue') && <VerifiedBadge variant={u.badge === 'verified-yellow' ? 'yellow' : 'blue'} />}
-            </div>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{displayName(u)}</span>
           </div>
           <button style={{ ...P.followBtn, padding: '6px 14px', fontSize: 12.5, background: followedUsers.has(u.id) ? 'var(--primary)' : 'transparent', color: followedUsers.has(u.id) ? '#060D10' : 'var(--primary)' }} onClick={() => onFollow(u.id)}>
             {followedUsers.has(u.id) ? 'Following' : 'Follow'}
@@ -1149,15 +680,6 @@ export default function StudyFeedPage() {
   const [isMuted, setIsMuted] = useState(false)
   const [mutedUntil, setMutedUntil] = useState<string | null>(null)
   const [statusLoaded, setStatusLoaded] = useState(false)
-  const [showGiveawayForm, setShowGiveawayForm] = useState(false)
-  const [gwType, setGwType] = useState<'tag' | 'coin' | 'name-color' | 'avatar'>('tag')
-  const [gwTag, setGwTag] = useState('')
-  const [gwColor, setGwColor] = useState('gold')
-  const [gwCoins, setGwCoins] = useState('')
-  const [gwDuration, setGwDuration] = useState('60')
-  const [gwBody, setGwBody] = useState('')
-  const [gwItemId, setGwItemId] = useState('')
-  const [creatingGw, setCreatingGw] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
   const [network, setNetwork] = useState<'global' | 'isd'>('global')
   const [isdCode, setIsdCode] = useState<string | null>(null)
@@ -1235,8 +757,8 @@ export default function StudyFeedPage() {
         setCurrentUserId(uid)
         if (uid) {
           return api.feedUserProfile(uid).then(p => {
-            setIsDevUser(p.role === 'ADMIN' || p.tag === 'DEV')
-            setIsModUser((p.allTags ?? []).some(t => t.tag === 'MOD'))
+            setIsDevUser(p.role === 'ADMIN' || p.role === 'DEV')
+            setIsModUser(p.role === 'MODERATOR')
             setIsBanned(p.chatBanned)
             const activeMute = !!p.chatMutedUntil && new Date(p.chatMutedUntil) > new Date()
             setIsMuted(activeMute)
@@ -1271,12 +793,12 @@ export default function StudyFeedPage() {
                 if (currentNetwork === 'isd') {
                   setIsdCode(currentIsd => {
                     if (msg.data.isdCode === currentIsd) {
-                      setPosts(prev => [{ ...msg.data, likedByMe: false, enteredByMe: false }, ...prev])
+                      setPosts(prev => [{ ...msg.data, likedByMe: false }, ...prev])
                     }
                     return currentIsd
                   })
                 } else {
-                  setPosts(prev => [{ ...msg.data, likedByMe: false, enteredByMe: false }, ...prev])
+                  setPosts(prev => [{ ...msg.data, likedByMe: false }, ...prev])
                 }
               }
               return currentNetwork
@@ -1345,28 +867,6 @@ export default function StudyFeedPage() {
     } catch { /* ignore */ }
   }
 
-  async function handleEnterGiveaway(postId: number) {
-    try {
-      const result = await api.feedEnterGiveaway(postId)
-      const update = (p: FeedPost) => p.id === postId
-        ? { ...p, enteredByMe: result.entered, _count: { ...p._count, giveawayEntries: result.count } }
-        : p
-      setPosts(prev => prev.map(update))
-      setFollowingPosts(prev => prev.map(update))
-    } catch { /* ignore */ }
-  }
-
-  async function handleDrawGiveaway(postId: number) {
-    try {
-      const result = await api.feedDrawGiveaway(postId)
-      const update = (p: FeedPost) => p.id === postId
-        ? { ...p, giveawayWinnerId: result.winnerId, giveawayWinner: { id: result.winnerId, name: result.winnerName, email: '' } }
-        : p
-      setPosts(prev => prev.map(update))
-      setFollowingPosts(prev => prev.map(update))
-    } catch { /* ignore */ }
-  }
-
   async function handlePin(postId: number, currentlyPinned: boolean) {
     try {
       if (currentlyPinned) {
@@ -1381,42 +881,6 @@ export default function StudyFeedPage() {
         setFollowingPosts(prev => prev.map(update))
       }
     } catch { /* ignore */ }
-  }
-
-  async function handleCreateGiveaway() {
-    const coinAmt = parseInt(gwCoins)
-    if (!gwBody.trim() || creatingGw) return
-    if (gwType === 'tag' && !gwTag.trim()) return
-    if (gwType === 'coin' && (!coinAmt || coinAmt < 1)) return
-    if ((gwType === 'name-color' || gwType === 'avatar') && !gwItemId) return
-    setCreatingGw(true)
-    try {
-      let giveawayPayload: Parameters<typeof api.feedCreateGiveaway>[0]
-      if (gwType === 'coin') {
-        giveawayPayload = { body: gwBody.trim(), durationMinutes: parseInt(gwDuration) || 60, giveawayCoinAmount: coinAmt }
-      } else if (gwType === 'name-color') {
-        const item = GW_NAME_COLOR_ITEMS.find(i => i.id === gwItemId)!
-        giveawayPayload = {
-          body: gwBody.trim(), durationMinutes: parseInt(gwDuration) || 60,
-          giveawayTag: item.name, giveawayTagColor: item.value,
-          giveawayItemType: 'name-color', giveawayItemId: item.id, giveawayItemRarity: item.rarity,
-        }
-      } else if (gwType === 'avatar') {
-        const item = GW_AVATAR_ITEMS.find(i => i.id === gwItemId)!
-        giveawayPayload = {
-          body: gwBody.trim(), durationMinutes: parseInt(gwDuration) || 60,
-          giveawayTag: item.name, giveawayTagColor: item.value,
-          giveawayItemType: 'avatar', giveawayItemId: item.id, giveawayItemRarity: item.rarity,
-        }
-      } else {
-        giveawayPayload = { body: gwBody.trim(), durationMinutes: parseInt(gwDuration) || 60, giveawayTag: gwTag.trim(), giveawayTagColor: gwColor.trim() || 'gold' }
-      }
-      const post = await api.feedCreateGiveaway(giveawayPayload)
-      setPosts(prev => [post, ...prev])
-      setGwTag(''); setGwColor('gold'); setGwCoins(''); setGwBody(''); setGwDuration('60'); setGwType('tag'); setGwItemId('')
-      setShowGiveawayForm(false)
-    } catch { /* ignore */ }
-    finally { setCreatingGw(false) }
   }
 
   function handleOpenProfile(uid: number) {
@@ -1507,156 +971,29 @@ export default function StudyFeedPage() {
             </div>
           ) : (
             <div className="ns-card" style={{ padding: 16, marginBottom: 20 }}>
-              {!showGiveawayForm ? (
-                <>
-                  <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, height: 'auto', minHeight: 80, fontSize: 14, lineHeight: 1.6, padding: 14 }}
-                    placeholder={network === 'isd' ? 'Post to your ISD…' : 'What are you studying today?'}
-                    value={newPostBody}
-                    onChange={e => { setNewPostBody(e.target.value); if (postError) setPostError(null) }}
-                    rows={3}
-                  />
-                  {postError && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', marginTop: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8 }}>
-                      <BanIcon size={18}/>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#EF4444', marginBottom: 2 }}>Post blocked</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{postError}</div>
-                      </div>
-                      <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 0, flexShrink: 0 }} onClick={() => setPostError(null)}>×</button>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{newPostBody.length}/500</span>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {isDevUser && (
-                        <button
-                          className="ns-btn-ghost"
-                          style={{ height: 38, padding: '0 14px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                          onClick={() => setShowGiveawayForm(true)}
-                        >
-                          <GiftIcon size={14}/> Giveaway
-                        </button>
-                      )}
-                      <button className="ns-btn-primary" style={{ height: 38, padding: '0 20px', opacity: newPostBody.trim() && !posting ? 1 : 0.5 }}
-                        onClick={handleCreatePost} disabled={!newPostBody.trim() || posting}>
-                        {posting ? 'Posting…' : 'Post'}
-                      </button>
-                    </div>
+              <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, height: 'auto', minHeight: 80, fontSize: 14, lineHeight: 1.6, padding: 14 }}
+                placeholder={network === 'isd' ? 'Post to your ISD…' : 'What are you studying today?'}
+                value={newPostBody}
+                onChange={e => { setNewPostBody(e.target.value); if (postError) setPostError(null) }}
+                rows={3}
+              />
+              {postError && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', marginTop: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8 }}>
+                  <BanIcon size={18}/>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#EF4444', marginBottom: 2 }}>Post blocked</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{postError}</div>
                   </div>
-                </>
-              ) : (
-                /* Giveaway creator */
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'gold', display: 'flex', alignItems: 'center', gap: 4 }}><GiftIcon size={14}/> Create Giveaway</span>
-                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1 }} onClick={() => setShowGiveawayForm(false)}>×</button>
-                  </div>
-                  {/* Type toggle */}
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const }}>
-                    {([
-                      ['tag', <><TagIcon size={12}/> Tag</>],
-                      ['coin', null],
-                      ['name-color', <><PaintPaletteIcon size={12}/> Name Color</>],
-                      ['avatar', <><ImageIcon size={12}/> Avatar Effect</>],
-                    ] as Array<[('tag'|'coin'|'name-color'|'avatar'), React.ReactNode | null]>).map(([t, label]) => (
-                      <button key={t} onClick={() => { setGwType(t); setGwItemId('') }} style={{ flex: 1, minWidth: 80, height: 34, borderRadius: 8, border: `1px solid ${gwType === t ? 'gold' : 'var(--border)'}`, background: gwType === t ? 'rgba(255,215,0,0.12)' : 'transparent', color: gwType === t ? 'gold' : 'var(--text-secondary)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                        {t === 'coin' ? <><CoinIcon size={13} /> Coins</> : label}
-                      </button>
-                    ))}
-                  </div>
-                  <textarea className="ns-input" style={{ width: '100%', resize: 'vertical' as const, minHeight: 60, fontSize: 14, lineHeight: 1.6, padding: 12, marginBottom: 10 }}
-                    placeholder={
-                      gwType === 'coin' ? "Announce the giveaway… (e.g. 'Enter to win 500 coins!')"
-                      : gwType === 'name-color' ? "Announce the giveaway… (e.g. 'Win a legendary name color!')"
-                      : gwType === 'avatar' ? "Announce the giveaway… (e.g. 'Enter to win a rare Avatar effect!')"
-                      : "Announce the giveaway… (e.g. 'Enter to win a limited VIP tag!')"
-                    }
-                    value={gwBody}
-                    onChange={e => setGwBody(e.target.value)}
-                    rows={2}
-                  />
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 10 }}>
-                    {gwType === 'tag' ? (
-                      <>
-                        <input className="ns-input" style={{ flex: 1, minWidth: 100, height: 36, fontSize: 13 }}
-                          placeholder="Tag name (e.g. VIP)"
-                          value={gwTag}
-                          onChange={e => setGwTag(e.target.value)}
-                        />
-                        <input className="ns-input" style={{ width: 90, height: 36, fontSize: 13 }}
-                          placeholder="Color"
-                          value={gwColor}
-                          onChange={e => setGwColor(e.target.value)}
-                        />
-                      </>
-                    ) : gwType === 'coin' ? (
-                      <input className="ns-input" style={{ flex: 1, height: 36, fontSize: 13 }}
-                        placeholder="Coin amount (e.g. 500)"
-                        type="number"
-                        min="1"
-                        value={gwCoins}
-                        onChange={e => setGwCoins(e.target.value)}
-                      />
-                    ) : gwType === 'name-color' ? (
-                      <select className="ns-input" style={{ flex: 1, height: 36, fontSize: 13 }} value={gwItemId} onChange={e => setGwItemId(e.target.value)}>
-                        <option value="">Pick a name color…</option>
-                        {GW_NAME_COLOR_ITEMS.map(i => (
-                          <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <select className="ns-input" style={{ flex: 1, height: 36, fontSize: 13 }} value={gwItemId} onChange={e => setGwItemId(e.target.value)}>
-                        <option value="">Pick an Avatar effect…</option>
-                        {GW_AVATAR_ITEMS.map(i => (
-                          <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>
-                        ))}
-                      </select>
-                    )}
-                    <select className="ns-input" style={{ height: 36, fontSize: 13 }} value={gwDuration} onChange={e => setGwDuration(e.target.value)}>
-                      <option value="30">30 min</option>
-                      <option value="60">1 hour</option>
-                      <option value="360">6 hours</option>
-                      <option value="720">12 hours</option>
-                      <option value="1440">24 hours</option>
-                      <option value="4320">3 days</option>
-                      <option value="10080">1 week</option>
-                    </select>
-                  </div>
-                  {/* Live preview for name-color / avatar */}
-                  {(gwType === 'name-color' || gwType === 'avatar') && gwItemId && (() => {
-                    const item = gwType === 'name-color'
-                      ? GW_NAME_COLOR_ITEMS.find(i => i.id === gwItemId)
-                      : GW_AVATAR_ITEMS.find(i => i.id === gwItemId)
-                    if (!item) return null
-                    const isRainbow = item.value === 'rainbow'
-                    return (
-                      <div style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, border: '1px solid var(--border)', boxShadow: 'var(--neo-raised)' }}>
-                        {gwType === 'avatar' ? (
-                          <div className={avatarClass(item.value)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, ...avatarStyle(item.value) }}>D</div>
-                        ) : (
-                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0 }}>D</div>
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span className={gwType === 'name-color' && isRainbow ? 'name-rainbow' : ''} style={{ fontSize: 13, fontWeight: 700, ...(gwType === 'name-color' && !isRainbow ? { color: item.value } : {}) }}>
-                            DUMMY
-                          </span>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 6 }}>[Student] · {item.rarity}</span>
-                        </div>
-                      </div>
-                    )
-                  })()}
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <button className="ns-btn-ghost" style={{ height: 36, padding: '0 14px', fontSize: 13 }} onClick={() => setShowGiveawayForm(false)}>Cancel</button>
-                    <button
-                      style={{ height: 36, padding: '0 20px', fontSize: 13, fontWeight: 700, background: 'gold', color: '#000', border: 'none', borderRadius: 8, cursor: 'pointer', opacity: gwBody.trim() && (gwType === 'coin' ? parseInt(gwCoins) > 0 : gwType === 'name-color' || gwType === 'avatar' ? !!gwItemId : gwTag.trim()) && !creatingGw ? 1 : 0.5 }}
-                      onClick={handleCreateGiveaway}
-                      disabled={!gwBody.trim() || (gwType === 'coin' ? !parseInt(gwCoins) : gwType === 'name-color' || gwType === 'avatar' ? !gwItemId : !gwTag.trim()) || creatingGw}
-                    >
-                      {creatingGw ? 'Creating…' : 'Launch Giveaway'}
-                    </button>
-                  </div>
+                  <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 0, flexShrink: 0 }} onClick={() => setPostError(null)}>×</button>
                 </div>
               )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{newPostBody.length}/500</span>
+                <button className="ns-btn-primary" style={{ height: 38, padding: '0 20px', opacity: newPostBody.trim() && !posting ? 1 : 0.5 }}
+                  onClick={handleCreatePost} disabled={!newPostBody.trim() || posting}>
+                  {posting ? 'Posting…' : 'Post'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -1691,8 +1028,7 @@ export default function StudyFeedPage() {
                 {posts.map(post => (
                   <PostCard key={post.id} post={post} onLike={handleLike} onDelete={handleDelete}
                     onOpenComments={id => setCommentPostId(id)} onOpenProfile={id => setProfileUserId(id)}
-                    onFollow={handleFollow} onEnterGiveaway={handleEnterGiveaway}
-                    onDrawGiveaway={handleDrawGiveaway} onPin={handlePin}
+                    onFollow={handleFollow} onPin={handlePin}
                     currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} isModUser={isModUser} />
                 ))}
                 <div ref={sentinelRef} style={{ height: 1 }} />
@@ -1735,8 +1071,7 @@ export default function StudyFeedPage() {
                 {recentFollowingPosts.map(post => (
                   <PostCard key={post.id} post={post} onLike={handleLike} onDelete={handleDelete}
                     onOpenComments={id => setCommentPostId(id)} onOpenProfile={id => setProfileUserId(id)}
-                    onFollow={handleFollow} onEnterGiveaway={handleEnterGiveaway}
-                    onDrawGiveaway={handleDrawGiveaway} onPin={handlePin}
+                    onFollow={handleFollow} onPin={handlePin}
                     currentUserId={currentUserId} followedUsers={followedUsers} isDevUser={isDevUser} isModUser={isModUser} />
                 ))}
               </>
@@ -1789,26 +1124,11 @@ export default function StudyFeedPage() {
 const P: Record<string, React.CSSProperties> = {
   avatar:     { width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 },
   authorName: { fontSize: 14, fontWeight: 700, color: 'var(--text)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 },
-  tag:        { fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4 },
-  tagDev:     { fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)' },
-  tagGod:     { fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)' },
   followBtn:  { padding: '2px 9px', borderRadius: 5, border: '1px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontWeight: 600, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' as const },
   deleteBtn:  { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center' },
   actionBtn:  { background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 6, fontWeight: 600 },
 }
 
-function tagCssClass(tag?: string | null, tagColor?: string | null): string {
-  if (tag === 'DEV') return 'tag-rainbow'
-  if (tag === 'VIP') return 'tag-mythic'
-  if (tag === 'GOAT') return 'tag-god'
-  if (tag === 'Prodigy') return 'tag-prodigy'
-  if (tag === 'Valedictorian') return 'tag-valedictorian'
-  if (tagColor === 'curse') return 'tag-curse'
-  return ''
-}
-function isAnimatedTag(tag?: string | null): boolean {
-  return tag === 'DEV' || tag === 'VIP' || tag === 'GOAT' || tag === 'Prodigy' || tag === 'Valedictorian'
-}
 
 const N: Record<string, React.CSSProperties> = {
   panel:   { position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 320, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.35)', zIndex: 300, overflow: 'hidden' },
@@ -1829,9 +1149,6 @@ const O: Record<string, React.CSSProperties> = {
   header:     { display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid var(--border)' },
   avatar:     { width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, flexShrink: 0 },
   name:       { fontSize: 19, fontWeight: 800, color: 'var(--text)', marginBottom: 3 },
-  tag:        { fontSize: 12, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-dim)', padding: '2px 8px', borderRadius: 4, display: 'inline-block' },
-  tagDev:     { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #ff6b6b', color: '#ff6b6b', background: 'rgba(255,107,107,0.12)', display: 'inline-block' },
-  tagGod:     { fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, border: '1px solid #b8860b', color: '#b8860b', background: 'rgba(184,134,11,0.10)', display: 'inline-block' },
   email:      { fontSize: 12, color: 'var(--text-muted)', marginTop: 3 },
   closeBtn:   { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: 6, display: 'flex', alignItems: 'center', flexShrink: 0 },
   stats:      { display: 'flex', justifyContent: 'space-around', padding: '14px 0', borderBottom: '1px solid var(--border)', marginBottom: 16 },

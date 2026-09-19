@@ -4,37 +4,31 @@ import { AuthRequest } from './auth'
 
 interface DevPowerFields {
   role: string
-  tag: string | null
-  allTags: unknown
 }
 
 // Pure predicate shared by hasDevPowers (single-user, request path) and any
 // bulk query that needs to filter a list of already-fetched users (e.g. the
 // autonomous job scheduler) without a DB round-trip per user.
 export function isDevPowerUser(user: DevPowerFields): boolean {
-  if (user.role === 'ADMIN' || user.role === 'DEV' || user.tag === 'DEV') return true
-  const tags = (user.allTags as Array<{ tag: string }> | null) ?? []
-  return Array.isArray(tags) && tags.some(t => t.tag === 'DEV')
+  return user.role === 'ADMIN' || user.role === 'DEV'
 }
 
 export async function hasDevPowers(userId: number): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true, tag: true, allTags: true },
+    select: { role: true },
   })
   if (!user) return false
   return isDevPowerUser(user)
 }
 
-async function hasModOrDevPowers(userId: number): Promise<boolean> {
+export async function hasModOrDevPowers(userId: number): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true, tag: true, allTags: true },
+    select: { role: true },
   })
   if (!user) return false
-  if (user.role === 'ADMIN' || user.role === 'DEV' || user.tag === 'DEV') return true
-  const tags = (user.allTags as Array<{ tag: string }> | null) ?? []
-  return Array.isArray(tags) && tags.some(t => t.tag === 'DEV' || t.tag === 'MOD')
+  return user.role === 'ADMIN' || user.role === 'DEV' || user.role === 'MODERATOR'
 }
 
 export async function requireAdmin(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
