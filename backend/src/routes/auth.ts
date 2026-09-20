@@ -1209,6 +1209,12 @@ router.get('/oauth/google/callback', async (req: Request, res: Response): Promis
     const intent = statePayload.intent === 'login' ? 'login' : 'signup'
 
     const redirect = encodeURIComponent(`${appUrl}/api/auth/oauth/google/callback`)
+    // Vercel logs showed this handler hanging up to the full 60s function
+    // ceiling — native fetch() has no default timeout, so a slow/degraded
+    // Google endpoint held the whole request open with no way to fail fast.
+    // An explicit timeout means a Google-side hiccup surfaces as a clean
+    // "try again" redirect in a few seconds instead of a multi-second (or
+    // full 60s) hang.
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1216,12 +1222,14 @@ router.get('/oauth/google/callback', async (req: Request, res: Response): Promis
         code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!,
         redirect_uri: decodeURIComponent(redirect), grant_type: 'authorization_code',
       }),
+      signal: AbortSignal.timeout(10000),
     })
     const tokens = await tokenRes.json() as { access_token?: string; id_token?: string }
     if (!tokens.access_token) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
 
     const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
+      signal: AbortSignal.timeout(10000),
     })
     const info = await userRes.json() as { sub?: string; email?: string; name?: string }
     if (!info.sub || !info.email) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
@@ -1257,6 +1265,9 @@ router.get('/oauth/microsoft/callback', async (req: Request, res: Response): Pro
     const intent = statePayload.intent === 'login' ? 'login' : 'signup'
 
     const redirect = encodeURIComponent(`${appUrl}/api/auth/oauth/microsoft/callback`)
+    // See the matching comment in the Google callback above — an explicit
+    // timeout here means a slow/degraded Microsoft endpoint fails fast and
+    // cleanly instead of hanging the request up to the full function ceiling.
     const tokenRes = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1264,12 +1275,14 @@ router.get('/oauth/microsoft/callback', async (req: Request, res: Response): Pro
         code, client_id: process.env.MICROSOFT_CLIENT_ID!, client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
         redirect_uri: decodeURIComponent(redirect), grant_type: 'authorization_code',
       }),
+      signal: AbortSignal.timeout(10000),
     })
     const tokens = await tokenRes.json() as { access_token?: string }
     if (!tokens.access_token) { res.redirect(`${appUrl}/login?error=oauth_failed`); return }
 
     const userRes = await fetch('https://graph.microsoft.com/v1.0/me?$select=id,mail,displayName,userPrincipalName', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
+      signal: AbortSignal.timeout(10000),
     })
     const info = await userRes.json() as { id?: string; mail?: string; userPrincipalName?: string; displayName?: string }
     const email = info.mail ?? info.userPrincipalName
