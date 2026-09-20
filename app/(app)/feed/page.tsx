@@ -161,6 +161,9 @@ function UserProfileOverlay({ userId, onClose, currentUserId, onViewPost }: { us
                 {profile.hacName && parseHacName(profile.hacName) !== displayName(profile) && (
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>{parseHacName(profile.hacName)}</div>
                 )}
+                {profile.lastSeenAt && (
+                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>Last active {timeAgo(profile.lastSeenAt)}</div>
+                )}
                 {(profile.chatBanned || (profile.chatMutedUntil && new Date(profile.chatMutedUntil) > new Date())) && (
                   <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4, display: 'inline-block', ...(profile.chatBanned ? { color: '#EF4444', background: '#EF444422', border: '1px solid #EF4444' } : { color: '#f97316', background: '#f9731622', border: '1px solid #f97316' }) }}>
                     {profile.chatBanned ? 'BANNED' : 'MUTED'}

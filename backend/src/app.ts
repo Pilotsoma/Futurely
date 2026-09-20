@@ -263,6 +263,17 @@ app.get('/health', async (_req, res) => {
   }
 })
 
+// Backs components/ui/UpdateBanner.tsx's poll — the client compares this
+// against the SHA it was built with (NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA,
+// baked in at build time) and prompts a refresh when they differ, i.e. when
+// Vercel has deployed a newer commit than the one the open tab is running.
+// VERCEL_GIT_COMMIT_SHA is provided automatically by Vercel's Git
+// integration — no config needed — and is 'unknown' in any other runtime
+// (local dev, Render), where there's nothing meaningful to compare against.
+app.get('/version', (_req, res) => {
+  res.json({ sha: process.env.VERCEL_GIT_COMMIT_SHA ?? 'unknown' })
+})
+
 app.get('/health/connectivity', async (_req, res) => {
   const testUrl = 'https://homeaccess.katyisd.org/HomeAccess/Account/LogOn'
 
