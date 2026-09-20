@@ -18,19 +18,17 @@ neonConfig.webSocketConstructor = ws
 // on its own, several minutes later. max/connectionTimeoutMillis/
 // idleTimeoutMillis keep this instance's own footprint small and make
 // exhaustion fail fast (a clear 5xx) instead of hanging.
-// Measured against production: Neon's compute needs a bit over 8s to wake
-// from auto-suspend on a cold request, so an 8s timeout was cutting the
-// connection off right as it was about to succeed — turning "slow" into "hard
-// failure" for every request that happened to land during a cold-start
-// window (this is what made login/refresh intermittently fail outright
-// rather than just being slow). 10s gives the wake-up enough room, and the
-// retry-once wrapper below means even a request unlucky enough to hit a
-// timeout gets one more chance — which succeeds near-instantly once the
-// compute is actually warm, per the same measurement.
+// Neon's compute is now configured to never auto-suspend (scale-to-zero
+// disabled), so the multi-second cold-start wake-up this timeout was
+// originally sized for shouldn't happen anymore — a normal connection
+// should establish in well under a second. 5s is generous headroom for a
+// genuinely healthy connection while still failing fast (a clear 5xx) if
+// something is actually wrong, rather than leaving a request hanging in
+// silence for a long time before anyone finds out.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 5,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
   idleTimeoutMillis: 10000,
 })
 
@@ -52,14 +50,13 @@ const adapter = new PrismaNeon(pool)
 
 const basePrisma = new PrismaClient({ adapter })
 
-// Neon compute waking from auto-suspend is the single most common cause of a
-// query failing here — and it's transient by definition: the compute is
-// warm within a second or two of the wake-up completing, so the very next
-// attempt almost always succeeds (measured: an 8.2s cold-start timeout
-// followed immediately by a 0.3s success on retry). Retrying once on exactly
-// this class of error turns an otherwise-user-facing failure into invisible
-// added latency, without masking real, non-transient errors (bad queries,
-// constraint violations, etc. are never retried).
+// Even with auto-suspend disabled, a connection can still fail transiently
+// (a dropped socket, a brief network blip) — retrying once turns that into
+// invisible added latency instead of a user-facing failure, without masking
+// real, non-transient errors (bad queries, constraint violations, etc. are
+// never retried). With the shorter timeout above, the worst case for a
+// request that hits two real connection failures in a row is ~10s, not the
+// ~20s it would have been at the old cold-start-sized timeout.
 export function isTransientConnectionError(err: unknown): boolean {
   if (!(err instanceof Error)) return false
   const msg = err.message.toLowerCase()
