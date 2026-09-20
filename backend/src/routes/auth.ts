@@ -24,8 +24,13 @@ const VERIFY_TOKEN_EXPIRY_HOURS = 24
 const MAX_FAILED_ATTEMPTS = 5
 const LOCKOUT_DURATION_MS = 2 * 60 * 60 * 1000 // 2 hours
 
-// Stable dummy hash used to normalise timing when user doesn't exist
-const DUMMY_HASH = '$2a$12$RhIbHdMHqDGwkVDSMsqmNOE7I1NLSq9k3n7N4wWfpjBYUdpFCt/0G'
+// Stable dummy hash used to normalise timing when user doesn't exist.
+// Cost 10 to match BCRYPT_ROUNDS (the previous cost-12 hash made every
+// failed-login/nonexistent-email check slower than a real one for no
+// reason — bcryptjs's compare is CPU-bound on Node's single event-loop
+// thread, so this runs on every login attempt and each higher cost step
+// roughly doubles that cost, compounding badly under concurrent requests).
+const DUMMY_HASH = '$2a$10$CZdOXm6/BjqVSUG1CnnyROga5aqbkt081inzJU2SFu8yVyfiyjRRq'
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 
