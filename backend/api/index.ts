@@ -13,7 +13,15 @@ ensureSchema().catch(err => console.error('[startup]', err))
 // vercel.json's "builds", not compiled by Next.js). The `config` export below
 // is the actual @vercel/node convention for this.
 // Has no effect on non-Vercel runtimes (local dev, Render).
-export const config = { maxDuration: 60 }
+// memory: a page load fires roughly a dozen API calls concurrently
+// (auth/me, several /integrations/grades/* endpoints, notifications,
+// assignments, canvas status, etc.), which can all land on the same warm
+// instance — production logs showed a crash ("Node.js process exited with
+// exit status: 129") at the exact moment ~12 such requests hit at once,
+// consistent with the instance running out of memory. 1024 is the max
+// Hobby-plan allows; this is a no-op if already at that ceiling, but raises
+// it if the plan supports more.
+export const config = { maxDuration: 60, memory: 1024 }
 
 export default function handler(req: any, res: any): void {
   req.url = (req.url ?? '/').replace(/^\/api/, '') || '/'

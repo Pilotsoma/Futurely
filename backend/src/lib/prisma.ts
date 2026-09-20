@@ -7,27 +7,30 @@ import { logger } from '../common/logger'
 neonConfig.webSocketConstructor = ws
 
 // This backend runs as a stateless Vercel serverless function (see
-// backend/api/index.ts) — every cold-started instance creates its own Pool,
-// so a traffic burst (e.g. the cold-start stampede right after a deploy, or
-// after Vercel scales idle instances down) can spin up many Pools at once,
-// each opening connections against the same Neon database. Without explicit
-// limits here, a saturated connection budget doesn't fail fast: `pg`-style
-// pools default connectionTimeoutMillis to 0 (no timeout), so a query
-// waiting for a free client queues indefinitely instead of erroring — which
-// surfaced as requests hanging forever until the pressure eventually eased
-// on its own, several minutes later. max/connectionTimeoutMillis/
-// idleTimeoutMillis keep this instance's own footprint small and make
-// exhaustion fail fast (a clear 5xx) instead of hanging.
-// Neon's compute is now configured to never auto-suspend (scale-to-zero
-// disabled), so the multi-second cold-start wake-up this timeout was
-// originally sized for shouldn't happen anymore — a normal connection
-// should establish in well under a second. 5s is generous headroom for a
-// genuinely healthy connection while still failing fast (a clear 5xx) if
-// something is actually wrong, rather than leaving a request hanging in
-// silence for a long time before anyone finds out.
+// backend/api/index.ts). Without explicit limits here, a saturated
+// connection budget doesn't fail fast: `pg`-style pools default
+// connectionTimeoutMillis to 0 (no timeout), so a query waiting for a free
+// client queues indefinitely instead of erroring. connectionTimeoutMillis/
+// idleTimeoutMillis make exhaustion fail fast (a clear 5xx) instead of
+// hanging; Neon's compute is now configured to never auto-suspend, so a
+// healthy connection should establish in well under a second, and 5s is
+// generous headroom for that while still failing fast if something's wrong.
+//
+// max was previously 5, sized to avoid exceeding Neon's connection budget
+// if many serverless instances each opened their own pool at once. Real
+// production logs showed this was too low in a different way: a single page
+// load fires roughly a dozen API requests concurrently, and when several
+// land on the same warm instance they compete for just 5 connections,
+// queuing (and sometimes timing out) rather than running in parallel — this
+// is what caused the instance to crash under load and cascade into 60s
+// timeouts on other endpoints. Neon's actual limit here is 894 direct
+// connections, so 5 per instance was far too conservative; 20 gives real
+// headroom for a single instance's concurrent request burst while still
+// being nowhere near Neon's actual ceiling even multiplied across many
+// concurrent instances.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 5,
+  max: 20,
   connectionTimeoutMillis: 5000,
   idleTimeoutMillis: 10000,
 })
