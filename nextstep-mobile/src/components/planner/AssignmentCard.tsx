@@ -2,7 +2,7 @@ import React, { useCallback } from 'react'
 import { TouchableOpacity, View } from 'react-native'
 import { CheckCircleIcon, CircleIcon } from '../icons'
 import Text from '../ui/Text'
-import { colors } from '../../constants/colors'
+import { colors } from '../../theme/tokens'
 import { formatDuration } from '../../utils/formatDuration'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ export default function AssignmentCard({
         <Text
           variant="h3"
           numberOfLines={2}
-          color={completed ? colors.textMuted : colors.textPrimary}
+          color={completed ? colors.textMuted : colors.text}
           className={`mb-1.5 ${completed ? 'line-through' : ''}`}
         >
           {title}

@@ -10,14 +10,14 @@ interface InputProps extends TextInputProps {
 export function Input({ label, error, style, onFocus, onBlur, multiline, ...rest }: InputProps): React.JSX.Element {
   const [focused, setFocused] = useState(false)
 
-  const borderColor = error ? colors.error : focused ? colors.primary : colors.border
+  const borderColor = error ? colors.tierRed : focused ? colors.accent : colors.cardBorder
 
   return (
     <View style={styles.container}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         style={[styles.input, { borderColor }, multiline && styles.inputMultiline, style]}
-        placeholderTextColor={colors.textSecondary}
+        placeholderTextColor={colors.textDim}
         onFocus={(e) => {
           setFocused(true)
           onFocus?.(e)
@@ -37,11 +37,11 @@ export function Input({ label, error, style, onFocus, onBlur, multiline, ...rest
 
 const styles = StyleSheet.create({
   container: { gap: spacing.xs },
-  label: { ...typography.label, color: colors.textSecondary },
+  label: { ...typography.label, color: colors.textDim },
   input: {
     height: 48,
     borderWidth: 1,
-    borderRadius: radii.sm,
+    borderRadius: radii.input,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.surface2,
     color: colors.text,
@@ -53,5 +53,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     textAlignVertical: 'top',
   },
-  error: { ...typography.caption, color: colors.error },
+  error: { ...typography.caption, color: colors.tierRed },
 })

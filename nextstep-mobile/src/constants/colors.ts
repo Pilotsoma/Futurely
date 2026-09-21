@@ -1,3 +1,4 @@
+/** @deprecated Use `src/theme/tokens.ts` for all color tokens. This file is a holdout from the original palette and will be removed once all three of its importers have been migrated. */
 // Futurely brand design tokens
 export const colors = {
   // Brand primaries

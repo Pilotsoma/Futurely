@@ -4,72 +4,162 @@
 
 import { Platform, type ViewStyle } from 'react-native'
 
-// Palette + gradients below match exact computed-style values extracted live from
-// the Figma prototype (https://cute-near-11852013.figma.site) via OKLCH->sRGB
-// conversion — not estimated from screenshots. See melodic-wobbling-pillow.md plan.
+// ---------------------------------------------------------------------------
+// Color palette — electric blue / teal brand, Futurely v2 design system
+// ---------------------------------------------------------------------------
+
 export const colors = {
-  primary: '#7F22FE',
-  primaryDark: '#5B0EBF',
-  primaryDim: 'rgba(127, 34, 254, 0.16)',
-  primaryGlow: 'rgba(127, 34, 254, 0.4)',
-  bg: '#07080F',
-  surface: '#0D0E1A',
-  surface2: '#13141F',
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderHover: 'rgba(255, 255, 255, 0.14)',
-  text: '#F0F1FF',
-  textSecondary: '#9497AE',
-  textMuted: '#565873',
-  success: '#00D492',
-  warning: '#F59E0B',
-  error: '#FF6467',
-  orange: '#F97316',
-  info: '#00E5FF',
-  purple: '#7C3AED',
-  buttonSecondaryBorder: 'rgba(255, 255, 255, 0.1)',
+  // ── Core surface tokens ──────────────────────────────────────────────────
+  bg:           '#0A0E1C',
+  cardFill:     'rgba(255, 255, 255, 0.05)',
+  cardBorder:   'rgba(255, 255, 255, 0.09)',
+  cardFallback: '#131A32',  // solid fallback where blur isn't available
+  divider:      'rgba(255, 255, 255, 0.07)',
+
+  // ── Text ─────────────────────────────────────────────────────────────────
+  text:      '#F3F5FA',
+  textDim:   '#8991AE',
+  textFaint: '#5A6280',
+
+  // ── Brand accents ─────────────────────────────────────────────────────────
+  // accent = electric blue — CTAs, active nav/tab state, focus rings
+  accent:    '#4C7CFF',
+  accentDim: 'rgba(76, 124, 255, 0.16)',
+  // accent2 = teal — progress, sync/trend-positive, auto-generated items
+  accent2:    '#22D3B5',
+  accent2Dim: 'rgba(34, 211, 181, 0.16)',
+
+  // ── Grade/severity tier colors ────────────────────────────────────────────
+  // Used ONLY for performance signals (grade pills, GPA trend, school-tier
+  // badges, checklist status). NEVER reuse for subject/category identity tags.
+  tierGreen:   '#34D399',
+  tierGreenBg: 'rgba(52, 211, 153, 0.16)',   // A-range / complete / "safety"
+  tierAmber:   '#FBBF24',
+  tierAmberBg: 'rgba(251, 191, 36, 0.16)',   // B-range / in progress / "target"
+  tierRed:     '#F87171',
+  tierRedBg:   'rgba(248, 113, 113, 0.16)',  // C- and below / not started / "reach" / Required flags
+
+  // ── Special-purpose tokens ────────────────────────────────────────────────
+  gold:           '#F0B429',              // achievement/streak chips ONLY
+  goldBg:         'rgba(240, 180, 41, 0.16)',
+  insetHighlight: 'rgba(255, 255, 255, 0.06)',  // inset top highlight on cards
+  shadowBase:     'rgba(0, 0, 0, 0.2)',
+
+  // ── Backward-compatible aliases ───────────────────────────────────────────
+  // Keep existing screens/components compiling while the redesign migrates
+  // forward to the new semantic tokens above.
+  // @deprecated — use the semantic tokens above in new code.
+  primary:               '#4C7CFF',   // → accent
+  primaryDark:           '#2B5CCC',
+  primaryDim:            'rgba(76, 124, 255, 0.16)',  // → accentDim
+  primaryGlow:           'rgba(76, 124, 255, 0.4)',
+  surface:               '#131A32',   // → cardFallback
+  surface2:              '#1C2647',   // slightly lighter solid surface
+  border:                'rgba(255, 255, 255, 0.09)',  // → cardBorder
+  borderHover:           'rgba(255, 255, 255, 0.14)',
+  textSecondary:         '#8991AE',   // → textDim
+  textMuted:             '#5A6280',   // → textFaint
+  success:               '#34D399',   // → tierGreen
+  warning:               '#FBBF24',   // → tierAmber
+  error:                 '#F87171',   // → tierRed
+  orange:                '#F97316',
+  info:                  '#22D3B5',   // → accent2
+  purple:                '#A78BFA',
+  buttonSecondaryBorder: 'rgba(255, 255, 255, 0.09)',  // → cardBorder
 } as const
 
-// Diagonal fills used by hero/gradient cards and quick-action icon tiles —
-// pass to react-native-svg's <LinearGradient> (no expo-linear-gradient dependency).
+// ---------------------------------------------------------------------------
+// Subject / category identity palette
+// ---------------------------------------------------------------------------
+// Used for icons, calendar tags, dot indicators — arbitrary subject names.
+// NEVER reuse tierGreen/Amber/Red here (severity vs. identity are distinct).
+
+export const subjectPalette = [
+  '#4C7CFF',
+  '#A78BFA',
+  '#60A5FA',
+  '#818CF8',
+  '#F472B6',
+  '#FB923C',
+  '#22D3B5',
+] as const
+
+// Deterministic hash so the same subject string always maps to the same color.
+export function getSubjectColor(subjectKey: string): string {
+  let hash = 0
+  for (let i = 0; i < subjectKey.length; i++) {
+    hash = (hash * 31 + subjectKey.charCodeAt(i)) >>> 0
+  }
+  return subjectPalette[hash % subjectPalette.length]
+}
+
+// ---------------------------------------------------------------------------
+// Grade tier color mapping
+// ---------------------------------------------------------------------------
+// A-range → tierGreen, B-range → tierAmber, C+ and below → tierRed.
+// Replaces the old 5-color gradeColors map. Blue (accent) is reserved
+// exclusively for interactive/brand elements in v2 — never for grade signals.
+
+export function getGradeTierColor(letter: string): { color: string; bg: string } {
+  const normalized = letter.trim().charAt(0).toUpperCase()
+  if (normalized === 'A') return { color: colors.tierGreen, bg: colors.tierGreenBg }
+  if (normalized === 'B') return { color: colors.tierAmber, bg: colors.tierAmberBg }
+  return { color: colors.tierRed, bg: colors.tierRedBg }
+}
+
+// ---------------------------------------------------------------------------
+// Gradients — diagonal fills for hero/quick-action tiles
+// (passed to react-native-svg's <LinearGradient>; no expo-linear-gradient dep)
+// ---------------------------------------------------------------------------
+
 export const gradients = {
-  hero: ['#7008E7', '#312C85'] as const,
-  accent: ['#7F22FE', '#4F39F6'] as const,
+  hero:   ['#1E3A8A', '#0F1F4A'] as const,  // rich blue → deep navy
+  accent: ['#4C7CFF', '#22D3B5'] as const,  // electric blue → teal
 } as const
 
-export const gradeColors = {
-  A: colors.success,
-  B: '#4F8CFF',
-  C: colors.warning,
-  D: colors.orange,
-  F: colors.error,
-} as const
+// ---------------------------------------------------------------------------
+// Spacing
+// ---------------------------------------------------------------------------
 
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  ms: 12,
-  md: 16,
-  lg: 20,
-  xl: 24,
-  xxl: 32,
-  xxxl: 40,
-  huge: 48,
-  massive: 64,
-  cardPadding: 16,
+  xs:           4,
+  sm:           8,
+  ms:           12,
+  md:           16,
+  lg:           20,
+  xl:           24,
+  xxl:          32,
+  xxxl:         40,
+  huge:         48,
+  massive:      64,
+  cardPadding:  16,
   screenPadding: 20,
-  sectionGap: 24,
+  sectionGap:   24,
 } as const
 
-// Progressive scale matching what the web app actually ships (app/globals.css,
-// app/login/page.tsx inline styles) — DESIGN_SYSTEM.md's flatter 8/12 scale was
-// stale relative to the real brand.
+// ---------------------------------------------------------------------------
+// Border radii
+// ---------------------------------------------------------------------------
+// Semantic keys (new): card, input, button, pill.
+// Legacy keys (kept for backward compat): xs, sm, md, lg, xl.
+
 export const radii = {
+  // Legacy keys — retained so existing screen code still resolves
   xs: 8,
   sm: 10,
   md: 16,
   lg: 20,
   xl: 24,
+  // Semantic keys — use these in new components
+  card:   20,
+  input:  14,
+  button: 18,
+  pill:   999,
 } as const
+
+// ---------------------------------------------------------------------------
+// Shadow / elevation helpers
+// ---------------------------------------------------------------------------
 
 function makeShadow(opacity: number, radius: number, elevationValue: number, offsetY: number): ViewStyle {
   return Platform.select<ViewStyle>({
@@ -83,44 +173,75 @@ function makeShadow(opacity: number, radius: number, elevationValue: number, off
   }) as ViewStyle
 }
 
-// Mirrors web's --shadow-sm/--shadow-md (app/globals.css), tuned for RN's
-// shadow props (dark-theme opacities carried over from the dark `html[data-theme="dark"]` block).
 export const elevation = {
-  sm: makeShadow(0.22, 6, 3, 1),
-  md: makeShadow(0.34, 12, 6, 3),
+  sm:   makeShadow(0.22, 6,  3, 1),
+  md:   makeShadow(0.34, 12, 6, 3),
+  card: makeShadow(0.2,  2,  1, 1),  // matches '0 1px 2px rgba(0,0,0,0.2)'
 } as const
 
-// Font family names match the keys @expo-google-fonts/inter registers via useFonts
-// (see App.tsx) — mirrors web's Inter typeface (app/globals.css / next/font) so the
-// app no longer inherits whatever font-style setting the device happens to have.
+// Inset top highlight — apply to glass/card inner views via borderTop
+export const cardInsetHighlight: ViewStyle = {
+  borderTopWidth: 1,
+  borderTopColor: colors.insetHighlight,
+}
+
+// ---------------------------------------------------------------------------
+// Typography
+// ---------------------------------------------------------------------------
+
+// Font family names match keys registered via useFonts in App.tsx.
+// Space Grotesk → headings/numerals/stats (data-forward contexts)
+// Plus Jakarta Sans → body copy and UI labels
+// Inter → legacy (kept for backward compat, prefer Jakarta for new body copy)
+
 export const fonts = {
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
+  // Inter (legacy/compat)
+  regular:  'Inter_400Regular',
+  medium:   'Inter_500Medium',
   semiBold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
+  bold:     'Inter_700Bold',
+  // Space Grotesk — headings, numerals, GPA figures
+  displayMedium:   'SpaceGrotesk_500Medium',
+  displaySemiBold: 'SpaceGrotesk_600SemiBold',
+  displayBold:     'SpaceGrotesk_700Bold',
+  // Plus Jakarta Sans — body copy, UI labels
+  bodyRegular:  'PlusJakartaSans_400Regular',
+  bodyMedium:   'PlusJakartaSans_500Medium',
+  bodySemiBold: 'PlusJakartaSans_600SemiBold',
+  bodyBold:     'PlusJakartaSans_700Bold',
 } as const
 
 export const typography = {
-  display: { fontSize: 32, fontFamily: fonts.bold, fontWeight: '700' as const },
-  h1: { fontSize: 24, fontFamily: fonts.bold, fontWeight: '700' as const },
-  h2: { fontSize: 20, fontFamily: fonts.semiBold, fontWeight: '600' as const },
-  h3: { fontSize: 16, fontFamily: fonts.semiBold, fontWeight: '600' as const },
-  body: { fontSize: 15, fontFamily: fonts.regular, fontWeight: '400' as const, lineHeight: 15 * 1.6 },
-  caption: { fontSize: 12, fontFamily: fonts.regular, fontWeight: '400' as const },
+  display: { fontSize: 32, fontFamily: fonts.displayBold,    fontWeight: '700' as const },
+  h1:      { fontSize: 24, fontFamily: fonts.displayBold,    fontWeight: '700' as const },
+  h2:      { fontSize: 20, fontFamily: fonts.displaySemiBold, fontWeight: '600' as const },
+  h3:      { fontSize: 16, fontFamily: fonts.displaySemiBold, fontWeight: '600' as const },
+  body: {
+    fontSize: 15,
+    fontFamily: fonts.bodyRegular,
+    fontWeight: '400' as const,
+    lineHeight: 15 * 1.6,
+  },
+  caption: { fontSize: 12, fontFamily: fonts.bodyRegular, fontWeight: '400' as const },
   label: {
     fontSize: 12,
-    fontFamily: fonts.medium,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500' as const,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.6,
   },
 } as const
 
+// ---------------------------------------------------------------------------
+// Accessibility
+// ---------------------------------------------------------------------------
+
 export const touchTarget = 44
 
-// Mirrors web's --dur-fast/base/slow and --ease-spring/out-expo (app/globals.css).
-// Reanimated's `Easing` uses bezier control points, not CSS cubic-bezier strings,
-// so these are duration/spring-config pairs rather than literal easing curves.
+// ---------------------------------------------------------------------------
+// Animation
+// ---------------------------------------------------------------------------
+
 export const animation = {
   navTransitionMs: 250,
   microInteractionMs: 150,

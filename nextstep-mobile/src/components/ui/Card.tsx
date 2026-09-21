@@ -1,17 +1,34 @@
 import React from 'react'
 import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native'
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg'
-import { colors, gradients, radii, spacing } from '../../theme/tokens'
+import { BlurView } from 'expo-blur'
+import {
+  cardInsetHighlight,
+  colors,
+  elevation,
+  gradients,
+  radii,
+  spacing,
+} from '../../theme/tokens'
 
 interface CardProps {
   children: React.ReactNode
   style?: StyleProp<ViewStyle>
-  /** 'gradient' renders the diagonal hero fill (GPA card, etc.) via react-native-svg — no expo-linear-gradient dependency. */
-  variant?: 'default' | 'gradient'
-  /** Gradient stop colors, defaults to tokens.gradients.hero. */
+  /**
+   * 'default'  — solid surface card (backward-compatible default)
+   * 'gradient' — diagonal hero fill via react-native-svg (no expo-linear-gradient dep)
+   * 'glass'    — frosted glass via expo-blur + semi-transparent overlay
+   */
+  variant?: 'default' | 'gradient' | 'glass'
+  /** Gradient stop colors for `variant="gradient"`. Defaults to tokens.gradients.hero. */
   gradientColors?: readonly [string, string]
-  /** Corner radius for the gradient fill — must match `style`'s borderRadius if overridden. */
+  /** Corner radius — must match `style`'s borderRadius if overridden. */
   radius?: number
+  /**
+   * Glass variant only: disable BlurView and fall back to a solid `cardFallback`
+   * background. Useful for Android contexts where blur has a meaningful perf cost.
+   */
+  disableBlur?: boolean
 }
 
 export function Card({
@@ -19,14 +36,12 @@ export function Card({
   style,
   variant = 'default',
   gradientColors = gradients.hero,
-  radius = radii.md,
+  radius = radii.card,
+  disableBlur = false,
 }: CardProps): React.JSX.Element {
   if (variant === 'gradient') {
-    // `style` (gap/padding/alignItems etc.) applies to the content layer, not the
-    // outer wrapper — the outer wrapper only owns the radius/border/gradient clip,
-    // controlled separately via the `radius` prop, since a single merged style
-    // can't cleanly split "visual" (goes on the gradient wrapper) from "layout"
-    // (goes on the children) concerns.
+    // `style` goes on the content layer (gap/padding/alignItems, etc.) so that
+    // caller overrides apply to layout, not the gradient clip wrapper.
     return (
       <View style={[styles.gradientCard, { borderRadius: radius }]}>
         <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
@@ -43,23 +58,60 @@ export function Card({
     )
   }
 
-  return <View style={[styles.card, style]}>{children}</View>
+  if (variant === 'glass') {
+    return (
+      <View style={[styles.glassOuter, { borderRadius: radius }, elevation.card]}>
+        {/* Blur layer — absolute fill, clipped to the outer border radius */}
+        {!disableBlur && (
+          <BlurView
+            intensity={18}
+            tint="dark"
+            style={StyleSheet.absoluteFillObject}
+          />
+        )}
+        {/* Content + frosted overlay */}
+        <View
+          style={[
+            styles.glassInner,
+            {
+              borderRadius: radius,
+              backgroundColor: disableBlur ? colors.cardFallback : colors.cardFill,
+            },
+            cardInsetHighlight,
+            style,
+          ]}
+        >
+          {children}
+        </View>
+      </View>
+    )
+  }
+
+  return <View style={[styles.card, { borderRadius: radius }, style]}>{children}</View>
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
+    borderColor: colors.cardBorder,
+    borderRadius: radii.card,
     padding: spacing.cardPadding,
   },
   gradientCard: {
     overflow: 'hidden',
     borderWidth: 0.8,
-    borderColor: 'rgba(142, 81, 255, 0.25)',
+    borderColor: 'rgba(76, 124, 255, 0.25)',
   },
   gradientContent: {
+    padding: spacing.cardPadding,
+  },
+  glassOuter: {
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  glassInner: {
     padding: spacing.cardPadding,
   },
 })

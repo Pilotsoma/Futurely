@@ -1,167 +1,259 @@
-# Futurely — Design System
+# Futurely — Mobile Design System (v2)
+
+`src/theme/tokens.ts` is the single source of truth for all tokens.
+Update this doc whenever tokens.ts changes.
+
+---
 
 ## Brand Identity
 - **Product:** Futurely — AI-powered academic companion for high schoolers
 - **Tone:** Confident, encouraging, clear. Not corporate. Not childish.
-- **Users are teenagers** — UI must feel modern, fast, and trustworthy.
+- **Visual language:** Dark navy base, frosted glass cards, electric blue + teal accents.
+  Numerals and data read bold via Space Grotesk; body copy uses Plus Jakarta Sans.
+
+---
 
 ## Color Palette
 
-### Brand Primaries
-```
-Primary Cyan:    #00E5FF  (electric cyan — accent, info)
-Primary Blue:    #2979FF  (interactive — buttons, links, focus)
-Primary Purple:  #7C3AED  (deep accent)
-Accent Teal:     #00BCD4
-Accent Lavender: #A855F7
+### Core surface tokens
+| Token | Value | Usage |
+|---|---|---|
+| `colors.bg` | `#0A0E1C` | Screen background |
+| `colors.cardFill` | `rgba(255,255,255,0.05)` | Glass card fill overlay |
+| `colors.cardBorder` | `rgba(255,255,255,0.09)` | Card borders, input borders |
+| `colors.cardFallback` | `#131A32` | Solid card bg where blur unavailable |
+| `colors.divider` | `rgba(255,255,255,0.07)` | Hairline dividers |
+| `colors.insetHighlight` | `rgba(255,255,255,0.06)` | 1px top border on glass cards |
+| `colors.shadowBase` | `rgba(0,0,0,0.2)` | Drop shadow base |
+
+### Text tokens
+| Token | Value | Usage |
+|---|---|---|
+| `colors.text` | `#F3F5FA` | Primary text |
+| `colors.textDim` | `#8991AE` | Secondary/supporting text |
+| `colors.textFaint` | `#5A6280` | Muted/placeholder text |
+
+### Brand accents
+| Token | Value | Usage |
+|---|---|---|
+| `colors.accent` | `#4C7CFF` | CTAs, active tab/nav state, focus rings, interactive elements |
+| `colors.accentDim` | `rgba(76,124,255,0.16)` | Active tab tile background, highlight fills |
+| `colors.accent2` | `#22D3B5` | Progress bars, sync/positive-trend signals, auto-generated items |
+| `colors.accent2Dim` | `rgba(34,211,181,0.16)` | accent2 fill backgrounds |
+
+### Grade/severity tier colors
+Used **only** for performance signals (grade pills, GPA trend, school-tier badges, checklist status).
+**Never reuse for subject/category identity tags** — those use `subjectPalette`.
+
+| Token | Value | Meaning |
+|---|---|---|
+| `colors.tierGreen` / `tierGreenBg` | `#34D399` / `rgba(52,211,153,0.16)` | A-range / complete / "safety" |
+| `colors.tierAmber` / `tierAmberBg` | `#FBBF24` / `rgba(251,191,36,0.16)` | B-range / in-progress / "target" |
+| `colors.tierRed` / `tierRedBg` | `#F87171` / `rgba(248,113,113,0.16)` | C- and below / not started / "reach" / Required flags |
+
+### Special-purpose tokens
+| Token | Value | Usage |
+|---|---|---|
+| `colors.gold` | `#F0B429` | Achievement chips and streak cards **only** |
+| `colors.goldBg` | `rgba(240,180,41,0.16)` | Gold-treatment fill background |
+
+### Backward-compatible aliases
+The following aliases exist in `tokens.ts` so existing screens compile unchanged.
+Do **not** use these in new code — use the semantic tokens above.
+
+`primary → accent`, `primaryDim → accentDim`, `surface → cardFallback`,
+`border → cardBorder`, `textSecondary → textDim`, `textMuted → textFaint`,
+`success → tierGreen`, `warning → tierAmber`, `error → tierRed`.
+
+---
+
+## Subject / Category Identity Palette
+
+```typescript
+export const subjectPalette = ['#4C7CFF', '#A78BFA', '#60A5FA', '#818CF8', '#F472B6', '#FB923C', '#22D3B5']
+export function getSubjectColor(subjectKey: string): string { /* deterministic hash */ }
 ```
 
-### Semantic Tokens (mobile: colors.ts / web: CSS vars)
-```
-primary:        #2979FF   --primary
-primaryDark:    #1B4DB0   --primary-dark
-background:     #0D1829   --bg
-surface:        #162235   --surface
-surface2:       #1C2D47   --surface-2
-border:         #273D5E   --border
-borderHover:    #2F4970   --border-hover
-textPrimary:    #E8EEFF   --text
-textSecondary:  #96AACC   --text-secondary
-textMuted:      #52698A   --text-muted
-success:        #10B981
-warning:        #F59E0B
-error:          #EF4444
-orange:         #F97316
-info:           #00E5FF
-purple:         #7C3AED
+Use `getSubjectColor(subject)` for subject color dots, calendar tags, and icon tints.
+Assign consistently across the app via the hash function — never hardcode per subject name.
+
+---
+
+## Grade Tier Colors
+
+```typescript
+export function getGradeTierColor(letter: string): { color: string; bg: string }
+// A → tierGreen, B → tierAmber, C+ and below → tierRed
 ```
 
-### Grade Colors
-```
-A: #10B981  (green)
-B: #2979FF  (blue)
-C: #F59E0B  (amber)
-D: #F97316  (orange)
-F: #EF4444  (red)
-```
+The old 5-color `gradeColors` export (A/B/C/D/F with blue for B) is removed.
+Blue (`accent`) is reserved exclusively for interactive/brand elements.
+
+---
 
 ## Typography
-- **Font:** System font stack (SF Pro on iOS, Roboto on Android via React Native defaults)
-- **Web:** Inter (body) + Space Grotesk (display) via next/font
-- **Scale:**
-  - Display: 32px / weight 700
-  - H1: 24px / weight 700
-  - H2: 20px / weight 600
-  - H3: 16px / weight 600
-  - Body: 15px / weight 400 / line-height 1.6
-  - Caption: 12px / weight 400
-  - Label: 12px / weight 500 / uppercase + letter-spacing
 
-## Logo & Brand Mark
-- **FuturelyLogo** component (mobile: `nextstep-mobile/src/components/ui/FuturelyLogo.tsx`)
-  - Rounded square, brand blue `#2979FF` bg, cyan `#00E5FF` accent stripe, white "F" glyph
-  - Props: `size` (default 40) — scales all dimensions
-  - No external package required (pure React Native View + Text)
-- **Web SVG** (`public/logo.png`)
-  - Mortarboard + book icon with brand gradient: `#00E5FF → #2979FF → #7C3AED`
-  - Includes "Futurely" wordmark in the SVG
-  - Used at 28×28 in sidebar, 48×48 on login page
+| Role | Font | Weight key | Usage |
+|---|---|---|---|
+| `display` | Space Grotesk | `displayBold` (700) | 32px hero numbers, large stats |
+| `h1` | Space Grotesk | `displayBold` (700) | 24px screen headings |
+| `h2` | Space Grotesk | `displaySemiBold` (600) | 20px section headings |
+| `h3` | Space Grotesk | `displaySemiBold` (600) | 16px card headings |
+| `body` | Plus Jakarta Sans | `bodyRegular` (400) | 15px / lh 1.6 body copy |
+| `caption` | Plus Jakarta Sans | `bodyRegular` (400) | 12px supporting text |
+| `label` | Plus Jakarta Sans | `bodyMedium` (500) | 12px uppercase + tracking |
+
+Font keys available on `fonts.*`:
+- `displayMedium/SemiBold/Bold` → Space Grotesk 500/600/700
+- `bodyRegular/Medium/SemiBold/Bold` → Plus Jakarta Sans 400/500/600/700
+- `regular/medium/semiBold/bold` → Inter 400/500/600/700 (legacy, prefer Jakarta for new body)
+
+**Space Grotesk max weight is 700 Bold — there is no 800 weight.**
+
+---
 
 ## Spacing
-- Base unit: 4px
-- Common: 4, 8, 12, 16, 20, 24, 32, 40, 48, 64
-- Card padding: 16px
-- Screen horizontal padding: 20px
-- Section gap: 24px
+Base unit: 4px. Common scale: `xs:4, sm:8, ms:12, md:16, lg:20, xl:24, xxl:32, xxxl:40, huge:48, massive:64`.
+Card padding: 16. Screen horizontal padding: 20. Section gap: 24.
 
-## Components — Standards
+---
+
+## Border Radii (`radii.*`)
+
+| Key | Value | Use |
+|---|---|---|
+| `card` | 20 | Cards (default) |
+| `input` | 14 | Text inputs |
+| `button` | 18 | Buttons |
+| `pill` | 999 | SegmentedControl, ProgressBar, FloatingTabBar, chips |
+| `sm` | 10 | Legacy (kept for backward compat) |
+| `md` | 16 | Legacy |
+| `lg` | 20 | Legacy |
+
+---
+
+## Components
 
 ### Cards
-- Background: surface (`#162235`)
-- Border: 1px solid border (`#273D5E`)
-- Border-radius: 12px
-- Shadow: none (flat design — dark theme)
-- Padding: 16px
+
+Three variants on `<Card variant="..." ...>`:
+
+- **`default`** — `cardFallback` solid background, `cardBorder` border, `radii.card` radius, `spacing.cardPadding`.
+- **`gradient`** — diagonal fill via react-native-svg `LinearGradient`. Pass `gradientColors` (defaults to `gradients.hero`). Border has blue tint.
+- **`glass`** — expo-blur `BlurView` (intensity 18, tint dark) + `cardFill` overlay + `insetHighlight` top border. Pass `disableBlur` to fall back to `cardFallback`. Default radius `radii.card`.
+
+Card treatment constants exported: `cardInsetHighlight` (ViewStyle for top highlight border), `elevation.card` (shadow matching `0 1px 2px rgba(0,0,0,0.2)`).
 
 ### Buttons
-- Primary: bg `#2979FF`, text `#FFFFFF`, radius 8px, height 48px, weight 600
-- Secondary: bg transparent, border `#1A2744`, text `#E8EEFF`
-- Destructive: bg `#EF4444`, text white
-- Disabled: opacity 0.4, no interaction
-- Loading state: show spinner, disable interaction, preserve width
-- Note: `expo-linear-gradient` not installed — use flat blue fallback
+
+- **`primary`** — `accent` fill, white text, `radii.button` (18), `elevation.sm`.
+- **`secondary`** — transparent + `cardBorder` border, `text` color.
+- **`destructive`** — `tierRed` fill, white text.
+- `loading` state: spinner in component, dimension preserved. `disabled`: opacity 0.4, interaction blocked. Scale spring animation on press (0.96).
 
 ### Inputs
-- Background: `#0D1829`
-- Border: `#273D5E` (default), `#2979FF` (focused), `#EF4444` (error)
-- Placeholder text: `#96AACC`
-- Radius: 8px (web) / rounded-2xl (mobile)
-- Height: 48px
-- Label above input, error message below
 
-### Navigation (mobile)
-- Drawer sidebar: bg `#0D1829`, active item left-border `#2979FF`
-- Active icon/label: `#2979FF`
-- Inactive icon/label: `#96AACC`
+- `radii.input` (14px) radius. Border: `cardBorder` default → `accent` focused → `tierRed` error.
+- Placeholder: `textDim`. Background: `surface2`. Label above, error below.
 
-### Navigation (web)
-- Sidebar: bg `var(--surface)`, 220px expanded / 64px collapsed
-- Active pill: `var(--primary-dim)` bg + `var(--primary-glow)` border
-- Active icon: `var(--primary)` color
+### SegmentedControl
 
-## Feature-Specific UI Standards
+Pill-shaped track (`radii.pill`). Active: `accentDim` background + `accent` text. Inactive: transparent + `textDim`. Generic `<SegmentedControl<T> segments value onChange>`.
 
-### Grade Viewer
-- Subject cards with letter grade badge (large, colored by grade)
-- GPA displayed prominently at top — large number, color-coded
-- Trend indicator (↑↓→) with delta from last sync
+### ProgressBar (new)
 
-### GPA Simulator
-- Slider or input per class to adjust hypothetical grade
-- Real-time GPA recalculation (debounced, no submit button)
-- College readiness indicator: progress bar toward target GPA
-- Visual diff: current vs projected (side-by-side or overlay)
+`<ProgressBar value={0-1} color? trackColor? height? />`. Defaults: `accent2`, `cardBorder`, 6pt. Fully rounded (pill) ends.
 
-### Smart Planner
-- Calendar view (week default) + list view toggle
-- Assignment cards: subject color coding, due date, estimated time, AI priority badge
-- Overdue = red accent, due today = amber, upcoming = muted
+### ProgressRing
 
-### High School Roadmap
-- Timeline visualization by grade (9th → 12th)
-- Course completion badges
-- Graduation progress: circular progress ring
-- College prep checklist with checkable items
+SVG stroke circle. Defaults: `accent` stroke, `accentDim` track. Props: `progress (0-100)`, `size`, `strokeWidth`, `color`, `trackColor`.
+
+### FloatingTabBar (new)
+
+Pure presentational glass pill tab bar. Zero React Navigation imports.
+
+```typescript
+interface FloatingTabBarItem {
+  key: string; label: string
+  icon: (props: { color: string; size: number }) => React.ReactNode
+  active: boolean; onPress: () => void; accessibilityLabel?: string
+}
+interface FloatingTabBarProps {
+  items: FloatingTabBarItem[]  // exactly 5 route items
+  settingsItem: { icon, onPress, accessibilityLabel? }
+  style?: StyleProp<ViewStyle>
+}
+```
+
+Absolute positioned, inset 20pt left/right, bottom = max(20, safeArea.bottom + 8). Height 64. Glass pill background. 5 route items + 1 settings item. Active: `accentDim` tile + `accent` icon. Settings: never active. Each Pressable is 44×44 (min touch target), visual tile 42×42.
+
+### GradeBadge
+
+```typescript
+<GradeBadge letter="A+" />
+<GradeBadge letter="A" tier="safety" />  // tier prop overrides color mode
+<GradeBadge tier="reach" />              // no letter — shows first char of tier
+```
+
+`tier?: 'reach' | 'target' | 'safety'` — maps to tierRed/tierAmber/tierGreen. Backed by `getGradeTierColor`.
+
+### Skeleton (unified)
+
+```typescript
+<Skeleton rows={4} rowHeight={64} />      // rows mode — shimmer list
+<Skeleton width="100%" height={16} radius={6} />  // block mode
+<LoadingSkeleton rows={4} />             // alias, same component
+```
+
+Reanimated shimmer sweep (~1.1s loop, ease-in-out). Static dim block when reduce-motion is active.
+Old `LoadingSkeleton.tsx` deleted — all screens now import `{ LoadingSkeleton }` from `./Skeleton`.
+
+### StreakCard / AchievementChip (new, not yet wired)
+
+Gold treatment (`colors.gold`/`goldBg`). Built and exported but not rendered anywhere — no backing data yet.
+
+---
+
+## Icon System
+
+`src/components/icons/index.tsx` — 103 stroke icons, 24×24 viewBox, strokeWidth 2.
+
+```typescript
+<FlameIcon size={20} color={colors.gold} />
+<HomeIcon size={22} gradient />  // gradient prop → accent→accent2 linear gradient
+```
+
+The `gradient` prop uses the two-stop brand gradient `[colors.accent, colors.accent2]` (electric blue → teal). Old three-stop cyan→blue→purple gradient is removed.
+
+`getSubjectColor(subject)` to pick a subject-palette color from `subjectPalette`.
+
+---
+
+## Screen Background
+
+`Screen` renders a subtle radial glow: accent blue bloom top-left, accent2 teal bloom top-right, 11–14% opacity, implemented via `react-native-svg` `RadialGradient` (no `expo-linear-gradient` dependency).
+
+---
 
 ## Accessibility
-- Minimum contrast ratio: 4.5:1 for body text, 3:1 for large text
-- All interactive elements: minimum 44×44pt touch target
-- All images: accessibility labels
-- Support system font size scaling (no fixed font sizes in pixels)
-- No color-only information conveying — always pair color with text/icon
+- Minimum contrast: 4.5:1 body text, 3:1 large text (> 18px bold).
+- All interactive elements: minimum 44×44pt touch target.
+- All non-text interactive and image elements: `accessibilityLabel`.
+- Font sizes support dynamic scaling.
+- Color never the only indicator of meaning — always pair with text or icon.
+- All animations check `useReducedMotion()` / `preferenceReduceMotion` and skip animation when set.
 
 ## Animation
-- Navigation transitions: 250ms ease-in-out
-- Data loading: skeleton screens (not spinners for content)
-- Micro-interactions: 150ms
-- No animations that cannot be disabled (respect `prefers-reduced-motion`)
+- Entry transitions: ≤ 300ms, never block interaction.
+- Press feedback: scale 0.97 (100–150ms, ease-out).
+- Skeleton shimmer: ~1.1s loop, ease-in-out.
+- Number transitions: 300–400ms ease-out (when implemented).
+- Reduced motion: instant state changes, no animation.
 
 ## Rules
-- Dark theme is the default and primary design target
-- No gradient backgrounds on content screens (only on marketing/onboarding)
-- No lorem ipsum in any deliverable
-- All screens must have empty states and error states designed
-- Loading states required on every async action
-- `react-native-svg` is now installed (mobile) — added for the "Continue with Google"
-  button's real multi-color Google logo, since Google's brand guidelines require the
-  actual logo, not a substitute. It's Expo Go-compatible (bundled support, no dev-client
-  needed). Gradient card fills (`Card` component's `variant="gradient"`) also use
-  `react-native-svg`'s `LinearGradient`/`Rect` rather than adding `expo-linear-gradient`
-  as a second, redundant gradient dependency — don't install `expo-linear-gradient`
-  without updating this doc.
-- Mobile visual language was rebuilt against a Figma prototype reference
-  (`https://cute-near-11852013.figma.site`, see `melodic-wobbling-pillow.md` plan) —
-  dark near-black background (`#07080F`), violet/indigo gradient hero cards and quick-
-  action tiles, hairline card borders instead of drop shadows, circular tint+border
-  grade badges, pill-shaped segmented controls and urgency badges. `theme/tokens.ts`'s
-  `colors`/`gradients` exports are the source of truth; update this doc if they drift.
+- Dark theme is the primary target (`app.json` hardcodes `"userInterfaceStyle": "dark"`).
+- No `expo-linear-gradient` — use `react-native-svg` `LinearGradient`/`RadialGradient`.
+- `expo-blur` for glass effects only — always provide `disableBlur` fallback.
+- No lorem ipsum in any deliverable.
+- All screens must have empty states, error states, and loading skeleton states.
+- `src/constants/colors.ts` is deprecated — migrate importers to `src/theme/tokens.ts`.

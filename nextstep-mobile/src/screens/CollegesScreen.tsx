@@ -26,7 +26,7 @@ import * as gradesApi from '../api/gradesApi'
 import * as studentsApi from '../api/studentsApi'
 import { ApiRequestError } from '../api/client'
 import { Screen } from '../components/ui/Screen'
-import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
+import { LoadingSkeleton } from '../components/ui/Skeleton'
 import type {
   CollegeInsights,
   CollegeListItem,

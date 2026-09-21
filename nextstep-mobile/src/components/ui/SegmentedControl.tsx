@@ -8,8 +8,8 @@ interface SegmentedControlProps<T extends string> {
   onChange: (value: T) => void
 }
 
-// Pill-shaped toggle track (Planner's "Today"/"This Week") matching the
-// Figma prototype — active segment filled solid violet, inactive transparent.
+// Pill-shaped toggle track — active segment filled with accentDim + accent label,
+// inactive transparent + textDim label. Fully generic, no breaking API change.
 export function SegmentedControl<T extends string>({
   segments,
   value,
@@ -38,21 +38,21 @@ export function SegmentedControl<T extends string>({
 const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
+    borderColor: colors.cardBorder,
+    borderRadius: radii.pill,
     padding: 4,
     gap: 4,
   },
   segment: {
     flex: 1,
     paddingVertical: spacing.sm,
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  segmentActive: { backgroundColor: colors.primary },
-  label: { ...typography.h3, fontSize: 13.5, color: colors.textSecondary },
-  labelActive: { color: '#FFFFFF' },
+  segmentActive: { backgroundColor: colors.accentDim },
+  label: { ...typography.h3, fontSize: 13.5, color: colors.textDim },
+  labelActive: { color: colors.accent },
 })

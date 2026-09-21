@@ -32,6 +32,7 @@ import Svg, {
   Stop,
 } from 'react-native-svg'
 import { ICON_PATHS, PathElement } from './paths'
+import { colors } from '../../theme/tokens'
 
 export interface IconProps {
   size?: number
@@ -192,10 +193,10 @@ function makeIcon(name: string): React.FC<IconProps> {
       <Svg width={size} height={size} viewBox="0 0 24 24">
         {gradient && (
           <Defs>
+            {/* Brand gradient: electric blue → teal, matching the v2 two-color palette */}
             <LinearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0%" stopColor="#00E5FF" />
-              <Stop offset="50%" stopColor="#2979FF" />
-              <Stop offset="100%" stopColor="#7C3AED" />
+              <Stop offset="0%"   stopColor={colors.accent} />
+              <Stop offset="100%" stopColor={colors.accent2} />
             </LinearGradient>
           </Defs>
         )}

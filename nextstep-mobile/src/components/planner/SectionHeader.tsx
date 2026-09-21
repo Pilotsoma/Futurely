@@ -2,7 +2,7 @@ import React from 'react'
 import { TouchableOpacity, View } from 'react-native'
 import { ChevronUpIcon, ChevronDownIcon } from '../icons'
 import Text from '../ui/Text'
-import { colors } from '../../constants/colors'
+import { colors } from '../../theme/tokens'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

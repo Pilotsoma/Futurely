@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import Text from './Text'
 import { ChevronLeftIcon } from '../icons'
-import { colors } from '../../constants/colors'
+import { colors } from '../../theme/tokens'
 
 interface ScreenHeaderProps {
   title: string

@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
 import Svg, { Circle } from 'react-native-svg'
+import { colors } from '../../theme/tokens'
 
 interface ProgressRingProps {
   /** 0-100 */
@@ -18,8 +19,8 @@ export function ProgressRing({
   progress,
   size = 84,
   strokeWidth = 8,
-  color = '#FFFFFF',
-  trackColor = 'rgba(255,255,255,0.22)',
+  color = colors.accent,
+  trackColor = colors.accentDim,
   children,
 }: ProgressRingProps): React.JSX.Element {
   const clamped = Math.max(0, Math.min(100, progress))
