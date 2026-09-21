@@ -1,12 +1,29 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
+import { useReducedMotion } from './useReducedMotion'
+
+// ── Rotating headline words ───────────────────────────────────────────────────
+const ROTATE_WORDS: { text: string; color: string }[] = [
+  { text: 'your future.',   color: '#22d3ee' },
+  { text: 'your progress.', color: 'var(--primary)' },
+  { text: 'your plan.',     color: 'var(--purple)' },
+]
 
 export default function Hero() {
   const { scrollYProgress } = useScroll()
   const heroY       = useTransform(scrollYProgress, [0, 0.4], [0, -90])
   const heroOpacity = useTransform(scrollYProgress, [0, 0.28], [1, 0])
+  const reduceMotion = useReducedMotion()
+
+  const [wordIdx, setWordIdx] = useState(0)
+  useEffect(() => {
+    if (reduceMotion) return
+    const id = setInterval(() => setWordIdx(i => (i + 1) % ROTATE_WORDS.length), 3700)
+    return () => clearInterval(id)
+  }, [reduceMotion])
 
   return (
     <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', paddingTop: 76, overflow: 'hidden' }}>
@@ -39,22 +56,32 @@ export default function Hero() {
           transition={{ duration: 0.75, ease: [0.19, 1, 0.22, 1], delay: 0.09 }}
           style={{
             fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(36px, 5.5vw, 76px)',
+            fontSize: 'clamp(72px, 11.5vw, 148px)',
             fontWeight: 500,
-            lineHeight: 1.08,
-            letterSpacing: '-2px',
+            lineHeight: 1.04,
+            letterSpacing: '-3px',
             color: 'var(--text)',
             marginBottom: 36,
           }}
         >
-          <span style={{
-            backgroundImage: 'linear-gradient(90deg, #22d3ee 0%, var(--primary) 45%, var(--purple) 100%)',
-            WebkitBackgroundClip: 'text',
-            backgroundClip: 'text',
-            color: 'transparent',
-          }}>
-            Your AI Academic Advisor
-          </span>{' '}for High School Students
+          This is
+          <br />
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={wordIdx}
+              initial={reduceMotion
+                ? { opacity: 1, y: 0 }
+                : { opacity: 0, y: 24, filter: 'blur(8px)', skewX: 3 }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)', skewX: 0 }}
+              exit={reduceMotion
+                ? { opacity: 1, y: 0 }
+                : { opacity: 0, y: -24, filter: 'blur(8px)', skewX: -3 }}
+              transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
+              style={{ display: 'inline-block', color: ROTATE_WORDS[wordIdx].color }}
+            >
+              {ROTATE_WORDS[wordIdx].text}
+            </motion.span>
+          </AnimatePresence>
         </motion.h1>
 
         {/* Subheading */}
