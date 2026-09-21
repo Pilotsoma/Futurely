@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { LightningBoltIcon, LockIcon, RobotIcon, GraduationCapIcon } from '@/components/icons'
 
 export default function Hero() {
   const { scrollYProgress } = useScroll()
@@ -48,7 +47,14 @@ export default function Hero() {
             marginBottom: 36,
           }}
         >
-          Your AI Academic Advisor for High School Students
+          <span style={{
+            backgroundImage: 'linear-gradient(90deg, #22d3ee 0%, var(--primary) 45%, var(--purple) 100%)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            color: 'transparent',
+          }}>
+            Your AI Academic Advisor
+          </span>{' '}for High School Students
         </motion.h1>
 
         {/* Subheading */}
@@ -59,7 +65,7 @@ export default function Hero() {
           style={{ fontSize: 21, color: 'var(--text-secondary)', maxWidth: 640, margin: '0 auto 52px', lineHeight: 1.7, fontWeight: 400, letterSpacing: '-0.1px' }}
         >
           myFuturely pairs a personal AI advisor with a planner built around your
-          academic life — giving you the tools to actually plan ahead, not just get by.
+          academic life, giving you the tools to actually plan ahead, not just get by.
         </motion.p>
 
         {/* CTAs */}
@@ -88,34 +94,6 @@ export default function Hero() {
           }}>
             See what it does
           </a>
-        </motion.div>
-
-        {/* Trust badges — no fake stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.19, 1, 0.22, 1], delay: 0.34 }}
-          style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}
-        >
-          {[
-            { icon: <LightningBoltIcon size={19}/>, label: 'Organized automatically', sub: 'Zero manual entry' },
-            { icon: <LockIcon size={19}/>, label: 'Encrypted end-to-end', sub: 'AES-256, always' },
-            { icon: <RobotIcon size={19}/>, label: 'AI knows your data', sub: 'Not a generic chatbot' },
-            { icon: <GraduationCapIcon size={19}/>, label: 'Built for students', sub: 'Not schools or counselors' },
-          ].map((b, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid var(--border)',
-              borderRadius: 14, padding: '13px 20px',
-            }}>
-              <span style={{ display: 'flex', alignItems: 'center' }}>{b.icon}</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>{b.label}</div>
-                <div style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.2 }}>{b.sub}</div>
-              </div>
-            </div>
-          ))}
         </motion.div>
       </motion.div>
 
