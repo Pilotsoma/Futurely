@@ -24,10 +24,10 @@ export default function LandingNav() {
       WebkitBackdropFilter: navScrolled ? 'blur(20px)' : 'none',
       transition: 'background 0.4s ease, border-color 0.4s ease, backdrop-filter 0.4s ease',
     }}>
-      <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 28px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 28px', height: 76, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
           style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Image src="/myfuturely-header.png" alt="myFuturely logo" width={2000} height={667} style={{ height: 38, width: 'auto', objectFit: 'contain', display: 'block' }} priority />
+          <Image src="/myfuturely-header.png" alt="myFuturely logo" width={2000} height={667} style={{ height: 58, width: 'auto', objectFit: 'contain', display: 'block' }} priority />
         </motion.div>
         <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
           style={{ display: 'flex', alignItems: 'center', gap: 20 }}>

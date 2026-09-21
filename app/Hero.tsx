@@ -9,7 +9,7 @@ export default function Hero() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.28], [1, 0])
 
   return (
-    <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', paddingTop: 60, overflow: 'hidden' }}>
+    <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', paddingTop: 76, overflow: 'hidden' }}>
 
       {/* Subtle warm washes */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
