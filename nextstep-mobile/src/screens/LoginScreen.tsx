@@ -17,13 +17,21 @@ import { useAuth } from '../context/AuthContext'
 import * as authApi from '../api/authApi'
 import { ApiRequestError } from '../api/client'
 import { GoogleLogo } from '../components/ui/GoogleLogo'
+import { Card } from '../components/ui/Card'
+import { SegmentedControl } from '../components/ui/SegmentedControl'
+import { Screen } from '../components/ui/Screen'
 import {
+  colors,
   elevation,
   fonts,
+  radii,
   spacing,
+  typography,
+  touchTarget,
 } from '../theme/tokens'
 
 type Mode = 'login' | 'register'
+type AccountType = 'Student' | 'Parent'
 type RegisterStep = 'dob' | 'account' | 'terms'
 type FeatherName = React.ComponentProps<typeof Feather>['name']
 
@@ -37,6 +45,20 @@ const REGISTER_STEPS: {
   { key: 'account', label: 'Account' },
   { key: 'terms', label: 'Finish' },
 ]
+
+type ModeLabel = 'Sign in' | 'Create account'
+
+const MODE_LABEL_SEGMENTS: readonly ModeLabel[] = ['Sign in', 'Create account']
+const MODE_VALUE_TO_LABEL: Record<Mode, ModeLabel> = {
+  login: 'Sign in',
+  register: 'Create account',
+}
+const MODE_LABEL_TO_VALUE: Record<ModeLabel, Mode> = {
+  'Sign in': 'login',
+  'Create account': 'register',
+}
+
+const ACCOUNT_TYPE_SEGMENTS: readonly AccountType[] = ['Student', 'Parent']
 
 function calculateAge(dateOfBirth: string): number | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return null
@@ -57,6 +79,10 @@ function calculateAge(dateOfBirth: string): number | null {
 
   return age
 }
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
 
 interface AuthFieldProps {
   label: string
@@ -98,9 +124,7 @@ function AuthField({
 
   return (
     <View style={styles.fieldWrap}>
-      <Text allowFontScaling={false} style={styles.fieldLabel}>
-        {label}
-      </Text>
+      <Text style={styles.fieldLabel}>{label}</Text>
 
       <View
         style={[
@@ -112,7 +136,9 @@ function AuthField({
           <Feather
             name={icon}
             size={17}
-            color={focused ? '#A996FF' : '#71829C'}
+            color={focused ? colors.accent : colors.textFaint}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
           />
         </View>
 
@@ -120,7 +146,7 @@ function AuthField({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#566781"
+          placeholderTextColor={colors.textFaint}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={false}
@@ -130,6 +156,7 @@ function AuthField({
           style={styles.input}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          accessibilityLabel={label}
         />
 
         {rightAction}
@@ -155,36 +182,40 @@ function ActionButton({
   icon,
   variant = 'primary',
 }: ActionButtonProps): React.JSX.Element {
+  const isDisabled = disabled === true || loading === true
+
   return (
     <Pressable
-      disabled={disabled || loading}
+      disabled={isDisabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.actionButton,
         variant === 'primary' && styles.primaryButton,
         variant === 'secondary' && styles.secondaryButton,
         variant === 'ghost' && styles.ghostButton,
-        pressed && !disabled && !loading && styles.actionButtonPressed,
-        (disabled || loading) && styles.actionButtonDisabled,
+        pressed && !isDisabled && styles.actionButtonPressed,
+        isDisabled && styles.actionButtonDisabled,
       ]}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? '#FFFFFF' : '#BFAFFF'}
+          color={variant === 'primary' ? '#FFFFFF' : colors.accent}
         />
-      ) : icon ? (
+      ) : icon !== undefined ? (
         <Feather
           name={icon}
           size={16}
-          color={variant === 'primary' ? '#FFFFFF' : '#BFAFFF'}
+          color={variant === 'primary' ? '#FFFFFF' : colors.textDim}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
         />
       ) : null}
 
       <Text
-        allowFontScaling={false}
         style={[
           styles.actionButtonText,
           variant !== 'primary' && styles.secondaryButtonText,
@@ -202,9 +233,15 @@ interface ErrorBannerProps {
 
 function ErrorBanner({ message }: ErrorBannerProps): React.JSX.Element {
   return (
-    <View style={styles.errorBanner}>
+    <View style={styles.errorBanner} accessibilityRole="alert">
       <View style={styles.errorIcon}>
-        <Feather name="alert-circle" size={16} color="#FF8185" />
+        <Feather
+          name="alert-circle"
+          size={16}
+          color={colors.tierRed}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
       </View>
       <Text style={styles.errorText}>{message}</Text>
     </View>
@@ -242,24 +279,86 @@ function CheckboxRow({
         ]}
       >
         {checked ? (
-          <Feather name="check" size={14} color="#FFFFFF" />
+          <Feather
+            name="check"
+            size={14}
+            color="#FFFFFF"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          />
         ) : null}
       </View>
 
       <View style={styles.checkboxCopy}>
-        <Text allowFontScaling={false} style={styles.checkboxLabel}>
-          {label}
-        </Text>
+        <Text style={styles.checkboxLabel}>{label}</Text>
         <Text style={styles.checkboxSubtitle}>{subtitle}</Text>
       </View>
     </Pressable>
   )
 }
 
+// ---------------------------------------------------------------------------
+// "Connect school account" placeholder box — Sign Up mode only
+// Visual placeholder — no navigation, no OAuth, no API call.
+// ---------------------------------------------------------------------------
+
+function ConnectSchoolPlaceholder(): React.JSX.Element {
+  return (
+    <View style={styles.connectSchoolBox} accessibilityRole="none">
+      <View style={styles.connectSchoolHeader}>
+        <Feather
+          name="link"
+          size={16}
+          color={colors.accent}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+        <Text style={styles.connectSchoolTitle}>School Account</Text>
+        <View style={styles.requiredBadge}>
+          <Text style={styles.requiredBadgeText}>Required</Text>
+        </View>
+      </View>
+
+      <Text style={styles.connectSchoolBody}>
+        {"Connect your school's portal so we can sync grades and assignments automatically."}
+      </Text>
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.connectSchoolButton,
+          pressed && styles.connectSchoolButtonPressed,
+        ]}
+        onPress={() => {
+          // Placeholder — OAuth/integration wiring handled separately via
+          // RootNavigator's hasPortalConnection gate (post-signup flow).
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Connect HAC, Canvas, or district SIS"
+      >
+        <Feather
+          name="external-link"
+          size={14}
+          color={colors.accent}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+        <Text style={styles.connectSchoolButtonText}>
+          Connect HAC, Canvas, or district SIS
+        </Text>
+      </Pressable>
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Main screen
+// ---------------------------------------------------------------------------
+
 export default function LoginScreen(): React.JSX.Element {
   const { signIn, register, signInWithGoogle } = useAuth()
 
   const [mode, setMode] = useState<Mode>('login')
+  const [accountType, setAccountType] = useState<AccountType>('Student')
 
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
@@ -486,603 +585,598 @@ export default function LoginScreen(): React.JSX.Element {
     mode === 'login' ? loginError || googleError : registerError || googleError
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View pointerEvents="none" style={styles.backgroundTopAccent} />
-      <View pointerEvents="none" style={styles.backgroundBottomAccent} />
-
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <Screen padded={false} edges={['top', 'left', 'right', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.brandHeader}>
-          <View style={styles.logoShell}>
-            <Image
-              source={APP_LOGO}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-
-          <View style={styles.brandCopy}>
-            <Text allowFontScaling={false} style={styles.brandName}>
-              myFuturely
-            </Text>
-            <Text allowFontScaling={false} style={styles.brandTag}>
-              AI academic copilot
-            </Text>
-          </View>
-
-          <View style={styles.securePill}>
-            <Feather name="shield" size={12} color="#69DAB8" />
-            <Text allowFontScaling={false} style={styles.securePillText}>
-              Secure
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.hero}>
-          <Text allowFontScaling={false} style={styles.heroEyebrow}>
-            YOUR FUTURE, ONE STEP CLOSER
-          </Text>
-
-          <Text allowFontScaling={false} style={styles.heroTitle}>
-            Plan smarter.{'\n'}
-            <Text style={styles.heroTitleAccent}>Move forward.</Text>
-          </Text>
-
-          <Text style={styles.heroSubtitle}>
-            Keep grades, assignments, college planning and personalized AI
-            guidance together in one place.
-          </Text>
-        </View>
-
-        <View style={styles.featureRow}>
-          <View style={styles.featureChip}>
-            <Feather name="bar-chart-2" size={14} color="#62D9BB" />
-            <Text allowFontScaling={false} style={styles.featureChipText}>
-              Live grades
-            </Text>
-          </View>
-
-          <View style={styles.featureChip}>
-            <Feather name="calendar" size={14} color="#78AFFF" />
-            <Text allowFontScaling={false} style={styles.featureChipText}>
-              Smart planner
-            </Text>
-          </View>
-
-          <View style={styles.featureChip}>
-            <Feather name="zap" size={14} color="#B69AFF" />
-            <Text allowFontScaling={false} style={styles.featureChipText}>
-              AI guidance
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.authCard}>
-          <View style={styles.modeSwitch}>
-            <Pressable
-              onPress={() => switchMode('login')}
-              style={[
-                styles.modeButton,
-                mode === 'login' && styles.modeButtonActive,
-              ]}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: mode === 'login' }}
-            >
-              <Text
-                allowFontScaling={false}
-                style={[
-                  styles.modeButtonText,
-                  mode === 'login' && styles.modeButtonTextActive,
-                ]}
-              >
-                Sign in
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => switchMode('register')}
-              style={[
-                styles.modeButton,
-                mode === 'register' && styles.modeButtonActive,
-              ]}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: mode === 'register' }}
-            >
-              <Text
-                allowFontScaling={false}
-                style={[
-                  styles.modeButtonText,
-                  mode === 'register' && styles.modeButtonTextActive,
-                ]}
-              >
-                Create account
-              </Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.formHeader}>
-            <View style={styles.formHeaderCopy}>
-              <Text allowFontScaling={false} style={styles.formEyebrow}>
-                {mode === 'login' ? 'WELCOME BACK' : 'JOIN MYFUTURELY'}
-              </Text>
-
-              <Text allowFontScaling={false} style={styles.formTitle}>
-                {mode === 'login'
-                  ? 'Continue your journey'
-                  : registerStep === 'dob'
-                    ? 'Let’s get started'
-                    : registerStep === 'account'
-                      ? 'Create your account'
-                      : 'Review and finish'}
-              </Text>
-
-              <Text style={styles.formSubtitle}>
-                {mode === 'login'
-                  ? 'Sign in to access your academic command center.'
-                  : registerStep === 'dob'
-                    ? 'We use your age to keep your account safe.'
-                    : registerStep === 'account'
-                      ? 'Verify your email to protect your student profile.'
-                      : 'Confirm the final details before creating your account.'}
-              </Text>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Brand header */}
+          <View style={styles.brandHeader}>
+            <View style={styles.logoShell}>
+              <Image
+                source={APP_LOGO}
+                style={styles.logo}
+                resizeMode="contain"
+                accessibilityLabel="Futurely app logo"
+              />
             </View>
 
-            <View style={styles.formIcon}>
+            <View style={styles.brandCopy}>
+              <Text style={styles.brandName}>myFuturely</Text>
+              <Text style={styles.brandTag}>AI academic copilot</Text>
+            </View>
+
+            <View style={styles.securePill}>
               <Feather
-                name={mode === 'login' ? 'log-in' : 'user-plus'}
-                size={19}
-                color="#B9A5FF"
+                name="shield"
+                size={12}
+                color={colors.accent2}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
               />
+              <Text style={styles.securePillText}>Secure</Text>
             </View>
           </View>
 
-          {mode === 'register' ? (
-            <View style={styles.stepProgress}>
-              {REGISTER_STEPS.map((step, index) => {
-                const complete = index < registerStepIndex
-                const active = index === registerStepIndex
-
-                return (
-                  <React.Fragment key={step.key}>
-                    <View style={styles.stepItem}>
-                      <View
-                        style={[
-                          styles.stepCircle,
-                          complete && styles.stepCircleComplete,
-                          active && styles.stepCircleActive,
-                        ]}
-                      >
-                        {complete ? (
-                          <Feather
-                            name="check"
-                            size={12}
-                            color="#FFFFFF"
-                          />
-                        ) : (
-                          <Text
-                            allowFontScaling={false}
-                            style={[
-                              styles.stepNumber,
-                              active && styles.stepNumberActive,
-                            ]}
-                          >
-                            {index + 1}
-                          </Text>
-                        )}
-                      </View>
-
-                      <Text
-                        allowFontScaling={false}
-                        style={[
-                          styles.stepLabel,
-                          active && styles.stepLabelActive,
-                        ]}
-                      >
-                        {step.label}
-                      </Text>
-                    </View>
-
-                    {index < REGISTER_STEPS.length - 1 ? (
-                      <View
-                        style={[
-                          styles.stepLine,
-                          complete && styles.stepLineComplete,
-                        ]}
-                      />
-                    ) : null}
-                  </React.Fragment>
-                )
-              })}
-            </View>
-          ) : null}
-
-          <Pressable
-            onPress={() => void handleGoogleSignIn()}
-            disabled={googleLoading}
-            style={({ pressed }) => [
-              styles.googleButton,
-              pressed && !googleLoading && styles.googleButtonPressed,
-              googleLoading && styles.actionButtonDisabled,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Continue with Google"
-          >
-            {googleLoading ? (
-              <ActivityIndicator size="small" color="#12141D" />
-            ) : (
-              <GoogleLogo size={19} />
-            )}
-
-            <Text
-              allowFontScaling={false}
-              style={styles.googleButtonText}
-            >
-              {googleLoading
-                ? 'Opening Google…'
-                : mode === 'login'
-                  ? 'Sign in with Google'
-                  : 'Continue with Google'}
+          {/* Hero */}
+          <View style={styles.hero}>
+            <Text style={styles.heroEyebrow}>YOUR FUTURE, ONE STEP CLOSER</Text>
+            <Text style={styles.heroTitle}>
+              Plan smarter.{'\n'}
+              <Text style={styles.heroTitleAccent}>Move forward.</Text>
             </Text>
-          </Pressable>
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text allowFontScaling={false} style={styles.dividerText}>
-              OR CONTINUE WITH EMAIL
+            <Text style={styles.heroSubtitle}>
+              Keep grades, assignments, college planning and personalized AI
+              guidance together in one place.
             </Text>
-            <View style={styles.dividerLine} />
           </View>
 
-          {mode === 'login' ? (
-            <View style={styles.form}>
-              <AuthField
-                label="Email address"
-                value={loginEmail}
-                onChangeText={setLoginEmail}
-                placeholder="you@example.com"
-                icon="mail"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                textContentType="emailAddress"
+          {/* Feature chips */}
+          <View style={styles.featureRow}>
+            <View style={styles.featureChip}>
+              <Feather
+                name="bar-chart-2"
+                size={14}
+                color={colors.accent2}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
               />
+              <Text style={styles.featureChipText}>Live grades</Text>
+            </View>
 
-              <AuthField
-                label="Password"
-                value={loginPassword}
-                onChangeText={setLoginPassword}
-                placeholder="Enter your password"
-                icon="lock"
-                secureTextEntry={!showLoginPassword}
-                autoCapitalize="none"
-                textContentType="password"
-                rightAction={
-                  <Pressable
-                    onPress={() =>
-                      setShowLoginPassword((current) => !current)
-                    }
-                    style={styles.visibilityButton}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      showLoginPassword ? 'Hide password' : 'Show password'
-                    }
-                  >
-                    <Feather
-                      name={showLoginPassword ? 'eye-off' : 'eye'}
-                      size={17}
-                      color="#7D8EA7"
-                    />
-                  </Pressable>
-                }
+            <View style={styles.featureChip}>
+              <Feather
+                name="calendar"
+                size={14}
+                color={colors.accent}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
               />
+              <Text style={styles.featureChipText}>Smart planner</Text>
+            </View>
 
-              {currentError ? <ErrorBanner message={currentError} /> : null}
-
-              <ActionButton
-                label="Sign in"
-                icon="arrow-right"
-                onPress={() => void handleLogin()}
-                loading={loginLoading}
+            <View style={styles.featureChip}>
+              <Feather
+                name="zap"
+                size={14}
+                color={colors.purple}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
               />
+              <Text style={styles.featureChipText}>AI guidance</Text>
+            </View>
+          </View>
 
-              <View style={styles.trustRow}>
-                <Feather name="lock" size={12} color="#71839E" />
-                <Text style={styles.trustText}>
-                  Your academic data stays private and protected.
+          {/* Auth card */}
+          <Card variant="glass" style={styles.authCardInner}>
+            {/* Log In / Sign Up mode toggle */}
+            <SegmentedControl
+              segments={MODE_LABEL_SEGMENTS}
+              value={MODE_VALUE_TO_LABEL[mode]}
+              onChange={(label) => switchMode(MODE_LABEL_TO_VALUE[label])}
+            />
+
+            {/* Student / Parent toggle */}
+            <SegmentedControl
+              segments={ACCOUNT_TYPE_SEGMENTS}
+              value={accountType}
+              onChange={setAccountType}
+            />
+
+            {/* Form header */}
+            <View style={styles.formHeader}>
+              <View style={styles.formHeaderCopy}>
+                <Text style={styles.formEyebrow}>
+                  {mode === 'login' ? 'WELCOME BACK' : 'JOIN MYFUTURELY'}
+                </Text>
+
+                <Text style={styles.formTitle}>
+                  {mode === 'login'
+                    ? 'Continue your journey'
+                    : registerStep === 'dob'
+                      ? 'Let\'s get started'
+                      : registerStep === 'account'
+                        ? 'Create your account'
+                        : 'Review and finish'}
+                </Text>
+
+                <Text style={styles.formSubtitle}>
+                  {mode === 'login'
+                    ? 'Sign in to access your academic command center.'
+                    : registerStep === 'dob'
+                      ? 'We use your age to keep your account safe.'
+                      : registerStep === 'account'
+                        ? 'Verify your email to protect your student profile.'
+                        : 'Confirm the final details before creating your account.'}
                 </Text>
               </View>
+
+              <View style={styles.formIcon}>
+                <Feather
+                  name={mode === 'login' ? 'log-in' : 'user-plus'}
+                  size={19}
+                  color={colors.accent}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                />
+              </View>
             </View>
-          ) : (
-            <View style={styles.form}>
-              {registerStep === 'dob' ? (
-                <>
-                  <AuthField
-                    label="Date of birth"
-                    value={dateOfBirth}
-                    onChangeText={(value) => {
-                      setDateOfBirth(value)
-                      setCoppaBlocked(false)
-                      setRegisterError(null)
-                    }}
-                    placeholder="YYYY-MM-DD"
-                    icon="calendar"
-                    keyboardType="numbers-and-punctuation"
-                    autoCapitalize="none"
-                    maxLength={10}
-                  />
 
-                  <View style={styles.infoBanner}>
-                    <View style={styles.infoIcon}>
-                      <Feather
-                        name="shield"
-                        size={16}
-                        color="#78AFFF"
-                      />
-                    </View>
-                    <Text style={styles.infoText}>
-                      Students must be at least 13 years old to create an
-                      account.
-                    </Text>
-                  </View>
+            {/* Registration step progress */}
+            {mode === 'register' ? (
+              <View style={styles.stepProgress}>
+                {REGISTER_STEPS.map((step, index) => {
+                  const complete = index < registerStepIndex
+                  const active = index === registerStepIndex
 
-                  {coppaBlocked ? (
-                    <ErrorBanner message="You must be at least 13 years old. Please ask a parent or guardian for help." />
-                  ) : currentError ? (
-                    <ErrorBanner message={currentError} />
-                  ) : null}
+                  return (
+                    <React.Fragment key={step.key}>
+                      <View style={styles.stepItem}>
+                        <View
+                          style={[
+                            styles.stepCircle,
+                            complete && styles.stepCircleComplete,
+                            active && styles.stepCircleActive,
+                          ]}
+                        >
+                          {complete ? (
+                            <Feather
+                              name="check"
+                              size={12}
+                              color="#FFFFFF"
+                              accessibilityElementsHidden
+                              importantForAccessibility="no-hide-descendants"
+                            />
+                          ) : (
+                            <Text
+                              style={[
+                                styles.stepNumber,
+                                active && styles.stepNumberActive,
+                              ]}
+                            >
+                              {index + 1}
+                            </Text>
+                          )}
+                        </View>
 
-                  <ActionButton
-                    label="Continue"
-                    icon="arrow-right"
-                    onPress={handleDobContinue}
-                    disabled={coppaBlocked}
-                  />
-                </>
-              ) : null}
+                        <Text
+                          style={[
+                            styles.stepLabel,
+                            active && styles.stepLabelActive,
+                          ]}
+                        >
+                          {step.label}
+                        </Text>
+                      </View>
 
-              {registerStep === 'account' ? (
-                <>
-                  <AuthField
-                    label="Display name"
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="What should we call you?"
-                    icon="user"
-                    autoCapitalize="words"
-                    textContentType="name"
-                  />
-
-                  <AuthField
-                    label="Email address"
-                    value={email}
-                    onChangeText={(value) => {
-                      setEmail(value)
-                      setOtpSent(false)
-                      setOtp('')
-                    }}
-                    placeholder="you@example.com"
-                    icon="mail"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    textContentType="emailAddress"
-                  />
-
-                  <AuthField
-                    label="Password"
-                    value={password}
-                    onChangeText={(value) => {
-                      setPassword(value)
-                      setOtpSent(false)
-                      setOtp('')
-                    }}
-                    placeholder="At least 8 characters"
-                    icon="lock"
-                    secureTextEntry={!showRegisterPassword}
-                    autoCapitalize="none"
-                    textContentType="newPassword"
-                    rightAction={
-                      <Pressable
-                        onPress={() =>
-                          setShowRegisterPassword((current) => !current)
-                        }
-                        style={styles.visibilityButton}
-                        accessibilityRole="button"
-                        accessibilityLabel={
-                          showRegisterPassword
-                            ? 'Hide password'
-                            : 'Show password'
-                        }
-                      >
-                        <Feather
-                          name={
-                            showRegisterPassword ? 'eye-off' : 'eye'
-                          }
-                          size={17}
-                          color="#7D8EA7"
+                      {index < REGISTER_STEPS.length - 1 ? (
+                        <View
+                          style={[
+                            styles.stepLine,
+                            complete && styles.stepLineComplete,
+                          ]}
                         />
-                      </Pressable>
-                    }
+                      ) : null}
+                    </React.Fragment>
+                  )
+                })}
+              </View>
+            ) : null}
+
+            {/* Google sign-in button */}
+            <Pressable
+              onPress={() => void handleGoogleSignIn()}
+              disabled={googleLoading}
+              style={({ pressed }) => [
+                styles.googleButton,
+                pressed && !googleLoading && styles.googleButtonPressed,
+                googleLoading && styles.actionButtonDisabled,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
+              accessibilityState={{ busy: googleLoading }}
+            >
+              {googleLoading ? (
+                <ActivityIndicator size="small" color="#12141D" />
+              ) : (
+                <GoogleLogo size={19} />
+              )}
+
+              <Text style={styles.googleButtonText}>
+                {googleLoading
+                  ? 'Opening Google…'
+                  : mode === 'login'
+                    ? 'Sign in with Google'
+                    : 'Continue with Google'}
+              </Text>
+            </Pressable>
+
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR CONTINUE WITH EMAIL</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Forms */}
+            {mode === 'login' ? (
+              <View style={styles.form}>
+                <AuthField
+                  label="Email address"
+                  value={loginEmail}
+                  onChangeText={setLoginEmail}
+                  placeholder="you@example.com"
+                  icon="mail"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  textContentType="emailAddress"
+                />
+
+                <AuthField
+                  label="Password"
+                  value={loginPassword}
+                  onChangeText={setLoginPassword}
+                  placeholder="Enter your password"
+                  icon="lock"
+                  secureTextEntry={!showLoginPassword}
+                  autoCapitalize="none"
+                  textContentType="password"
+                  rightAction={
+                    <Pressable
+                      onPress={() =>
+                        setShowLoginPassword((current) => !current)
+                      }
+                      style={styles.visibilityButton}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showLoginPassword ? 'Hide password' : 'Show password'
+                      }
+                    >
+                      <Feather
+                        name={showLoginPassword ? 'eye-off' : 'eye'}
+                        size={17}
+                        color={colors.textDim}
+                      />
+                    </Pressable>
+                  }
+                />
+
+                {currentError !== null ? (
+                  <ErrorBanner message={currentError} />
+                ) : null}
+
+                <ActionButton
+                  label="Sign in"
+                  icon="arrow-right"
+                  onPress={() => void handleLogin()}
+                  loading={loginLoading}
+                />
+
+                <View style={styles.trustRow}>
+                  <Feather
+                    name="lock"
+                    size={12}
+                    color={colors.textFaint}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
                   />
-
-                  <View style={styles.passwordHint}>
-                    <View
-                      style={[
-                        styles.passwordDot,
-                        password.length >= 8 && styles.passwordDotComplete,
-                      ]}
-                    />
-                    <Text style={styles.passwordHintText}>
-                      Use at least 8 characters
-                    </Text>
-                  </View>
-
-                  {otpSent ? (
+                  <Text style={styles.trustText}>
+                    Your academic data stays private and protected.
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.form}>
+                {registerStep === 'dob' ? (
+                  <>
                     <AuthField
-                      label="Verification code"
-                      value={otp}
-                      onChangeText={setOtp}
-                      placeholder="6-digit code"
-                      icon="key"
-                      keyboardType="number-pad"
+                      label="Date of birth"
+                      value={dateOfBirth}
+                      onChangeText={(value) => {
+                        setDateOfBirth(value)
+                        setCoppaBlocked(false)
+                        setRegisterError(null)
+                      }}
+                      placeholder="YYYY-MM-DD"
+                      icon="calendar"
+                      keyboardType="numbers-and-punctuation"
                       autoCapitalize="none"
-                      textContentType="oneTimeCode"
-                      maxLength={6}
+                      maxLength={10}
                     />
-                  ) : null}
 
-                  {otpSent ? (
-                    <View style={styles.codeSentBanner}>
+                    <View style={styles.infoBanner}>
+                      <View style={styles.infoIcon}>
+                        <Feather
+                          name="shield"
+                          size={16}
+                          color={colors.accent}
+                          accessibilityElementsHidden
+                          importantForAccessibility="no-hide-descendants"
+                        />
+                      </View>
+                      <Text style={styles.infoText}>
+                        Students must be at least 13 years old to create an
+                        account.
+                      </Text>
+                    </View>
+
+                    {coppaBlocked ? (
+                      <ErrorBanner message="You must be at least 13 years old. Please ask a parent or guardian for help." />
+                    ) : currentError !== null ? (
+                      <ErrorBanner message={currentError} />
+                    ) : null}
+
+                    <ActionButton
+                      label="Continue"
+                      icon="arrow-right"
+                      onPress={handleDobContinue}
+                      disabled={coppaBlocked}
+                    />
+                  </>
+                ) : null}
+
+                {registerStep === 'account' ? (
+                  <>
+                    <AuthField
+                      label="Display name"
+                      value={name}
+                      onChangeText={setName}
+                      placeholder="What should we call you?"
+                      icon="user"
+                      autoCapitalize="words"
+                      textContentType="name"
+                    />
+
+                    <AuthField
+                      label="Email address"
+                      value={email}
+                      onChangeText={(value) => {
+                        setEmail(value)
+                        setOtpSent(false)
+                        setOtp('')
+                      }}
+                      placeholder="you@example.com"
+                      icon="mail"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      textContentType="emailAddress"
+                    />
+
+                    <AuthField
+                      label="Password"
+                      value={password}
+                      onChangeText={(value) => {
+                        setPassword(value)
+                        setOtpSent(false)
+                        setOtp('')
+                      }}
+                      placeholder="At least 8 characters"
+                      icon="lock"
+                      secureTextEntry={!showRegisterPassword}
+                      autoCapitalize="none"
+                      textContentType="newPassword"
+                      rightAction={
+                        <Pressable
+                          onPress={() =>
+                            setShowRegisterPassword((current) => !current)
+                          }
+                          style={styles.visibilityButton}
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            showRegisterPassword
+                              ? 'Hide password'
+                              : 'Show password'
+                          }
+                        >
+                          <Feather
+                            name={
+                              showRegisterPassword ? 'eye-off' : 'eye'
+                            }
+                            size={17}
+                            color={colors.textDim}
+                          />
+                        </Pressable>
+                      }
+                    />
+
+                    <View style={styles.passwordHint}>
+                      <View
+                        style={[
+                          styles.passwordDot,
+                          password.length >= 8 && styles.passwordDotComplete,
+                        ]}
+                      />
+                      <Text style={styles.passwordHintText}>
+                        Use at least 8 characters
+                      </Text>
+                    </View>
+
+                    {otpSent ? (
+                      <AuthField
+                        label="Verification code"
+                        value={otp}
+                        onChangeText={setOtp}
+                        placeholder="6-digit code"
+                        icon="key"
+                        keyboardType="number-pad"
+                        autoCapitalize="none"
+                        textContentType="oneTimeCode"
+                        maxLength={6}
+                      />
+                    ) : null}
+
+                    {otpSent ? (
+                      <View style={styles.codeSentBanner}>
+                        <Feather
+                          name="check-circle"
+                          size={15}
+                          color={colors.tierGreen}
+                          accessibilityElementsHidden
+                          importantForAccessibility="no-hide-descendants"
+                        />
+                        <Text style={styles.codeSentText}>
+                          Verification code sent to {email.trim()}.
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    {currentError !== null ? (
+                      <ErrorBanner message={currentError} />
+                    ) : null}
+
+                    <ActionButton
+                      label={
+                        otpSent
+                          ? 'Resend verification code'
+                          : 'Send verification code'
+                      }
+                      icon={otpSent ? 'refresh-cw' : 'send'}
+                      onPress={() => void handleSendOtp()}
+                      loading={otpLoading}
+                      variant="secondary"
+                    />
+
+                    <ActionButton
+                      label="Continue"
+                      icon="arrow-right"
+                      onPress={handleAccountContinue}
+                      disabled={!otpSent || otp.trim().length === 0}
+                    />
+
+                    {/* Connect school account placeholder — shown on the account step
+                        before the user finishes registration, per design spec */}
+                    <ConnectSchoolPlaceholder />
+                  </>
+                ) : null}
+
+                {registerStep === 'terms' ? (
+                  <>
+                    <View style={styles.summaryCard}>
+                      <View style={styles.summaryIcon}>
+                        <Feather
+                          name="user"
+                          size={19}
+                          color={colors.accent}
+                          accessibilityElementsHidden
+                          importantForAccessibility="no-hide-descendants"
+                        />
+                      </View>
+                      <View style={styles.summaryCopy}>
+                        <Text style={styles.summaryTitle}>
+                          {name.trim() || 'New myFuturely student'}
+                        </Text>
+                        <Text style={styles.summaryEmail}>
+                          {email.trim()}
+                        </Text>
+                      </View>
                       <Feather
                         name="check-circle"
-                        size={15}
-                        color="#5ED6AE"
+                        size={18}
+                        color={colors.tierGreen}
+                        accessibilityElementsHidden
+                        importantForAccessibility="no-hide-descendants"
                       />
-                      <Text style={styles.codeSentText}>
-                        Verification code sent to {email.trim()}.
-                      </Text>
                     </View>
-                  ) : null}
 
-                  {currentError ? <ErrorBanner message={currentError} /> : null}
+                    <CheckboxRow
+                      checked={acceptedTos}
+                      onToggle={() => setAcceptedTos((current) => !current)}
+                      label="Terms of Service"
+                      subtitle="I agree to use myFuturely responsibly."
+                    />
 
-                  <ActionButton
-                    label={
-                      otpSent
-                        ? 'Resend verification code'
-                        : 'Send verification code'
-                    }
-                    icon={otpSent ? 'refresh-cw' : 'send'}
-                    onPress={() => void handleSendOtp()}
-                    loading={otpLoading}
-                    variant="secondary"
-                  />
+                    <CheckboxRow
+                      checked={acceptedPrivacy}
+                      onToggle={() =>
+                        setAcceptedPrivacy((current) => !current)
+                      }
+                      label="Privacy Policy"
+                      subtitle="I understand how my information is handled."
+                    />
 
-                  <ActionButton
-                    label="Continue"
-                    icon="arrow-right"
-                    onPress={handleAccountContinue}
-                    disabled={!otpSent || otp.trim().length === 0}
-                  />
-                </>
-              ) : null}
+                    {currentError !== null ? (
+                      <ErrorBanner message={currentError} />
+                    ) : null}
 
-              {registerStep === 'terms' ? (
-                <>
-                  <View style={styles.summaryCard}>
-                    <View style={styles.summaryIcon}>
-                      <Feather name="user" size={19} color="#B9A5FF" />
-                    </View>
-                    <View style={styles.summaryCopy}>
-                      <Text
-                        allowFontScaling={false}
-                        style={styles.summaryTitle}
-                      >
-                        {name.trim() || 'New myFuturely student'}
-                      </Text>
-                      <Text
-                        allowFontScaling={false}
-                        style={styles.summaryEmail}
-                      >
-                        {email.trim()}
-                      </Text>
-                    </View>
-                    <Feather name="check-circle" size={18} color="#5ED6AE" />
-                  </View>
+                    <ActionButton
+                      label="Create my account"
+                      icon="check"
+                      onPress={() => void handleRegisterSubmit()}
+                      loading={registerLoading}
+                      disabled={!acceptedTos || !acceptedPrivacy}
+                    />
+                  </>
+                ) : null}
 
-                  <CheckboxRow
-                    checked={acceptedTos}
-                    onToggle={() => setAcceptedTos((current) => !current)}
-                    label="Terms of Service"
-                    subtitle="I agree to use myFuturely responsibly."
-                  />
+                <ActionButton
+                  label={
+                    registerStep === 'dob'
+                      ? 'Back to sign in'
+                      : 'Back'
+                  }
+                  icon="arrow-left"
+                  onPress={goBackRegisterStep}
+                  variant="ghost"
+                />
+              </View>
+            )}
+          </Card>
 
-                  <CheckboxRow
-                    checked={acceptedPrivacy}
-                    onToggle={() =>
-                      setAcceptedPrivacy((current) => !current)
-                    }
-                    label="Privacy Policy"
-                    subtitle="I understand how my information is handled."
-                  />
-
-                  {currentError ? <ErrorBanner message={currentError} /> : null}
-
-                  <ActionButton
-                    label="Create my account"
-                    icon="check"
-                    onPress={() => void handleRegisterSubmit()}
-                    loading={registerLoading}
-                    disabled={!acceptedTos || !acceptedPrivacy}
-                  />
-                </>
-              ) : null}
-
-              <ActionButton
-                label={
-                  registerStep === 'dob'
-                    ? 'Back to sign in'
-                    : 'Back'
-                }
-                icon="arrow-left"
-                onPress={goBackRegisterStep}
-                variant="ghost"
-              />
-            </View>
-          )}
-        </View>
-
-        <Text style={styles.footerText}>
-          By continuing, you’re joining a student-first platform designed
-          to help you make confident academic decisions.
-        </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <Text style={styles.footerText}>
+            {"By continuing, you're joining a student-first platform designed to help you make confident academic decisions."}
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Screen>
   )
 }
+
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: '#02040B',
-  },
-  backgroundTopAccent: {
-    position: 'absolute',
-    top: -120,
-    right: -145,
-    width: 310,
-    height: 310,
-    borderRadius: 155,
-    backgroundColor: '#14103A',
-    opacity: 0.72,
-  },
-  backgroundBottomAccent: {
-    position: 'absolute',
-    bottom: -170,
-    left: -180,
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    backgroundColor: '#071D2B',
-    opacity: 0.62,
   },
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
     paddingHorizontal: spacing.screenPadding,
-    paddingTop: Platform.OS === 'android' ? 34 : 22,
-    paddingBottom: 30,
-    gap: 18,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
   },
 
+  // Brand header
   brandHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.ms,
   },
   logoShell: {
     width: 48,
@@ -1090,10 +1184,10 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    backgroundColor: '#071528',
+    borderRadius: radii.sm,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#1A4D6B',
+    borderColor: colors.cardBorder,
     ...elevation.sm,
   },
   logo: {
@@ -1105,8 +1199,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   brandName: {
-    color: '#F4F6FF',
-    fontFamily: fonts.bold,
+    color: colors.text,
+    fontFamily: fonts.displayBold,
     fontSize: 18,
     lineHeight: 22,
     fontWeight: '700',
@@ -1114,61 +1208,56 @@ const styles = StyleSheet.create({
   },
   brandTag: {
     marginTop: 1,
-    color: '#71839F',
-    fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 13,
+    color: colors.textFaint,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 10,
+    lineHeight: 14,
   },
   securePill: {
     minHeight: 29,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 9,
-    borderRadius: 10,
-    backgroundColor: 'rgba(16,185,129,0.08)',
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+    backgroundColor: colors.accent2Dim,
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.25)',
+    borderColor: 'rgba(34,211,181,0.25)',
   },
   securePillText: {
-    color: '#69DAB8',
-    fontFamily: fonts.bold,
-    fontSize: 8.5,
+    color: colors.accent2,
+    fontFamily: fonts.bodyBold,
+    fontSize: 9,
     fontWeight: '700',
   },
 
+  // Hero
   hero: {
-    gap: 6,
+    gap: spacing.xs,
   },
   heroEyebrow: {
-    color: '#7D92BA',
-    fontFamily: fonts.bold,
-    fontSize: 8.5,
-    fontWeight: '700',
-    letterSpacing: 1.2,
+    ...typography.label,
+    color: colors.textDim,
   },
   heroTitle: {
-    color: '#F5F7FF',
-    fontFamily: fonts.bold,
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: '700',
+    ...typography.display,
+    color: colors.text,
+    lineHeight: 36,
     letterSpacing: -0.8,
   },
   heroTitleAccent: {
-    color: '#A78BFA',
+    color: colors.accent,
   },
   heroSubtitle: {
-    maxWidth: 345,
-    color: '#8B9AB0',
-    fontFamily: fonts.regular,
-    fontSize: 11.5,
-    lineHeight: 17,
+    ...typography.body,
+    color: colors.textDim,
+    marginTop: 2,
   },
 
+  // Feature chips
   featureRow: {
     flexDirection: 'row',
-    gap: 7,
+    gap: spacing.xs,
   },
   featureChip: {
     flex: 1,
@@ -1178,103 +1267,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingHorizontal: 6,
-    borderRadius: 11,
-    backgroundColor: '#0B1422',
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.sm,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#1D3049',
+    borderColor: colors.cardBorder,
   },
   featureChipText: {
-    color: '#A4B1C5',
-    fontFamily: fonts.semiBold,
-    fontSize: 8.2,
+    ...typography.caption,
+    color: colors.textDim,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '600',
   },
 
-  authCard: {
-    gap: 16,
-    padding: 15,
-    borderRadius: 22,
-    backgroundColor: '#0C1422',
-    borderWidth: 1,
-    borderColor: '#263B58',
-    ...elevation.md,
-  },
-  modeSwitch: {
-    minHeight: 44,
-    flexDirection: 'row',
-    padding: 4,
-    borderRadius: 14,
-    backgroundColor: '#070D17',
-    borderWidth: 1,
-    borderColor: '#1D2B40',
-  },
-  modeButton: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-  },
-  modeButtonActive: {
-    backgroundColor: '#21184A',
-    borderWidth: 1,
-    borderColor: 'rgba(167,139,250,0.35)',
-  },
-  modeButtonText: {
-    color: '#71819A',
-    fontFamily: fonts.bold,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  modeButtonTextActive: {
-    color: '#D1C5FF',
+  // Auth card inner content (Card component provides the glass wrapper)
+  authCardInner: {
+    gap: spacing.md,
   },
 
+  // Form header
   formHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: spacing.ms,
   },
   formHeaderCopy: {
     flex: 1,
     minWidth: 0,
   },
   formEyebrow: {
-    color: '#7892BB',
-    fontFamily: fonts.bold,
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 1,
+    ...typography.label,
+    color: colors.textDim,
   },
   formTitle: {
-    marginTop: 2,
-    color: '#F4F6FF',
-    fontFamily: fonts.bold,
-    fontSize: 19,
-    lineHeight: 23,
-    fontWeight: '700',
+    marginTop: 3,
+    ...typography.h2,
+    color: colors.text,
     letterSpacing: -0.3,
   },
   formSubtitle: {
     marginTop: 4,
-    color: '#7D8DA5',
-    fontFamily: fonts.regular,
-    fontSize: 9.8,
-    lineHeight: 14,
+    ...typography.caption,
+    color: colors.textDim,
+    lineHeight: 16,
   },
   formIcon: {
-    width: 39,
-    height: 39,
+    width: touchTarget,
+    height: touchTarget,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 13,
-    backgroundColor: '#21184A',
+    borderRadius: radii.md,
+    backgroundColor: colors.accentDim,
     borderWidth: 1,
-    borderColor: 'rgba(167,139,250,0.30)',
+    borderColor: 'rgba(76,124,255,0.25)',
   },
 
+  // Registration step progress
   stepProgress: {
     minHeight: 47,
     flexDirection: 'row',
@@ -1291,35 +1340,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 13,
-    backgroundColor: '#111B2B',
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#2A3C56',
+    borderColor: colors.cardBorder,
   },
   stepCircleActive: {
-    backgroundColor: '#6741DE',
-    borderColor: '#8D6BFF',
+    backgroundColor: colors.accentDim,
+    borderColor: colors.accent,
   },
   stepCircleComplete: {
-    backgroundColor: '#168765',
-    borderColor: '#34B38D',
+    backgroundColor: colors.tierGreenBg,
+    borderColor: colors.tierGreen,
   },
   stepNumber: {
-    color: '#71819A',
-    fontFamily: fonts.bold,
-    fontSize: 8.5,
+    ...typography.caption,
+    color: colors.textFaint,
+    fontFamily: fonts.bodyBold,
     fontWeight: '700',
   },
   stepNumberActive: {
-    color: '#FFFFFF',
+    color: colors.accent,
   },
   stepLabel: {
-    color: '#64758F',
-    fontFamily: fonts.medium,
-    fontSize: 7.5,
+    ...typography.caption,
+    color: colors.textFaint,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500',
   },
   stepLabelActive: {
-    color: '#C7B9FF',
+    color: colors.accent,
   },
   stepLine: {
     flex: 1,
@@ -1328,20 +1377,21 @@ const styles = StyleSheet.create({
     minWidth: 36,
     marginHorizontal: 7,
     marginBottom: 16,
-    backgroundColor: '#24354D',
+    backgroundColor: colors.cardBorder,
   },
   stepLineComplete: {
-    backgroundColor: '#2FA67F',
+    backgroundColor: colors.tierGreen,
   },
 
+  // Google button
   googleButton: {
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 9,
-    paddingHorizontal: 13,
-    borderRadius: 14,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.input,
     backgroundColor: '#F8F9FC',
     borderWidth: 1,
     borderColor: '#FFFFFF',
@@ -1352,56 +1402,53 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     color: '#12141D',
-    fontFamily: fonts.bold,
-    fontSize: 11,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
+    fontSize: 13,
   },
 
+  // Divider
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
+    gap: spacing.sm,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#22324A',
+    backgroundColor: colors.divider,
   },
   dividerText: {
-    color: '#60718C',
-    fontFamily: fonts.bold,
-    fontSize: 7.5,
-    fontWeight: '700',
-    letterSpacing: 0.65,
+    ...typography.label,
+    color: colors.textFaint,
   },
 
+  // Form container
   form: {
-    gap: 13,
+    gap: spacing.ms,
   },
+
+  // AuthField
   fieldWrap: {
-    gap: 6,
+    gap: spacing.xs,
   },
   fieldLabel: {
-    color: '#8798B2',
-    fontFamily: fonts.bold,
-    fontSize: 8.5,
-    fontWeight: '700',
-    letterSpacing: 0.7,
-    textTransform: 'uppercase',
+    ...typography.label,
+    color: colors.textDim,
   },
   inputShell: {
     minHeight: 50,
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
-    borderRadius: 14,
-    backgroundColor: '#080F1A',
+    borderRadius: radii.input,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#263954',
+    borderColor: colors.cardBorder,
   },
   inputShellFocused: {
-    borderColor: '#7555E8',
-    backgroundColor: '#0A1120',
+    borderColor: colors.accent,
+    backgroundColor: colors.surface2,
   },
   inputIcon: {
     width: 43,
@@ -1413,35 +1460,37 @@ const styles = StyleSheet.create({
     minWidth: 0,
     height: 50,
     paddingVertical: 0,
-    paddingRight: 10,
-    color: '#F1F4FC',
-    fontFamily: fonts.regular,
-    fontSize: 12,
+    paddingRight: spacing.ms,
+    color: colors.text,
+    fontFamily: fonts.bodyRegular,
+    fontSize: typography.body.fontSize,
   },
   visibilityButton: {
     width: 43,
-    height: 48,
+    height: touchTarget,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
+  // ActionButton
   actionButton: {
-    minHeight: 47,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    paddingHorizontal: 13,
-    borderRadius: 14,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.button,
     borderWidth: 1,
   },
   primaryButton: {
-    backgroundColor: '#7048F4',
-    borderColor: '#8565FF',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+    ...elevation.sm,
   },
   secondaryButton: {
-    backgroundColor: '#151F31',
-    borderColor: '#304764',
+    backgroundColor: 'transparent',
+    borderColor: colors.cardBorder,
   },
   ghostButton: {
     backgroundColor: 'transparent',
@@ -1449,31 +1498,32 @@ const styles = StyleSheet.create({
   },
   actionButtonPressed: {
     opacity: 0.86,
-    transform: [{ scale: 0.99 }],
+    transform: [{ scale: 0.98 }],
   },
   actionButtonDisabled: {
-    opacity: 0.55,
+    opacity: 0.4,
   },
   actionButtonText: {
     color: '#FFFFFF',
-    fontFamily: fonts.bold,
-    fontSize: 10.5,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
+    fontSize: 14,
   },
   secondaryButtonText: {
-    color: '#C3B5FA',
+    color: colors.textDim,
   },
 
+  // ErrorBanner
   errorBanner: {
     minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
-    padding: 10,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,99,103,0.08)',
+    gap: spacing.sm,
+    padding: spacing.ms,
+    borderRadius: radii.md,
+    backgroundColor: colors.tierRedBg,
     borderWidth: 1,
-    borderColor: 'rgba(255,99,103,0.25)',
+    borderColor: 'rgba(248,113,113,0.25)',
   },
   errorIcon: {
     width: 29,
@@ -1481,27 +1531,27 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,99,103,0.10)',
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(248,113,113,0.10)',
   },
   errorText: {
     flex: 1,
-    color: '#E7A1A4',
-    fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 13.5,
+    ...typography.caption,
+    color: colors.tierRed,
+    lineHeight: 16,
   },
 
+  // Info banner
   infoBanner: {
     minHeight: 50,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
-    padding: 10,
-    borderRadius: 13,
-    backgroundColor: 'rgba(59,130,246,0.07)',
+    gap: spacing.sm,
+    padding: spacing.ms,
+    borderRadius: radii.md,
+    backgroundColor: colors.accentDim,
     borderWidth: 1,
-    borderColor: 'rgba(59,130,246,0.22)',
+    borderColor: 'rgba(76,124,255,0.22)',
   },
   infoIcon: {
     width: 31,
@@ -1509,67 +1559,67 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
-    backgroundColor: 'rgba(59,130,246,0.10)',
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(76,124,255,0.10)',
   },
   infoText: {
     flex: 1,
-    color: '#91A5C2',
-    fontFamily: fonts.regular,
-    fontSize: 9.2,
-    lineHeight: 13.5,
+    ...typography.caption,
+    color: colors.textDim,
+    lineHeight: 16,
   },
 
+  // Password hint
   passwordHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.xs,
     paddingLeft: 2,
   },
   passwordDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#485B76',
+    backgroundColor: colors.textFaint,
   },
   passwordDotComplete: {
-    backgroundColor: '#36C595',
+    backgroundColor: colors.tierGreen,
   },
   passwordHintText: {
-    color: '#6F809A',
-    fontFamily: fonts.regular,
-    fontSize: 8.5,
+    ...typography.caption,
+    color: colors.textFaint,
   },
 
+  // Code sent banner
   codeSentBanner: {
     minHeight: 40,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    backgroundColor: 'rgba(16,185,129,0.07)',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.ms,
+    borderRadius: radii.md,
+    backgroundColor: colors.tierGreenBg,
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.22)',
+    borderColor: 'rgba(52,211,153,0.22)',
   },
   codeSentText: {
     flex: 1,
-    color: '#8FC9B5',
-    fontFamily: fonts.regular,
-    fontSize: 8.8,
-    lineHeight: 12,
+    ...typography.caption,
+    color: colors.tierGreen,
+    lineHeight: 14,
   },
 
+  // Summary card (terms step)
   summaryCard: {
     minHeight: 65,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 11,
-    borderRadius: 14,
-    backgroundColor: '#141F33',
+    gap: spacing.ms,
+    padding: spacing.ms,
+    borderRadius: radii.card,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#2A4160',
+    borderColor: colors.cardBorder,
   },
   summaryIcon: {
     width: 38,
@@ -1577,8 +1627,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: '#21184A',
+    borderRadius: radii.md,
+    backgroundColor: colors.accentDim,
   },
   summaryCopy: {
     flex: 1,
@@ -1586,27 +1636,25 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   summaryTitle: {
-    color: '#EDF1FA',
-    fontFamily: fonts.semiBold,
-    fontSize: 10.5,
-    fontWeight: '600',
+    ...typography.h3,
+    color: colors.text,
   },
   summaryEmail: {
-    color: '#7C8EA8',
-    fontFamily: fonts.regular,
-    fontSize: 8.8,
+    ...typography.caption,
+    color: colors.textDim,
   },
 
+  // Checkbox row (terms step)
   checkboxRow: {
     minHeight: 63,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 10,
-    borderRadius: 13,
-    backgroundColor: '#101A2A',
+    gap: spacing.ms,
+    padding: spacing.ms,
+    borderRadius: radii.card,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#273D59',
+    borderColor: colors.cardBorder,
   },
   checkboxRowPressed: {
     opacity: 0.86,
@@ -1618,13 +1666,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 7,
-    backgroundColor: '#09111D',
+    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: '#3A4C65',
+    borderColor: colors.cardBorder,
   },
   checkboxBoxChecked: {
-    backgroundColor: '#7048F4',
-    borderColor: '#8D71FF',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   checkboxCopy: {
     flex: 1,
@@ -1632,39 +1680,100 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   checkboxLabel: {
-    color: '#EBEFF8',
-    fontFamily: fonts.semiBold,
-    fontSize: 10.5,
-    fontWeight: '600',
+    ...typography.h3,
+    color: colors.text,
   },
   checkboxSubtitle: {
-    color: '#71829A',
-    fontFamily: fonts.regular,
-    fontSize: 8.5,
-    lineHeight: 12,
+    ...typography.caption,
+    color: colors.textDim,
+    lineHeight: 14,
   },
 
+  // Connect school account placeholder
+  connectSchoolBox: {
+    gap: spacing.ms,
+    padding: spacing.md,
+    borderRadius: radii.card,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.cardBorder,
+    backgroundColor: 'transparent',
+  },
+  connectSchoolHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  connectSchoolTitle: {
+    flex: 1,
+    ...typography.h3,
+    color: colors.textDim,
+  },
+  requiredBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    backgroundColor: colors.tierRedBg,
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.25)',
+  },
+  requiredBadgeText: {
+    ...typography.caption,
+    color: colors.tierRed,
+    fontFamily: fonts.bodyBold,
+    fontWeight: '700',
+  },
+  connectSchoolBody: {
+    ...typography.body,
+    color: colors.textFaint,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  connectSchoolButton: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.input,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    backgroundColor: colors.accentDim,
+  },
+  connectSchoolButtonPressed: {
+    opacity: 0.75,
+  },
+  connectSchoolButtonText: {
+    ...typography.body,
+    fontSize: 13,
+    color: colors.accent,
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
+  },
+
+  // Trust row
   trustRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: spacing.xs,
   },
   trustText: {
-    color: '#667791',
-    fontFamily: fonts.regular,
-    fontSize: 8.2,
-    lineHeight: 11,
+    ...typography.caption,
+    color: colors.textFaint,
     textAlign: 'center',
+    lineHeight: 14,
   },
 
+  // Footer
   footerText: {
     maxWidth: 330,
     alignSelf: 'center',
-    color: '#586A84',
-    fontFamily: fonts.regular,
-    fontSize: 8.2,
-    lineHeight: 12,
+    ...typography.caption,
+    color: colors.textFaint,
     textAlign: 'center',
+    lineHeight: 16,
   },
 })
