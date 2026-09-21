@@ -8,6 +8,7 @@ import {
 } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import { Feather } from '@expo/vector-icons'
 
 import * as gradesApi from '../api/gradesApi'
@@ -18,6 +19,8 @@ import { ActionTile } from '../components/ui/ActionTile'
 import { GpaOverviewCard } from '../components/grades/GpaOverviewCard'
 import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
 import type { GradesStackParamList } from '../navigation/GradesNavigator'
+import type { MainTabParamList } from '../navigation/MainNavigator'
+import type { MainStackParamList } from '../navigation/MainStack'
 import {
   colors,
   fonts,
@@ -31,7 +34,10 @@ type FeatherName = React.ComponentProps<typeof Feather>['name']
 interface AcademicTool {
   label: string
   description: string
-  route: keyof GradesStackParamList
+  // Route identifier — most values are GradesStackParamList keys, but Roadmap
+  // (now a top-level tab) and GpaSimulator (now a MainStack push screen) need
+  // cross-navigator navigation handled by handleToolPress below.
+  route: string
   icon: FeatherName
   color: string
   iconBackground: string
@@ -123,6 +129,26 @@ function resultMessage(error: unknown, fallback: string): string {
 
 export default function GradesScreen(): React.JSX.Element {
   const navigation = useNavigation<Nav>()
+
+  // Cross-navigator navigation helper.
+  // GradesHub lives inside GradesNavigator (native-stack) → MainTabs (bottom-tab) → MainStack (native-stack).
+  // GpaSimulator and Roadmap are no longer registered in GradesNavigator:
+  //   • GpaSimulator is a pushed screen in MainStack → two getParent() hops
+  //   • Roadmap is a tab in MainTabs → one getParent() hop
+  const handleToolPress = useCallback((route: string): void => {
+    if (route === 'GpaSimulator') {
+      navigation
+        .getParent<BottomTabNavigationProp<MainTabParamList>>()
+        ?.getParent<NativeStackNavigationProp<MainStackParamList>>()
+        ?.navigate('GpaSimulator')
+    } else if (route === 'Roadmap') {
+      navigation
+        .getParent<BottomTabNavigationProp<MainTabParamList>>()
+        ?.navigate('Roadmap')
+    } else {
+      navigation.navigate(route as keyof GradesStackParamList)
+    }
+  }, [navigation])
 
   const [courses, setCourses] = useState<CurrentGradeCourse[]>([])
   const [gpa, setGpa] = useState<GpaSummary | null>(null)
@@ -234,7 +260,7 @@ export default function GradesScreen(): React.JSX.Element {
           courses={courses}
           error={gpaError}
           syncing={syncing}
-          onPress={() => navigation.navigate('GpaSimulator')}
+          onPress={() => handleToolPress('GpaSimulator')}
           onSync={() => void handleSync()}
           testID="grades-gpa-card"
         />
@@ -271,7 +297,7 @@ export default function GradesScreen(): React.JSX.Element {
                   icon={item.icon}
                   color={item.color}
                   iconBackground={item.iconBackground}
-                  onPress={() => navigation.navigate(item.route)}
+                  onPress={() => handleToolPress(item.route)}
                   accessibilityHint={`Open ${item.description.toLowerCase()}`}
                   testID={`grades-tile-${item.route}`}
                 />

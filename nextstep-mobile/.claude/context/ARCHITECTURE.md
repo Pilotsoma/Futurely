@@ -45,15 +45,21 @@ Futurely-mobile/
   module Expo Go doesn't support, that's an architecture decision (introduce `expo-dev-client`
   + EAS) — flag it, don't silently add the dependency.
 - **Navigation:** React Navigation **v7** (`@react-navigation/native`, `native-stack`,
-  `drawer`; `bottom-tabs` is installed but unused — Drawer was chosen instead, see below).
-  Structure: `RootNavigator` (3-state auth gate: unauthenticated → `AuthNavigator`;
-  authenticated + no school portal linked → `ConnectSchoolNavigator`; authenticated + portal
-  linked → `MainNavigator`) → `MainNavigator` is a flat **Drawer**, not nested tabs, with 7
-  screens matching web's real sidebar order (Dashboard, Grades, Planner, StudyFeed, Colleges,
-  AIChat, Settings) — `Grades` is itself a native-stack (`GradesNavigator`) wrapping a hub
-  screen + 8 sub-screens. Not v6 — don't use v6-only APIs.
-- **Why Drawer, not bottom tabs:** matches web's collapsible sidebar, and 7 top-level items
-  exceeds iOS bottom tabs' ~5-item limit before a fragmenting "More" overflow.
+  `bottom-tabs`; `drawer` is installed but unused). Not v6 — don't use v6-only APIs.
+  Structure:
+  - `RootNavigator` — 3-state auth gate: unauthenticated → `AuthNavigator`;
+    authenticated + no school portal linked → `ConnectSchoolNavigator`;
+    authenticated + portal linked → `MainStack`.
+  - `MainStack` (`createNativeStackNavigator`) — outer shell, `headerShown: false` by default.
+    First screen is `MainTabs`; `Settings`, `Colleges`, and `GpaSimulator` are pushed on top
+    (back arrow shown automatically, no tab bar visible).
+  - `MainNavigator` / `MainTabs` (`createBottomTabNavigator`) — 5 visible tabs (Dashboard,
+    Grades, Planner, Roadmap, AIChat) rendered via the `FloatingTabBar` custom tab bar; `StudyFeed`
+    is registered but hidden from the tab bar. `Grades` tab is itself `GradesNavigator`, a
+    native-stack with a hub screen + 8 sub-screens (Attendance, Classwork, ContactTeachers,
+    ProgressReport, ReportCard, Schedule, Transcript, GradesHub).
+  - Tab bar is a floating glass pill (`src/components/ui/FloatingTabBar.tsx`) — a pure
+    presentational component wired via a `tabBar` render prop adapter in `MainNavigator.tsx`.
 - **Scope note:** this app deliberately covers only the 7 screens in web's visible student
   nav, plus auth/connect-school. Battle, Play, Classroom, Marketplace (full), Study Sets, My
   Counselor, the Canvas LMS integration, and ClassLink are **out of scope** — all are hidden

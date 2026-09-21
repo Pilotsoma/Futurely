@@ -1,199 +1,147 @@
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import type { NavigatorScreenParams } from '@react-navigation/native'
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { CommonActions } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import DashboardScreen from '../screens/DashboardScreen'
 import GradesNavigator from './GradesNavigator'
 import PlannerScreen from '../screens/PlannerScreen'
-import StudyFeedScreen from '../screens/StudyFeedScreen'
-import CollegesScreen from '../screens/CollegesScreen'
+import RoadmapScreen from '../screens/grades/RoadmapScreen'
 import AIChatScreen from '../screens/AIChatScreen'
-import SettingsScreen from '../screens/SettingsScreen'
+import StudyFeedScreen from '../screens/StudyFeedScreen'
 import type { GradesStackParamList } from './GradesNavigator'
-import { colors, fonts } from '../theme/tokens'
+// import type only — avoids a runtime circular dependency since MainStack imports
+// MainNavigator at runtime, but we only need MainStackParamList as a type here.
+import type { MainStackParamList } from './MainStack'
+import { FloatingTabBar, type FloatingTabBarItem, type FloatingTabBarProps } from '../components/ui/FloatingTabBar'
+import {
+  GridIcon,
+  BarChartIcon,
+  CalendarIcon,
+  MapIcon,
+  RobotIcon,
+  SettingsIcon,
+} from '../components/icons'
+
+// ---------------------------------------------------------------------------
+// Route param list
+// ---------------------------------------------------------------------------
 
 export type MainTabParamList = {
   Dashboard: undefined
   Grades: NavigatorScreenParams<GradesStackParamList> | undefined
-  AIChat: { initialPrompt?: string; requestId?: number } | undefined
   Planner: { assignmentId?: number } | undefined
-  Colleges: undefined
-  Settings: undefined
+  Roadmap: undefined
+  AIChat: { initialPrompt?: string; requestId?: number } | undefined
   StudyFeed: undefined
 }
 
 const Tab = createBottomTabNavigator<MainTabParamList>()
 
-function TabIcon({
-  focused,
-  children,
-}: {
-  focused: boolean
-  children: React.ReactNode
-}): React.JSX.Element {
-  return <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>{children}</View>
+// ---------------------------------------------------------------------------
+// Tab bar configuration maps
+// ---------------------------------------------------------------------------
+
+// Routes that should never appear in the floating tab bar.
+const HIDDEN_ROUTES = new Set<string>(['StudyFeed'])
+
+// Display label for each tab route key. Dashboard → "Home", AIChat → "Chat"
+// keeps deep-link route keys stable while showing the design-approved labels.
+const TAB_LABELS: Record<string, string> = {
+  Dashboard: 'Home',
+  Grades: 'Grades',
+  Planner: 'Planner',
+  Roadmap: 'Roadmap',
+  AIChat: 'Chat',
 }
 
-function hideFromTabBar() {
-  return {
-    tabBarButton: () => null,
-    // Remove the hidden StudyFeed route from the tab bar layout entirely.
-    // Without this, React Navigation can reserve a seventh empty tab slot.
-    tabBarItemStyle: { display: 'none' as const },
-  }
+// Icon render function for each tab route key.
+const TAB_ICONS: Record<string, (p: { color: string; size: number }) => React.ReactNode> = {
+  Dashboard: (p) => <GridIcon color={p.color} size={p.size} />,
+  Grades: (p) => <BarChartIcon color={p.color} size={p.size} />,
+  Planner: (p) => <CalendarIcon color={p.color} size={p.size} />,
+  Roadmap: (p) => <MapIcon color={p.color} size={p.size} />,
+  AIChat: (p) => <RobotIcon color={p.color} size={p.size} />,
 }
+
+const SETTINGS_ICON = (p: { color: string; size: number }): React.ReactNode => (
+  <SettingsIcon color={p.color} size={p.size} />
+)
+
+// ---------------------------------------------------------------------------
+// FloatingTabBar adapter
+//
+// Maps React Navigation's BottomTabBarProps into FloatingTabBar's declarative
+// items/settingsItem shape. Defined outside MainNavigator so the function
+// reference is stable across renders (no new component created each render).
+// ---------------------------------------------------------------------------
+
+function TabBarAdapter({ state, navigation }: BottomTabBarProps): React.JSX.Element {
+  const items: FloatingTabBarItem[] = state.routes
+    .filter((route) => !HIDDEN_ROUTES.has(route.name))
+    .map((route) => {
+      const isActive = state.routes[state.index].key === route.key
+      const label = TAB_LABELS[route.name] ?? route.name
+      const icon = TAB_ICONS[route.name] ?? TAB_ICONS['Dashboard']
+
+      return {
+        key: route.key,
+        label,
+        icon,
+        active: isActive,
+        onPress: () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          })
+          if (!isActive && !event.defaultPrevented) {
+            navigation.dispatch(
+              CommonActions.navigate({ name: route.name, merge: true }),
+            )
+          }
+        },
+        accessibilityLabel: label,
+      }
+    })
+
+  const settingsItem: FloatingTabBarProps['settingsItem'] = {
+    icon: SETTINGS_ICON,
+    // Navigate up to the outer MainStack to push Settings (no tab bar visible).
+    onPress: () => {
+      navigation
+        .getParent<NativeStackNavigationProp<MainStackParamList>>()
+        ?.navigate('Settings')
+    },
+    accessibilityLabel: 'Settings',
+  }
+
+  return <FloatingTabBar items={items} settingsItem={settingsItem} />
+}
+
+// ---------------------------------------------------------------------------
+// MainNavigator — inner 5-tab bottom-tab navigator.
+// Tab order: Dashboard, Grades, Planner, Roadmap, AIChat.
+// StudyFeed is registered but filtered out of the tab bar by TabBarAdapter.
+// ---------------------------------------------------------------------------
 
 export default function MainNavigator(): React.JSX.Element {
-  const insets = useSafeAreaInsets()
-
-  // Adds a little extra clearance above Android's system navigation/gesture bar.
-  const safeBottom = Math.max(insets.bottom, 8)
-  const contentLift = 7
-
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: '#C5AEFF',
-        tabBarInactiveTintColor: '#8190A7',
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            height: 64 + safeBottom + contentLift,
-            paddingBottom: safeBottom + contentLift,
-          },
-        ],
-        tabBarItemStyle: styles.tabItem,
-        tabBarIconStyle: styles.tabIcon,
-        tabBarLabelStyle: styles.tabLabel,
       }}
+      tabBar={TabBarAdapter}
     >
-      <Tab.Screen
-        name="Dashboard"
-        component={DashboardScreen}
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon focused={focused}>
-              <Feather name="home" size={20} color={color} />
-            </TabIcon>
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="Grades"
-        component={GradesNavigator}
-        options={{
-          title: 'Grades',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon focused={focused}>
-              <Feather name="bar-chart-2" size={20} color={color} />
-            </TabIcon>
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="AIChat"
-        component={AIChatScreen}
-        options={{
-          title: 'AI',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon focused={focused}>
-              <MaterialCommunityIcons name="brain" size={21} color={color} />
-            </TabIcon>
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="Planner"
-        component={PlannerScreen}
-        options={{
-          title: 'Planner',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon focused={focused}>
-              <Feather name="calendar" size={20} color={color} />
-            </TabIcon>
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="Colleges"
-        component={CollegesScreen}
-        options={{
-          title: 'Colleges',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon focused={focused}>
-              <Feather name="bookmark" size={20} color={color} />
-            </TabIcon>
-          ),
-        }}
-      />
-
-      <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon focused={focused}>
-              <Feather name="settings" size={20} color={color} />
-            </TabIcon>
-          ),
-        }}
-      />
-
-      <Tab.Screen name="StudyFeed" component={StudyFeedScreen} options={hideFromTabBar()} />
+      <Tab.Screen name="Dashboard" component={DashboardScreen} />
+      <Tab.Screen name="Grades" component={GradesNavigator} />
+      <Tab.Screen name="Planner" component={PlannerScreen} />
+      <Tab.Screen name="Roadmap" component={RoadmapScreen} />
+      <Tab.Screen name="AIChat" component={AIChatScreen} />
+      <Tab.Screen name="StudyFeed" component={StudyFeedScreen} />
     </Tab.Navigator>
   )
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: '#071522',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(102, 128, 165, 0.30)',
-    paddingTop: 7,
-    paddingHorizontal: 2,
-    shadowColor: '#000000',
-    shadowOpacity: 0.32,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: -5 },
-    elevation: 18,
-  },
-  tabItem: {
-    flex: 1,
-    minWidth: 0,
-    paddingHorizontal: 0,
-  },
-  tabIcon: {
-    marginTop: 0,
-  },
-  tabLabel: {
-    fontFamily: fonts.semiBold,
-    fontWeight: '600',
-    fontSize: 10,
-    lineHeight: 12,
-    marginTop: 2,
-  },
-  iconWrap: {
-    width: 36,
-    height: 31,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  iconWrapActive: {
-    backgroundColor: colors.primaryDim,
-    borderColor: 'rgba(197, 174, 255, 0.28)',
-  },
-})

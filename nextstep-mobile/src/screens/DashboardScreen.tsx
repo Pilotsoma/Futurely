@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '../context/AuthContext'
 import * as studentsApi from '../api/studentsApi'
@@ -31,6 +32,7 @@ import type { StudentMe } from '../types/student'
 import type { Assignment } from '../types/assignments'
 import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
 import type { MainTabParamList } from '../navigation/MainNavigator'
+import type { MainStackParamList } from '../navigation/MainStack'
 import { colors, fonts, spacing, typography } from '../theme/tokens'
 
 type Nav = BottomTabNavigationProp<MainTabParamList>
@@ -223,7 +225,11 @@ export default function DashboardScreen(): React.JSX.Element {
           error={gpaError}
           syncing={syncing}
           hidden={hideGpa}
-          onPress={() => navigation.navigate('Grades', { screen: 'GpaSimulator' })}
+          onPress={() =>
+            navigation
+              .getParent<NativeStackNavigationProp<MainStackParamList>>()
+              ?.navigate('GpaSimulator')
+          }
           onSync={() => void handleResync()}
           testID="dashboard-gpa-card"
         />

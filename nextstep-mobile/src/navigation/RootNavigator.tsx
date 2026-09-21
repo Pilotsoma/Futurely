@@ -2,10 +2,13 @@
 //
 // Three-state routing (avoids flash of wrong screen on cold launch):
 //   'initializing'                                  -> loading indicator
-//   'unauthenticated'                                -> AuthNavigator (Login + Register)
+//   'unauthenticated'                                -> AuthNavigator (Login)
 //   'authenticated' + hasPortalConnection === null   -> loading indicator (status check in flight)
 //   'authenticated' + hasPortalConnection === false  -> ConnectSchoolNavigator
-//   'authenticated' + hasPortalConnection === true   -> MainNavigator (Drawer)
+//   'authenticated' + hasPortalConnection === true   -> MainStack (floating-tab inner navigator
+//                                                       wrapped in an outer native-stack that
+//                                                       pushes Settings, Colleges, GpaSimulator
+//                                                       above the tab bar)
 //
 // No imperative navigation calls — all transitions are reactive on AuthContext
 // state, so any async update (token restore, portal check, markPortalConnected)
@@ -17,7 +20,7 @@ import { NavigationContainer } from '@react-navigation/native'
 import { useAuth } from '../context/AuthContext'
 import AuthNavigator from './AuthNavigator'
 import ConnectSchoolNavigator from './ConnectSchoolNavigator'
-import MainNavigator from './MainNavigator'
+import MainStack from './MainStack'
 import AccountRestrictionScreen from '../screens/AccountRestrictionScreen'
 import { linking } from './linking'
 import { colors } from '../theme/tokens'
@@ -49,7 +52,7 @@ export default function RootNavigator(): React.JSX.Element {
   } else if (hasPortalConnection === false) {
     navigator = <ConnectSchoolNavigator />
   } else {
-    navigator = <MainNavigator />
+    navigator = <MainStack />
   }
 
   return <NavigationContainer linking={linking}>{navigator}</NavigationContainer>

@@ -4,23 +4,23 @@ import GradesScreen from '../screens/GradesScreen'
 import AttendanceScreen from '../screens/grades/AttendanceScreen'
 import ClassworkScreen from '../screens/grades/ClassworkScreen'
 import ContactTeachersScreen from '../screens/grades/ContactTeachersScreen'
-import GpaSimulatorScreen from '../screens/grades/GpaSimulatorScreen'
 import ProgressReportScreen from '../screens/grades/ProgressReportScreen'
 import ReportCardScreen from '../screens/grades/ReportCardScreen'
-import RoadmapScreen from '../screens/grades/RoadmapScreen'
 import ScheduleScreen from '../screens/grades/ScheduleScreen'
 import TranscriptScreen from '../screens/grades/TranscriptScreen'
 import { colors, fonts } from '../theme/tokens'
+
+// Roadmap is now a top-level tab in MainNavigator.
+// GpaSimulator is now a pushed screen in MainStack.
+// Neither is registered here any more.
 
 export type GradesStackParamList = {
   GradesHub: undefined
   Attendance: undefined
   Classwork: undefined
   ContactTeachers: undefined
-  GpaSimulator: undefined
   ProgressReport: undefined
   ReportCard: undefined
-  Roadmap: undefined
   Schedule: undefined
   Transcript: undefined
 }
@@ -46,17 +46,11 @@ export default function GradesNavigator(): React.JSX.Element {
         options={{ title: 'Contact Teachers' }}
       />
       <Stack.Screen
-        name="GpaSimulator"
-        component={GpaSimulatorScreen}
-        options={{ title: 'What-If Calculator' }}
-      />
-      <Stack.Screen
         name="ProgressReport"
         component={ProgressReportScreen}
         options={{ title: 'Progress Report' }}
       />
       <Stack.Screen name="ReportCard" component={ReportCardScreen} options={{ title: 'Report Card' }} />
-      <Stack.Screen name="Roadmap" component={RoadmapScreen} options={{ title: 'Roadmap' }} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} options={{ title: 'Schedule' }} />
       <Stack.Screen name="Transcript" component={TranscriptScreen} options={{ title: 'Transcript' }} />
     </Stack.Navigator>
