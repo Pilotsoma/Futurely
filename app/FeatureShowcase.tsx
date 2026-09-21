@@ -122,7 +122,7 @@ export default function FeatureShowcase() {
                   background: 'var(--surface-2)', border: '1px solid rgba(255,255,255,0.08)',
                   alignItems: 'center', justifyContent: 'center', padding: 10,
                 }}>
-                  <Image src="/logo.png" alt="" width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.6 }} />
+                  <Image src="/logo.png" alt="myFuturely logo" width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.6 }} />
                 </span>
                 <p style={{ fontSize: 15, color: 'var(--text-muted)' }}>
                   Hover a feature to see it in action
@@ -146,7 +146,7 @@ export default function FeatureShowcase() {
                     background: 'var(--surface-2)', border: '1px solid rgba(255,255,255,0.08)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6,
                   }}>
-                    <Image src="/logo.png" alt="" width={24} height={24} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <Image src="/logo.png" alt="myFuturely AI advisor icon" width={24} height={24} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   </span>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>myFuturely AI</div>

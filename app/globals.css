@@ -888,6 +888,22 @@ a:focus-visible > .ns-nav-link { box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.45);
 .canvas-page-body code { padding: 1px 5px; }
 .canvas-page-body blockquote { border-left: 3px solid var(--primary); margin: 0.8em 0; padding: 6px 14px; color: var(--text-secondary); background: var(--surface-2); border-radius: 0 6px 6px 0; }
 
+/* ── FAQ accordion (native <details>/<summary>, kept crawlable for SEO) ──── */
+.ns-faq-item > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.ns-faq-item > summary::-webkit-details-marker,
+.ns-faq-item > summary::marker {
+  display: none;
+}
+.ns-faq-chevron {
+  transition: transform var(--dur-base) var(--ease-out-quart);
+}
+.ns-faq-item[open] .ns-faq-chevron {
+  transform: rotate(180deg);
+}
+
 /* ── Reduce-motion: disables all cosmetic animations for performance ──────── */
 .reduce-motion .tag-rainbow,
 .reduce-motion .tag-mythic,
