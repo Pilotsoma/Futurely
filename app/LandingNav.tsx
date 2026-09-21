@@ -27,12 +27,7 @@ export default function LandingNav() {
       <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 28px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
           style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Image src="/logo.png" alt="myFuturely logo" width={1706} height={2048} style={{ height: 34, width: 'auto', objectFit: 'contain', display: 'block' }} />
-          <span style={{
-            fontSize: 20, fontWeight: 800, letterSpacing: '-0.4px',
-            backgroundImage: 'linear-gradient(90deg, #22d3ee 0%, var(--primary) 45%, var(--purple) 100%)',
-            WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-          }}>myFuturely</span>
+          <Image src="/myfuturely-header.png" alt="myFuturely logo" width={2000} height={667} style={{ height: 38, width: 'auto', objectFit: 'contain', display: 'block' }} priority />
         </motion.div>
         <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
           style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
