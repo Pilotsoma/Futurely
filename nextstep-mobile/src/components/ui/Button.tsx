@@ -51,7 +51,7 @@ export function Button({
         style={[styles.base, variantStyles[variant], isDisabled && styles.disabled, animatedStyle, style]}
       >
         {loading ? (
-          <ActivityIndicator color={variant === 'secondary' ? colors.accent : '#FFFFFF'} size="small" />
+          <ActivityIndicator color={variant === 'secondary' ? colors.accent : colors.white} size="small" />
         ) : (
           <Text style={[styles.label, textColor[variant]]}>{label}</Text>
         )}
@@ -81,7 +81,7 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
 }
 
 const textColor: Record<ButtonVariant, { color: string }> = {
-  primary:     { color: '#FFFFFF' },
+  primary:     { color: colors.white },
   secondary:   { color: colors.text },
-  destructive: { color: '#FFFFFF' },
+  destructive: { color: colors.white },
 }

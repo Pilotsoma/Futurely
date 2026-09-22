@@ -69,9 +69,13 @@ Futurely-mobile/
 - **Styling:** NativeWind v4 (Tailwind for RN) + `tailwindcss` v3 are dependencies, but screens
   are actually styled with plain RN `StyleSheet.create` + `src/theme/tokens.ts` constants (dark
   theme only — `app.json` hardcodes `"userInterfaceStyle": "dark"`, so no `ThemeContext`/
-  provider exists). `expo-linear-gradient` and `react-native-svg` are **not installed** — icons
-  come from `@expo/vector-icons` (already a dependency) instead of inline SVG paths; see
-  DESIGN_SYSTEM.md before adding gradients/SVG.
+  provider exists). `react-native-svg` and `expo-blur` **are installed** and load-bearing —
+  gradients, the glass Card/FloatingTabBar blur treatment, ProgressRing, and the background
+  radial glow all depend on them. Icons come primarily from the app's own custom stroke-icon
+  system (`src/components/icons/`, SVG-based); `@expo/vector-icons` is still used in a few
+  pre-existing spots but is not the primary icon source. `expo-linear-gradient` remains
+  **not installed/approved** — use `react-native-svg`'s gradient primitives instead. See
+  DESIGN_SYSTEM.md before adding new gradients/SVG.
 - **State management:** No Redux, no RTK Query, no Zustand. State is React Context
   (`src/context/AuthContext.tsx` for auth/session + portal-connection status) + local component
   state + a thin per-domain fetch layer in `src/api/*.ts` (`authApi.ts`, `studentsApi.ts`,

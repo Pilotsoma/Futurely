@@ -44,6 +44,7 @@ export const colors = {
   goldBg:         'rgba(240, 180, 41, 0.16)',
   insetHighlight: 'rgba(255, 255, 255, 0.06)',  // inset top highlight on cards
   shadowBase:     'rgba(0, 0, 0, 0.2)',
+  white:          '#FFFFFF',  // pure white — max-contrast text/icons on filled colored surfaces
 
   // ── Backward-compatible aliases ───────────────────────────────────────────
   // Keep existing screens/components compiling while the redesign migrates
