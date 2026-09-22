@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -13,7 +14,8 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { colors, fonts, radii, spacing, typography } from '../theme/tokens'
 import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native'
 import { Feather } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -56,16 +58,16 @@ const PROMPTS: PromptOption[] = [
     subtitle: 'Build a focused improvement plan',
     prompt: 'How can I raise my GPA, and which classes should I focus on first?',
     icon: 'trending-up',
-    color: '#2DD4BF',
-    background: 'rgba(45,212,191,0.13)',
+    color: colors.accent2,
+    background: colors.accent2Dim,
   },
   {
     label: 'Plan my week',
     subtitle: 'Organize assignments and priorities',
     prompt: 'Help me plan my school week based on my assignments and priorities.',
     icon: 'calendar',
-    color: '#60A5FA',
-    background: 'rgba(96,165,250,0.13)',
+    color: colors.accent,
+    background: colors.accentDim,
   },
   {
     label: 'Study smarter',
@@ -80,10 +82,9 @@ const PROMPTS: PromptOption[] = [
     subtitle: 'Map out your next application steps',
     prompt: 'Help me build a college application roadmap and tell me what to do next.',
     icon: 'map',
-    color: '#F59E0B',
-    background: 'rgba(245,158,11,0.14)',
+    color: colors.gold,
+    background: colors.goldBg,
   },
-
 ]
 
 const APP_LOGO = require('../../assets/logo.png')
@@ -115,9 +116,12 @@ const PROMPT_ROWS: PromptOption[][] = Array.from(
   (_, index) => PROMPTS.slice(index * 2, index * 2 + 2),
 )
 
+const PILL_HEIGHT = 64
+
 export default function AIChatScreen(): React.JSX.Element {
   const route = useRoute<RouteProp<MainTabParamList, 'AIChat'>>()
   const { user } = useAuth()
+  const insets = useSafeAreaInsets()
   const [studentData, setStudentData] = useState<StudentMe | null>(null)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -126,9 +130,20 @@ export default function AIChatScreen(): React.JSX.Element {
   const [historyVisible, setHistoryVisible] = useState(false)
   const [history, setHistory] = useState<ChatSession[]>([])
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
   const listRef = useRef<FlatList<ChatMessage>>(null)
   const sendLockRef = useRef(createActionLock())
   const handledInitialPromptRef = useRef<string | null>(null)
+
+  // Tab bar clearance — FloatingTabBar is position:absolute, height 64,
+  // bottom = Math.max(20, insets.bottom + 8). When keyboard shows,
+  // tabBarHideOnKeyboard:true in MainNavigator hides it automatically.
+  const tabBarBottom = Math.max(20, insets.bottom + 8)
+  const tabBarClearance = tabBarBottom + PILL_HEIGHT
+  const composerBottomPad = keyboardVisible
+    ? Math.max(spacing.sm, insets.bottom)
+    : tabBarClearance + spacing.xs
+  const contentBottomPad = tabBarClearance + spacing.md
 
   useEffect(() => {
     let mounted = true
@@ -143,6 +158,15 @@ export default function AIChatScreen(): React.JSX.Element {
 
     return () => {
       mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true))
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false))
+    return () => {
+      showSub.remove()
+      hideSub.remove()
     }
   }, [])
 
@@ -308,13 +332,13 @@ export default function AIChatScreen(): React.JSX.Element {
             data={messages}
             keyExtractor={(item) => item.id}
             renderItem={renderMessageItem}
-            contentContainerStyle={styles.chatContent}
+            contentContainerStyle={[styles.chatContent, { paddingBottom: contentBottomPad }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <View style={styles.conversationIntro}>
                 <View style={styles.conversationIcon}>
-                  <Feather name="message-circle" size={18} color="#B9A7FF" />
+                  <Feather name="message-circle" size={18} color={colors.accent} />
                 </View>
                 <Text style={styles.conversationTitle}>Your conversation</Text>
                 <Text style={styles.conversationSubtitle}>
@@ -328,18 +352,18 @@ export default function AIChatScreen(): React.JSX.Element {
         ) : (
           <ScrollView
             style={styles.homeScroll}
-            contentContainerStyle={styles.homeContent}
+            contentContainerStyle={[styles.homeContent, { paddingBottom: contentBottomPad }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.heroCard}>
               <View style={styles.heroTopRow}>
                 <View style={styles.heroBadge}>
-                  <Feather name="zap" size={15} color="#D9CFFF" />
+                  <Feather name="zap" size={15} color={colors.accent} />
                   <Text style={styles.heroBadgeText}>YOUR AI COPILOT</Text>
                 </View>
                 <View style={styles.secureBadge}>
-                  <Feather name="shield" size={13} color="#78E9CE" />
+                  <Feather name="shield" size={13} color={colors.accent2} />
                   <Text style={styles.secureBadgeText}>Student-aware</Text>
                 </View>
               </View>
@@ -356,7 +380,7 @@ export default function AIChatScreen(): React.JSX.Element {
                 <Text style={styles.sectionEyebrow}>QUICK START</Text>
                 <Text style={styles.sectionTitle}>What do you need help with?</Text>
               </View>
-              <Feather name="star" size={17} color="#8F78FF" />
+              <Feather name="star" size={17} color={colors.accent} />
             </View>
 
             <View style={styles.promptGrid}>
@@ -389,6 +413,7 @@ export default function AIChatScreen(): React.JSX.Element {
           onSend={() => void handleSend()}
           canSend={canSend}
           isSending={isSending}
+          bottomPad={composerBottomPad}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -418,7 +443,7 @@ function Header({
             accessibilityRole="button"
             accessibilityLabel="Back to AI home"
           >
-            <Feather name="arrow-left" size={20} color="#E8ECF7" />
+            <Feather name="arrow-left" size={20} color={colors.text} />
           </Pressable>
         ) : (
           <View style={styles.logoWrap}>
@@ -430,7 +455,7 @@ function Header({
           <Text style={styles.headerTitle}>myFuturely AI</Text>
           <View style={styles.onlineRow}>
             <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>Online and ready</Text>
+            <Text style={styles.onlineText}>Grounded in your record</Text>
           </View>
         </View>
       </View>
@@ -441,7 +466,7 @@ function Header({
         accessibilityRole="button"
         accessibilityLabel="View past chats"
       >
-        <Feather name="clock" size={16} color="#C9BBFF" />
+        <Feather name="clock" size={16} color={colors.textDim} />
         <Text style={styles.historyButtonText}>Chats</Text>
         {historyCount > 0 ? (
           <View style={styles.historyCount}>
@@ -498,14 +523,14 @@ function PastChatsModal({
               accessibilityRole="button"
               accessibilityLabel="Close past chats"
             >
-              <Feather name="x" size={18} color="#DCE4F2" />
+              <Feather name="x" size={18} color={colors.text} />
             </Pressable>
           </View>
 
           {sessions.length === 0 ? (
             <View style={styles.historyEmpty}>
               <View style={styles.historyEmptyIcon}>
-                <Feather name="message-square" size={22} color="#A996FF" />
+                <Feather name="message-square" size={22} color={colors.accent} />
               </View>
               <Text style={styles.historyEmptyTitle}>No past chats yet</Text>
               <Text style={styles.historyEmptyText}>
@@ -530,7 +555,7 @@ function PastChatsModal({
                   accessibilityLabel={`Open chat: ${item.title}`}
                 >
                   <View style={styles.historyCardIcon}>
-                    <Feather name="message-circle" size={17} color="#B9A7FF" />
+                    <Feather name="message-circle" size={17} color={colors.accent} />
                   </View>
 
                   <View style={styles.historyCardCopy}>
@@ -542,7 +567,7 @@ function PastChatsModal({
                     </Text>
                   </View>
 
-                  <Feather name="chevron-right" size={17} color="#7186A5" />
+                  <Feather name="chevron-right" size={17} color={colors.textFaint} />
                 </Pressable>
               )}
             />
@@ -557,7 +582,7 @@ function PastChatsModal({
             accessibilityRole="button"
             accessibilityLabel="Start a new chat"
           >
-            <Feather name="plus" size={17} color="#FFFFFF" />
+            <Feather name="plus" size={17} color={colors.text} />
             <Text style={styles.historyNewButtonText}>Start new chat</Text>
           </Pressable>
         </View>
@@ -572,21 +597,22 @@ interface ComposerProps {
   onSend: () => void
   canSend: boolean
   isSending: boolean
+  bottomPad: number
 }
 
-function Composer({ value, onChangeText, onSend, canSend, isSending }: ComposerProps): React.JSX.Element {
+function Composer({ value, onChangeText, onSend, canSend, isSending, bottomPad }: ComposerProps): React.JSX.Element {
   return (
-    <View style={styles.composerArea}>
+    <View style={[styles.composerArea, { paddingBottom: bottomPad }]}>
       <View style={styles.composer}>
         <View style={styles.composerIcon}>
-          <Feather name="message-circle" size={18} color="#B7A5FF" />
+          <Feather name="message-circle" size={18} color={colors.accent} />
         </View>
         <TextInput
           value={value}
           onChangeText={onChangeText}
           style={styles.input}
           placeholder="Ask myFuturely AI anything..."
-          placeholderTextColor="#6F809A"
+          placeholderTextColor={colors.textFaint}
           editable={!isSending}
           multiline
           maxLength={1200}
@@ -606,9 +632,9 @@ function Composer({ value, onChangeText, onSend, canSend, isSending }: ComposerP
           accessibilityLabel="Send message"
         >
           {isSending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={colors.text} />
           ) : (
-            <Feather name="send" size={17} color="#FFFFFF" />
+            <Feather name="send" size={17} color={colors.text} />
           )}
         </Pressable>
       </View>
@@ -654,7 +680,7 @@ function TypingIndicator(): React.JSX.Element {
         <Image source={APP_LOGO} style={styles.messageLogo} resizeMode="contain" />
       </View>
       <View style={[styles.messageBubble, styles.aiBubble, styles.typingBubble]}>
-        <ActivityIndicator size="small" color="#9B83FF" />
+        <ActivityIndicator size="small" color={colors.accent} />
         <Text style={styles.typingText}>Thinking...</Text>
       </View>
     </View>
@@ -664,11 +690,11 @@ function TypingIndicator(): React.JSX.Element {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#05070D',
+    backgroundColor: colors.bg,
   },
   keyboardView: {
     flex: 1,
-    backgroundColor: '#05070D',
+    backgroundColor: colors.bg,
   },
   pressed: {
     opacity: 0.84,
@@ -676,14 +702,14 @@ const styles = StyleSheet.create({
   },
   header: {
     minHeight: 72,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.ms,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(113,132,165,0.14)',
-    backgroundColor: '#070A12',
+    borderBottomColor: colors.divider,
+    backgroundColor: colors.bg,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -693,12 +719,12 @@ const styles = StyleSheet.create({
   logoWrap: {
     width: 45,
     height: 45,
-    borderRadius: 15,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0E1421',
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: 'rgba(112,152,222,0.34)',
+    borderColor: colors.cardBorder,
     overflow: 'hidden',
   },
   headerLogo: {
@@ -706,23 +732,23 @@ const styles = StyleSheet.create({
     height: 37,
   },
   headerIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#26344C',
+    borderColor: colors.cardBorder,
   },
   headerCopy: {
     gap: 3,
   },
   headerTitle: {
-    color: '#F5F7FF',
+    color: colors.text,
+    fontFamily: fonts.displayBold,
     fontSize: 19,
     lineHeight: 23,
-    fontWeight: '800',
     letterSpacing: -0.35,
   },
   onlineRow: {
@@ -734,29 +760,28 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#27D6A2',
+    backgroundColor: colors.accent2,
   },
   onlineText: {
-    color: '#77DDBF',
-    fontSize: 10.5,
-    fontWeight: '600',
+    color: colors.accent2,
+    ...typography.caption,
+    fontFamily: fonts.bodyMedium,
   },
   historyButton: {
     minHeight: 39,
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.ms,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    borderRadius: 12,
-    backgroundColor: '#141127',
+    gap: spacing.sm,
+    borderRadius: radii.sm,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: 'rgba(151,119,255,0.30)',
+    borderColor: colors.cardBorder,
   },
   historyButtonText: {
-    color: '#D4C9FF',
-    fontSize: 10.5,
-    fontWeight: '800',
+    color: colors.textDim,
+    ...typography.label,
   },
   historyCount: {
     minWidth: 18,
@@ -765,47 +790,45 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6840E8',
+    backgroundColor: colors.accent,
   },
   historyCountText: {
-    color: '#FFFFFF',
-    fontSize: 8.5,
-    fontWeight: '800',
+    color: colors.text,
+    ...typography.label,
+    fontSize: 9,
   },
   homeScroll: {
     flex: 1,
   },
   homeContent: {
-    paddingHorizontal: 15,
-    paddingTop: 15,
-    paddingBottom: 20,
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: spacing.md,
     gap: 17,
   },
   heroCard: {
     padding: 17,
-    borderRadius: 24,
-    backgroundColor: '#151238',
+    borderRadius: radii.card,
+    backgroundColor: colors.accentDim,
     borderWidth: 1,
-    borderColor: 'rgba(141,102,255,0.42)',
+    borderColor: colors.accent,
     overflow: 'hidden',
   },
   heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 16,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   heroBadgeText: {
-    color: '#BFB0F4',
+    color: colors.accent,
+    ...typography.label,
     fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.15,
   },
   secureBadge: {
     minHeight: 27,
@@ -813,29 +836,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    borderRadius: 10,
-    backgroundColor: 'rgba(20,49,55,0.68)',
+    borderRadius: radii.sm,
+    backgroundColor: colors.accent2Dim,
     borderWidth: 1,
-    borderColor: 'rgba(57,207,170,0.25)',
+    borderColor: colors.accent2,
   },
   secureBadgeText: {
-    color: '#81E4C8',
-    fontSize: 9.5,
-    fontWeight: '700',
+    color: colors.accent2,
+    ...typography.caption,
+    fontFamily: fonts.bodyMedium,
   },
   heroTitle: {
     maxWidth: 310,
-    color: '#FFFFFF',
-    fontSize: 25,
-    lineHeight: 31,
-    fontWeight: '800',
+    color: colors.text,
+    fontFamily: fonts.displayBold,
+    fontSize: 24,
+    lineHeight: 30,
     letterSpacing: -0.65,
   },
   heroDescription: {
-    marginTop: 8,
-    color: '#AAA6C9',
-    fontSize: 11.5,
-    lineHeight: 17,
+    marginTop: spacing.sm,
+    color: colors.textDim,
+    ...typography.body,
     maxWidth: 315,
   },
   sectionHeader: {
@@ -845,18 +867,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionEyebrow: {
-    color: '#6888B5',
-    fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 1.15,
+    color: colors.textFaint,
+    ...typography.label,
+    fontSize: 9,
   },
   sectionTitle: {
     marginTop: 3,
-    color: '#F4F6FD',
-    fontSize: 16.5,
-    lineHeight: 21,
-    fontWeight: '800',
-    letterSpacing: -0.25,
+    color: colors.text,
+    ...typography.h2,
   },
   promptGrid: {
     width: '100%',
@@ -877,74 +895,70 @@ const styles = StyleSheet.create({
   },
   historySheet: {
     maxHeight: '78%',
-    paddingTop: 18,
-    paddingHorizontal: 15,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 18,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    backgroundColor: '#0B111C',
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingBottom: Platform.OS === 'ios' ? 28 : spacing.lg,
+    borderTopLeftRadius: radii.card,
+    borderTopRightRadius: radii.card,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
     borderBottomWidth: 0,
-    borderColor: '#263B58',
+    borderColor: colors.cardBorder,
   },
   historySheetHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 15,
+    marginBottom: spacing.md,
   },
   historyEyebrow: {
-    color: '#7E93B7',
-    fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 1.15,
+    color: colors.textFaint,
+    ...typography.label,
+    fontSize: 9,
   },
   historyTitle: {
     marginTop: 3,
-    color: '#F6F8FF',
-    fontSize: 22,
-    lineHeight: 27,
-    fontWeight: '800',
-    letterSpacing: -0.4,
+    color: colors.text,
+    ...typography.h1,
   },
   historySubtitle: {
     marginTop: 3,
-    color: '#7E8EA7',
-    fontSize: 10.5,
-    lineHeight: 15,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
   },
   historyCloseButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: '#121C2C',
+    borderRadius: radii.sm,
+    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: '#2A3D59',
+    borderColor: colors.cardBorder,
   },
   historyList: {
     maxHeight: 390,
   },
   historyListContent: {
-    gap: 9,
-    paddingBottom: 10,
+    gap: spacing.ms,
+    paddingBottom: spacing.ms,
   },
   historyCard: {
     minHeight: 69,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 11,
-    borderRadius: 16,
-    backgroundColor: '#111D2F',
+    gap: spacing.ms,
+    paddingHorizontal: spacing.ms,
+    borderRadius: radii.card,
+    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: '#263E5D',
+    borderColor: colors.cardBorder,
   },
   historyCardPressed: {
     opacity: 0.88,
-    backgroundColor: '#172740',
+    backgroundColor: colors.accentDim,
   },
   historyCardIcon: {
     width: 39,
@@ -953,7 +967,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: '#24165A',
+    backgroundColor: colors.accentDim,
   },
   historyCardCopy: {
     flex: 1,
@@ -961,102 +975,98 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   historyCardTitle: {
-    color: '#F1F5FF',
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '700',
+    color: colors.text,
+    ...typography.h3,
+    fontSize: 13,
   },
   historyCardMeta: {
-    color: '#7F90A9',
-    fontSize: 9,
-    lineHeight: 12,
+    color: colors.textFaint,
+    ...typography.caption,
+    fontSize: 10,
   },
   historyEmpty: {
     alignItems: 'center',
     paddingVertical: 28,
-    paddingHorizontal: 18,
-    borderRadius: 18,
-    backgroundColor: '#101A2A',
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.card,
+    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: '#233850',
+    borderColor: colors.cardBorder,
   },
   historyEmptyIcon: {
     width: 46,
     height: 46,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    backgroundColor: '#211651',
+    borderRadius: radii.sm,
+    backgroundColor: colors.accentDim,
   },
   historyEmptyTitle: {
     marginTop: 11,
-    color: '#F3F6FF',
-    fontSize: 14,
-    fontWeight: '800',
+    color: colors.text,
+    ...typography.h3,
   },
   historyEmptyText: {
     marginTop: 5,
     maxWidth: 250,
-    color: '#7E8EA7',
-    fontSize: 10.5,
-    lineHeight: 15,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
     textAlign: 'center',
   },
   historyNewButton: {
     minHeight: 48,
-    marginTop: 13,
+    marginTop: spacing.ms,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    borderRadius: 15,
-    backgroundColor: '#6840E8',
+    borderRadius: radii.button,
+    backgroundColor: colors.accent,
   },
   historyNewButtonPressed: {
     opacity: 0.86,
     transform: [{ scale: 0.99 }],
   },
   historyNewButtonText: {
-    color: '#FFFFFF',
-    fontSize: 11.5,
-    fontWeight: '800',
+    color: colors.text,
+    ...typography.label,
+    fontSize: 13,
   },
   chatList: {
     flex: 1,
   },
   chatContent: {
     flexGrow: 1,
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 14,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
   },
   conversationIntro: {
     alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 24,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
   },
   conversationIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#17132F',
+    backgroundColor: colors.accentDim,
     borderWidth: 1,
-    borderColor: 'rgba(151,119,255,0.28)',
+    borderColor: colors.accent,
   },
   conversationTitle: {
-    marginTop: 10,
-    color: '#F4F6FD',
-    fontSize: 15,
-    fontWeight: '800',
+    marginTop: spacing.ms,
+    color: colors.text,
+    ...typography.h3,
   },
   conversationSubtitle: {
     marginTop: 5,
     maxWidth: 285,
-    color: '#7888A0',
-    fontSize: 10.5,
-    lineHeight: 15,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
     textAlign: 'center',
   },
   messageRow: {
@@ -1078,9 +1088,9 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#24125C',
+    backgroundColor: colors.accentDim,
     borderWidth: 1,
-    borderColor: 'rgba(149,108,255,0.35)',
+    borderColor: colors.accent,
   },
   messageLogo: {
     width: 25,
@@ -1094,30 +1104,31 @@ const styles = StyleSheet.create({
   aiBubble: {
     borderRadius: 17,
     borderBottomLeftRadius: 5,
-    backgroundColor: '#111A29',
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#253752',
+    borderColor: colors.cardBorder,
   },
   userBubble: {
     borderRadius: 17,
     borderBottomRightRadius: 5,
-    backgroundColor: '#6840E8',
+    backgroundColor: colors.accent,
     borderWidth: 1,
-    borderColor: 'rgba(209,196,255,0.26)',
+    borderColor: colors.accentDim,
   },
   messageAuthor: {
     marginBottom: 4,
-    color: '#A995F8',
-    fontSize: 9.5,
-    fontWeight: '800',
+    color: colors.accent,
+    ...typography.label,
+    fontSize: 9,
   },
   messageText: {
-    color: '#E8EDF8',
-    fontSize: 12.5,
-    lineHeight: 18,
+    color: colors.text,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 13,
+    lineHeight: 19,
   },
   userMessageText: {
-    color: '#FFFFFF',
+    color: colors.text,
   },
   typingBubble: {
     minWidth: 105,
@@ -1126,32 +1137,31 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   typingText: {
-    color: '#8E9CB2',
-    fontSize: 10.5,
-    fontWeight: '600',
+    color: colors.textDim,
+    ...typography.caption,
+    fontFamily: fonts.bodyMedium,
   },
   chatFooterSpace: {
-    height: 4,
+    height: spacing.xs,
   },
   composerArea: {
-    paddingHorizontal: 10,
-    paddingTop: 8,
-    paddingBottom: 6,
-    backgroundColor: '#070A12',
+    paddingHorizontal: spacing.ms,
+    paddingTop: spacing.sm,
+    backgroundColor: colors.bg,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(98,120,156,0.16)',
+    borderTopColor: colors.divider,
   },
   composer: {
     minHeight: 54,
     maxHeight: 108,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
+    gap: spacing.sm,
     padding: 7,
-    borderRadius: 18,
-    backgroundColor: '#111C2E',
+    borderRadius: radii.input,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#2A4368',
+    borderColor: colors.cardBorder,
   },
   composerIcon: {
     width: 38,
@@ -1160,7 +1170,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: '#26165E',
+    backgroundColor: colors.accentDim,
   },
   input: {
     flex: 1,
@@ -1169,8 +1179,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
     paddingTop: Platform.OS === 'ios' ? 10 : 8,
     paddingBottom: Platform.OS === 'ios' ? 9 : 7,
-    color: '#EEF2FC',
-    fontSize: 12.5,
+    color: colors.text,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 13,
     lineHeight: 18,
     textAlignVertical: 'center',
   },
@@ -1181,10 +1192,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: '#7048FF',
+    backgroundColor: colors.accent,
   },
   sendButtonDisabled: {
-    backgroundColor: '#26334A',
+    backgroundColor: colors.cardBorder,
     opacity: 0.7,
   },
   sendButtonPressed: {
@@ -1193,8 +1204,10 @@ const styles = StyleSheet.create({
   },
   composerHint: {
     marginTop: 5,
-    color: '#8798B0',
-    fontSize: 8.5,
+    marginBottom: spacing.sm,
+    color: colors.textFaint,
+    ...typography.caption,
+    fontSize: 9,
     textAlign: 'center',
   },
 })

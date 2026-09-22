@@ -9,7 +9,6 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
@@ -34,11 +33,16 @@ import type {
   CanvasConnection,
   CanvasStatus,
 } from '../api/canvasApi'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
 import {
   colors,
   elevation,
   fonts,
+  radii,
   spacing,
+  typography,
 } from '../theme/tokens'
 
 function confirmDestructiveAction(
@@ -166,7 +170,7 @@ function SectionHeader({
   title,
   description,
   icon,
-  tint = colors.primary,
+  tint = colors.accent,
   action,
 }: SectionHeaderProps): React.JSX.Element {
   return (
@@ -222,23 +226,16 @@ function FormField({
   multiline,
 }: FormFieldProps): React.JSX.Element {
   return (
-    <View style={styles.field}>
-      <Text allowFontScaling={false} style={styles.fieldLabel}>
-        {label}
-      </Text>
-      <TextInput
-        accessibilityLabel={label}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#5F7089"
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-        autoCapitalize={autoCapitalize}
-        multiline={multiline}
-        style={[styles.input, multiline && styles.multilineInput]}
-      />
-    </View>
+    <Input
+      label={label}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      keyboardType={keyboardType}
+      secureTextEntry={secureTextEntry}
+      autoCapitalize={autoCapitalize}
+      multiline={multiline}
+    />
   )
 }
 
@@ -280,13 +277,13 @@ function PrimaryButton({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={tone === 'danger' ? '#FF8A8D' : '#FFFFFF'}
+          color={tone === 'danger' ? colors.tierRed : '#FFFFFF'}
         />
       ) : icon ? (
         <Feather
           name={icon}
           size={15}
-          color={tone === 'danger' ? '#FF777A' : '#FFFFFF'}
+          color={tone === 'danger' ? colors.tierRed : '#FFFFFF'}
         />
       ) : null}
 
@@ -325,7 +322,7 @@ function SettingRow({
   return (
     <View style={styles.settingRow}>
       <View style={styles.settingRowIcon}>
-        <Feather name={icon} size={16} color="#A893FF" />
+        <Feather name={icon} size={16} color={colors.accent} />
       </View>
 
       <View style={styles.settingRowCopy}>
@@ -342,9 +339,9 @@ function SettingRow({
         disabled={disabled}
         accessibilityLabel={title}
         accessibilityState={{ checked: value, disabled }}
-        trackColor={{ false: '#263853', true: '#6B42EA' }}
+        trackColor={{ false: colors.cardBorder, true: colors.accent }}
         thumbColor="#FFFFFF"
-        ios_backgroundColor="#263853"
+        ios_backgroundColor={colors.cardBorder}
       />
     </View>
   )
@@ -711,7 +708,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
   if (loading) {
     return (
-      <Screen edges={['top', 'left', 'right', 'bottom']}>
+      <Screen>
         <View style={styles.loadingWrap}>
           <LoadingSkeleton rows={5} rowHeight={90} />
         </View>
@@ -721,7 +718,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
   if (error && !student) {
     return (
-      <Screen edges={['top', 'left', 'right', 'bottom']}>
+      <Screen>
         <ErrorRetryBlock
           message={error}
           onRetry={() => {
@@ -743,7 +740,7 @@ export default function SettingsScreen(): React.JSX.Element {
     .join(' · ')
 
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']} padded={false}>
+    <Screen edges={['left', 'right', 'bottom']} padded={false}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -754,25 +751,7 @@ export default function SettingsScreen(): React.JSX.Element {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.pageHeader}>
-            <View style={styles.pageHeaderIcon}>
-              <Feather name="settings" size={21} color="#BDAAFF" />
-            </View>
-
-            <View style={styles.pageHeaderCopy}>
-              <Text allowFontScaling={false} style={styles.pageEyebrow}>
-                ACCOUNT & PREFERENCES
-              </Text>
-              <Text allowFontScaling={false} style={styles.pageTitle}>
-                Settings
-              </Text>
-              <Text style={styles.pageSubtitle}>
-                Manage your academic profile, integrations and account.
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.profileCard}>
+          <Card style={styles.profileCardInner}>
             <View style={styles.avatar}>
               <Text allowFontScaling={false} style={styles.avatarText}>
                 {initials(displayName)}
@@ -795,7 +774,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 </Text>
               ) : null}
             </View>
-          </View>
+          </Card>
 
           <View style={styles.card}>
             <SectionHeader
@@ -1465,11 +1444,10 @@ export default function SettingsScreen(): React.JSX.Element {
             </View>
           ) : null}
 
-          <PrimaryButton
+          <Button
             label="Sign out"
-            icon="log-out"
             onPress={confirmSignOut}
-            tone="danger"
+            variant="destructive"
           />
 
           <View style={[styles.card, styles.dangerZoneCard]}>
@@ -1482,11 +1460,10 @@ export default function SettingsScreen(): React.JSX.Element {
             />
 
             {!deleteOpen ? (
-              <PrimaryButton
+              <Button
                 label="Delete account"
-                icon="trash-2"
                 onPress={() => setDeleteOpen(true)}
-                tone="danger"
+                variant="destructive"
               />
             ) : (
               <View style={styles.deleteForm}>
@@ -1525,16 +1502,15 @@ export default function SettingsScreen(): React.JSX.Element {
 
                 <View style={styles.deleteActions}>
                   <View style={styles.deletePrimary}>
-                    <PrimaryButton
+                    <Button
                       label="Delete forever"
-                      icon="trash-2"
                       onPress={() => void handleDeleteAccount()}
                       loading={deleting}
-                      tone="danger"
+                      variant="destructive"
                     />
                   </View>
 
-                  <PrimaryButton
+                  <Button
                     label="Cancel"
                     onPress={() => {
                       setDeleteOpen(false)
@@ -1542,8 +1518,7 @@ export default function SettingsScreen(): React.JSX.Element {
                       setDeletePassword('')
                       setDeleteConfirmation('')
                     }}
-                    tone="secondary"
-                    compact
+                    variant="secondary"
                   />
                 </View>
               </View>
@@ -1570,60 +1545,10 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
 
-  pageHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  pageHeaderIcon: {
-    width: 46,
-    height: 46,
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    backgroundColor: '#211752',
-    borderWidth: 1,
-    borderColor: 'rgba(167,139,250,0.34)',
-  },
-  pageHeaderCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  pageEyebrow: {
-    color: '#7893BC',
-    fontFamily: fonts.bold,
-    fontSize: 8.5,
-    fontWeight: '700',
-    letterSpacing: 1.15,
-  },
-  pageTitle: {
-    marginTop: 2,
-    color: colors.text,
-    fontFamily: fonts.bold,
-    fontSize: 25,
-    lineHeight: 30,
-    fontWeight: '700',
-    letterSpacing: -0.45,
-  },
-  pageSubtitle: {
-    marginTop: 4,
-    color: '#8798B1',
-    fontFamily: fonts.regular,
-    fontSize: 11.5,
-    lineHeight: 17,
-  },
-
-  profileCard: {
+  profileCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 13,
-    padding: 15,
-    borderRadius: 20,
-    backgroundColor: '#132038',
-    borderWidth: 1,
-    borderColor: '#2A4261',
-    ...elevation.sm,
   },
   avatar: {
     width: 54,
@@ -1632,15 +1557,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 27,
-    backgroundColor: '#235C68',
+    backgroundColor: colors.accent2Dim,
     borderWidth: 1,
-    borderColor: '#3A7A83',
+    borderColor: colors.accent2,
   },
   avatarText: {
-    color: '#F4F8FF',
-    fontFamily: fonts.bold,
-    fontSize: 18,
-    fontWeight: '700',
+    color: colors.text,
+    ...typography.h2,
   },
   profileCopy: {
     flex: 1,
@@ -1648,40 +1571,31 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   profileName: {
-    color: '#F4F7FF',
-    fontFamily: fonts.bold,
-    fontSize: 15,
-    lineHeight: 19,
-    fontWeight: '700',
+    color: colors.text,
+    ...typography.h3,
   },
   profileMeta: {
-    color: '#9BAAC0',
-    fontFamily: fonts.medium,
-    fontSize: 10.5,
-    lineHeight: 14,
-    fontWeight: '500',
+    color: colors.textDim,
+    ...typography.caption,
   },
   profileEmail: {
-    color: '#91A3BD',
-    fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 13,
+    color: colors.textFaint,
+    ...typography.caption,
   },
   futurelyId: {
     marginTop: 3,
-    color: '#91A3BD',
-    fontFamily: fonts.regular,
-    fontSize: 8.5,
-    lineHeight: 11,
+    color: colors.textFaint,
+    ...typography.caption,
+    fontSize: 10,
   },
 
   card: {
     gap: 14,
-    padding: 15,
-    borderRadius: 20,
-    backgroundColor: '#111D30',
+    padding: spacing.cardPadding,
+    borderRadius: radii.card,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#2A4261',
+    borderColor: colors.cardBorder,
     ...elevation.sm,
   },
   sectionHeader: {
@@ -1703,26 +1617,19 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sectionEyebrow: {
-    color: '#7188AB',
-    fontFamily: fonts.bold,
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 1,
+    color: colors.textFaint,
+    ...typography.label,
   },
   sectionTitle: {
     marginTop: 2,
-    color: '#F2F5FF',
-    fontFamily: fonts.bold,
-    fontSize: 15,
-    lineHeight: 19,
-    fontWeight: '700',
+    color: colors.text,
+    ...typography.h3,
   },
   sectionDescription: {
     marginTop: 3,
-    color: '#7F91AA',
-    fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 14,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
   },
 
   twoColumnFields: {
@@ -1733,34 +1640,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  field: {
-    gap: 6,
-  },
-  fieldLabel: {
-    color: '#8496B2',
-    fontFamily: fonts.bold,
-    fontSize: 8.5,
-    fontWeight: '700',
-    letterSpacing: 0.75,
-    textTransform: 'uppercase',
-  },
-  input: {
-    minHeight: 47,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 13,
-    color: '#EEF2FC',
-    backgroundColor: '#0D1727',
-    borderWidth: 1,
-    borderColor: '#2A3D5A',
-    fontFamily: fonts.regular,
-    fontSize: 12.5,
-  },
-  multilineInput: {
-    minHeight: 76,
-    textAlignVertical: 'top',
-  },
-
   readOnlyGrid: {
     flexDirection: 'row',
     gap: 10,
@@ -1769,32 +1648,26 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: 3,
-    padding: 11,
-    borderRadius: 13,
-    backgroundColor: '#142238',
+    padding: spacing.ms,
+    borderRadius: radii.input,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#273E5D',
+    borderColor: colors.cardBorder,
   },
   readOnlyLabel: {
-    color: '#92A5C0',
-    fontFamily: fonts.bold,
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 0.65,
-    textTransform: 'uppercase',
+    color: colors.textFaint,
+    ...typography.label,
+    fontSize: 10,
   },
   readOnlyValue: {
-    color: '#E7ECF8',
-    fontFamily: fonts.semiBold,
-    fontSize: 10.5,
-    lineHeight: 14,
-    fontWeight: '600',
+    color: colors.text,
+    ...typography.h3,
+    fontSize: 13,
   },
   readOnlySource: {
-    color: '#92A5C0',
-    fontFamily: fonts.regular,
-    fontSize: 7.5,
-    lineHeight: 10,
+    color: colors.textFaint,
+    ...typography.caption,
+    fontSize: 10,
   },
 
   button: {
@@ -1803,44 +1676,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    borderRadius: 13,
+    borderRadius: radii.button,
     borderWidth: 1,
   },
   fullButton: {
     width: '100%',
-    paddingHorizontal: 14,
+    paddingHorizontal: spacing.md,
   },
   compactButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.ms,
   },
   primaryButton: {
-    backgroundColor: '#7048F4',
-    borderColor: '#7E5AFF',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+    ...elevation.sm,
   },
   secondaryButton: {
-    backgroundColor: '#15243A',
-    borderColor: '#2C4668',
+    backgroundColor: colors.cardFallback,
+    borderColor: colors.cardBorder,
   },
   dangerButton: {
-    backgroundColor: 'rgba(255,99,103,0.04)',
-    borderColor: 'rgba(255,99,103,0.48)',
+    backgroundColor: colors.tierRedBg,
+    borderColor: colors.tierRed,
   },
   buttonPressed: {
     opacity: 0.84,
-    transform: [{ scale: 0.99 }],
+    transform: [{ scale: 0.97 }],
   },
   buttonDisabled: {
-    opacity: 0.58,
+    opacity: 0.4,
   },
   buttonText: {
     color: '#FFFFFF',
-    fontFamily: fonts.bold,
-    fontSize: 10.5,
-    lineHeight: 14,
-    fontWeight: '700',
+    ...typography.label,
+    fontSize: 13,
+    textTransform: 'none',
   },
   dangerButtonText: {
-    color: '#FF777A',
+    color: colors.tierRed,
   },
 
   messageBanner: {
@@ -1848,34 +1721,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: spacing.ms,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.sm,
     borderWidth: 1,
   },
   successBanner: {
-    backgroundColor: 'rgba(16,185,129,0.08)',
-    borderColor: 'rgba(16,185,129,0.26)',
+    backgroundColor: colors.tierGreenBg,
+    borderColor: colors.tierGreen,
   },
   warningBanner: {
-    backgroundColor: 'rgba(245,158,11,0.08)',
-    borderColor: 'rgba(245,158,11,0.25)',
+    backgroundColor: colors.tierAmberBg,
+    borderColor: colors.tierAmber,
   },
   messageText: {
     flex: 1,
-    color: '#B7C5D7',
-    fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 13,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
   },
 
   connectedBanner: {
     gap: 5,
-    padding: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(16,185,129,0.06)',
+    padding: spacing.ms,
+    borderRadius: radii.input,
+    backgroundColor: colors.tierGreenBg,
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.20)',
+    borderColor: colors.tierGreen,
   },
   connectedStatus: {
     flexDirection: 'row',
@@ -1886,39 +1758,33 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: '#2DD491',
+    backgroundColor: colors.tierGreen,
   },
   connectedText: {
-    color: '#5ED6AE',
-    fontFamily: fonts.bold,
-    fontSize: 10.5,
-    fontWeight: '700',
+    color: colors.tierGreen,
+    ...typography.label,
+    fontSize: 11,
   },
   systemBadge: {
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
-    backgroundColor: '#192A43',
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#304C70',
+    borderColor: colors.cardBorder,
   },
   systemBadgeText: {
-    color: '#9FB2CC',
-    fontFamily: fonts.semiBold,
-    fontSize: 7.5,
-    fontWeight: '600',
+    color: colors.textDim,
+    ...typography.caption,
   },
   connectionUrl: {
-    color: '#7E91AB',
-    fontFamily: fonts.regular,
-    fontSize: 9,
-    lineHeight: 12,
+    color: colors.textDim,
+    ...typography.caption,
   },
   lastSynced: {
-    color: '#5F7390',
-    fontFamily: fonts.regular,
-    fontSize: 8,
-    lineHeight: 11,
+    color: colors.textFaint,
+    ...typography.caption,
+    fontSize: 10,
   },
   actionRow: {
     flexDirection: 'row',
@@ -1933,11 +1799,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 12,
-    borderRadius: 14,
-    backgroundColor: '#101A2A',
+    padding: spacing.ms,
+    borderRadius: radii.input,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#263C59',
+    borderColor: colors.cardBorder,
   },
   disconnectedIcon: {
     width: 38,
@@ -1945,8 +1811,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: '#17243A',
+    borderRadius: radii.sm,
+    backgroundColor: colors.bg,
   },
   disconnectedCopy: {
     flex: 1,
@@ -1954,16 +1820,14 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   disconnectedTitle: {
-    color: '#DDE4F1',
-    fontFamily: fonts.semiBold,
-    fontSize: 10.5,
-    fontWeight: '600',
+    color: colors.text,
+    ...typography.h3,
+    fontSize: 13,
   },
   disconnectedText: {
-    color: '#74859F',
-    fontFamily: fonts.regular,
-    fontSize: 8.5,
-    lineHeight: 12,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
   },
 
   addCanvasButton: {
@@ -1972,16 +1836,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: 9,
-    borderRadius: 11,
-    backgroundColor: '#1B1640',
+    borderRadius: radii.sm,
+    backgroundColor: colors.accentDim,
     borderWidth: 1,
-    borderColor: 'rgba(167,139,250,0.30)',
+    borderColor: colors.accent,
   },
   addCanvasText: {
-    color: '#C6B7FF',
-    fontFamily: fonts.bold,
-    fontSize: 9,
-    fontWeight: '700',
+    color: colors.accent,
+    ...typography.label,
+    fontSize: 11,
   },
   canvasConnectedHeader: {
     flexDirection: 'row',
@@ -1995,10 +1858,9 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   canvasConnectedText: {
-    color: '#5ED6AE',
-    fontFamily: fonts.bold,
-    fontSize: 10.5,
-    fontWeight: '700',
+    color: colors.tierGreen,
+    ...typography.label,
+    fontSize: 11,
   },
   syncAllButton: {
     minHeight: 34,
@@ -2006,16 +1868,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: 10,
-    borderRadius: 11,
-    backgroundColor: '#171837',
+    borderRadius: radii.sm,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#343B68',
+    borderColor: colors.cardBorder,
   },
   syncAllText: {
-    color: '#A997FF',
-    fontFamily: fonts.bold,
-    fontSize: 8.5,
-    fontWeight: '700',
+    color: colors.textDim,
+    ...typography.label,
+    fontSize: 11,
   },
   canvasConnectionList: {
     gap: 9,
@@ -2025,11 +1886,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 10,
-    borderRadius: 14,
-    backgroundColor: '#142238',
+    padding: spacing.ms,
+    borderRadius: radii.card,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#29415F',
+    borderColor: colors.cardBorder,
   },
   canvasLogo: {
     width: 40,
@@ -2038,9 +1899,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 13,
-    backgroundColor: 'rgba(16,185,129,0.10)',
+    backgroundColor: colors.accent2Dim,
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.30)',
+    borderColor: colors.accent2,
   },
   canvasConnectionCopy: {
     flex: 1,
@@ -2054,36 +1915,33 @@ const styles = StyleSheet.create({
   },
   canvasName: {
     flexShrink: 1,
-    color: '#EAF0FA',
-    fontFamily: fonts.semiBold,
-    fontSize: 10.5,
-    fontWeight: '600',
+    color: colors.text,
+    ...typography.h3,
+    fontSize: 13,
   },
   tokenExpiredBadge: {
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 5,
-    backgroundColor: 'rgba(255,99,103,0.10)',
+    backgroundColor: colors.tierRedBg,
     borderWidth: 1,
-    borderColor: 'rgba(255,99,103,0.30)',
+    borderColor: colors.tierRed,
   },
   tokenExpiredText: {
-    color: '#FF8588',
-    fontFamily: fonts.bold,
-    fontSize: 6.5,
-    fontWeight: '700',
+    color: colors.tierRed,
+    ...typography.label,
+    fontSize: 9,
   },
   canvasUrlText: {
-    color: '#7A8DA7',
-    fontFamily: fonts.regular,
-    fontSize: 8.5,
-    lineHeight: 11,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
   },
   canvasSyncTime: {
-    color: '#5F718C',
-    fontFamily: fonts.regular,
-    fontSize: 7.5,
-    lineHeight: 10,
+    color: colors.textFaint,
+    ...typography.caption,
+    fontSize: 10,
+    lineHeight: 14,
   },
   connectionRemoveButton: {
     width: 34,
@@ -2091,19 +1949,19 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 11,
-    backgroundColor: 'rgba(255,99,103,0.06)',
+    borderRadius: radii.sm,
+    backgroundColor: colors.tierRedBg,
     borderWidth: 1,
-    borderColor: 'rgba(255,99,103,0.22)',
+    borderColor: colors.tierRed,
   },
   canvasEmptyState: {
     alignItems: 'center',
-    gap: 9,
-    padding: 16,
-    borderRadius: 15,
-    backgroundColor: '#101B2B',
+    gap: spacing.ms,
+    padding: spacing.md,
+    borderRadius: radii.card,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#263E5A',
+    borderColor: colors.cardBorder,
   },
   canvasEmptyIcon: {
     width: 48,
@@ -2111,22 +1969,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 16,
-    backgroundColor: 'rgba(16,185,129,0.09)',
+    backgroundColor: colors.accent2Dim,
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.25)',
+    borderColor: colors.accent2,
   },
   canvasEmptyTitle: {
-    color: '#ECF1FA',
-    fontFamily: fonts.bold,
-    fontSize: 12,
-    fontWeight: '700',
+    color: colors.text,
+    ...typography.h3,
   },
   canvasEmptyText: {
     maxWidth: 285,
-    color: '#7C8DA5',
-    fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 14,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
     textAlign: 'center',
   },
   canvasForm: {
@@ -2137,18 +1992,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 9,
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: 'rgba(245,158,11,0.07)',
+    padding: spacing.ms,
+    borderRadius: radii.sm,
+    backgroundColor: colors.tierAmberBg,
     borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.21)',
+    borderColor: colors.tierAmber,
   },
   canvasHelpText: {
     flex: 1,
-    color: '#ACA087',
-    fontFamily: fonts.regular,
-    fontSize: 8.5,
-    lineHeight: 12.5,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
   },
   canvasFormButtons: {
     flexDirection: 'row',
@@ -2165,19 +2019,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,99,103,0.07)',
+    paddingHorizontal: spacing.ms,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.sm,
+    backgroundColor: colors.tierRedBg,
     borderWidth: 1,
-    borderColor: 'rgba(255,99,103,0.22)',
+    borderColor: colors.tierRed,
   },
   inlineErrorText: {
     flex: 1,
-    color: '#E7A0A3',
-    fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 13,
+    color: colors.tierRed,
+    ...typography.caption,
+    lineHeight: 16,
   },
 
   themeRow: {
@@ -2193,13 +2046,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   settingRowIcon: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: '#1C1742',
+    backgroundColor: colors.accentDim,
   },
   settingRowCopy: {
     flex: 1,
@@ -2207,17 +2060,14 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   settingRowTitle: {
-    color: '#E8EDF7',
-    fontFamily: fonts.semiBold,
-    fontSize: 10.5,
-    lineHeight: 14,
-    fontWeight: '600',
+    color: colors.text,
+    ...typography.h3,
+    fontSize: 13,
   },
   settingRowDescription: {
-    color: '#74859F',
-    fontFamily: fonts.regular,
-    fontSize: 8.5,
-    lineHeight: 12,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
   },
   themeBadge: {
     minHeight: 31,
@@ -2225,20 +2075,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: 10,
-    borderRadius: 10,
-    backgroundColor: '#1A2943',
+    borderRadius: radii.sm,
+    backgroundColor: colors.accentDim,
     borderWidth: 1,
-    borderColor: '#2D496E',
+    borderColor: colors.accent,
   },
   themeBadgeText: {
-    color: '#C5B7FF',
-    fontFamily: fonts.bold,
-    fontSize: 8.5,
-    fontWeight: '700',
+    color: colors.accent,
+    ...typography.label,
   },
   settingsDivider: {
     height: 1,
-    backgroundColor: '#263C58',
+    backgroundColor: colors.divider,
   },
   gradeColorRow: {
     flexDirection: 'row',
@@ -2276,16 +2124,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 10,
-    borderRadius: 10,
-    backgroundColor: '#1A2943',
+    borderRadius: radii.sm,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: '#2D496E',
+    borderColor: colors.cardBorder,
   },
   gradeColorResetText: {
-    color: '#C5B7FF',
-    fontFamily: fonts.semiBold,
-    fontSize: 9,
-    fontWeight: '600',
+    color: colors.textDim,
+    ...typography.caption,
   },
 
   supportRow: {
@@ -2296,46 +2142,41 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   supportRowLabel: {
-    color: '#8294AF',
-    fontFamily: fonts.medium,
-    fontSize: 10,
-    fontWeight: '500',
+    color: colors.textDim,
+    ...typography.caption,
   },
   supportRowValue: {
-    color: '#E5EBF6',
-    fontFamily: fonts.semiBold,
-    fontSize: 10,
-    fontWeight: '600',
+    color: colors.text,
+    ...typography.caption,
+    fontFamily: fonts.bodyMedium,
   },
 
   dangerZoneCard: {
-    borderColor: 'rgba(255,99,103,0.35)',
+    borderColor: 'rgba(248, 113, 113, 0.35)',
   },
   deleteForm: {
-    gap: 12,
+    gap: spacing.ms,
   },
   deleteWarning: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 9,
-    padding: 11,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,99,103,0.07)',
+    padding: spacing.ms,
+    borderRadius: radii.sm,
+    backgroundColor: colors.tierRedBg,
     borderWidth: 1,
-    borderColor: 'rgba(255,99,103,0.20)',
+    borderColor: colors.tierRed,
   },
   deleteWarningText: {
     flex: 1,
-    color: '#DDA5A7',
-    fontFamily: fonts.regular,
-    fontSize: 9,
-    lineHeight: 13,
+    color: colors.textDim,
+    ...typography.caption,
+    lineHeight: 16,
   },
   deleteError: {
-    color: '#FF8B8E',
-    fontFamily: fonts.regular,
-    fontSize: 9.5,
-    lineHeight: 13,
+    color: colors.tierRed,
+    ...typography.caption,
+    lineHeight: 16,
   },
   deleteActions: {
     flexDirection: 'row',
