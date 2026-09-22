@@ -33,6 +33,7 @@ import {
   spacing,
   typography,
 } from '../theme/tokens'
+import { TAB_BAR_SCROLL_BOTTOM_INSET } from '../components/ui/FloatingTabBar'
 
 type Nav = NativeStackNavigationProp<GradesStackParamList>
 type FeatherName = React.ComponentProps<typeof Feather>['name']
@@ -497,7 +498,7 @@ export default function GradesScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 10,
-    paddingBottom: 118,
+    paddingBottom: TAB_BAR_SCROLL_BOTTOM_INSET,
     gap: 16,
   },
 

@@ -20,6 +20,7 @@ import type { CollegeListItem } from '../../types/colleges'
 import type { MainTabParamList } from '../../navigation/MainNavigator'
 import type { MainStackParamList } from '../../navigation/MainStack'
 import { colors, fonts, gradients, radii, spacing, typography } from '../../theme/tokens'
+import { TAB_BAR_SCROLL_BOTTOM_INSET } from '../../components/ui/FloatingTabBar'
 
 type FeatherName = React.ComponentProps<typeof Feather>['name']
 
@@ -300,7 +301,7 @@ export default function RoadmapScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   scroll: {
     paddingVertical: spacing.lg,
-    paddingBottom: 104,
+    paddingBottom: TAB_BAR_SCROLL_BOTTOM_INSET,
     gap: spacing.lg,
   },
 

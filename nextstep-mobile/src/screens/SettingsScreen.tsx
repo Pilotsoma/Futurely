@@ -2112,8 +2112,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   gradeLabel: {
-    fontFamily: fonts.bold,
+    ...typography.caption,
     fontSize: 8,
+    fontFamily: fonts.bodyBold,
     fontWeight: '700',
   },
   gradeColorReset: {

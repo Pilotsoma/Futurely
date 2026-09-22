@@ -22,6 +22,7 @@ import Animated, {
   cancelAnimation,
   Easing,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -201,7 +202,9 @@ function SkeletonBlock({
 // ---------------------------------------------------------------------------
 
 export function Skeleton(props: SkeletonProps): React.JSX.Element {
-  const { reduceMotion } = useDisplayPreferences()
+  const systemReduceMotion = useReducedMotion() ?? false
+  const { reduceMotion: preferenceReduceMotion } = useDisplayPreferences()
+  const reduceMotion = systemReduceMotion || preferenceReduceMotion
 
   if (props.rows !== undefined) {
     return (

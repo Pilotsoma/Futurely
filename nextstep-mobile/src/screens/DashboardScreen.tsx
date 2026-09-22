@@ -36,6 +36,7 @@ import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
 import type { MainTabParamList } from '../navigation/MainNavigator'
 import type { MainStackParamList } from '../navigation/MainStack'
 import { colors, fonts, getSubjectColor, spacing, typography } from '../theme/tokens'
+import { TAB_BAR_SCROLL_BOTTOM_INSET } from '../components/ui/FloatingTabBar'
 
 type Nav = BottomTabNavigationProp<MainTabParamList>
 
@@ -434,7 +435,7 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 14,
     paddingTop: 8,
-    paddingBottom: 118,
+    paddingBottom: TAB_BAR_SCROLL_BOTTOM_INSET,
   },
   pageCompact: {
     gap: 12,

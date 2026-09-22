@@ -30,6 +30,17 @@ import Animated, {
 import { BlurView } from 'expo-blur'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, radii } from '../../theme/tokens'
+import { useDisplayPreferences } from '../../preferences/displayPreferences'
+
+// ---------------------------------------------------------------------------
+// Shared geometry constant — export so all tab screens can reference the same
+// scroll-content bottom padding without hardcoding magic numbers.
+//
+// Derivation: max(20, safeAreaBottom + 8) + height = max(20, 34+8) + 64 = 106
+// on a home-indicator phone.  118 adds 12pt of breathing room and is safe on
+// all current device families.
+// ---------------------------------------------------------------------------
+export const TAB_BAR_SCROLL_BOTTOM_INSET = 118
 
 // ---------------------------------------------------------------------------
 // Types
@@ -155,7 +166,9 @@ export function FloatingTabBar({
   style,
 }: FloatingTabBarProps): React.JSX.Element {
   const insets = useSafeAreaInsets()
-  const reduceMotion = useReducedMotion() ?? false
+  const systemReduceMotion = useReducedMotion() ?? false
+  const { reduceMotion: preferenceReduceMotion } = useDisplayPreferences()
+  const reduceMotion = systemReduceMotion || preferenceReduceMotion
 
   const bottomInset = Math.max(20, insets.bottom + 8)
 

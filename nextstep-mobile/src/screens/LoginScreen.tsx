@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext'
 import * as authApi from '../api/authApi'
 import { ApiRequestError } from '../api/client'
 import { GoogleLogo } from '../components/ui/GoogleLogo'
+import { LinkIcon } from '../components/icons'
 import { Card } from '../components/ui/Card'
 import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { Screen } from '../components/ui/Screen'
@@ -306,13 +307,9 @@ function ConnectSchoolPlaceholder(): React.JSX.Element {
   return (
     <View style={styles.connectSchoolBox} accessibilityRole="none">
       <View style={styles.connectSchoolHeader}>
-        <Feather
-          name="link"
-          size={16}
-          color={colors.accent}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        />
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <LinkIcon size={16} color={colors.accent} />
+        </View>
         <Text style={styles.connectSchoolTitle}>School Account</Text>
         <View style={styles.requiredBadge}>
           <Text style={styles.requiredBadgeText}>Required</Text>
@@ -673,7 +670,7 @@ export default function LoginScreen(): React.JSX.Element {
           </View>
 
           {/* Auth card */}
-          <Card variant="glass" style={styles.authCardInner}>
+          <Card variant="glass" disableBlur={Platform.OS === 'android'} style={styles.authCardInner}>
             {/* Log In / Sign Up mode toggle */}
             <SegmentedControl
               segments={MODE_LABEL_SEGMENTS}

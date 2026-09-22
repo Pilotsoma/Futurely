@@ -15,6 +15,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import type { Assignment } from '../types/assignments'
 import type { MainTabParamList } from '../navigation/MainNavigator'
 import { colors, fonts, getSubjectColor, radii, spacing, typography } from '../theme/tokens'
+import { TAB_BAR_SCROLL_BOTTOM_INSET } from '../components/ui/FloatingTabBar'
 
 type Group = 'Overdue' | 'Today' | 'Tomorrow' | 'This Week' | 'Later' | 'Completed'
 type DisplaySection = { title: string; data: Assignment[] }
@@ -574,7 +575,7 @@ const styles = StyleSheet.create({
   dayPill: {
     width: 44,
     height: 68,
-    borderRadius: radii.input,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
@@ -665,7 +666,7 @@ const styles = StyleSheet.create({
   error: { ...typography.caption, color: colors.tierRed },
 
   // Section list
-  listContent: { paddingBottom: 100 },
+  listContent: { paddingBottom: TAB_BAR_SCROLL_BOTTOM_INSET },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
