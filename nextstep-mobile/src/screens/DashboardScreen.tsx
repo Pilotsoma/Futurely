@@ -17,7 +17,9 @@ import * as studentsApi from '../api/studentsApi'
 import * as gradesApi from '../api/gradesApi'
 import { ApiRequestError } from '../api/client'
 import { Screen } from '../components/ui/Screen'
+import { Card } from '../components/ui/Card'
 import { ActionTile } from '../components/ui/ActionTile'
+import { GradeBadge } from '../components/ui/GradeBadge'
 import { GpaOverviewCard } from '../components/grades/GpaOverviewCard'
 import { LoadingSkeleton } from '../components/ui/Skeleton'
 import { ErrorRetryBlock } from '../components/ui/ErrorRetryBlock'
@@ -33,7 +35,7 @@ import type { Assignment } from '../types/assignments'
 import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
 import type { MainTabParamList } from '../navigation/MainNavigator'
 import type { MainStackParamList } from '../navigation/MainStack'
-import { colors, fonts, spacing, typography } from '../theme/tokens'
+import { colors, fonts, getSubjectColor, spacing, typography } from '../theme/tokens'
 
 type Nav = BottomTabNavigationProp<MainTabParamList>
 
@@ -167,11 +169,15 @@ export default function DashboardScreen(): React.JSX.Element {
   }
 
   const displayName = (student?.name ?? user?.name ?? 'Student').split(' ')[0]
+  const displayInitial = displayName.charAt(0).toUpperCase()
   const dueItemsPerRow = width >= 700 ? 2 : 1
   const dueRows = Array.from(
     { length: Math.ceil(dueToday.length / dueItemsPerRow) },
     (_, index) => dueToday.slice(index * dueItemsPerRow, index * dueItemsPerRow + dueItemsPerRow),
   )
+
+  // Recent-grade pills: courses that have a letter grade (capped at 6)
+  const gradedCourses = courses.filter((c) => c.letterGrade !== null).slice(0, 6)
 
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
@@ -190,6 +196,7 @@ export default function DashboardScreen(): React.JSX.Element {
           veryCompact && styles.pageVeryCompact,
         ]}
       >
+        {/* Header row */}
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
             <Text style={styles.greetingLine}>Good {getTimeOfDay()},</Text>
@@ -208,13 +215,18 @@ export default function DashboardScreen(): React.JSX.Element {
                 {formatDate()}
               </Text>
             </View>
+            {/* Avatar button — navigates to Settings */}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Notifications"
-              style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+              accessibilityLabel="Settings"
+              onPress={() =>
+                navigation
+                  .getParent<NativeStackNavigationProp<MainStackParamList>>()
+                  ?.navigate('Settings')
+              }
+              style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}
             >
-              <Feather name="bell" size={17} color="#B9C6DD" />
-              <View style={styles.notificationDot} />
+              <Text style={styles.avatarInitial}>{displayInitial}</Text>
             </Pressable>
           </View>
         </View>
@@ -234,7 +246,38 @@ export default function DashboardScreen(): React.JSX.Element {
           testID="dashboard-gpa-card"
         />
 
-        <View style={styles.dueSection} testID="dashboard-due-today">
+        {/* Recent grade pills — only shown when at least one graded course exists */}
+        {gradedCourses.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.gradePillsRow}
+            accessibilityLabel="Recent grade overview"
+          >
+            {gradedCourses.map((course) => {
+              const subjectColor = getSubjectColor(course.name)
+              return (
+                <Pressable
+                  key={course.id}
+                  style={({ pressed }) => [styles.gradePill, pressed && styles.pressed]}
+                  onPress={() => navigation.navigate('Grades')}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${course.name}: ${course.letterGrade ?? 'no grade'}`}
+                >
+                  <View style={[styles.pillDot, { backgroundColor: subjectColor }]} />
+                  <Text style={styles.pillName} numberOfLines={1}>
+                    {course.name.length > 13 ? course.name.slice(0, 12) + '…' : course.name}
+                  </Text>
+                  <GradeBadge letter={course.letterGrade} size="sm" />
+                </Pressable>
+              )
+            })}
+          </ScrollView>
+        ) : null}
+
+        {/* Due today — glass Card */}
+        <View testID="dashboard-due-today">
+        <Card variant="glass" style={styles.dueCardContent}>
           <View style={styles.dueHeadingRow}>
             <View>
               <Text style={styles.sectionEyebrow}>TODAY</Text>
@@ -293,8 +336,10 @@ export default function DashboardScreen(): React.JSX.Element {
               ))}
             </View>
           )}
+        </Card>
         </View>
 
+        {/* Stats row */}
         <View style={[styles.statsRow, compact && styles.statsRowCompact]}>
           <Pressable
             style={({ pressed }) => [
@@ -342,6 +387,7 @@ export default function DashboardScreen(): React.JSX.Element {
           </Pressable>
         </View>
 
+        {/* AI composer */}
         <View style={styles.aiSection}>
           {!veryCompact ? (
             <View style={styles.aiLabelRow}>
@@ -492,40 +538,59 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 10,
   },
-  notificationButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 11,
+  // Avatar button — navigates to Settings
+  avatarButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(15, 27, 47, 0.84)',
-    borderWidth: 1,
-    borderColor: 'rgba(86, 111, 148, 0.20)',
+    backgroundColor: 'rgba(76, 124, 255, 0.22)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(76, 124, 255, 0.50)',
   },
-  notificationDot: {
-    position: 'absolute',
-    top: 6,
-    right: 7,
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#7C5CFF',
-    borderWidth: 1,
-    borderColor: '#0A1220',
+  avatarInitial: {
+    fontFamily: fonts.displaySemiBold,
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
-  dueSection: {
-    width: '100%',
-    gap: 11,
-    padding: 14,
-    borderRadius: 20,
-    backgroundColor: 'rgba(17, 31, 52, 0.94)',
+
+  // Recent-grade pills
+  gradePillsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: 2,
+  },
+  gradePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(19, 37, 64, 0.90)',
     borderWidth: 1,
     borderColor: 'rgba(72, 100, 139, 0.30)',
-    shadowColor: '#000000',
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    minHeight: 32,
+  },
+  pillDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  pillName: {
+    ...typography.caption,
+    color: '#B9C6DD',
+    fontSize: 11,
+    maxWidth: 100,
+  },
+
+  // Due today — glass card (style goes to inner content view via Card.style prop)
+  dueCardContent: {
+    gap: 11,
+    padding: 14,
   },
   dueHeadingRow: {
     flexDirection: 'row',
@@ -602,6 +667,8 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     gap: 10,
   },
+
+  // Stats row
   statsRow: {
     width: '100%',
     minHeight: 98,
@@ -655,6 +722,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 12,
   },
+
+  // AI composer
   aiSection: {
     width: '100%',
     gap: 5,
@@ -733,7 +802,7 @@ const styles = StyleSheet.create({
   },
   inlineError: {
     ...typography.caption,
-    color: colors.error,
+    color: colors.tierRed,
     textAlign: 'center',
     fontSize: 10,
   },

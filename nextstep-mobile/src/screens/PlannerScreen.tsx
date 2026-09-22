@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native'
+import { Pressable, SectionList, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native'
 import { Feather } from '@expo/vector-icons'
 import * as assignmentsApi from '../api/assignmentsApi'
@@ -8,23 +8,31 @@ import { Screen } from '../components/ui/Screen'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { ProgressBar } from '../components/ui/ProgressBar'
 import { LoadingSkeleton } from '../components/ui/Skeleton'
 import { ErrorRetryBlock } from '../components/ui/ErrorRetryBlock'
 import { EmptyState } from '../components/ui/EmptyState'
 import type { Assignment } from '../types/assignments'
 import type { MainTabParamList } from '../navigation/MainNavigator'
-import { colors, fonts, radii, spacing, typography } from '../theme/tokens'
+import { colors, fonts, getSubjectColor, radii, spacing, typography } from '../theme/tokens'
 
 type Group = 'Overdue' | 'Today' | 'Tomorrow' | 'This Week' | 'Later' | 'Completed'
+type DisplaySection = { title: string; data: Assignment[] }
 
 const GROUP_ORDER: Group[] = ['Overdue', 'Today', 'Tomorrow', 'This Week', 'Later', 'Completed']
 
 // Mirrors web's GROUP_META (app/(app)/planner/page.tsx) — only Overdue/Today get a
 // distinct urgency color, everything else reads as neutral.
-const GROUP_META: Partial<Record<Group, { color: string; bg: string }>> = {
-  Overdue: { color: colors.error, bg: 'rgba(239,68,68,0.12)' },
-  Today: { color: colors.warning, bg: 'rgba(245,158,11,0.12)' },
+const GROUP_META: Partial<Record<string, { color: string; bg: string }>> = {
+  Overdue: { color: colors.tierRed, bg: colors.tierRedBg },
+  Today: { color: colors.tierAmber, bg: colors.tierAmberBg },
 }
+
+const DAY_LETTERS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as const
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function formatDueDate(assignment: Assignment): string {
   const date = new Date(assignment.dueDate)
@@ -34,6 +42,14 @@ function formatDueDate(assignment: Assignment): string {
 
 function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
 }
 
 function groupFor(assignment: Assignment): Group {
@@ -49,6 +65,15 @@ function groupFor(assignment: Assignment): Group {
   return 'Later'
 }
 
+// Format a date as "MMM D" (e.g. "Sep 22")
+function shortDate(d: Date): string {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+
 export default function PlannerScreen(): React.JSX.Element {
   const route = useRoute<RouteProp<MainTabParamList, 'Planner'>>()
   const [assignments, setAssignments] = useState<Assignment[]>([])
@@ -63,6 +88,7 @@ export default function PlannerScreen(): React.JSX.Element {
   const [newDueDate, setNewDueDate] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
   const loadFirstPage = useCallback(async () => {
     setError(null)
@@ -174,6 +200,63 @@ export default function PlannerScreen(): React.JSX.Element {
     return [...activeSections, { title: 'Completed' as Group, data: showCompleted ? completedItems : [] }]
   }, [activeSections, completedItems, showCompleted])
 
+  // ---------------------------------------------------------------------------
+  // 7-day strip data
+  // NOTE: weekDays is computed once at mount. The screen uses useFocusEffect to
+  // refresh assignments on each visit, so data stays fresh. The day strip itself
+  // won't rotate past midnight unless the component remounts — acceptable for
+  // this sprint scope.
+  // ---------------------------------------------------------------------------
+  const weekDays = useMemo<Date[]>(() => {
+    const today = startOfDay(new Date())
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today)
+      d.setDate(d.getDate() + i)
+      return d
+    })
+  }, [])
+
+  const weekRange = useMemo<string>(() => {
+    const first = weekDays[0]
+    const last = weekDays[weekDays.length - 1]
+    return `${shortDate(first)} – ${shortDate(last)}`
+  }, [weekDays])
+
+  // Dot map: which days in the strip have at least one incomplete assignment
+  const dayHasDueAssignment = useMemo<Map<string, boolean>>(() => {
+    const map = new Map<string, boolean>()
+    for (const a of assignments) {
+      if (!a.completed) {
+        const dueDay = startOfDay(new Date(a.dueDate))
+        map.set(dueDay.toISOString(), true)
+      }
+    }
+    return map
+  }, [assignments])
+
+  // Weekly workload progress (completed / total within the 7-day window)
+  const workloadProgress = useMemo<number>(() => {
+    const weekEnd = new Date(weekDays[weekDays.length - 1])
+    weekEnd.setDate(weekEnd.getDate() + 1) // exclusive upper bound
+    const weekAssignments = assignments.filter((a) => {
+      const due = startOfDay(new Date(a.dueDate))
+      return due >= weekDays[0] && due < weekEnd
+    })
+    if (weekAssignments.length === 0) return 0
+    const done = weekAssignments.filter((a) => a.completed).length
+    return done / weekAssignments.length
+  }, [assignments, weekDays])
+
+  // The sections displayed in the SectionList — filtered by selected day when one is active
+  const displaySections = useMemo<DisplaySection[]>(() => {
+    if (!selectedDay) return sections as DisplaySection[]
+    const dayAssignments = assignments.filter(
+      (a) => !a.completed && isSameDay(startOfDay(new Date(a.dueDate)), selectedDay),
+    )
+    if (dayAssignments.length === 0) return []
+    return [{ title: shortDate(selectedDay), data: dayAssignments }]
+  }, [selectedDay, assignments, sections])
+
   // assignments is a dep because handleDelete reads it from closure for its
   // rollback snapshot — everything else these handlers touch goes through a
   // functional setState updater, so no other closure state can go stale here.
@@ -214,6 +297,7 @@ export default function PlannerScreen(): React.JSX.Element {
 
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
+      {/* Static header area — not part of SectionList so it stays pinned */}
       <View style={styles.headerRow}>
         <Text style={styles.title}>Planner</Text>
         <Pressable
@@ -225,6 +309,53 @@ export default function PlannerScreen(): React.JSX.Element {
           <Feather name={showCreate ? 'x' : 'plus'} size={20} color={colors.text} />
         </Pressable>
       </View>
+
+      {/* Week-range header + workload ProgressBar */}
+      <View style={styles.weekHeaderCard}>
+        <View style={styles.weekHeaderRow}>
+          <Text style={styles.weekRangeText}>{weekRange}</Text>
+          <Text style={styles.workloadLabel}>
+            {Math.round(workloadProgress * 100)}% done
+          </Text>
+        </View>
+        <ProgressBar value={workloadProgress} color={colors.accent2} height={5} />
+      </View>
+
+      {/* 7-day selector strip */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.dayStrip}
+      >
+        {weekDays.map((day) => {
+          const dayKey = day.toISOString()
+          const isSelected = selectedDay !== null && isSameDay(day, selectedDay)
+          const hasDot = dayHasDueAssignment.has(dayKey)
+          const isToday = isSameDay(day, startOfDay(new Date()))
+          return (
+            <Pressable
+              key={dayKey}
+              onPress={() => setSelectedDay(isSelected ? null : day)}
+              style={[styles.dayPill, isSelected && styles.dayPillSelected]}
+              accessibilityRole="button"
+              accessibilityLabel={`${DAY_LETTERS[day.getDay()]} ${day.getDate()}${hasDot ? ', has assignments' : ''}`}
+              accessibilityState={{ selected: isSelected }}
+            >
+              <Text style={[styles.dayLetter, isSelected && styles.dayTextSelected, isToday && !isSelected && styles.dayLetterToday]}>
+                {DAY_LETTERS[day.getDay()]}
+              </Text>
+              <Text style={[styles.dayNumber, isSelected && styles.dayTextSelected, isToday && !isSelected && styles.dayNumberToday]}>
+                {day.getDate()}
+              </Text>
+              {hasDot ? (
+                <View style={[styles.dayDot, isSelected && styles.dayDotSelected]} />
+              ) : (
+                <View style={styles.dayDotPlaceholder} />
+              )}
+            </Pressable>
+          )
+        })}
+      </ScrollView>
 
       {showCreate ? (
         <Card style={styles.createCard}>
@@ -246,7 +377,7 @@ export default function PlannerScreen(): React.JSX.Element {
           <Card style={styles.selectedAssignment}>
             <View style={styles.selectedAssignmentHeading}>
               <View style={styles.selectedAssignmentIcon}>
-                <Feather name="clipboard" size={17} color={colors.warning} />
+                <Feather name="clipboard" size={17} color={colors.tierAmber} />
               </View>
               <View style={styles.selectedAssignmentCopy}>
                 <Text style={styles.selectedAssignmentEyebrow}>OPENED ASSIGNMENT</Text>
@@ -263,7 +394,7 @@ export default function PlannerScreen(): React.JSX.Element {
           </Card>
         ) : (
           <View style={styles.routeError} accessibilityRole="alert">
-            <Feather name="alert-circle" size={16} color={colors.error} />
+            <Feather name="alert-circle" size={16} color={colors.tierRed} />
             <Text style={styles.routeErrorText}>
               {hasValidRequestedId
                 ? 'That assignment is no longer available.'
@@ -273,11 +404,15 @@ export default function PlannerScreen(): React.JSX.Element {
         )
       ) : null}
 
-      {activeSections.length === 0 && completedItems.length === 0 ? (
+      {displaySections.length === 0 && !selectedDay && activeSections.length === 0 && completedItems.length === 0 ? (
         <EmptyState icon="check-circle" title="Nothing due" message="You're all caught up." />
+      ) : displaySections.length === 0 && selectedDay ? (
+        <View style={styles.emptyDay}>
+          <Text style={styles.emptyDayText}>Nothing due on {shortDate(selectedDay)}.</Text>
+        </View>
       ) : (
-        <SectionList
-          sections={sections}
+        <SectionList<Assignment, DisplaySection>
+          sections={displaySections}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
           onEndReached={() => void loadMore()}
@@ -293,7 +428,7 @@ export default function PlannerScreen(): React.JSX.Element {
                   <Feather
                     name="chevron-right"
                     size={13}
-                    color={colors.textSecondary}
+                    color={colors.textDim}
                     style={showCompleted ? styles.chevronOpen : undefined}
                   />
                   <Text style={styles.completedToggleText}>
@@ -314,10 +449,10 @@ export default function PlannerScreen(): React.JSX.Element {
           }}
           renderItem={renderAssignment}
           ListFooterComponent={
-            activeSections.length === 0 && completedItems.length > 0 ? (
+            activeSections.length === 0 && completedItems.length > 0 && !selectedDay ? (
               <View style={styles.allCaughtUp}>
                 <View style={styles.allCaughtUpIcon}>
-                  <Feather name="check" size={22} color={colors.success} />
+                  <Feather name="check" size={22} color={colors.tierGreen} />
                 </View>
                 <Text style={styles.allCaughtUpTitle}>All caught up!</Text>
                 <Text style={styles.allCaughtUpSubtitle}>Every assignment is completed.</Text>
@@ -329,6 +464,10 @@ export default function PlannerScreen(): React.JSX.Element {
     </Screen>
   )
 }
+
+// ---------------------------------------------------------------------------
+// AssignmentRow
+// ---------------------------------------------------------------------------
 
 interface AssignmentRowProps {
   item: Assignment
@@ -343,6 +482,7 @@ const AssignmentRow = React.memo(function AssignmentRow({
   onToggle,
   onDelete,
 }: AssignmentRowProps): React.JSX.Element {
+  const subjectColor = item.subject ? getSubjectColor(item.subject) : null
   return (
     <Card
       style={[
@@ -366,42 +506,127 @@ const AssignmentRow = React.memo(function AssignmentRow({
             {item.title}
           </Text>
           <View style={styles.assignmentMetaRow}>
+            {subjectColor ? (
+              <View style={[styles.subjectDot, { backgroundColor: subjectColor }]} />
+            ) : null}
             {item.subject ? <Text style={styles.assignmentSubject}>{item.subject}</Text> : null}
             <Text style={styles.assignmentSubject}>Due {formatDueDate(item)}</Text>
           </View>
         </View>
       </Pressable>
       <Pressable onPress={onDelete} hitSlop={8} style={styles.deleteButton} accessibilityLabel="Delete task">
-        <Feather name="x" size={16} color={colors.textMuted} />
+        <Feather name="x" size={16} color={colors.textFaint} />
       </Pressable>
     </Card>
   )
 })
+
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   title: { ...typography.h1, color: colors.text },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface2,
+    width: 44,
+    height: 44,
+    borderRadius: radii.button,
+    backgroundColor: colors.cardFallback,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // Week header
+  weekHeaderCard: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  weekHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  weekRangeText: {
+    ...typography.h3,
+    fontSize: 14,
+    color: colors.text,
+  },
+  workloadLabel: {
+    ...typography.caption,
+    color: colors.accent2,
+    fontFamily: fonts.bodyMedium,
+  },
+
+  // 7-day strip
+  dayStrip: {
+    gap: spacing.xs,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.xs,
+  },
+  dayPill: {
+    width: 44,
+    height: 68,
+    borderRadius: radii.input,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.cardFallback,
+    paddingVertical: spacing.sm,
+  },
+  dayPillSelected: {
+    backgroundColor: colors.accentDim,
+    borderColor: colors.accent,
+  },
+  dayLetter: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 11,
+    color: colors.textDim,
+  },
+  dayLetterToday: {
+    color: colors.accent,
+  },
+  dayNumber: {
+    fontFamily: fonts.displaySemiBold,
+    fontSize: 15,
+    color: colors.text,
+  },
+  dayNumberToday: {
+    color: colors.accent,
+  },
+  dayTextSelected: {
+    color: colors.accent,
+  },
+  dayDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.accent2,
+  },
+  dayDotSelected: {
+    backgroundColor: colors.accent,
+  },
+  dayDotPlaceholder: {
+    width: 5,
+    height: 5,
+  },
+
+  // Create form
   createCard: { gap: spacing.sm, marginBottom: spacing.md },
   selectedAssignment: {
     gap: spacing.sm,
     marginBottom: spacing.sm,
-    borderColor: 'rgba(245,158,11,0.42)',
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderColor: 'rgba(251,191,36,0.42)',
+    backgroundColor: 'rgba(251,191,36,0.06)',
   },
   selectedAssignmentHeading: {
     flexDirection: 'row',
@@ -414,16 +639,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.sm,
-    backgroundColor: 'rgba(245,158,11,0.14)',
+    backgroundColor: 'rgba(251,191,36,0.14)',
   },
   selectedAssignmentCopy: { flex: 1, minWidth: 0 },
   selectedAssignmentEyebrow: {
     ...typography.label,
-    color: colors.warning,
+    color: colors.tierAmber,
     fontSize: 9,
   },
   selectedAssignmentTitle: { ...typography.h3, color: colors.text },
-  selectedAssignmentMeta: { ...typography.caption, color: colors.textSecondary },
+  selectedAssignmentMeta: { ...typography.caption, color: colors.textDim },
   routeError: {
     minHeight: 44,
     flexDirection: 'row',
@@ -432,13 +657,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.ms,
     borderWidth: 1,
-    borderColor: 'rgba(255,100,103,0.28)',
+    borderColor: 'rgba(248,113,113,0.28)',
     borderRadius: radii.sm,
-    backgroundColor: 'rgba(255,100,103,0.08)',
+    backgroundColor: 'rgba(248,113,113,0.08)',
   },
-  routeErrorText: { ...typography.caption, flex: 1, color: colors.error },
-  error: { ...typography.caption, color: colors.error },
-  listContent: { paddingBottom: spacing.xl },
+  routeErrorText: { ...typography.caption, flex: 1, color: colors.tierRed },
+  error: { ...typography.caption, color: colors.tierRed },
+
+  // Section list
+  listContent: { paddingBottom: 100 },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -446,16 +673,24 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
-  sectionTitle: { ...typography.label, color: colors.textSecondary },
+  sectionTitle: { ...typography.label, color: colors.textDim },
   countPill: {
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.cardFallback,
     borderRadius: 100,
     paddingHorizontal: spacing.sm,
     minWidth: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  countPillText: { ...typography.caption, fontSize: 11, fontFamily: fonts.bold, fontWeight: '700', color: colors.textSecondary },
+  countPillText: {
+    ...typography.caption,
+    fontSize: 11,
+    fontFamily: fonts.bold,
+    fontWeight: '700',
+    color: colors.textDim,
+  },
+
+  // Assignment card
   assignmentCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -465,8 +700,8 @@ const styles = StyleSheet.create({
   },
   assignmentCardCompleted: { opacity: 0.6 },
   assignmentCardSelected: {
-    borderColor: colors.warning,
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderColor: colors.tierAmber,
+    backgroundColor: 'rgba(251,191,36,0.06)',
   },
   assignmentMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.ms },
   checkbox: {
@@ -474,25 +709,33 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: radii.xs / 2,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  checkboxChecked: { backgroundColor: colors.accent, borderColor: colors.accent },
   assignmentInfo: { flex: 1, gap: 3, marginRight: spacing.sm },
   assignmentTitle: { ...typography.h3, fontSize: 14.5, color: colors.text },
-  completedText: { textDecorationLine: 'line-through', color: colors.textMuted },
-  assignmentMetaRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
-  assignmentSubject: { ...typography.caption, color: colors.textSecondary },
+  completedText: { textDecorationLine: 'line-through', color: colors.textFaint },
+  assignmentMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  subjectDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  assignmentSubject: { ...typography.caption, color: colors.textDim },
   deleteButton: { padding: spacing.xs },
+
+  // Completed toggle
   completedToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.cardBorder,
     borderRadius: radii.sm,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.ms,
@@ -500,19 +743,37 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   chevronOpen: { transform: [{ rotate: '90deg' }] },
-  completedToggleText: { ...typography.caption, fontFamily: fonts.semiBold, fontWeight: '600', color: colors.textSecondary },
+  completedToggleText: {
+    ...typography.caption,
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    color: colors.textDim,
+  },
+
+  // All caught up
   allCaughtUp: { alignItems: 'center', paddingVertical: spacing.xxl },
   allCaughtUpIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(16,185,129,0.12)',
+    backgroundColor: colors.tierGreenBg,
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.3)',
+    borderColor: 'rgba(52,211,153,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.ms,
   },
   allCaughtUpTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
-  allCaughtUpSubtitle: { ...typography.caption, color: colors.textSecondary },
+  allCaughtUpSubtitle: { ...typography.caption, color: colors.textDim },
+
+  // Empty day filter state
+  emptyDay: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyDayText: {
+    ...typography.body,
+    color: colors.textDim,
+    textAlign: 'center',
+  },
 })

@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react'
 import {
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -14,29 +15,35 @@ import { Feather } from '@expo/vector-icons'
 import * as gradesApi from '../api/gradesApi'
 import { ApiRequestError } from '../api/client'
 import { Screen } from '../components/ui/Screen'
+import { Card } from '../components/ui/Card'
 import { LoadingSkeleton } from '../components/ui/Skeleton'
 import { ActionTile } from '../components/ui/ActionTile'
+import { SegmentedControl } from '../components/ui/SegmentedControl'
+import { GradeBadge } from '../components/ui/GradeBadge'
 import { GpaOverviewCard } from '../components/grades/GpaOverviewCard'
-import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
+import type { CurrentGradeCourse, GpaSummary, PortalStatus } from '../types/grades'
 import type { GradesStackParamList } from '../navigation/GradesNavigator'
 import type { MainTabParamList } from '../navigation/MainNavigator'
 import type { MainStackParamList } from '../navigation/MainStack'
 import {
   colors,
   fonts,
+  getSubjectColor,
   radii,
   spacing,
+  typography,
 } from '../theme/tokens'
 
 type Nav = NativeStackNavigationProp<GradesStackParamList>
 type FeatherName = React.ComponentProps<typeof Feather>['name']
 
+// ---------------------------------------------------------------------------
+// Academic tools config (unchanged)
+// ---------------------------------------------------------------------------
+
 interface AcademicTool {
   label: string
   description: string
-  // Route identifier — most values are GradesStackParamList keys, but Roadmap
-  // (now a top-level tab) and GpaSimulator (now a MainStack push screen) need
-  // cross-navigator navigation handled by handleToolPress below.
   route: string
   icon: FeatherName
   color: string
@@ -123,9 +130,31 @@ const ACADEMIC_TOOL_ROWS: AcademicTool[][] = Array.from(
   (_, index) => ACADEMIC_TOOLS.slice(index * 2, index * 2 + 2),
 )
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function resultMessage(error: unknown, fallback: string): string {
   return error instanceof ApiRequestError ? error.message : fallback
 }
+
+function formatLastSynced(isoString: string): string {
+  const date = new Date(isoString)
+  const minutesAgo = Math.round((Date.now() - date.getTime()) / 60_000)
+  if (minutesAgo < 1) return 'Synced just now'
+  if (minutesAgo < 60) return `Synced ${minutesAgo}m ago`
+  const hoursAgo = Math.round(minutesAgo / 60)
+  if (hoursAgo < 24) return `Synced ${hoursAgo}h ago`
+  return `Synced ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+}
+
+// Labels for the GPA type SegmentedControl
+const GPA_SEGMENTS = ['Weighted', 'Unweighted'] as const
+type GpaSegmentLabel = (typeof GPA_SEGMENTS)[number]
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
 
 export default function GradesScreen(): React.JSX.Element {
   const navigation = useNavigation<Nav>()
@@ -152,19 +181,25 @@ export default function GradesScreen(): React.JSX.Element {
 
   const [courses, setCourses] = useState<CurrentGradeCourse[]>([])
   const [gpa, setGpa] = useState<GpaSummary | null>(null)
+  const [portalStatus, setPortalStatus] = useState<PortalStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [inlineError, setInlineError] = useState<string | null>(null)
   const [gpaError, setGpaError] = useState<string | null>(null)
 
+  // GPA toggle and course accordion state
+  const [gpaSegment, setGpaSegment] = useState<GpaSegmentLabel>('Weighted')
+  const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     setInlineError(null)
     setGpaError(null)
 
-    const [currentResult, gpaResult] = await Promise.allSettled([
+    const [currentResult, gpaResult, statusResult] = await Promise.allSettled([
       gradesApi.getCurrentGrades(),
       gradesApi.getGpa(),
+      gradesApi.getPortalStatus(),
     ])
 
     if (currentResult.status === 'fulfilled') {
@@ -175,6 +210,10 @@ export default function GradesScreen(): React.JSX.Element {
       setGpa(gpaResult.value)
     } else {
       setGpa(null)
+    }
+
+    if (statusResult.status === 'fulfilled') {
+      setPortalStatus(statusResult.value)
     }
 
     if (currentResult.status === 'rejected') {
@@ -226,6 +265,12 @@ export default function GradesScreen(): React.JSX.Element {
     )
   }
 
+  // Derived GPA display value
+  const highlightedGpa: number | null =
+    gpaSegment === 'Weighted'
+      ? (gpa?.weightedGpa ?? null)
+      : (gpa?.unweightedGpa ?? null)
+
   return (
     <Screen edges={['top', 'left', 'right']}>
       <ScrollView
@@ -235,12 +280,13 @@ export default function GradesScreen(): React.JSX.Element {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => void handleRefresh()}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-            progressBackgroundColor={colors.surface2}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+            progressBackgroundColor={colors.cardFallback}
           />
         }
       >
+        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text allowFontScaling={false} style={styles.eyebrow}>
@@ -253,6 +299,15 @@ export default function GradesScreen(): React.JSX.Element {
               Your GPA, classes and academic progress in one place.
             </Text>
           </View>
+          {/* Last-synced indicator */}
+          {portalStatus?.lastSynced ? (
+            <View style={styles.syncChip}>
+              <Feather name="refresh-cw" size={10} color="#7AB4FF" />
+              <Text style={styles.syncChipText}>
+                {formatLastSynced(portalStatus.lastSynced)}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <GpaOverviewCard
@@ -265,6 +320,124 @@ export default function GradesScreen(): React.JSX.Element {
           testID="grades-gpa-card"
         />
 
+        {/* Weighted / Unweighted GPA toggle */}
+        {gpa ? (
+          <View style={styles.gpaToggleSection}>
+            <SegmentedControl<GpaSegmentLabel>
+              segments={GPA_SEGMENTS}
+              value={gpaSegment}
+              onChange={setGpaSegment}
+            />
+            {highlightedGpa !== null ? (
+              <View style={styles.highlightedGpaRow}>
+                <Text style={styles.highlightedGpaValue}>{highlightedGpa.toFixed(2)}</Text>
+                <Text style={styles.highlightedGpaLabel}>
+                  {gpaSegment === 'Weighted' ? 'Weighted GPA' : 'Unweighted GPA'}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Course list with expandable accordion */}
+        {courses.length > 0 ? (
+          <View style={styles.courseSection}>
+            <View style={styles.courseSectionHeader}>
+              <Text style={styles.courseSectionTitle}>COURSE GRADES</Text>
+              <Text style={styles.courseSectionCount}>{courses.length} courses</Text>
+            </View>
+            {courses.map((course) => {
+              const isExpanded = expandedCourseId === course.id
+              const subjectColor = getSubjectColor(course.name)
+              return (
+                <View key={course.id}>
+                  <Pressable
+                    onPress={() =>
+                      setExpandedCourseId(isExpanded ? null : course.id)
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`${course.name}, ${course.letterGrade ?? 'no grade'}${isExpanded ? ', expanded' : ', collapsed'}`}
+                    accessibilityState={{ expanded: isExpanded }}
+                    style={({ pressed }) => [
+                      styles.courseRow,
+                      pressed && styles.courseRowPressed,
+                    ]}
+                  >
+                    {/* Subject-colored icon square */}
+                    <View
+                      style={[styles.subjectIcon, { backgroundColor: subjectColor }]}
+                      accessibilityElementsHidden
+                    >
+                      <Text style={styles.subjectIconLetter}>
+                        {course.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+
+                    {/* Course info */}
+                    <View style={styles.courseInfo}>
+                      <Text style={styles.courseName} numberOfLines={1}>{course.name}</Text>
+                      <Text style={styles.courseMeta} numberOfLines={1}>
+                        {[course.teacher, course.period ? `Period ${course.period}` : null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Text>
+                    </View>
+
+                    {/* Grade badge + chevron */}
+                    <View style={styles.courseTrailing}>
+                      <GradeBadge letter={course.letterGrade} size="sm" />
+                      <Feather
+                        name="chevron-right"
+                        size={14}
+                        color={colors.textFaint}
+                        style={isExpanded ? styles.chevronOpen : undefined}
+                      />
+                    </View>
+                  </Pressable>
+
+                  {/* Expanded accordion: assignment breakdown */}
+                  {isExpanded && course.assignments.length > 0 ? (
+                    <Card style={styles.assignmentsAccordion}>
+                      <Text style={styles.assignmentsLabel}>Recent assignments</Text>
+                      {course.assignments.map((a, idx) => (
+                        <View
+                          key={`${course.id}-assignment-${idx}`}
+                          style={[
+                            styles.assignmentAccordionRow,
+                            idx < course.assignments.length - 1 && styles.assignmentAccordionRowBorder,
+                          ]}
+                        >
+                          <View style={styles.assignmentAccordionInfo}>
+                            <Text style={styles.assignmentAccordionName} numberOfLines={2}>
+                              {a.name}
+                            </Text>
+                            <Text style={styles.assignmentAccordionCategory}>{a.category}</Text>
+                          </View>
+                          <Text style={styles.assignmentAccordionScore}>
+                            {a.score !== null && a.totalPoints !== null
+                              ? `${a.score}/${a.totalPoints}`
+                              : a.percentage || '—'}
+                          </Text>
+                        </View>
+                      ))}
+                      {course.assignments.length === 0 ? (
+                        <Text style={styles.noAssignmentsText}>No assignments recorded.</Text>
+                      ) : null}
+                    </Card>
+                  ) : null}
+
+                  {isExpanded && course.assignments.length === 0 ? (
+                    <Card style={styles.assignmentsAccordion}>
+                      <Text style={styles.noAssignmentsText}>No assignments recorded for this course.</Text>
+                    </Card>
+                  ) : null}
+                </View>
+              )
+            })}
+          </View>
+        ) : null}
+
+        {/* Academic Tools grid (unchanged) */}
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderCopy}>
             <Text allowFontScaling={false} style={styles.sectionEyebrow}>
@@ -308,7 +481,7 @@ export default function GradesScreen(): React.JSX.Element {
 
         {inlineError ? (
           <View style={styles.inlineErrorCard}>
-            <Feather name="alert-circle" size={15} color={colors.error} />
+            <Feather name="alert-circle" size={15} color={colors.tierRed} />
             <Text style={styles.inlineErrorText}>{inlineError}</Text>
           </View>
         ) : null}
@@ -317,12 +490,18 @@ export default function GradesScreen(): React.JSX.Element {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
 const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 10,
     paddingBottom: 118,
     gap: 16,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -357,6 +536,180 @@ const styles = StyleSheet.create({
     marginTop: 3,
     maxWidth: 270,
   },
+  syncChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(19, 37, 64, 0.90)',
+    borderWidth: 1,
+    borderColor: 'rgba(47, 112, 203, 0.36)',
+    maxWidth: 120,
+    flexShrink: 0,
+  },
+  syncChipText: {
+    ...typography.caption,
+    color: '#7AB4FF',
+    fontSize: 9.5,
+    flexShrink: 1,
+  },
+
+  // GPA toggle section
+  gpaToggleSection: {
+    gap: spacing.sm,
+  },
+  highlightedGpaRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  highlightedGpaValue: {
+    fontFamily: fonts.displayBold,
+    fontSize: 32,
+    color: colors.text,
+    letterSpacing: -1,
+  },
+  highlightedGpaLabel: {
+    ...typography.caption,
+    color: colors.textDim,
+    fontFamily: fonts.bodyMedium,
+  },
+
+  // Course list
+  courseSection: {
+    gap: spacing.sm,
+  },
+  courseSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  courseSectionTitle: {
+    ...typography.label,
+    color: colors.textDim,
+  },
+  courseSectionCount: {
+    ...typography.caption,
+    color: colors.textFaint,
+    fontSize: 11,
+  },
+  courseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.ms,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.ms,
+    borderRadius: radii.input,
+    backgroundColor: colors.cardFallback,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: spacing.xs,
+    minHeight: 60,
+  },
+  courseRowPressed: {
+    opacity: 0.82,
+  },
+
+  // Subject-colored icon
+  subjectIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  subjectIconLetter: {
+    fontFamily: fonts.displayBold,
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.95,
+  },
+
+  // Course info
+  courseInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  courseName: {
+    ...typography.h3,
+    fontSize: 14,
+    color: colors.text,
+  },
+  courseMeta: {
+    ...typography.caption,
+    color: colors.textDim,
+    fontSize: 11,
+  },
+
+  // Course trailing
+  courseTrailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 0,
+  },
+  chevronOpen: { transform: [{ rotate: '90deg' }] },
+
+  // Assignments accordion
+  assignmentsAccordion: {
+    gap: spacing.xs,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.xs,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  assignmentsLabel: {
+    ...typography.label,
+    color: colors.textFaint,
+    marginBottom: spacing.xs,
+  },
+  assignmentAccordionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  assignmentAccordionRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  assignmentAccordionInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  assignmentAccordionName: {
+    ...typography.caption,
+    color: colors.text,
+    fontFamily: fonts.bodyMedium,
+    lineHeight: 16,
+  },
+  assignmentAccordionCategory: {
+    ...typography.caption,
+    color: colors.textFaint,
+    fontSize: 10,
+    marginTop: 1,
+  },
+  assignmentAccordionScore: {
+    ...typography.caption,
+    color: colors.textDim,
+    fontFamily: fonts.displaySemiBold,
+    fontSize: 13,
+    flexShrink: 0,
+  },
+  noAssignmentsText: {
+    ...typography.caption,
+    color: colors.textFaint,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
+
+  // Academic tools section (unchanged styles)
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -428,13 +781,13 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: spacing.ms,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(255,100,103,0.08)',
+    backgroundColor: 'rgba(248,113,113,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,100,103,0.18)',
+    borderColor: 'rgba(248,113,113,0.18)',
   },
   inlineErrorText: {
     flex: 1,
-    color: colors.error,
+    color: colors.tierRed,
     fontFamily: fonts.regular,
     fontSize: 11,
     lineHeight: 16,
