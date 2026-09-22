@@ -7,7 +7,7 @@
  * Props:
  *   size     — pixel dimension (default 24)
  *   color    — stroke/fill color (default 'currentColor')
- *   gradient — applies brand gradient stroke: #00E5FF → #2979FF → #7C3AED
+ *   gradient — applies brand gradient stroke: accent → accent2 (electric blue → teal)
  *              Reserved for primary/emphasis contexts only (active nav, primary CTAs).
  *
  * Usage:

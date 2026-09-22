@@ -82,8 +82,9 @@ const PROMPTS: PromptOption[] = [
     subtitle: 'Map out your next application steps',
     prompt: 'Help me build a college application roadmap and tell me what to do next.',
     icon: 'map',
-    color: colors.gold,
-    background: colors.goldBg,
+    // Not colors.gold/goldBg — that pair is reserved for achievement/streak chips only.
+    color: '#FB923C',
+    background: 'rgba(251, 146, 60, 0.15)',
   },
 ]
 

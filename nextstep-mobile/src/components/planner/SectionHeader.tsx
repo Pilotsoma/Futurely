@@ -31,7 +31,10 @@ export default function SectionHeader({
         <Text variant="label" color={accentColor ?? colors.textSecondary} className="leading-4">
           {label}
         </Text>
-        <View className="bg-[#07080F] border border-[#1C1F3C] rounded-full px-2 py-0.5 min-w-[24px] items-center">
+        <View
+          style={{ backgroundColor: colors.cardFallback, borderColor: colors.cardBorder }}
+          className="border rounded-full px-2 py-0.5 min-w-[24px] items-center"
+        >
           <Text variant="caption" color={colors.textMuted}>
             {count}
           </Text>
