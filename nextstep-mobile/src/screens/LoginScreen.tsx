@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Image,
@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TextInputProps,
   View,
 } from 'react-native'
 import { Feather } from '@expo/vector-icons'
@@ -18,6 +19,19 @@ import * as authApi from '../api/authApi'
 import { ApiRequestError } from '../api/client'
 import { GoogleLogo } from '../components/ui/GoogleLogo'
 import {
+  OTP_LENGTH,
+  PASSWORD_PLACEHOLDER,
+  PASSWORD_REQUIREMENTS,
+  type SignupField,
+  isSignupField,
+  normalizeEmail,
+  normalizeOtp,
+  validateDisplayName,
+  validateEmail,
+  validateOtp,
+  validatePassword,
+} from '../../../backend/src/shared/signupValidation'
+import {
   elevation,
   fonts,
   spacing,
@@ -25,6 +39,8 @@ import {
 
 type Mode = 'login' | 'register'
 type RegisterStep = 'dob' | 'account' | 'terms'
+type AccountField = 'name' | 'email' | 'password'
+type FieldErrors = Partial<Record<SignupField, string>>
 type FeatherName = React.ComponentProps<typeof Feather>['name']
 
 const APP_LOGO = require('../../assets/logo.png')
@@ -79,6 +95,10 @@ interface AuthFieldProps {
   secureTextEntry?: boolean
   rightAction?: React.ReactNode
   maxLength?: number
+  autoComplete?: TextInputProps['autoComplete']
+  onBlur?: () => void
+  /** Inline validation error shown directly under the input. */
+  error?: string
 }
 
 function AuthField({
@@ -93,6 +113,9 @@ function AuthField({
   secureTextEntry,
   rightAction,
   maxLength,
+  autoComplete,
+  onBlur,
+  error,
 }: AuthFieldProps): React.JSX.Element {
   const [focused, setFocused] = useState(false)
 
@@ -127,13 +150,29 @@ function AuthField({
           textContentType={textContentType}
           secureTextEntry={secureTextEntry}
           maxLength={maxLength}
+          autoComplete={autoComplete}
+          accessibilityLabel={label}
+          accessibilityHint={error}
           style={styles.input}
           onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onBlur={() => {
+            setFocused(false)
+            onBlur?.()
+          }}
         />
 
         {rightAction}
       </View>
+
+      {error ? (
+        <Text
+          style={styles.fieldErrorText}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          {error}
+        </Text>
+      ) : null}
     </View>
   )
 }
@@ -279,11 +318,24 @@ export default function LoginScreen(): React.JSX.Element {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false)
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
+  const [otpReused, setOtpReused] = useState(false)
   const [otpLoading, setOtpLoading] = useState(false)
+  const [otpError, setOtpError] = useState<string | null>(null)
+  const [verifyLoading, setVerifyLoading] = useState(false)
+  const [resendIn, setResendIn] = useState(0)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  // Blocks double-taps within the same tick, before the loading state renders.
+  const inFlight = useRef(false)
   const [acceptedTos, setAcceptedTos] = useState(false)
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
   const [registerError, setRegisterError] = useState<string | null>(null)
   const [registerLoading, setRegisterLoading] = useState(false)
+
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const timer = setTimeout(() => setResendIn((n) => n - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [resendIn])
 
   const registerStepIndex = useMemo(
     () => REGISTER_STEPS.findIndex((step) => step.key === registerStep),
@@ -361,11 +413,94 @@ export default function LoginScreen(): React.JSX.Element {
     }
   }
 
+  function accountFieldError(
+    field: AccountField,
+    values = { name, email, password },
+  ): string | null {
+    switch (field) {
+      case 'name':
+        return validateDisplayName(values.name, false)
+      case 'email':
+        return validateEmail(values.email)
+      case 'password':
+        return validatePassword(values.password)
+    }
+  }
+
+  function validateAccountFields(): FieldErrors {
+    const errors: FieldErrors = {}
+    for (const field of ['name', 'email', 'password'] as const) {
+      const message = accountFieldError(field)
+      if (message) errors[field] = message
+    }
+    return errors
+  }
+
+  // Re-checks a field only if it already shows an error, so the error clears
+  // as soon as the value is valid; new errors appear on blur or submit.
+  function updateAccountField(
+    field: AccountField,
+    value: string,
+    setter: (value: string) => void,
+  ): void {
+    setter(value)
+    setFieldErrors((prev) => {
+      if (prev[field] === undefined) return prev
+      const next = { ...prev }
+      const message = accountFieldError(field, { name, email, password, [field]: value })
+      if (message) next[field] = message
+      else delete next[field]
+      return next
+    })
+  }
+
+  function blurAccountField(field: AccountField): void {
+    const message = accountFieldError(field)
+    if (message) setFieldErrors((prev) => ({ ...prev, [field]: message }))
+  }
+
+  function accountPayload() {
+    return {
+      email: normalizeEmail(email),
+      password,
+      name: name.trim() || undefined,
+      dateOfBirth,
+    }
+  }
+
+  // Routes a server error back to the step and field that caused it.
+  function applySignupError(error: unknown): void {
+    if (error instanceof ApiRequestError && isSignupField(error.field)) {
+      const field = error.field
+      setRegisterError(null)
+      if (field === 'dateOfBirth') {
+        setRegisterStep('dob')
+        setFieldErrors((prev) => ({ ...prev, dateOfBirth: error.message }))
+      } else if (field === 'otp') {
+        setRegisterStep('account')
+        setOtpError(error.message)
+      } else {
+        setRegisterStep('account')
+        setFieldErrors((prev) => ({ ...prev, [field]: error.message }))
+      }
+      return
+    }
+
+    setRegisterError(
+      error instanceof ApiRequestError
+        ? error.message
+        : 'Something went wrong. Please try again.',
+    )
+  }
+
   function handleDobContinue(): void {
     const age = calculateAge(dateOfBirth)
 
     if (age === null) {
-      setRegisterError('Enter your date of birth as YYYY-MM-DD.')
+      setFieldErrors((prev) => ({
+        ...prev,
+        dateOfBirth: 'Enter your date of birth as YYYY-MM-DD.',
+      }))
       return
     }
 
@@ -381,46 +516,63 @@ export default function LoginScreen(): React.JSX.Element {
   }
 
   async function handleSendOtp(): Promise<void> {
-    const normalizedEmail = email.trim()
+    if (inFlight.current) return
 
-    if (!normalizedEmail || !password) {
-      setRegisterError('Enter your email and password first.')
-      return
-    }
+    const errors = validateAccountFields()
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) return
 
-    if (password.length < 8) {
-      setRegisterError('Use a password with at least 8 characters.')
-      return
-    }
-
+    inFlight.current = true
     setRegisterError(null)
+    setOtpError(null)
     setOtpLoading(true)
 
     try {
-      await authApi.sendOtp({ email: normalizedEmail })
+      // Server validates every account field before emailing a code
+      const result = await authApi.sendOtp(accountPayload())
       setOtpSent(true)
+      setOtpReused(!result.sent)
+      setResendIn(result.resendAvailableInSeconds)
     } catch (error) {
-      setRegisterError(
-        error instanceof ApiRequestError
-          ? error.message
-          : 'Could not send code. Try again.',
-      )
+      applySignupError(error)
     } finally {
       setOtpLoading(false)
+      inFlight.current = false
     }
   }
 
-  function handleAccountContinue(): void {
-    if (!otpSent || !otp.trim()) {
-      setRegisterError('Enter the verification code sent to your email.')
+  async function handleAccountContinue(): Promise<void> {
+    if (inFlight.current) return
+
+    const errors = validateAccountFields()
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
+    const codeError = validateOtp(otp)
+    if (codeError) {
+      setOtpError(codeError)
       return
     }
 
+    inFlight.current = true
     setRegisterError(null)
-    setRegisterStep('terms')
+    setOtpError(null)
+    setVerifyLoading(true)
+
+    try {
+      await authApi.verifyOtp({ ...accountPayload(), otp })
+      setRegisterStep('terms')
+    } catch (error) {
+      applySignupError(error)
+    } finally {
+      setVerifyLoading(false)
+      inFlight.current = false
+    }
   }
 
   async function handleRegisterSubmit(): Promise<void> {
+    if (inFlight.current) return
+
     if (!acceptedTos || !acceptedPrivacy) {
       setRegisterError(
         'You must accept the Terms of Service and Privacy Policy.',
@@ -428,41 +580,23 @@ export default function LoginScreen(): React.JSX.Element {
       return
     }
 
+    inFlight.current = true
     setRegisterError(null)
     setRegisterLoading(true)
 
     try {
       await register({
-        email: email.trim(),
-        password,
-        name: name.trim() || undefined,
-        otp: otp.trim(),
-        dateOfBirth,
+        ...accountPayload(),
+        otp,
         agreedTos: true,
         agreedPrivacy: true,
         agreedAge: true,
       })
     } catch (error) {
-      if (error instanceof ApiRequestError) {
-        const messages: Record<string, string> = {
-          COPPA_BLOCK:
-            'You must be at least 13 years old to create an account.',
-          CONFLICT: 'An account with this email already exists.',
-          NAME_TAKEN: 'That display name is already taken.',
-          INVALID_OTP:
-            'That code is incorrect or has expired. Request a new one.',
-          OTP_REQUIRED:
-            'Enter the verification code sent to your email.',
-        }
-
-        setRegisterError(
-          (error.code && messages[error.code]) || error.message,
-        )
-      } else {
-        setRegisterError('Something went wrong. Please try again.')
-      }
+      applySignupError(error)
     } finally {
       setRegisterLoading(false)
+      inFlight.current = false
     }
   }
 
@@ -484,6 +618,8 @@ export default function LoginScreen(): React.JSX.Element {
 
   const currentError =
     mode === 'login' ? loginError || googleError : registerError || googleError
+
+  const accountStepInvalid = Object.keys(validateAccountFields()).length > 0
 
   return (
     <KeyboardAvoidingView
@@ -808,12 +944,22 @@ export default function LoginScreen(): React.JSX.Element {
                       setDateOfBirth(value)
                       setCoppaBlocked(false)
                       setRegisterError(null)
+                      setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }))
+                    }}
+                    onBlur={() => {
+                      if (dateOfBirth && calculateAge(dateOfBirth) === null) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          dateOfBirth: 'Enter your date of birth as YYYY-MM-DD.',
+                        }))
+                      }
                     }}
                     placeholder="YYYY-MM-DD"
                     icon="calendar"
                     keyboardType="numbers-and-punctuation"
                     autoCapitalize="none"
                     maxLength={10}
+                    error={fieldErrors.dateOfBirth}
                   />
 
                   <View style={styles.infoBanner}>
@@ -840,7 +986,7 @@ export default function LoginScreen(): React.JSX.Element {
                     label="Continue"
                     icon="arrow-right"
                     onPress={handleDobContinue}
-                    disabled={coppaBlocked}
+                    disabled={coppaBlocked || calculateAge(dateOfBirth) === null}
                   />
                 </>
               ) : null}
@@ -850,41 +996,54 @@ export default function LoginScreen(): React.JSX.Element {
                   <AuthField
                     label="Display name"
                     value={name}
-                    onChangeText={setName}
+                    onChangeText={(value) =>
+                      updateAccountField('name', value, setName)
+                    }
+                    onBlur={() => blurAccountField('name')}
                     placeholder="What should we call you?"
                     icon="user"
                     autoCapitalize="words"
                     textContentType="name"
+                    error={fieldErrors.name}
                   />
 
                   <AuthField
                     label="Email address"
                     value={email}
                     onChangeText={(value) => {
-                      setEmail(value)
+                      updateAccountField('email', value, setEmail)
                       setOtpSent(false)
                       setOtp('')
+                      setOtpError(null)
+                      setResendIn(0)
                     }}
+                    onBlur={() => blurAccountField('email')}
                     placeholder="you@example.com"
                     icon="mail"
                     keyboardType="email-address"
                     autoCapitalize="none"
                     textContentType="emailAddress"
+                    autoComplete="email"
+                    error={fieldErrors.email}
                   />
 
                   <AuthField
                     label="Password"
                     value={password}
                     onChangeText={(value) => {
-                      setPassword(value)
+                      updateAccountField('password', value, setPassword)
                       setOtpSent(false)
                       setOtp('')
+                      setOtpError(null)
                     }}
-                    placeholder="At least 8 characters"
+                    onBlur={() => blurAccountField('password')}
+                    placeholder={PASSWORD_PLACEHOLDER}
                     icon="lock"
                     secureTextEntry={!showRegisterPassword}
                     autoCapitalize="none"
                     textContentType="newPassword"
+                    autoComplete="new-password"
+                    error={fieldErrors.password}
                     rightAction={
                       <Pressable
                         onPress={() =>
@@ -909,29 +1068,38 @@ export default function LoginScreen(): React.JSX.Element {
                     }
                   />
 
-                  <View style={styles.passwordHint}>
-                    <View
-                      style={[
-                        styles.passwordDot,
-                        password.length >= 8 && styles.passwordDotComplete,
-                      ]}
-                    />
-                    <Text style={styles.passwordHintText}>
-                      Use at least 8 characters
-                    </Text>
-                  </View>
+                  {PASSWORD_REQUIREMENTS.map((requirement) => (
+                    <View key={requirement.id} style={styles.passwordHint}>
+                      <View
+                        style={[
+                          styles.passwordDot,
+                          requirement.test(password) &&
+                            styles.passwordDotComplete,
+                        ]}
+                      />
+                      <Text style={styles.passwordHintText}>
+                        {requirement.label}
+                      </Text>
+                    </View>
+                  ))}
 
                   {otpSent ? (
+                    // No maxLength: it would truncate a pasted "123 456"
+                    // before normalizeOtp strips the non-digits.
                     <AuthField
                       label="Verification code"
                       value={otp}
-                      onChangeText={setOtp}
-                      placeholder="6-digit code"
+                      onChangeText={(value) => {
+                        setOtp(normalizeOtp(value))
+                        setOtpError(null)
+                      }}
+                      placeholder={`${OTP_LENGTH}-digit code`}
                       icon="key"
                       keyboardType="number-pad"
                       autoCapitalize="none"
                       textContentType="oneTimeCode"
-                      maxLength={6}
+                      autoComplete="one-time-code"
+                      error={otpError ?? undefined}
                     />
                   ) : null}
 
@@ -943,7 +1111,9 @@ export default function LoginScreen(): React.JSX.Element {
                         color="#5ED6AE"
                       />
                       <Text style={styles.codeSentText}>
-                        Verification code sent to {email.trim()}.
+                        {otpReused
+                          ? `A code was already sent to ${email.trim()} and is still valid.`
+                          : `Verification code sent to ${email.trim()}.`}
                       </Text>
                     </View>
                   ) : null}
@@ -952,21 +1122,31 @@ export default function LoginScreen(): React.JSX.Element {
 
                   <ActionButton
                     label={
-                      otpSent
-                        ? 'Resend verification code'
-                        : 'Send verification code'
+                      !otpSent
+                        ? 'Send verification code'
+                        : resendIn > 0
+                          ? `Resend code in ${resendIn}s`
+                          : 'Resend verification code'
                     }
                     icon={otpSent ? 'refresh-cw' : 'send'}
                     onPress={() => void handleSendOtp()}
                     loading={otpLoading}
+                    disabled={
+                      accountStepInvalid || (otpSent && resendIn > 0)
+                    }
                     variant="secondary"
                   />
 
                   <ActionButton
                     label="Continue"
                     icon="arrow-right"
-                    onPress={handleAccountContinue}
-                    disabled={!otpSent || otp.trim().length === 0}
+                    onPress={() => void handleAccountContinue()}
+                    loading={verifyLoading}
+                    disabled={
+                      accountStepInvalid ||
+                      !otpSent ||
+                      otp.length !== OTP_LENGTH
+                    }
                   />
                 </>
               ) : null}
@@ -1534,6 +1714,13 @@ const styles = StyleSheet.create({
   },
   passwordDotComplete: {
     backgroundColor: '#36C595',
+  },
+  fieldErrorText: {
+    paddingLeft: 2,
+    color: '#FF8185',
+    fontFamily: fonts.regular,
+    fontSize: 9.5,
+    lineHeight: 13.5,
   },
   passwordHintText: {
     color: '#6F809A',

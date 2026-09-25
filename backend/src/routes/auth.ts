@@ -4,13 +4,26 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { promises as dnsPromises } from 'dns'
 import rateLimit from 'express-rate-limit'
-import { AccountStatus } from '@prisma/client'
+import { AccountStatus, Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { filterUsername } from '../lib/contentFilter'
 import { sendEmail } from '../lib/email'
 import { logger } from '../common/logger'
 import { validateDobInput, encryptDob, MAX_DOB_CORRECTION_ATTEMPTS, liftExpiredBanIfNeeded } from '../lib/dobVerification'
+import {
+  OTP_EXPIRY_MINUTES,
+  OTP_LENGTH,
+  OTP_RESEND_COOLDOWN_SECONDS,
+  SIGNUP_ERROR_CODES,
+  SignupField,
+  displayNameRequired,
+  normalizeEmail,
+  validateDisplayName,
+  validateEmail,
+  validateOtp,
+  validatePassword,
+} from '../shared/signupValidation'
 
 const router = Router()
 
@@ -100,14 +113,25 @@ const resendVerifyLimiter = rateLimit({
   },
 })
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// Only failed guesses count (skipSuccessfulRequests), so a user who types the
+// right code is never locked out by earlier typos from the same network.
+const verifyOtpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    data: null,
+    error: {
+      code: SIGNUP_ERROR_CODES.TOO_MANY_ATTEMPTS,
+      field: 'otp',
+      message: 'Too many incorrect codes. Wait 15 minutes, then request a new code.',
+    },
+  },
+})
 
-function validatePassword(password: string): string | null {
-  if (password.length < 8) return 'Password must be at least 8 characters'
-  if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter'
-  if (!/[0-9]/.test(password)) return 'Password must contain at least one number'
-  return null
-}
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 // accountStatus is embedded as a convenience claim only (e.g. for optimistic
 // frontend UI) — it is never trusted as the source of truth for access
@@ -178,6 +202,143 @@ async function hasValidMailDomain(email: string): Promise<boolean> {
   }
 }
 
+// ── Signup validation ────────────────────────────────────────────────────────
+// Every signup step re-checks its own fields server-side (send-otp for the
+// account step, verify-otp for the code step), so /register is never the
+// first place a rule runs. /register still re-runs everything because a
+// client can always skip straight to it.
+
+interface SignupFieldError {
+  status: number
+  code: string
+  field: SignupField
+  message: string
+}
+
+interface SignupInput {
+  email?: unknown
+  password?: unknown
+  name?: unknown
+  role?: unknown
+  dateOfBirth?: unknown
+}
+
+type SignupValidation =
+  | { ok: false; error: SignupFieldError }
+  | { ok: true; email: string; displayName: string | null; dobIsoDate: string | null }
+
+function sendSignupError(res: Response, err: SignupFieldError): void {
+  res.status(err.status).json({ data: null, error: { code: err.code, field: err.field, message: err.message } })
+}
+
+function fieldError(field: SignupField, message: string, code: string = SIGNUP_ERROR_CODES.VALIDATION_ERROR, status = 400): SignupValidation {
+  return { ok: false, error: { status, code, field, message } }
+}
+
+function isStudentRole(role: unknown): boolean {
+  return role !== 'PARENT' && role !== 'TEACHER' && role !== 'COUNSELOR'
+}
+
+// Format-only checks — no I/O. `requireAll` (register) demands every field;
+// otherwise optional fields are checked only when the client sent them, which
+// keeps older clients that post just { email } to /send-otp working.
+function validateSignupFormat(input: SignupInput, requireAll: boolean): SignupValidation {
+  const emailError = validateEmail(input.email)
+  if (emailError) return fieldError('email', emailError)
+
+  if (requireAll || input.password !== undefined) {
+    const passwordError = validatePassword(input.password)
+    if (passwordError) return fieldError('password', passwordError)
+  }
+
+  const role = typeof input.role === 'string' ? input.role : undefined
+  const nameRequired = displayNameRequired(role)
+  let displayName: string | null = null
+  if (requireAll || nameRequired || input.name !== undefined) {
+    const nameError = validateDisplayName(input.name, nameRequired)
+    if (nameError) return fieldError('name', nameError)
+    const trimmed = typeof input.name === 'string' ? input.name.trim() : ''
+    if (trimmed) {
+      const nameCheck = filterUsername(trimmed)
+      if (!nameCheck.ok) {
+        return fieldError('name', nameCheck.reason ?? 'That name isn’t allowed.', SIGNUP_ERROR_CODES.INAPPROPRIATE_NAME)
+      }
+      displayName = trimmed
+    }
+  }
+
+  // Date of birth is required for students — it is later reconciled against
+  // the official HAC (school portal) record; a mismatch locks the account
+  // until corrected via PATCH /auth/dob. Non-student roles (parent/teacher/
+  // counselor) never sync against HAC, so DOB is not collected for them.
+  let dobIsoDate: string | null = null
+  if (isStudentRole(input.role) && (requireAll || input.dateOfBirth !== undefined)) {
+    const dobCheck = validateDobInput(input.dateOfBirth)
+    if (!dobCheck.ok || !dobCheck.isoDate) {
+      return fieldError('dateOfBirth', dobCheck.error ?? 'A valid date of birth is required.', dobCheck.errorCode ?? SIGNUP_ERROR_CODES.VALIDATION_ERROR)
+    }
+    dobIsoDate = dobCheck.isoDate
+  }
+
+  return { ok: true, email: normalizeEmail(input.email as string), displayName, dobIsoDate }
+}
+
+async function validateSignupFields(input: SignupInput, requireAll: boolean): Promise<SignupValidation> {
+  const format = validateSignupFormat(input, requireAll)
+  if (!format.ok) return format
+
+  const [domainValid, emailTaken, nameTaken] = await Promise.all([
+    hasValidMailDomain(format.email),
+    findUserByEmail(format.email),
+    format.displayName ? prisma.user.findFirst({ where: { name: format.displayName }, select: { id: true } }) : Promise.resolve(null),
+  ])
+  if (!domainValid) {
+    return fieldError('email', 'That email domain doesn’t appear to be valid. Please check for typos.')
+  }
+  if (emailTaken) {
+    return fieldError('email', 'An account with this email already exists.', SIGNUP_ERROR_CODES.EMAIL_TAKEN, 409)
+  }
+  if (nameTaken) {
+    return fieldError('name', 'That display name is already taken. Please choose another.', SIGNUP_ERROR_CODES.NAME_TAKEN, 409)
+  }
+  return format
+}
+
+// Emails are stored normalised (trimmed + lowercased) from now on, but older
+// accounts may have been stored exactly as typed. Prefer an exact match, then
+// fall back to the normalised form, in a single query.
+async function findUserByEmail(raw: string) {
+  const normalized = normalizeEmail(raw)
+  const candidates = await prisma.user.findMany({ where: { email: { in: Array.from(new Set([raw, normalized])) } } })
+  return candidates.find((u) => u.email === raw) ?? candidates[0] ?? null
+}
+
+function hashOtp(code: string): string {
+  return crypto.createHash('sha256').update(code).digest('hex')
+}
+
+type OtpCheck = { status: 'valid'; id: number } | { status: 'invalid' | 'expired' }
+
+// send-otp invalidates older codes, so only the newest unused one can match.
+// Checking it directly lets us tell "wrong code" apart from "expired code".
+async function checkSignupOtp(email: string, code: string): Promise<OtpCheck> {
+  const latest = await prisma.emailOTP.findFirst({
+    where: { email, usedAt: null },
+    orderBy: { createdAt: 'desc' },
+  })
+  if (!latest || latest.expiresAt <= new Date()) return { status: 'expired' }
+  const matches = crypto.timingSafeEqual(Buffer.from(latest.codeHash, 'hex'), Buffer.from(hashOtp(code), 'hex'))
+  return matches ? { status: 'valid', id: latest.id } : { status: 'invalid' }
+}
+
+function otpFailure(status: 'invalid' | 'expired'): SignupFieldError {
+  return status === 'expired'
+    ? { status: 410, code: SIGNUP_ERROR_CODES.OTP_EXPIRED, field: 'otp', message: 'This code has expired. Request a new one.' }
+    : { status: 400, code: SIGNUP_ERROR_CODES.INVALID_OTP, field: 'otp', message: 'That code isn’t right. Check your email and try again.' }
+}
+
+class OtpAlreadyUsedError extends Error {}
+
 async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
   const appUrl = process.env.APP_URL ?? 'https://myfuturely.ai'
   const link = `${appUrl}/reset-password?token=${token}`
@@ -237,139 +398,63 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
 // ── POST /auth/register ───────────────────────────────────────────────────────
 
 router.post('/register', registerLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email, password, name, role: roleInput, otp, agreedTos, agreedPrivacy, agreedAge, dateOfBirth } = req.body as {
-    email?: string
-    password?: string
-    name?: string
-    role?: string
-    otp?: string
+  const body = req.body as SignupInput & {
+    otp?: unknown
     agreedTos?: unknown
     agreedPrivacy?: unknown
     agreedAge?: unknown
-    dateOfBirth?: string
   }
 
-  if (!email || !password) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'VALIDATION_ERROR', message: 'email and password required' },
-    })
-    return
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'VALIDATION_ERROR', message: 'Please enter a valid email address.' },
-    })
-    return
-  }
-
-  const domainValid = await hasValidMailDomain(email)
-  if (!domainValid) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'VALIDATION_ERROR', message: 'That email domain doesn\'t appear to be valid. Please check for typos.' },
-    })
-    return
-  }
-
-  const passError = validatePassword(password)
-  if (passError) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'VALIDATION_ERROR', message: passError },
-    })
-    return
-  }
-
-  // Display name is optional — only validate if provided
-  const displayName = name?.trim() || null
-  if (displayName) {
-    const nameCheck = filterUsername(displayName)
-    if (!nameCheck.ok) {
-      res.status(400).json({
-        data: null,
-        error: { code: 'INAPPROPRIATE_NAME', message: nameCheck.reason },
-      })
+  try {
+    const validation = await validateSignupFields(body, true)
+    if (!validation.ok) {
+      sendSignupError(res, validation.error)
       return
     }
-  }
+    const { email, displayName, dobIsoDate } = validation
 
-  // Consent is required before account creation — all three must be strictly true
-  if (agreedTos !== true || agreedPrivacy !== true || agreedAge !== true) {
-    res.status(400).json({
-      data: null,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'You must agree to the Terms of Service, Privacy Policy, and confirm your age to register.',
-      },
-    })
-    return
-  }
-
-  // Date of birth is required for students — it is later reconciled against
-  // the official HAC (school portal) record; a mismatch locks the account
-  // until corrected via PATCH /auth/dob. Non-student roles (parent/teacher/
-  // counselor) never sync against HAC, so DOB is not collected for them.
-  const isStudentSignup = roleInput !== 'PARENT' && roleInput !== 'TEACHER' && roleInput !== 'COUNSELOR'
-  let encryptedDob: string | null = null
-  if (isStudentSignup) {
-    const dobCheck = validateDobInput(dateOfBirth)
-    if (!dobCheck.ok || !dobCheck.isoDate) {
+    // Consent is required before account creation — all three must be strictly true
+    if (body.agreedTos !== true || body.agreedPrivacy !== true || body.agreedAge !== true) {
       res.status(400).json({
         data: null,
         error: {
-          code: dobCheck.errorCode ?? 'VALIDATION_ERROR',
-          message: dobCheck.error ?? 'A valid date of birth is required.',
+          code: 'VALIDATION_ERROR',
+          message: 'You must agree to the Terms of Service, Privacy Policy, and confirm your age to register.',
         },
       })
       return
     }
-    encryptedDob = encryptDob(dobCheck.isoDate)
-  }
 
-  try {
-    const [emailTaken, nameTaken] = await Promise.all([
-      prisma.user.findUnique({ where: { email } }),
-      displayName ? prisma.user.findFirst({ where: { name: displayName } }) : Promise.resolve(null),
-    ])
-    if (emailTaken) {
-      res.status(409).json({
-        data: null,
-        error: { code: 'CONFLICT', message: 'An account with this email already exists' },
-      })
+    if (body.otp === undefined || body.otp === null || body.otp === '') {
+      sendSignupError(res, { status: 400, code: SIGNUP_ERROR_CODES.OTP_REQUIRED, field: 'otp', message: 'Enter the verification code we emailed you.' })
       return
     }
-    if (nameTaken) {
-      res.status(409).json({
-        data: null,
-        error: { code: 'NAME_TAKEN', message: 'That display name is already taken. Please choose another.' },
-      })
+    const otpError = validateOtp(body.otp)
+    if (otpError) {
+      sendSignupError(res, { status: 400, code: SIGNUP_ERROR_CODES.VALIDATION_ERROR, field: 'otp', message: otpError })
+      return
+    }
+    const otpCheck = await checkSignupOtp(email, (body.otp as string).trim())
+    if (otpCheck.status !== 'valid') {
+      sendSignupError(res, otpFailure(otpCheck.status))
       return
     }
 
-    // Verify OTP
-    if (!otp) {
-      res.status(400).json({ data: null, error: { code: 'OTP_REQUIRED', message: 'Verification code required.' } })
-      return
-    }
-    const codeHash = crypto.createHash('sha256').update(otp.trim()).digest('hex')
-    const otpRecord = await prisma.emailOTP.findFirst({
-      where: { email, codeHash, usedAt: null, expiresAt: { gt: new Date() } },
-      orderBy: { createdAt: 'desc' },
-    })
-    if (!otpRecord) {
-      res.status(400).json({ data: null, error: { code: 'INVALID_OTP', message: 'Invalid or expired verification code.' } })
-      return
-    }
-    await prisma.emailOTP.update({ where: { id: otpRecord.id }, data: { usedAt: new Date() } })
-
-    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS)
+    const passwordHash = await bcrypt.hash(body.password as string, BCRYPT_ROUNDS)
+    const encryptedDob = dobIsoDate ? encryptDob(dobIsoDate) : null
+    const roleInput = body.role
     const userRole = roleInput === 'PARENT' ? 'PARENT' : roleInput === 'TEACHER' ? 'TEACHER' : roleInput === 'COUNSELOR' ? 'COUNSELOR' : 'STUDENT'
 
     const consentTimestamp = new Date()
     const user = await prisma.$transaction(async (tx) => {
+      // Claimed inside the transaction so a failed create doesn't burn the
+      // code, and a double-submitted register can't use it twice.
+      const claimed = await tx.emailOTP.updateMany({
+        where: { id: otpCheck.id, usedAt: null },
+        data: { usedAt: new Date() },
+      })
+      if (claimed.count === 0) throw new OtpAlreadyUsedError()
+
       const created = await tx.user.create({
         data: {
           email,
@@ -424,6 +509,18 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
       },
     })
   } catch (e) {
+    if (e instanceof OtpAlreadyUsedError) {
+      sendSignupError(res, otpFailure('expired'))
+      return
+    }
+    // Lost a race with a concurrent signup between the uniqueness check and create
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      const target = String(e.meta?.target ?? '')
+      sendSignupError(res, target.includes('name')
+        ? { status: 409, code: SIGNUP_ERROR_CODES.NAME_TAKEN, field: 'name', message: 'That display name is already taken. Please choose another.' }
+        : { status: 409, code: SIGNUP_ERROR_CODES.EMAIL_TAKEN, field: 'email', message: 'An account with this email already exists.' })
+      return
+    }
     logger.error('auth.error', { event: 'register', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({
       data: null,
@@ -446,7 +543,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response): Promise
   }
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } })
+    const user = await findUserByEmail(email)
 
     // Always run bcrypt regardless of whether user exists — prevents timing-based
     // user enumeration (attacker can't tell if email is registered from response time)
@@ -632,19 +729,12 @@ router.post('/logout', async (req: Request, res: Response): Promise<void> => {
 router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body as { email?: string }
 
-  if (!email) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'VALIDATION_ERROR', message: 'email required' },
-    })
-    return
-  }
-
   // Basic format check before DNS lookup
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const emailError = validateEmail(email)
+  if (!email || emailError) {
     res.status(400).json({
       data: null,
-      error: { code: 'VALIDATION_ERROR', message: 'Please enter a valid email address.' },
+      error: { code: 'VALIDATION_ERROR', field: 'email', message: emailError ?? 'Enter your email address.' },
     })
     return
   }
@@ -664,7 +754,7 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: 
   // killed immediately after res.json(), so fire-and-forget after the response
   // is unreliable. Always return the same generic message to prevent enumeration.
   try {
-    const user = await prisma.user.findUnique({ where: { email } })
+    const user = await findUserByEmail(email)
 
     if (!user) {
       res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'No account found with that email address.' } })
@@ -685,7 +775,7 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: 
     await prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt } })
     logger.info('auth.password_reset_requested', { userId: user.id })
 
-    await sendPasswordResetEmail(email, rawToken)
+    await sendPasswordResetEmail(user.email, rawToken)
   } catch (e) {
     logger.error('auth.error', { event: 'forgot_password', error: e instanceof Error ? e.message : String(e) })
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong. Please try again.' } })
@@ -1081,8 +1171,6 @@ router.post('/consent', requireAuth, async (req: AuthRequest, res: Response): Pr
 
 // ── OAuth helpers ────────────────────────────────────────────────────────────
 
-const OTP_EXPIRY_MINUTES = 10
-
 const otpLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
@@ -1296,36 +1384,39 @@ router.get('/oauth/microsoft/callback', async (req: Request, res: Response): Pro
 })
 
 // ── POST /auth/send-otp ──────────────────────────────────────────────────────
+// Validates the whole account step (email + any of password / name / DOB the
+// client sends) before emailing a code, so account-step errors surface on the
+// account step. Within the resend cooldown the existing (still valid) code is
+// kept and { sent: false } is returned instead of an error.
 router.post('/send-otp', otpLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email } = req.body as { email?: string }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Valid email required.' } })
-    return
-  }
+  try {
+    const validation = await validateSignupFields(req.body as SignupInput, false)
+    if (!validation.ok) {
+      sendSignupError(res, validation.error)
+      return
+    }
+    const { email } = validation
 
-  const domainValid = await hasValidMailDomain(email)
-  if (!domainValid) {
-    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'That email domain doesn\'t appear to be valid.' } })
-    return
-  }
+    const latest = await prisma.emailOTP.findFirst({
+      where: { email, usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    })
+    const secondsSinceLast = latest ? (Date.now() - latest.createdAt.getTime()) / 1000 : Infinity
+    if (secondsSinceLast < OTP_RESEND_COOLDOWN_SECONDS) {
+      res.json({ data: { sent: false, resendAvailableInSeconds: Math.ceil(OTP_RESEND_COOLDOWN_SECONDS - secondsSinceLast) } })
+      return
+    }
 
-  const existing = await prisma.user.findUnique({ where: { email } })
-  if (existing) {
-    res.status(409).json({ data: null, error: { code: 'CONFLICT', message: 'An account with this email already exists.' } })
-    return
-  }
+    const code = String(crypto.randomInt(10 ** (OTP_LENGTH - 1), 10 ** OTP_LENGTH))
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000)
 
-  const code = String(Math.floor(100000 + Math.random() * 900000))
-  const codeHash = crypto.createHash('sha256').update(code).digest('hex')
-  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000)
+    await prisma.emailOTP.updateMany({ where: { email, usedAt: null }, data: { usedAt: new Date() } })
+    await prisma.emailOTP.create({ data: { email, codeHash: hashOtp(code), expiresAt } })
 
-  await prisma.emailOTP.updateMany({ where: { email, usedAt: null }, data: { usedAt: new Date() } })
-  await prisma.emailOTP.create({ data: { email, codeHash, expiresAt } })
-
-  await sendEmail({
-    to: email,
-    subject: 'Your myFuturely verification code',
-    html: `
+    await sendEmail({
+      to: email,
+      subject: 'Your myFuturely verification code',
+      html: `
       <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:40px 20px;background:#F0F4FF;">
         <div style="background:#fff;border-radius:16px;border:1px solid #C0CCE8;padding:36px 40px;text-align:center;">
           <div style="font-size:26px;font-weight:800;color:#050B18;margin-bottom:24px;">myFuturely</div>
@@ -1335,9 +1426,42 @@ router.post('/send-otp', otpLimiter, async (req: Request, res: Response): Promis
         </div>
       </div>
     `,
-  })
+    })
 
-  res.json({ data: { sent: true } })
+    res.json({ data: { sent: true, resendAvailableInSeconds: OTP_RESEND_COOLDOWN_SECONDS } })
+  } catch (e) {
+    logger.error('auth.error', { event: 'send_otp', error: e instanceof Error ? e.message : String(e) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Could not send the code. Please try again.' } })
+  }
+})
+
+// ── POST /auth/verify-otp ────────────────────────────────────────────────────
+// Checks the code on the code step without consuming it (register consumes
+// it). Also re-validates any account fields sent, since mobile collects them
+// on the same step. Never marks anything verified.
+router.post('/verify-otp', verifyOtpLimiter, async (req: Request, res: Response): Promise<void> => {
+  const body = req.body as SignupInput & { otp?: unknown }
+  try {
+    const validation = await validateSignupFields(body, false)
+    if (!validation.ok) {
+      sendSignupError(res, validation.error)
+      return
+    }
+    const otpError = validateOtp(body.otp)
+    if (otpError) {
+      sendSignupError(res, { status: 400, code: SIGNUP_ERROR_CODES.VALIDATION_ERROR, field: 'otp', message: otpError })
+      return
+    }
+    const check = await checkSignupOtp(validation.email, (body.otp as string).trim())
+    if (check.status !== 'valid') {
+      sendSignupError(res, otpFailure(check.status))
+      return
+    }
+    res.json({ data: { verified: true } })
+  } catch (e) {
+    logger.error('auth.error', { event: 'verify_otp', error: e instanceof Error ? e.message : String(e) })
+    res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Could not check the code. Please try again.' } })
+  }
 })
 
 export default router
