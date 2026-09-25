@@ -11,6 +11,8 @@ import type {
   MeResponse,
   RegisterRequest,
   SendOtpRequest,
+  SendOtpResponse,
+  VerifyOtpRequest,
 } from '../types/auth'
 
 WebBrowser.maybeCompleteAuthSession()
@@ -39,8 +41,14 @@ export async function register(payload: RegisterRequest): Promise<AuthResult> {
   return result
 }
 
-export async function sendOtp(payload: SendOtpRequest): Promise<{ sent: true }> {
+// Validates the whole account step server-side before emailing a code.
+export async function sendOtp(payload: SendOtpRequest): Promise<SendOtpResponse> {
   return api.post('/auth/send-otp', payload, { skipAuth: true })
+}
+
+// Checks the code (and re-checks account fields) without consuming it.
+export async function verifyOtp(payload: VerifyOtpRequest): Promise<{ verified: true }> {
+  return api.post('/auth/verify-otp', payload, { skipAuth: true })
 }
 
 export async function getMe(): Promise<MeResponse> {

@@ -1,3 +1,5 @@
+import { DISPLAY_NAME_MAX_LENGTH, DISPLAY_NAME_MIN_LENGTH } from '../shared/signupValidation'
+
 // Content filter for usernames, posts, and comments.
 //
 // Three detection layers applied in sequence:
@@ -213,11 +215,11 @@ const RESERVED_NAMES: readonly string[] = [
 
 export function filterUsername(name: string): FilterResult {
   const trimmed = name.trim()
-  if (trimmed.length < 2) {
-    return { ok: false, reason: 'Name must be at least 2 characters' }
+  if (trimmed.length < DISPLAY_NAME_MIN_LENGTH) {
+    return { ok: false, reason: `Name must be at least ${DISPLAY_NAME_MIN_LENGTH} characters` }
   }
-  if (trimmed.length > 30) {
-    return { ok: false, reason: 'Name must be 30 characters or fewer' }
+  if (trimmed.length > DISPLAY_NAME_MAX_LENGTH) {
+    return { ok: false, reason: `Name must be ${DISPLAY_NAME_MAX_LENGTH} characters or fewer` }
   }
 
   // Reserved name check — normalize to lowercase alphanumeric only

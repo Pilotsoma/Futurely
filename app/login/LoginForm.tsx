@@ -5,11 +5,26 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { InboxIcon, ArrowLeftIcon, WarningIcon, XMarkIcon, MailboxIcon } from '@/components/icons'
+import { InboxIcon, ArrowLeftIcon, WarningIcon, XMarkIcon, MailboxIcon, CheckIcon } from '@/components/icons'
 import { LEGAL_EFFECTIVE_DATE, TOS_INTRO, TOS_SECTIONS, PRIVACY_INTRO, PRIVACY_SECTIONS } from '@/lib/legalText'
 import { api, ApiError } from '../../lib/api'
 import { setWebLogin } from '../../lib/authState'
 import { SORTED_ISD_LIST, type ISDEntry } from '../../lib/isds'
+import {
+  OTP_LENGTH,
+  PASSWORD_PLACEHOLDER,
+  PASSWORD_REQUIREMENTS,
+  type SignupField,
+  displayNameRequired,
+  isSignupField,
+  normalizeEmail,
+  normalizeOtp,
+  validateConfirmPassword,
+  validateDisplayName,
+  validateEmail,
+  validateOtp,
+  validatePassword,
+} from '@/backend/src/shared/signupValidation'
 
 // Desktop-only decorative background (WebGL particles) — not needed until the
 // isDesktop media-query check resolves client-side, so it's split out of the
@@ -18,8 +33,22 @@ const CosmicScene = dynamic(() => import('./CosmicScene'))
 
 type Mode = 'login' | 'register-student' | 'register-parent' | 'register-teacher'
 type RegisterStep = 'form' | 'otp'
+type FormField = 'name' | 'email' | 'password' | 'confirmPassword' | 'dateOfBirth'
+type FieldErrors = Partial<Record<SignupField, string>>
+
+const FORM_FIELDS: readonly FormField[] = ['name', 'email', 'password', 'confirmPassword', 'dateOfBirth']
+const NETWORK_ERROR = 'Could not reach myFuturely. Check your connection and try again.'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
+
+function roleForMode(mode: Mode): string | undefined {
+  return mode === 'register-parent' ? 'PARENT' : mode === 'register-teacher' ? 'TEACHER' : undefined
+}
+
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) return null
+  return <span id={id} role="alert" style={styles.fieldError}>{message}</span>
+}
 
 export default function LoginForm() {
   const router = useRouter()
@@ -73,6 +102,19 @@ export default function LoginForm() {
   const [otpCode, setOtpCode]       = useState('')
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpError, setOtpError]     = useState<string | null>(null)
+  const [otpVerifying, setOtpVerifying] = useState(false)
+  const [otpNotice, setOtpNotice]   = useState<string | null>(null)
+  const [resendIn, setResendIn]     = useState(0)
+
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  // Blocks double-submits within the same tick, before the disabled state renders.
+  const inFlight = useRef(false)
+
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const t = setTimeout(() => setResendIn(n => n - 1), 1000)
+    return () => clearTimeout(t)
+  }, [resendIn])
 
   // Cosmic background is desktop-only — mobile keeps the original plain login screen.
   const [isDesktop, setIsDesktop] = useState(false)
@@ -165,63 +207,171 @@ export default function LoginForm() {
   function selectOther() {
     setSelectedIsd(null); setHacUrl(''); setUseCustomUrl(true); setIsdSearch(''); setIsdOpen(false)
   }
-  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setSchoolQuery(''); setSchoolResults([]); setSchoolOpen(false) }
+  function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setOtpNotice(null); setFieldErrors({}); setSchoolQuery(''); setSchoolResults([]); setSchoolOpen(false) }
   function fullReset() { reset(); setInstitution(''); setApplyAsCounselor(false) }
+
+  function formFieldError(field: FormField, values = { name, email, password, confirmPassword, dateOfBirth }): string | null {
+    switch (field) {
+      case 'name':            return validateDisplayName(values.name, displayNameRequired(roleForMode(mode)))
+      case 'email':           return validateEmail(values.email)
+      case 'password':        return validatePassword(values.password)
+      case 'confirmPassword': return validateConfirmPassword(values.password, values.confirmPassword)
+      case 'dateOfBirth':     return mode === 'register-student' && !values.dateOfBirth ? 'Please enter your birthday.' : null
+    }
+  }
+
+  function validateForm(): FieldErrors {
+    const errs: FieldErrors = {}
+    for (const field of FORM_FIELDS) {
+      const message = formFieldError(field)
+      if (message) errs[field] = message
+    }
+    return errs
+  }
+
+  // Re-checks only fields already showing an error, so an error clears as soon
+  // as the value becomes valid; new errors appear on blur or submit.
+  function updateField(field: FormField, value: string, setter: (v: string) => void) {
+    setter(value)
+    if (mode === 'login') return
+    const values = { name, email, password, confirmPassword, dateOfBirth, [field]: value }
+    setFieldErrors(prev => {
+      const next = { ...prev }
+      const recheck = field === 'password' ? ['password', 'confirmPassword'] as const : [field]
+      for (const f of recheck) {
+        if (prev[f] === undefined) continue
+        const message = formFieldError(f, values)
+        if (message) next[f] = message
+        else delete next[f]
+      }
+      return next
+    })
+  }
+
+  function blurField(field: FormField) {
+    if (mode === 'login') return
+    const message = formFieldError(field)
+    if (message) setFieldErrors(prev => ({ ...prev, [field]: message }))
+  }
+
+  function signupPayload() {
+    return {
+      email: normalizeEmail(email),
+      password,
+      name: name.trim() || undefined,
+      role: roleForMode(mode),
+      ...(mode === 'register-student' && dateOfBirth ? { dateOfBirth } : {}),
+    }
+  }
+
+  // Routes a server error back to the step and field that caused it.
+  function applySignupError(err: unknown, where: 'form' | 'otp' | 'terms') {
+    if (err instanceof ApiError && isSignupField(err.field)) {
+      const field = err.field
+      setShowPrivacyModal(false)
+      if (field === 'otp') {
+        setRegisterStep('otp')
+        setOtpError(err.message)
+      } else {
+        setRegisterStep('form')
+        setFieldErrors(prev => ({ ...prev, [field]: err.message }))
+      }
+      return
+    }
+    const message = err instanceof ApiError ? err.message : NETWORK_ERROR
+    if (where === 'otp') setOtpError(message)
+    else setError(message)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    reset()
     if (mode === 'login') {
+      reset()
       await doRegisterOrLogin()
       return
     }
+    if (inFlight.current) return
+    reset()
     // Registration — validate first
-    if (password !== confirmPassword) { setError('Passwords do not match'); return }
-    if (password.length < 6)          { setError('Password must be at least 6 characters'); return }
+    const errs = validateForm()
+    setFieldErrors(errs)
+    if (Object.keys(errs).length > 0) return
     if (mode === 'register-student') {
-      if (!dateOfBirth) { setError('Please enter your birthday'); return }
       if (!hacUsername.trim() || !hacPassword.trim()) { setError('School portal credentials are required'); return }
       if (!isClasslinkDistrict && !hacUrl.trim() && !useCustomUrl) { setError('Please select your school district'); return }
     }
-    // Send OTP before showing privacy modal
+    // Server validates every field on this step before sending the code
+    inFlight.current = true
     setOtpLoading(true)
-    setOtpError(null)
     try {
-      await api.sendOtp(email.trim())
+      const result = await api.sendOtp(signupPayload())
       setOtpCode('')
+      setResendIn(result.resendAvailableInSeconds)
+      setOtpNotice(result.sent ? null : 'We already sent a code to this address, and it’s still valid.')
       setRegisterStep('otp')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send verification code.')
+      applySignupError(err, 'form')
     } finally {
       setOtpLoading(false)
+      inFlight.current = false
     }
   }
 
   async function handleVerifyOtp(e: React.FormEvent) {
     e.preventDefault()
+    if (inFlight.current) return
+    const codeError = validateOtp(otpCode)
+    if (codeError) { setOtpError(codeError); return }
+    inFlight.current = true
+    setOtpVerifying(true)
     setOtpError(null)
-    if (!otpCode.trim() || otpCode.trim().length !== 6) {
-      setOtpError('Enter the 6-digit code we sent to your email.')
-      return
+    try {
+      await api.verifyOtp({ email: normalizeEmail(email), otp: otpCode })
+      setAgreedPrivacy(false)
+      setAgreedTos(false)
+      setAgreedAge(false)
+      setShowPrivacyModal(true)
+    } catch (err) {
+      applySignupError(err, 'otp')
+    } finally {
+      setOtpVerifying(false)
+      inFlight.current = false
     }
-    setAgreedPrivacy(false)
-    setAgreedTos(false)
-    setAgreedAge(false)
-    setShowPrivacyModal(true)
+  }
+
+  async function handleResendOtp() {
+    if (inFlight.current || resendIn > 0) return
+    inFlight.current = true
+    setOtpLoading(true)
+    setOtpError(null)
+    setOtpNotice(null)
+    try {
+      const result = await api.sendOtp({ email: normalizeEmail(email) })
+      setResendIn(result.resendAvailableInSeconds)
+      setOtpCode('')
+      if (result.sent) setOtpNotice(`We sent a new code to ${email.trim()}.`)
+    } catch (err) {
+      applySignupError(err, 'otp')
+    } finally {
+      setOtpLoading(false)
+      inFlight.current = false
+    }
   }
 
   async function doRegisterOrLogin() {
+    if (inFlight.current) return
+    inFlight.current = true
     setIsLoading(true)
     try {
       let result: { user: { id: number; name: string | null; role: string } }
       if (mode === 'login') {
         result = await api.login(email, password)
       } else if (mode === 'register-student') {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, undefined, agreedTos, agreedPrivacy, agreedAge, dateOfBirth || undefined)
+        result = await api.register(normalizeEmail(email), password, otpCode, name.trim() || undefined, undefined, agreedTos, agreedPrivacy, agreedAge, dateOfBirth || undefined)
       } else if (mode === 'register-teacher') {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'TEACHER', agreedTos, agreedPrivacy, agreedAge)
+        result = await api.register(normalizeEmail(email), password, otpCode, name.trim() || undefined, 'TEACHER', agreedTos, agreedPrivacy, agreedAge)
       } else {
-        result = await api.register(email, password, otpCode.trim(), name.trim() || undefined, 'PARENT', agreedTos, agreedPrivacy, agreedAge)
+        result = await api.register(normalizeEmail(email), password, otpCode, name.trim() || undefined, 'PARENT', agreedTos, agreedPrivacy, agreedAge)
       }
       setWebLogin()
       localStorage.setItem('ns_user', JSON.stringify(result.user))
@@ -268,10 +418,8 @@ export default function LoginForm() {
       else if (role === 'COUNSELOR') router.push('/counselor/dashboard')
       else router.push('/dashboard')
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'NAME_TAKEN') {
-        setError('That display name is already taken. Please choose a different one.')
-      } else if (err instanceof ApiError && err.code === 'COPPA_AGE_GATE') {
-        setError('You must be at least 13 years old to create an account.')
+      if (mode !== 'login') {
+        applySignupError(err, 'terms')
       } else if (err instanceof ApiError && err.code === 'ACCOUNT_LOCKED' && err.secondsRemaining) {
         const totalMins = Math.ceil(err.secondsRemaining / 60)
         const hours = Math.floor(totalMins / 60)
@@ -281,10 +429,10 @@ export default function LoginForm() {
           : `${mins}m`
         setError(`Account locked. Too many failed attempts — try again in ${timeStr}.`)
       } else {
-        const msg = err instanceof Error ? err.message : (mode === 'login' ? 'Login failed' : 'Registration failed')
+        const msg = err instanceof Error ? err.message : 'Login failed'
         setError(msg)
       }
-    } finally { setIsLoading(false); setStep('auth') }
+    } finally { setIsLoading(false); setStep('auth'); inFlight.current = false }
   }
 
   async function handleForgotPassword(e: React.FormEvent) {
@@ -310,6 +458,13 @@ export default function LoginForm() {
     : 'Creating account...'
     : mode === 'login'      ? 'Log In'
     : 'Send verification code'
+
+  // Register: blocked until every field on this step is valid (login stays enabled — it only needs "not empty")
+  const portalReady = mode !== 'register-student' || (
+    !!hacUsername.trim() && !!hacPassword.trim() && (isClasslinkDistrict || !!hacUrl.trim() || useCustomUrl)
+  )
+  const formInvalid = mode !== 'login' && (Object.keys(validateForm()).length > 0 || !portalReady)
+  const submitDisabled = isLoading || otpLoading || formInvalid
 
   const headingText =
     mode === 'login'            ? 'Your academic companion' :
@@ -362,24 +517,34 @@ export default function LoginForm() {
 
         {/* ── OTP verification step ── */}
         {registerStep === 'otp' && (
-          <form onSubmit={e => void handleVerifyOtp(e)} style={{ ...styles.form, marginBottom: 8 }}>
+          <form onSubmit={e => void handleVerifyOtp(e)} noValidate style={{ ...styles.form, marginBottom: 8 }}>
             <div style={{ textAlign: 'center', marginBottom: 4 }}>
               <div style={{ marginBottom: 8 }}><InboxIcon size={36}/></div>
               <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '0 0 6px' }}>Check your email</p>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-                We sent a 6-digit code to <strong>{email}</strong>
+                We sent a {OTP_LENGTH}-digit code to <strong>{email}</strong>
               </p>
             </div>
             <div style={styles.field}>
               <label style={styles.label}>Verification code</label>
+              {/* No maxLength: it would truncate a pasted "123 456" before non-digits are stripped */}
               <input
-                type="text" inputMode="numeric" maxLength={6} autoFocus
-                value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="000000" style={{ ...styles.input, textAlign: 'center', fontSize: 22, fontWeight: 700, letterSpacing: 8 }}
+                type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus
+                value={otpCode} onChange={e => { setOtpCode(normalizeOtp(e.target.value)); setOtpError(null) }}
+                aria-invalid={!!otpError} aria-describedby={otpError ? 'signup-otp-error' : undefined}
+                placeholder={'0'.repeat(OTP_LENGTH)} style={{ ...styles.input, textAlign: 'center', fontSize: 22, fontWeight: 700, letterSpacing: 8 }}
               />
             </div>
-            {otpError && <p style={styles.error}>{otpError}</p>}
-            <button type="submit" style={styles.btn}>Verify code</button>
+            {otpError && <p id="signup-otp-error" role="alert" style={styles.error}>{otpError}</p>}
+            {otpNotice && <p style={styles.hint}>{otpNotice}</p>}
+            <button type="submit" disabled={otpCode.length !== OTP_LENGTH || otpVerifying}
+              style={{ ...styles.btn, opacity: otpCode.length !== OTP_LENGTH || otpVerifying ? 0.6 : 1 }}>
+              {otpVerifying ? 'Verifying...' : 'Verify code'}
+            </button>
+            <button type="button" onClick={() => void handleResendOtp()} disabled={resendIn > 0 || otpLoading}
+              style={{ background: 'none', border: 'none', color: resendIn > 0 || otpLoading ? 'var(--text-muted)' : 'var(--primary)', cursor: resendIn > 0 || otpLoading ? 'default' : 'pointer', fontSize: 13, textAlign: 'center' as const }}>
+              {otpLoading ? 'Sending...' : resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+            </button>
             <button type="button" onClick={() => setRegisterStep('form')}
               style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, textAlign: 'center' as const }}>
               <ArrowLeftIcon size={13}/> Back / change email
@@ -387,37 +552,61 @@ export default function LoginForm() {
           </form>
         )}
 
-        {registerStep === 'form' && <form onSubmit={e => void handleSubmit(e)} style={styles.form}>
+        {registerStep === 'form' && <form onSubmit={e => void handleSubmit(e)} noValidate={mode !== 'login'} style={styles.form}>
           {mode !== 'login' && (
             <div style={styles.field}>
               <label style={styles.label}>
                 {mode === 'register-parent' || mode === 'register-teacher' ? 'Your Name' : 'Display Name'}{' '}
                 {mode === 'register-student' && <span style={{ color: 'var(--text-muted)' }}>(optional)</span>}
               </label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)}
+              <input type="text" value={name} onChange={e => updateField('name', e.target.value, setName)} onBlur={() => blurField('name')}
                 placeholder={mode === 'register-parent' || mode === 'register-teacher' ? 'Jane Smith' : 'Jane Doe'}
+                aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? 'signup-name-error' : undefined}
                 required={mode === 'register-parent' || mode === 'register-teacher'} style={styles.input} />
+              <FieldError id="signup-name-error" message={fieldErrors.name} />
             </div>
           )}
 
           <div style={styles.field}>
             <label style={styles.label}>Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            <input type="email" value={email} onChange={e => updateField('email', e.target.value, setEmail)} onBlur={() => blurField('email')}
+              aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'signup-email-error' : undefined}
               placeholder="you@example.com" required style={styles.input} />
+            <FieldError id="signup-email-error" message={fieldErrors.email} />
           </div>
 
           <div style={styles.field}>
             <label style={styles.label}>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-              placeholder={mode !== 'login' ? 'At least 6 characters' : '••••••••'}
-              required minLength={mode !== 'login' ? 6 : undefined} style={styles.input} />
+            {/* Login deliberately checks only "not empty" — older accounts may predate the current password policy */}
+            <input type="password" value={password} onChange={e => updateField('password', e.target.value, setPassword)} onBlur={() => blurField('password')}
+              placeholder={mode !== 'login' ? PASSWORD_PLACEHOLDER : '••••••••'}
+              autoComplete={mode !== 'login' ? 'new-password' : 'current-password'}
+              aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'signup-password-error' : undefined}
+              required style={styles.input} />
+            {mode !== 'login' && password.length > 0 && (
+              <ul style={styles.reqList}>
+                {PASSWORD_REQUIREMENTS.map(r => {
+                  const met = r.test(password)
+                  return (
+                    <li key={r.id} style={{ ...styles.reqItem, color: met ? 'var(--success)' : 'var(--text-muted)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center' }}>{met ? <CheckIcon size={14}/> : <span style={{ fontSize: 14 }}>○</span>}</span>
+                      {r.label}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            <FieldError id="signup-password-error" message={fieldErrors.password} />
           </div>
 
           {mode !== 'login' && (
             <div style={styles.field}>
               <label style={styles.label}>Confirm Password</label>
-              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+              <input type="password" value={confirmPassword} onChange={e => updateField('confirmPassword', e.target.value, setConfirmPassword)} onBlur={() => blurField('confirmPassword')}
+                autoComplete="new-password"
+                aria-invalid={!!fieldErrors.confirmPassword} aria-describedby={fieldErrors.confirmPassword ? 'signup-confirm-error' : undefined}
                 placeholder="Re-enter your password" required style={styles.input} />
+              <FieldError id="signup-confirm-error" message={fieldErrors.confirmPassword} />
             </div>
           )}
 
@@ -434,12 +623,15 @@ export default function LoginForm() {
                 <input
                   type="date"
                   value={dateOfBirth}
-                  onChange={e => setDateOfBirth(e.target.value)}
+                  onChange={e => updateField('dateOfBirth', e.target.value, setDateOfBirth)}
+                  onBlur={() => blurField('dateOfBirth')}
                   max={new Date().toISOString().split('T')[0]}
+                  aria-invalid={!!fieldErrors.dateOfBirth} aria-describedby={fieldErrors.dateOfBirth ? 'signup-dob-error' : undefined}
                   required
                   style={styles.input}
                 />
-                {dobHintVisible && (
+                <FieldError id="signup-dob-error" message={fieldErrors.dateOfBirth} />
+                {!fieldErrors.dateOfBirth && dobHintVisible && (
                   <span style={{ fontSize: 12, color: 'var(--error)', marginTop: 2 }}>
                     You must be 13 or older to sign up.
                   </span>
@@ -579,7 +771,7 @@ export default function LoginForm() {
 
           {error && <p style={styles.error}>{error}</p>}
 
-          <button type="submit" disabled={isLoading} style={{ ...styles.btn, opacity: isLoading ? 0.6 : 1 }}>
+          <button type="submit" disabled={submitDisabled} style={{ ...styles.btn, opacity: submitDisabled ? 0.6 : 1 }}>
             {btnLabel}
           </button>
 
@@ -791,6 +983,9 @@ const styles: Record<string, React.CSSProperties> = {
   hacSection:      { display: 'flex', flexDirection: 'column', gap: 12, padding: 16, background: 'var(--surface-2)', borderRadius: 12, border: '1px solid var(--border)' },
   hint:            { fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 },
   error:           { color: 'var(--error)', fontSize: 13.5, lineHeight: 1.4 },
+  fieldError:      { color: 'var(--error)', fontSize: 12, lineHeight: 1.4, marginTop: 2 },
+  reqList:         { margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 5 },
+  reqItem:         { fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 7 },
   hacError:        { color: 'var(--warning)', fontSize: 12, lineHeight: 1.5 },
   btn:             { background: 'var(--primary)', color: '#FFFFFF', border: 'none', borderRadius: 10, height: 48, fontWeight: 600, fontSize: 15, width: '100%', cursor: 'pointer', marginTop: 4, letterSpacing: '0.1px', transition: 'background 0.15s, box-shadow 0.15s' },
   oauthBtn:        { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', height: 46, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 14, fontWeight: 600, textDecoration: 'none', cursor: 'pointer', transition: 'background 0.15s' },

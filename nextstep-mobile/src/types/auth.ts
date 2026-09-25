@@ -36,8 +36,21 @@ export interface RegisterRequest {
   agreedAge: true
 }
 
+/** Account-step fields are optional; the server validates whichever are sent. */
 export interface SendOtpRequest {
   email: string
+  password?: string
+  name?: string
+  dateOfBirth?: string
+}
+
+export interface SendOtpResponse {
+  sent: boolean
+  resendAvailableInSeconds: number
+}
+
+export interface VerifyOtpRequest extends SendOtpRequest {
+  otp: string
 }
 
 export interface MeResponse extends AuthUser {

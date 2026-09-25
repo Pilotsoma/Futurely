@@ -21,11 +21,14 @@ export class ApiError extends Error {
   code?: string
   secondsRemaining?: number
   httpStatus?: number
-  constructor(message: string, code?: string, secondsRemaining?: number, httpStatus?: number) {
+  /** Input field the server rejected (signup endpoints), so the UI can show the error under it. */
+  field?: string
+  constructor(message: string, code?: string, secondsRemaining?: number, httpStatus?: number, field?: string) {
     super(message)
     this.code = code
     this.secondsRemaining = secondsRemaining
     this.httpStatus = httpStatus
+    this.field = field
   }
 }
 
@@ -109,15 +112,16 @@ async function request<T>(path: string, options?: RequestInit, _retried = false,
     if (refreshed) return request<T>(path, options, true, timeoutMs)
   }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }
+    const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string; field?: string }; secondsRemaining?: number }
     const msg  = typeof body?.error === 'string' ? body.error : body?.error?.message
     const code = typeof body?.error === 'object' ? body?.error?.code : undefined
+    const field = typeof body?.error === 'object' ? body?.error?.field : undefined
     // Consent not yet recorded for this OAuth account — redirect back to the consent modal.
     if (res.status === 403 && code === 'CONSENT_REQUIRED' && typeof window !== 'undefined') {
       window.location.replace('/login?oauth=new')
       return new Promise<T>(() => {})
     }
-    throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining, res.status)
+    throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining, res.status, field)
   }
   const { data } = await res.json() as { data: T }
   return data
@@ -151,17 +155,26 @@ async function requestWithMeta<T>(path: string, options?: RequestInit, _retried 
     if (refreshed) return requestWithMeta<T>(path, options, true, timeoutMs)
   }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string }; secondsRemaining?: number }
+    const body = await res.json().catch(() => ({})) as { error?: string | { message?: string; code?: string; field?: string }; secondsRemaining?: number }
     const msg  = typeof body?.error === 'string' ? body.error : body?.error?.message
     const code = typeof body?.error === 'object' ? body?.error?.code : undefined
+    const field = typeof body?.error === 'object' ? body?.error?.field : undefined
     if (res.status === 403 && code === 'CONSENT_REQUIRED' && typeof window !== 'undefined') {
       window.location.replace('/login?oauth=new')
       return new Promise<{ data: T; meta?: Record<string, unknown> }>(() => {})
     }
-    throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining, res.status)
+    throw new ApiError(msg ?? `HTTP ${res.status}`, code, body.secondsRemaining, res.status, field)
   }
   const { data, meta } = await res.json() as { data: T; meta?: Record<string, unknown> }
   return { data, meta }
+}
+
+interface SignupFieldsPayload {
+  email: string
+  password?: string
+  name?: string
+  role?: string
+  dateOfBirth?: string
 }
 
 interface LoginResult {
@@ -270,10 +283,16 @@ export const api = {
 
   searchSchools: (q: string) =>
     request<Array<{ name: string; city: string; state: string }>>(`/api/schools/search?q=${encodeURIComponent(q)}`),
-  sendOtp: (email: string) =>
-    request<{ sent: boolean }>('/api/auth/send-otp', {
+  // Validates the whole account step server-side before emailing a code.
+  sendOtp: (payload: SignupFieldsPayload) =>
+    request<{ sent: boolean; resendAvailableInSeconds: number }>('/api/auth/send-otp', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(payload),
+    }),
+  verifyOtp: (payload: SignupFieldsPayload & { otp: string }) =>
+    request<{ verified: true }>('/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
   forgotPassword: (email: string) =>
     request<{ message: string }>('/api/auth/forgot-password', {

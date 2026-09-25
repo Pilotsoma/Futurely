@@ -15,13 +15,16 @@ export class ApiRequestError extends Error {
   code?: string
   /** Present only for endpoints that attach extra top-level fields alongside data/error, e.g. auth's ACCOUNT_LOCKED → secondsRemaining. */
   raw?: unknown
+  /** Input field the server rejected (signup endpoints), so the UI can show the error under it. */
+  field?: string
 
-  constructor(message: string, status: number, code?: string, raw?: unknown) {
+  constructor(message: string, status: number, code?: string, raw?: unknown, field?: string) {
     super(message)
     this.name = 'ApiRequestError'
     this.status = status
     this.code = code
     this.raw = raw
+    this.field = field
   }
 }
 
@@ -45,12 +48,12 @@ interface RequestOptions {
 //   - colleges:                               { data: null, error: { message } }        (no code)
 //   - feed:                                    { error: "message string" }               (bare, no data key)
 // Normalize all three into one shape so callers only ever handle ApiRequestError.
-function extractError(body: unknown): { message: string; code?: string } {
+function extractError(body: unknown): { message: string; code?: string; field?: string } {
   const err = (body as { error?: unknown } | null)?.error
   if (typeof err === 'string') return { message: err }
   if (err && typeof err === 'object') {
-    const e = err as { message?: string; code?: string }
-    return { message: e.message ?? 'Request failed', code: e.code }
+    const e = err as { message?: string; code?: string; field?: string }
+    return { message: e.message ?? 'Request failed', code: e.code, field: e.field }
   }
   return { message: 'Request failed' }
 }
@@ -173,14 +176,14 @@ export async function requestEnvelope<T, M = undefined>(
     return requestEnvelope<T, M>(path, opts, true)
   }
 
-  const { message, code } = extractError(body)
+  const { message, code, field } = extractError(body)
   if (
     res.status === 403 &&
     (code === 'DOB_VERIFICATION_REQUIRED' || code === 'ACCOUNT_BANNED')
   ) {
     DeviceEventEmitter.emit(ACCOUNT_STATUS_CHANGED_EVENT)
   }
-  throw new ApiRequestError(message, res.status, code, body)
+  throw new ApiRequestError(message, res.status, code, body, field)
 }
 
 export async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {

@@ -7,6 +7,7 @@ import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { LinkIcon, CheckCircleIcon, CheckIcon } from '@/components/icons'
 import { api, ApiError } from '../../lib/api'
+import { PASSWORD_PLACEHOLDER, PASSWORD_REQUIREMENTS, validatePassword } from '@/backend/src/shared/signupValidation'
 
 // Desktop-only decorative background — not needed until the isDesktop media
 // query resolves client-side (same treatment as app/login/LoginForm.tsx).
@@ -23,13 +24,9 @@ function ResetPasswordForm() {
   const [error, setError]                     = useState<string | null>(null)
   const [success, setSuccess]                 = useState(false)
 
-  // Validate password requirements client-side
-  const requirements = [
-    { label: 'At least 8 characters',     met: password.length >= 8 },
-    { label: 'At least one uppercase letter', met: /[A-Z]/.test(password) },
-    { label: 'At least one number',       met: /[0-9]/.test(password) },
-  ]
-  const allMet = requirements.every(r => r.met)
+  // Same rules the server enforces (shared with signup)
+  const requirements = PASSWORD_REQUIREMENTS.map(r => ({ label: r.label, met: r.test(password) }))
+  const allMet = validatePassword(password) === null
 
   useEffect(() => {
     if (success) {
@@ -100,7 +97,7 @@ function ResetPasswordForm() {
           type="password"
           value={password}
           onChange={e => setPassword(e.target.value)}
-          placeholder="At least 8 characters"
+          placeholder={PASSWORD_PLACEHOLDER}
           required
           autoFocus
           style={styles.input}
