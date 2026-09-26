@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>myFuturely brag</title>
+    <script src="assets/lib/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Clash Grotesk"; src: url("assets/fonts/ClashGrotesk-Medium.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+
+      :root {
+        --bg: #0d1829; --surface: #162235; --surface-2: #1c2d47; --border: #273d5e;
+        --text: #e8eeff; --text-2: #a9bbdb; --muted: #8fa3c6;
+        --primary: #2979ff; --cyan: #22d3ee; --purple: #7c3aed; --violet: #a78bfa; --amber: #f59e0b; --red: #f87171;
+        --display: "Clash Grotesk", "Inter", sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); font-family: "Inter", sans-serif; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+      .clip { position: absolute; inset: 0; }
+      .scene { position: absolute; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+
+      /* ── persistent background ── */
+      #bg { overflow: hidden; }
+      .glow { position: absolute; border-radius: 50%; }
+      #glow-a { width: 1300px; height: 1000px; left: 310px; top: -380px; background: radial-gradient(ellipse, rgba(41,121,255,0.20) 0%, transparent 65%); }
+      #glow-b { width: 900px; height: 900px; left: 1250px; top: 480px; background: radial-gradient(circle, rgba(124,58,237,0.16) 0%, transparent 68%); }
+      #glow-c { width: 800px; height: 800px; left: -300px; top: 520px; background: radial-gradient(circle, rgba(34,211,238,0.10) 0%, transparent 68%); }
+      #grid { position: absolute; inset: -80px; background-image: linear-gradient(rgba(150,170,204,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(150,170,204,0.06) 1px, transparent 1px); background-size: 80px 80px; }
+
+      /* ── S1 hook ── */
+      #s1-wrap { display: flex; align-items: center; gap: 140px; }
+      #s1-text { width: 760px; }
+      .kicker { font-size: 26px; font-weight: 600; letter-spacing: 5px; text-transform: uppercase; color: var(--muted); margin: 0 0 18px; }
+      #s1-line1 { font-family: var(--display); font-weight: 500; font-size: 120px; line-height: 1; letter-spacing: -3px; margin: 0 0 22px; }
+      #s1-line1 .one { color: var(--primary); }
+      #s1-count-row { display: flex; align-items: baseline; gap: 26px; }
+      #s1-count { font-family: var(--display); font-weight: 500; font-size: 220px; line-height: 0.95; letter-spacing: -8px; color: var(--cyan); }
+      #s1-students { font-family: var(--display); font-size: 72px; letter-spacing: -2px; color: var(--text); }
+      #dots { display: grid; grid-template-columns: repeat(25, 16px); gap: 7px; }
+      .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--cyan); }
+
+      /* ── S2 mess ── */
+      #s2-head { position: absolute; top: 110px; left: 0; right: 0; text-align: center; font-family: var(--display); font-size: 92px; letter-spacing: -2.5px; line-height: 1.05; margin: 0; }
+      #s2-head em { font-style: normal; color: var(--red); }
+      #portals { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      .portal { position: absolute; width: 440px; background: #f4f6fb; color: #1d2433; border-radius: 16px; box-shadow: 0 30px 70px rgba(0,0,0,0.5); overflow: hidden; }
+      .portal .bar { height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 16px; font-size: 18px; font-weight: 700; color: #fff; }
+      .portal .bar i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.55); display: block; }
+      .portal .body { padding: 22px 22px 26px; }
+      .portal .field { height: 38px; border: 1px solid #c9d0de; border-radius: 8px; margin-bottom: 12px; padding: 0 12px; display: flex; align-items: center; font-size: 17px; color: #4a5468; background: #fff; }
+      .portal .btn { height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 17px; }
+
+      /* ── S3 reveal ── */
+      #s3-wrap { display: flex; flex-direction: column; align-items: center; }
+      #s3-logo { width: 150px; height: auto; display: block; margin-bottom: 26px; }
+      #s3-this { font-family: var(--display); font-size: 170px; line-height: 1; letter-spacing: -5px; margin: 0; }
+      #s3-words { position: relative; width: 1500px; height: 200px; margin-top: 4px; }
+      .rw { position: absolute; left: 0; right: 0; top: 0; text-align: center; font-family: var(--display); font-size: 170px; line-height: 1.1; letter-spacing: -5px; }
+
+      /* ── feature scenes ── */
+      .feat { display: flex; align-items: center; gap: 100px; width: 1680px; }
+      .feat-label { width: 560px; flex-shrink: 0; }
+      .feat-n { font-family: var(--display); font-size: 30px; letter-spacing: 6px; color: var(--muted); margin: 0 0 16px; }
+      .feat-title { font-family: var(--display); font-size: 92px; line-height: 1.02; letter-spacing: -2.5px; margin: 0 0 26px; }
+      .feat-sub { font-size: 30px; line-height: 1.45; color: var(--text-2); margin: 0; }
+      .card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 32px; padding: 52px 56px; box-shadow: 0 40px 100px rgba(0,0,0,0.5); }
+
+      /* chat */
+      .ai-head { display: flex; align-items: center; gap: 18px; margin-bottom: 36px; }
+      .ai-icon { width: 64px; height: 64px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+      .ai-icon img { width: 40px; height: auto; display: block; }
+      .ai-name { font-size: 28px; font-weight: 600; }
+      .ai-meta { font-size: 21px; color: var(--muted); }
+      .msgs { display: flex; flex-direction: column; gap: 22px; min-height: 250px; }
+      .row-r { display: flex; justify-content: flex-end; }
+      .row-l { display: flex; justify-content: flex-start; }
+      .b-user { display: block; font-size: 30px; font-weight: 500; color: #fff; background: #1f63d9; border-radius: 22px 22px 4px 22px; padding: 20px 28px; max-width: 80%; line-height: 1.4; }
+      .b-ai { display: block; font-size: 30px; color: var(--text); background: var(--surface-2); border-radius: 22px 22px 22px 4px; padding: 22px 28px; max-width: 96%; line-height: 1.45; }
+      .typing { display: flex; gap: 10px; background: var(--surface-2); border-radius: 22px 22px 22px 4px; padding: 26px 28px; }
+      .typing i { width: 12px; height: 12px; border-radius: 50%; background: var(--text-2); display: block; }
+      .chips { display: flex; gap: 14px; margin-top: 30px; }
+      .chip { display: block; font-size: 21px; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 30px; padding: 12px 22px; }
+
+      /* planner */
+      .pl-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+      .pl-title { font-size: 34px; font-weight: 600; }
+      .tags { display: flex; gap: 12px; }
+      .tag { display: block; font-size: 20px; font-weight: 600; border-radius: 10px; padding: 6px 14px; }
+      .t-cyan { color: var(--cyan); background: rgba(34,211,238,0.12); border: 1px solid rgba(34,211,238,0.3); }
+      .t-red { color: var(--red); background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); }
+      .task { display: flex; align-items: center; gap: 24px; padding: 17px 0; border-top: 1px solid var(--border); }
+      .task:first-child { border-top: none; }
+      .day { width: 60px; text-align: center; flex-shrink: 0; }
+      .day b { display: block; font-size: 17px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+      .day span { display: block; font-size: 28px; font-weight: 600; }
+      .sdot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+      .tinfo { flex: 1; }
+      .tname { font-size: 27px; line-height: 1.25; }
+      .tsub { font-size: 19px; color: var(--muted); }
+      .hi { display: block; font-size: 19px; font-weight: 700; color: var(--red); background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.35); border-radius: 8px; padding: 5px 14px; }
+      .pl-foot { margin-top: 12px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 22px; color: var(--text-2); }
+
+      /* simulator */
+      .sim-title { font-size: 34px; font-weight: 600; margin: 0 0 8px; }
+      .sim-sub { font-size: 23px; color: var(--muted); margin: 0 0 36px; }
+      .bars { display: flex; align-items: flex-end; gap: 34px; height: 360px; }
+      .bcol { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 14px; }
+      .bpct { display: block; font-size: 26px; font-weight: 700; color: var(--violet); }
+      .bar { display: block; width: 100%; border-radius: 14px; transform-origin: 50% 100%; }
+      .blabel { display: block; font-size: 22px; font-weight: 600; color: var(--text-2); }
+      .sim-foot { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; align-items: baseline; gap: 22px; }
+      #sim-big { font-family: var(--display); font-size: 96px; letter-spacing: -3px; color: var(--violet); line-height: 1; }
+      .sim-foot p { margin: 0; font-size: 25px; color: var(--text-2); line-height: 1.4; }
+
+      /* outro */
+      #s7-wrap { display: flex; flex-direction: column; align-items: center; }
+      #road { position: relative; width: 1000px; height: 140px; margin-bottom: 40px; }
+      #road-line { position: absolute; left: 50px; right: 50px; top: 46px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, #2979ff, #22d3ee, #a78bfa, #f59e0b); transform-origin: 0 50%; }
+      .node { position: absolute; top: 0; width: 96px; height: 96px; border-radius: 26px; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 44px; background: var(--surface); border: 3px solid; }
+      .node-l { position: absolute; top: 108px; width: 96px; text-align: center; font-size: 18px; font-weight: 600; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+      #s7-head { font-family: var(--display); font-size: 120px; line-height: 1.02; letter-spacing: -3.5px; text-align: center; max-width: 1400px; margin: 0 0 54px; }
+      #s7-head em { font-style: normal; color: var(--amber); }
+      #s7-brand { display: flex; align-items: center; gap: 40px; }
+      #s7-logo-row { display: flex; align-items: center; gap: 16px; }
+      #s7-logo { width: 60px; height: auto; display: block; }
+      #s7-name { font-family: var(--display); font-size: 56px; letter-spacing: -1.5px; }
+      #s7-cta { display: flex; align-items: center; gap: 14px; background: #1f63d9; color: #fff; border-radius: 18px; padding: 24px 50px; font-weight: 600; font-size: 32px; box-shadow: 0 8px 40px rgba(41,121,255,0.4); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="21.5">
+
+      <!-- persistent background -->
+      <div id="bg" class="clip" data-start="0" data-duration="21.5" data-track-index="0">
+        <div id="grid" data-layout-allow-overflow></div>
+        <div id="glow-a" class="glow" data-layout-allow-overflow></div>
+        <div id="glow-b" class="glow" data-layout-allow-overflow></div>
+        <div id="glow-c" class="glow" data-layout-allow-overflow></div>
+      </div>
+
+      <!-- S1 hook -->
+      <section id="s1" class="clip" data-start="0" data-duration="2.8" data-track-index="1">
+        <div class="scene">
+          <div id="s1-wrap">
+            <div id="s1-text">
+              <p class="kicker" id="s1-kicker">At many high schools</p>
+              <h1 id="s1-line1"><span class="one">1</span> counselor.</h1>
+              <div id="s1-count-row">
+                <span id="s1-count">0</span>
+                <span id="s1-students">students.</span>
+              </div>
+            </div>
+            <div id="dots"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S2 the mess -->
+      <section id="s2" class="clip" data-start="2.8" data-duration="2.2" data-track-index="1">
+        <div id="s2-all" class="scene">
+          <div id="portals">
+            <div class="portal" id="p1" style="left:170px; top:470px;">
+              <div class="bar" style="background:#2e7d32;"><i></i>HAC · Home Access Center</div>
+              <div class="body"><div class="field">Username</div><div class="field">Password</div><div class="btn" style="background:#2e7d32;">Sign in</div></div>
+            </div>
+            <div class="portal" id="p2" style="left:560px; top:380px;">
+              <div class="bar" style="background:#0a6fb5;"><i></i>Skyward</div>
+              <div class="body"><div class="field">Login ID</div><div class="field">Password</div><div class="btn" style="background:#0a6fb5;">Sign in</div></div>
+            </div>
+            <div class="portal" id="p3" style="left:950px; top:500px;">
+              <div class="bar" style="background:#1a4e8a;"><i></i>PowerSchool</div>
+              <div class="body"><div class="field">Username</div><div class="field">Password</div><div class="btn" style="background:#1a4e8a;">Sign in</div></div>
+            </div>
+            <div class="portal" id="p4" style="left:1330px; top:390px;">
+              <div class="bar" style="background:#c43b20;"><i></i>Canvas</div>
+              <div class="body"><div class="field">Email</div><div class="field">Password</div><div class="btn" style="background:#c43b20;">Log in</div></div>
+            </div>
+            <div class="portal" id="p5" style="left:740px; top:640px;">
+              <div class="bar" style="background:#137333;"><i></i>Google Classroom</div>
+              <div class="body"><div class="field">Choose an account</div><div class="btn" style="background:#137333;">Next</div></div>
+            </div>
+          </div>
+          <h2 id="s2-head">Your grades live in <em>5 different places.</em></h2>
+        </div>
+      </section>
+
+      <!-- S3 reveal -->
+      <section id="s3" class="clip" data-start="5.0" data-duration="3.2" data-track-index="1">
+        <div class="scene">
+          <div id="s3-wrap">
+            <img id="s3-logo" src="assets/img/logo.png" alt="myFuturely logo" />
+            <h2 id="s3-this">This is</h2>
+            <div id="s3-words">
+              <div class="rw" id="rw1" style="color:#22d3ee;">your future.</div>
+              <div class="rw" id="rw2" style="color:#4d8fff;">your progress.</div>
+              <div class="rw" id="rw3" style="color:#a78bfa;">your plan.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S4 advisor -->
+      <section id="s4" class="clip" data-start="8.2" data-duration="3.8" data-track-index="1">
+        <div class="scene">
+          <div class="feat" id="s4-feat">
+            <div class="feat-label" id="s4-label">
+              <p class="feat-n">01</p>
+              <h3 class="feat-title" style="color:#a78bfa;">Your Academic Advisor</h3>
+              <p class="feat-sub">Not a generic chatbot. It actually knows your academic history.</p>
+            </div>
+            <div class="card" id="s4-card">
+              <div class="ai-head">
+                <div class="ai-icon"><img src="assets/img/logo.png" alt="" /></div>
+                <div><div class="ai-name">myFuturely AI</div><div class="ai-meta">Knows your academic history</div></div>
+              </div>
+              <div class="msgs">
+                <div class="row-r" id="m1"><span class="b-user">What should I focus on this week?</span></div>
+                <div class="row-l" id="m-typing"><div class="typing"><i id="td1"></i><i id="td2"></i><i id="td3"></i></div></div>
+                <div class="row-l" id="m2"><span class="b-ai">Your chemistry report is due Monday. Start it tonight.</span></div>
+              </div>
+              <div class="chips" id="chips">
+                <span class="chip">Study tips for finals</span>
+                <span class="chip">College prep advice</span>
+                <span class="chip">Help me plan my week</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S5 planner -->
+      <section id="s5" class="clip" data-start="12.0" data-duration="3.2" data-track-index="1">
+        <div class="scene">
+          <div class="feat" id="s5-feat">
+            <div class="feat-label" id="s5-label">
+              <p class="feat-n">02</p>
+              <h3 class="feat-title" style="color:#4d8fff;">Smart Planner</h3>
+              <p class="feat-sub">No manual entry. Ever. Just open it and know what matters today.</p>
+            </div>
+            <div class="card" id="s5-card">
+              <div class="pl-head">
+                <span class="pl-title">This week</span>
+                <div class="tags"><span class="tag t-cyan">6 due</span><span class="tag t-red">2 high priority</span></div>
+              </div>
+              <div id="tasks">
+                <div class="task"><div class="day"><b>Mon</b><span>15</span></div><span class="sdot" style="background:#2979ff"></span><div class="tinfo"><div class="tname">Chemistry lab report</div><div class="tsub">Chemistry</div></div><span class="hi">High</span></div>
+                <div class="task"><div class="day"><b>Tue</b><span>16</span></div><span class="sdot" style="background:#f59e0b"></span><div class="tinfo"><div class="tname">Robotics club meeting prep</div><div class="tsub">Robotics Club</div></div></div>
+                <div class="task"><div class="day"><b>Wed</b><span>17</span></div><span class="sdot" style="background:#22d3ee"></span><div class="tinfo"><div class="tname">Read Ch. 5–6</div><div class="tsub">English</div></div></div>
+                <div class="task"><div class="day"><b>Thu</b><span>18</span></div><span class="sdot" style="background:#7c3aed"></span><div class="tinfo"><div class="tname">Practice SAT math section</div><div class="tsub">Test Prep</div></div><span class="hi">High</span></div>
+                <div class="task"><div class="day"><b>Fri</b><span>19</span></div><span class="sdot" style="background:#a78bfa"></span><div class="tinfo"><div class="tname">History reading response</div><div class="tsub">History</div></div></div>
+              </div>
+              <div class="pl-foot" id="pl-foot">Sorted by priority, automatically.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S6 simulator -->
+      <section id="s6" class="clip" data-start="15.2" data-duration="3.0" data-track-index="1">
+        <div class="scene">
+          <div class="feat" id="s6-feat">
+            <div class="feat-label" id="s6-label">
+              <p class="feat-n">03</p>
+              <h3 class="feat-title" style="color:#a78bfa;">What-If Simulator</h3>
+              <p class="feat-sub">Know exactly what you need before you sit down for that final.</p>
+            </div>
+            <div class="card" id="s6-card">
+              <p class="sim-title">What-if Simulator</p>
+              <p class="sim-sub">Adding extra study sessions each week</p>
+              <div class="bars">
+                <div class="bcol"><span class="bpct" style="visibility:hidden">+0%</span><span class="bar" id="bar0" style="height:32%; background:#2a3f63;"></span><span class="blabel">Now</span></div>
+                <div class="bcol"><span class="bpct" id="pct1">+7%</span><span class="bar" id="bar1" style="height:52%; background:rgba(167,139,250,0.5);"></span><span class="blabel">+1 / wk</span></div>
+                <div class="bcol"><span class="bpct" id="pct2">+18%</span><span class="bar" id="bar2" style="height:78%; background:rgba(167,139,250,0.75);"></span><span class="blabel">+2 / wk</span></div>
+                <div class="bcol"><span class="bpct" id="pct3">+26%</span><span class="bar" id="bar3" style="height:100%; background:linear-gradient(180deg,#a78bfa 0%,#7c3aed 100%);"></span><span class="blabel">+3 / wk</span></div>
+              </div>
+              <div class="sim-foot">
+                <span id="sim-big">+0%</span>
+                <p>with three extra sessions a week, over a semester.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S7 outro -->
+      <section id="s7" class="clip" data-start="18.2" data-duration="3.3" data-track-index="1">
+        <div class="scene">
+          <div id="s7-wrap">
+            <div id="road">
+              <div id="road-line"></div>
+              <div class="node" id="n9" style="left:0px; border-color:#2979ff; color:#4d8fff;">9</div>
+              <div class="node" id="n10" style="left:301px; border-color:#22d3ee; color:#22d3ee;">10</div>
+              <div class="node" id="n11" style="left:603px; border-color:#a78bfa; color:#a78bfa;">11</div>
+              <div class="node" id="n12" style="left:904px; border-color:#f59e0b; color:#f59e0b;">12</div>
+            </div>
+            <h2 id="s7-head">You don't need to wait for <em>senior year.</em></h2>
+            <div id="s7-brand">
+              <div id="s7-logo-row"><img id="s7-logo" src="assets/img/logo.png" alt="myFuturely logo" /><span id="s7-name">myFuturely</span></div>
+              <div id="s7-cta">Start for free
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- audio -->
+      <audio id="music" src="assets/music.mp3" data-start="0" data-duration="21.5" data-track-index="10" data-volume="0.6"></audio>
+      <audio id="sfx-riser" src="assets/sfx/riser.mp3" data-start="0" data-media-start="7.4" data-duration="2.6" data-track-index="11" data-volume="0.5"></audio>
+      <audio id="sfx-pop1" src="assets/sfx/pop.mp3" data-start="2.2" data-duration="0.72" data-track-index="12" data-volume="0.8"></audio>
+      <audio id="sfx-glitch" src="assets/sfx/glitch-2.mp3" data-start="4.2" data-duration="0.7" data-track-index="11" data-volume="0.55"></audio>
+      <audio id="sfx-whoosh" src="assets/sfx/whoosh.mp3" data-start="4.75" data-duration="0.57" data-track-index="12" data-volume="0.8"></audio>
+      <audio id="sfx-impact" src="assets/sfx/impact-bass-1.mp3" data-start="5.0" data-duration="2.1" data-track-index="13" data-volume="0.8"></audio>
+      <audio id="sfx-pop2" src="assets/sfx/pop.mp3" data-start="8.65" data-duration="0.72" data-track-index="12" data-volume="0.7"></audio>
+      <audio id="sfx-key" src="assets/sfx/key-press.mp3" data-start="9.3" data-duration="0.43" data-track-index="11" data-volume="0.7"></audio>
+      <audio id="sfx-notif" src="assets/sfx/notification.mp3" data-start="9.85" data-duration="1.2" data-track-index="13" data-volume="0.5"></audio>
+      <audio id="sfx-whoosh2" src="assets/sfx/whoosh-short.mp3" data-start="11.85" data-duration="0.57" data-track-index="12" data-volume="0.75"></audio>
+      <audio id="sfx-click1" src="assets/sfx/click-soft.mp3" data-start="13.35" data-duration="0.37" data-track-index="11" data-volume="0.8"></audio>
+      <audio id="sfx-click2" src="assets/sfx/click-soft.mp3" data-start="13.55" data-duration="0.37" data-track-index="13" data-volume="0.8"></audio>
+      <audio id="sfx-whoosh3" src="assets/sfx/whoosh-short.mp3" data-start="15.05" data-duration="0.57" data-track-index="12" data-volume="0.75"></audio>
+      <audio id="sfx-sparkle" src="assets/sfx/sparkle.mp3" data-start="16.7" data-duration="1.4" data-track-index="11" data-volume="0.6"></audio>
+      <audio id="sfx-whoosh4" src="assets/sfx/whoosh-short.mp3" data-start="18.05" data-duration="0.57" data-track-index="12" data-volume="0.75"></audio>
+      <audio id="sfx-chime" src="assets/sfx/chime.mp3" data-start="19.3" data-duration="2.2" data-track-index="13" data-volume="0.55"></audio>
+    </div>
+
+    <script>
+      // Build the 500-dot grid (static DOM, before the timeline)
+      const dotsEl = document.getElementById("dots");
+      for (let i = 0; i < 500; i++) {
+        const d = document.createElement("span");
+        d.className = "dot";
+        dotsEl.appendChild(d);
+      }
+
+      const tl = gsap.timeline({ paused: true });
+      const E = "expo.out";
+
+      // ── background ambience (finite) ──
+      tl.fromTo("#glow-a", { x: -60, scale: 1 }, { x: 60, scale: 1.12, duration: 21.5, ease: "sine.inOut" }, 0);
+      tl.fromTo("#glow-b", { y: 40 }, { y: -80, duration: 21.5, ease: "sine.inOut" }, 0);
+      tl.fromTo("#glow-c", { x: 0 }, { x: 120, duration: 21.5, ease: "sine.inOut" }, 0);
+      tl.fromTo("#grid", { x: 0, y: 0 }, { x: -80, y: -40, duration: 21.5, ease: "none" }, 0);
+
+      // ── S1 hook 0–2.8 ──
+      tl.fromTo("#s1-kicker", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 0.05);
+      tl.fromTo("#s1-line1", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.55, ease: E }, 0.1);
+      tl.fromTo("#s1-count-row", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, ease: E }, 0.5);
+      tl.fromTo(".dot", { scale: 0, opacity: 0.2, backgroundColor: "#273d5e" },
+        { scale: 1, opacity: 1, backgroundColor: "#22d3ee", duration: 0.3, ease: "back.out(2)", stagger: { each: 0.0034, from: "start" } }, 0.5);
+      const counter = { v: 0 };
+      tl.to(counter, { v: 500, duration: 1.7, ease: "power2.out", onUpdate: () => {
+        const n = Math.round(counter.v);
+        document.getElementById("s1-count").textContent = n >= 500 ? "500+" : String(n);
+      } }, 0.5);
+      tl.fromTo("#s1-count", { scale: 1 }, { scale: 1.08, duration: 0.12, yoyo: true, repeat: 1, ease: "power2.out" }, 2.2);
+      tl.to("#s1-wrap", { opacity: 0, scale: 0.94, duration: 0.25, ease: "power2.in" }, 2.55);
+
+      // ── S2 mess 2.8–5.0 ──
+      const drops = [
+        ["#p1", -9, 0.0], ["#p2", 6, 0.12], ["#p3", -4, 0.24], ["#p4", 10, 0.36], ["#p5", -7, 0.48]
+      ];
+      drops.forEach(([sel, rot, d]) => {
+        tl.fromTo(sel, { y: -900, rotation: rot * 3, opacity: 1 }, { y: 0, rotation: rot, duration: 0.5, ease: "back.out(1.3)" }, 2.8 + d);
+      });
+      tl.fromTo("#s2-head", { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.45, ease: E }, 2.9);
+      // glitch shake
+      tl.fromTo("#portals", { x: 0 }, { x: 14, duration: 0.05, yoyo: true, repeat: 7, ease: "none" }, 4.2);
+      // whoosh everything away
+      tl.to("#s2-all", { opacity: 0, scale: 1.15, duration: 0.3, ease: "power3.in" }, 4.7);
+
+      // ── S3 reveal 5.0–8.2 ──
+      tl.fromTo("#s3-logo", { opacity: 0, scale: 0.4, y: 30 }, { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: "back.out(2)" }, 5.0);
+      tl.fromTo("#s3-this", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.55, ease: E }, 5.1);
+      const wordIn = (sel, at) => tl.fromTo(sel, { opacity: 0, y: 50, filter: "blur(10px)", skewX: 4 }, { opacity: 1, y: 0, filter: "blur(0px)", skewX: 0, duration: 0.4, ease: E }, at);
+      const wordOut = (sel, at) => tl.to(sel, { opacity: 0, y: -50, filter: "blur(10px)", skewX: -4, duration: 0.25, ease: "power2.in" }, at);
+      tl.set(["#rw1", "#rw2", "#rw3"], { opacity: 0 }, 5.0);
+      wordIn("#rw1", 5.35); wordOut("#rw1", 6.3);
+      wordIn("#rw2", 6.45); wordOut("#rw2", 7.2);
+      wordIn("#rw3", 7.35);
+      tl.to("#s3-wrap", { opacity: 0, y: -40, duration: 0.25, ease: "power2.in" }, 7.95);
+
+      // ── S4 advisor 8.2–12.0 ──
+      tl.fromTo("#s4-label", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, 8.2);
+      tl.fromTo("#s4-card", { opacity: 0, y: 80, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.55, ease: E }, 8.25);
+      tl.fromTo("#m1", { opacity: 0, y: 30, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: "back.out(1.8)" }, 8.65);
+      tl.fromTo("#m-typing", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.25, ease: E }, 9.25);
+      ["#td1", "#td2", "#td3"].forEach((s, i) => {
+        tl.fromTo(s, { y: 0 }, { y: -8, duration: 0.15, yoyo: true, repeat: 1, ease: "sine.inOut" }, 9.3 + i * 0.1);
+      });
+      tl.to("#m-typing", { opacity: 0, duration: 0.1 }, 9.72);
+      tl.set("#m-typing", { display: "none" }, 9.83);
+      tl.fromTo("#m2", { opacity: 0, y: 30, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: "back.out(1.6)" }, 9.85);
+      tl.fromTo("#chips .chip", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.3, ease: E, stagger: 0.07 }, 10.5);
+      tl.to("#s4-feat", { opacity: 0, x: -120, duration: 0.25, ease: "power2.in" }, 11.75);
+
+      // ── S5 planner 12.0–15.2 ──
+      tl.fromTo("#s5-label", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, 12.0);
+      tl.fromTo("#s5-card", { opacity: 0, x: 200 }, { opacity: 1, x: 0, duration: 0.55, ease: E }, 12.0);
+      tl.fromTo("#tasks .task", { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.35, ease: E, stagger: 0.09 }, 12.35);
+      tl.fromTo("#tasks .hi", { scale: 2.2, opacity: 0, rotation: -12 }, { scale: 1, opacity: 1, rotation: 0, duration: 0.3, ease: "back.out(2.5)", stagger: 0.2 }, 13.35);
+      tl.fromTo("#pl-foot", { opacity: 0 }, { opacity: 1, duration: 0.35 }, 13.7);
+      tl.to("#s5-feat", { opacity: 0, x: -120, duration: 0.25, ease: "power2.in" }, 14.95);
+
+      // ── S6 simulator 15.2–18.2 ──
+      tl.fromTo("#s6-label", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, 15.2);
+      tl.fromTo("#s6-card", { opacity: 0, x: 200 }, { opacity: 1, x: 0, duration: 0.55, ease: E }, 15.2);
+      ["#bar0", "#bar1", "#bar2", "#bar3"].forEach((s, i) => {
+        tl.fromTo(s, { scaleY: 0 }, { scaleY: 1, duration: 0.45, ease: "back.out(1.4)" }, 15.55 + i * 0.25);
+      });
+      ["#pct1", "#pct2", "#pct3"].forEach((s, i) => {
+        tl.fromTo(s, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.25, ease: E }, 16.0 + i * 0.25);
+      });
+      const pct = { v: 0 };
+      tl.to(pct, { v: 26, duration: 1.0, ease: "power2.out", onUpdate: () => {
+        document.getElementById("sim-big").textContent = "+" + Math.round(pct.v) + "%";
+      } }, 15.8);
+      tl.fromTo("#sim-big", { scale: 1 }, { scale: 1.12, duration: 0.14, yoyo: true, repeat: 1, ease: "power2.out", transformOrigin: "0% 70%" }, 16.75);
+      tl.to("#s6-feat", { opacity: 0, y: -60, duration: 0.25, ease: "power2.in" }, 17.95);
+
+      // ── S7 outro 18.2–21.5 ──
+      tl.fromTo("#road-line", { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: "power2.inOut" }, 18.25);
+      ["#n9", "#n10", "#n11", "#n12"].forEach((s, i) => {
+        tl.fromTo(s, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2)" }, 18.25 + i * 0.22);
+      });
+      tl.fromTo("#s7-head", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 19.2);
+      tl.fromTo("#s7-brand", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: E }, 19.8);
+      tl.fromTo("#s7-cta", { scale: 0.85 }, { scale: 1, duration: 0.5, ease: "back.out(2.2)" }, 19.8);
+      tl.fromTo("#s7-cta", { scale: 1 }, { scale: 1.05, duration: 0.3, yoyo: true, repeat: 1, ease: "sine.inOut" }, 20.6);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

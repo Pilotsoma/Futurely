@@ -1,0 +1,22 @@
+── X / Threads ──
+1 counselor. 500+ students.
+
+So we built every high schooler their own advisor.
+
+myFuturely: an AI advisor that actually knows your grades, a planner that sorts your week by priority, and a what-if simulator for before that final.
+
+You don't need to wait for senior year.
+
+── LinkedIn ──
+At many high schools, one counselor is responsible for 500+ students. Grades live across HAC, Skyward, PowerSchool, Canvas and Google Classroom. Nobody has time to help a 10th grader plan ahead.
+
+We're building myFuturely to close that gap:
+• An AI academic advisor that knows your history ("What should I focus on this week?")
+• A Smart Planner that sorts deadlines by priority, with no manual entry
+• A What-If Simulator: see how extra study sessions move your standing before you commit
+• A 4-year roadmap from 9th grade to applications
+
+Free for students. You don't need to wait for senior year.
+
+── Short caption ──
+This is your future. And your progress. And your plan. 🎓 myFuturely: start for free.
