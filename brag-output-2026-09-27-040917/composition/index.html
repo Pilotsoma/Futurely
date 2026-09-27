@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>myFuturely promo v2</title>
+    <script src="assets/lib/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-800-normal.woff2") format("woff2"); font-weight: 800; }
+
+      :root {
+        --bg: #0b1424; --screen: #0e1829; --card: #15223a; --card-2: #1b2b47; --line: #23355a;
+        --text: #eaf0ff; --text-2: #aebfdd; --muted: #8699bd;
+        --blue: #2f7bff; --blue-2: #5b9bff; --cyan: #22d3ee; --violet: #a78bfa; --purple: #8b5cf6;
+        --green: #34d399; --amber: #fbbf24; --orange: #fb923c; --red: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); font-family: "Inter", sans-serif; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #081122; }
+      .clip { position: absolute; inset: 0; }
+
+      /* ── background ── */
+      #bg-base { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 50%, #0f2248 0%, #0a1630 45%, #060d1c 100%); }
+      #bg-bright { position: absolute; inset: 0; background: radial-gradient(70% 70% at 62% 62%, #2f6fd6 0%, #1c4596 38%, rgba(10,22,48,0) 75%); }
+      .blob { position: absolute; border-radius: 50%; }
+      #blob-a { width: 1100px; height: 1100px; left: 1100px; top: 380px; background: radial-gradient(circle, rgba(47,123,255,0.35) 0%, transparent 65%); }
+      #blob-b { width: 900px; height: 900px; left: -300px; top: -350px; background: radial-gradient(circle, rgba(34,211,238,0.12) 0%, transparent 65%); }
+      #vignette { position: absolute; inset: 0; background: radial-gradient(90% 80% at 50% 50%, transparent 60%, rgba(0,0,0,0.45) 100%); }
+
+      /* ── title cards ── */
+      .title-scene { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+      .tline { display: flex; gap: 0.26em; font-weight: 800; font-size: 118px; letter-spacing: -3.5px; line-height: 1.08; }
+      .tw { display: inline-block; }
+      .acc { color: #6fb3ff; background: linear-gradient(90deg, #6fdcff 0%, #6aa4ff 55%, #aa98ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; padding-bottom: 0.08em; }
+
+      /* ── logo scene ── */
+      #logo-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      #logo-mark { width: 230px; height: auto; display: block; filter: drop-shadow(0 0 40px rgba(34,211,238,0.45)); }
+      #logo-sweep { position: absolute; width: 300px; height: 360px; overflow: hidden; }
+      #sweep-bar { position: absolute; top: -60px; width: 70px; height: 480px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); mix-blend-mode: overlay; }
+
+      /* ── device ── */
+      .stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; perspective: 2600px; }
+      .cam { width: 1560px; height: 960px; flex-shrink: 0; perspective: 2600px; }
+      .device { position: relative; width: 1560px; height: 960px; border-radius: 46px; padding: 14px; background: linear-gradient(145deg, #2a4170 0%, #16233f 40%, #121d34 100%);
+        box-shadow: inset 0 0 0 2px rgba(150,195,255,0.45), 0 0 0 1px rgba(34,211,238,0.35), 0 0 60px rgba(34,211,238,0.28), 0 0 160px rgba(47,123,255,0.28), 0 70px 140px rgba(0,0,0,0.55); }
+      .screen { position: relative; width: 100%; height: 100%; border-radius: 32px; overflow: hidden; background: var(--screen); display: flex; }
+      .side { width: 250px; flex-shrink: 0; background: #0b1424; border-right: 1px solid var(--line); position: relative; padding: 30px 16px; }
+      .brand { display: flex; align-items: center; gap: 12px; padding: 0 12px; margin-bottom: 34px; }
+      .brand img { width: 34px; height: auto; display: block; }
+      .brand span { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
+      .nav-hl { position: absolute; left: 16px; right: 16px; height: 50px; border-radius: 12px; background: rgba(47,123,255,0.16); border: 1px solid rgba(91,155,255,0.35); }
+      .nav { position: relative; display: flex; align-items: center; gap: 14px; height: 50px; padding: 0 14px; margin-bottom: 4px; font-size: 18px; font-weight: 500; color: var(--text-2); }
+      .nav svg { width: 21px; height: 21px; flex-shrink: 0; }
+      .nav.on { color: #fff; }
+      .nav.on svg { color: var(--blue-2); }
+      .main { flex: 1; position: relative; padding: 38px 46px; overflow: hidden; }
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
+      .lbl { font-size: 13px; font-weight: 600; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); }
+      .h1 { font-size: 38px; font-weight: 700; letter-spacing: -0.8px; margin: 0; }
+
+      .cursor { position: absolute; left: 0; top: 0; width: 34px; height: 34px; z-index: 20; }
+      .cursor svg { width: 34px; height: 34px; display: block; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5)); }
+      .ripple { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(120,180,255,0.9); }
+
+      /* dashboard */
+      .dash-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 26px; }
+      .greet { font-size: 20px; color: var(--text-2); margin: 0 0 4px; }
+      .pills { display: flex; gap: 12px; }
+      .pill { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500; color: var(--text-2); border: 1px solid var(--line); background: var(--card); border-radius: 30px; padding: 9px 16px; }
+      .pill.blue { color: var(--blue-2); border-color: rgba(91,155,255,0.4); background: rgba(47,123,255,0.1); }
+      .dgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+      .gpa-card { grid-column: span 2; padding: 26px 30px; height: 190px; display: flex; flex-direction: column; }
+      .gpa-row { flex: 1; display: flex; align-items: center; }
+      .gpa-col { flex: 1; text-align: center; }
+      .gpa-col + .gpa-col { border-left: 1px solid var(--line); }
+      .gnum { display: block; font-size: 62px; font-weight: 700; letter-spacing: -1.5px; line-height: 1.1; }
+      .gsub { display: block; font-size: 17px; color: var(--text-2); }
+      .due-card { grid-column: span 2; padding: 26px 30px; height: 190px; }
+      .due-item { display: flex; align-items: center; gap: 16px; margin-top: 22px; padding: 16px 18px; border-radius: 14px; background: var(--card-2); }
+      .due-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
+      .due-t { font-size: 20px; font-weight: 600; }
+      .due-s { font-size: 16px; color: var(--muted); }
+      .stat { padding: 22px; height: 138px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+      .snum { display: block; font-size: 46px; font-weight: 700; line-height: 1.1; }
+      .ssub { display: block; font-size: 16px; color: var(--text-2); margin-top: 4px; }
+      .qa-lbl { margin: 26px 0 14px; }
+      .qa { display: flex; align-items: center; gap: 14px; padding: 18px 20px; font-size: 18px; font-weight: 600; }
+      .qa i { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .qa i svg { width: 20px; height: 20px; }
+      .toasts { position: absolute; right: 34px; bottom: 34px; width: 400px; display: flex; flex-direction: column; gap: 12px; }
+      .toast { display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; border-radius: 14px; background: #1a2742; border: 1px solid rgba(251,191,36,0.45); box-shadow: 0 16px 40px rgba(0,0,0,0.45); }
+      .toast i { width: 30px; height: 30px; border-radius: 8px; background: rgba(251,191,36,0.15); color: var(--amber); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .toast i svg { width: 16px; height: 16px; }
+      .toast b { display: block; font-size: 16px; font-weight: 600; line-height: 1.35; }
+      .toast span { display: block; font-size: 14px; color: var(--muted); margin-top: 2px; }
+
+      /* grades */
+      .select { display: inline-flex; align-items: center; gap: 30px; margin: 10px 0 24px; padding: 12px 18px; font-size: 18px; font-weight: 600; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+      .gtable { padding: 6px 0; }
+      .grow { display: grid; grid-template-columns: 330px 230px 110px 120px 110px 1fr; align-items: center; height: 76px; padding: 0 30px; border-top: 1px solid var(--line); font-size: 19px; }
+      .grow.head { height: 58px; border-top: none; font-size: 13px; font-weight: 600; letter-spacing: 1.6px; color: var(--muted); text-transform: uppercase; }
+      .grow .c { font-weight: 600; }
+      .grow .t { color: var(--text-2); }
+      .avg { font-weight: 700; }
+      .let { font-weight: 800; font-size: 22px; display: inline-block; }
+      .wif { justify-self: end; font-size: 15px; font-weight: 600; color: var(--blue-2); border: 1.5px solid rgba(91,155,255,0.6); border-radius: 9px; padding: 7px 14px; }
+      .g-a { color: var(--green); } .g-b { color: var(--blue-2); }
+      #g-hlrow { position: absolute; left: 46px; right: 46px; height: 76px; background: rgba(47,123,255,0.1); border-radius: 10px; }
+      #g-scrim { position: absolute; inset: 0; background: rgba(8,14,28,0.62); }
+      #wi-pop { position: absolute; right: 60px; top: 330px; width: 430px; padding: 26px 28px; border-radius: 20px; background: #1c2c4b; border: 1px solid rgba(91,155,255,0.55); box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 40px rgba(47,123,255,0.25); }
+      .wi-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+      .wi-h b { font-size: 21px; } .wi-h span { font-size: 14px; font-weight: 700; letter-spacing: 1.4px; color: var(--violet); }
+      .wi-in { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 18px; margin-bottom: 18px; }
+      .wi-in em { font-style: normal; font-weight: 700; font-size: 22px; color: #fff; background: rgba(47,123,255,0.25); padding: 4px 12px; border-radius: 8px; }
+      .wi-res { display: flex; gap: 16px; }
+      .wi-box { flex: 1; padding: 14px 16px; border-radius: 12px; background: var(--card); }
+      .wi-box .lbl { font-size: 12px; }
+      .wi-val { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; font-size: 30px; font-weight: 800; }
+      .wi-val s { font-size: 22px; color: var(--muted); font-weight: 600; }
+      .wi-arrow { font-size: 20px; color: var(--muted); }
+
+      /* my future */
+      .mf-top { display: flex; justify-content: space-between; align-items: center; }
+      .tabs { position: relative; display: inline-flex; gap: 4px; margin: 18px 0 22px; padding: 5px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+      .tab { position: relative; z-index: 1; width: 130px; text-align: center; padding: 9px 0; font-size: 17px; font-weight: 600; color: var(--text-2); }
+      #mf-tabhl { position: absolute; left: 5px; top: 5px; width: 130px; height: 40px; border-radius: 9px; background: var(--card-2); border: 1px solid rgba(91,155,255,0.35); }
+      .pane { position: absolute; left: 46px; right: 46px; top: 200px; bottom: 30px; }
+      #rm { display: flex; gap: 34px; }
+      .rm-l { width: 470px; flex-shrink: 0; }
+      .rm-r { flex: 1; }
+      .ring-box { position: relative; height: 260px; display: flex; align-items: center; justify-content: center; }
+      .ring-box svg { width: 240px; height: 240px; display: block; }
+      .ring-txt { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #rm-pct { font-size: 58px; font-weight: 800; color: #b99cff; letter-spacing: -1px; }
+      .ring-txt span { font-size: 16px; color: var(--muted); }
+      .gpa2 { display: flex; gap: 16px; margin-top: 14px; }
+      .gpa2 .card { flex: 1; padding: 20px 22px; }
+      .gpa2 b { display: block; font-size: 44px; font-weight: 800; margin-top: 6px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 20px; }
+      .chip { display: flex; gap: 8px; align-items: center; font-size: 16px; font-weight: 600; padding: 9px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
+      .chip span { color: var(--blue-2); font-size: 14px; }
+      .credits { padding: 18px 22px; margin-bottom: 22px; }
+      .cr-top { display: flex; justify-content: space-between; font-size: 17px; color: var(--text-2); margin-bottom: 12px; }
+      .cr-top b { color: var(--text); font-size: 20px; }
+      .track { height: 10px; border-radius: 6px; background: #22314f; overflow: hidden; }
+      .fill { display: block; height: 100%; width: 100%; border-radius: 6px; transform-origin: 0 50%; }
+      .tl-row { display: flex; align-items: center; gap: 16px; padding: 15px 18px; margin-top: 10px; }
+      .tl-row i { width: 36px; height: 36px; border-radius: 10px; background: rgba(139,92,246,0.18); color: #c4b5fd; font-style: normal; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .tl-row p { flex: 1; margin: 0; font-size: 18px; }
+      .tl-row svg { width: 24px; height: 24px; color: var(--violet); flex-shrink: 0; }
+      #cl .sub { font-size: 18px; color: var(--text-2); margin: 0 0 16px; }
+      .cstats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
+      .cstats .card { padding: 16px 18px; text-align: center; }
+      .cstats b { display: block; font-size: 32px; font-weight: 800; margin-top: 4px; }
+      .search { padding: 14px 18px; font-size: 17px; color: var(--muted); margin-bottom: 16px; }
+      .col-card { display: flex; align-items: center; gap: 24px; padding: 16px 24px; margin-bottom: 12px; }
+      .col-info { flex: 1; }
+      .col-info b { display: block; font-size: 20px; }
+      .col-info small { display: block; font-size: 15px; color: var(--muted); margin: 2px 0 10px; }
+      .col-score { width: 150px; text-align: right; }
+      .col-score b { display: block; font-size: 40px; font-weight: 800; line-height: 1; }
+      .col-score span { display: block; font-size: 15px; font-weight: 700; margin-top: 4px; }
+
+      /* chat */
+      .chat-list { width: 290px; flex-shrink: 0; border-right: 1px solid var(--line); padding: 30px 18px; background: #0c1627; }
+      .newchat { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-radius: 12px; background: var(--card-2); font-size: 17px; font-weight: 600; margin-bottom: 26px; }
+      .ch-item { padding: 12px 12px; border-radius: 10px; margin-bottom: 4px; }
+      .ch-item b { display: block; font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .ch-item span { display: block; font-size: 13px; color: var(--muted); }
+      .chat-main { flex: 1; position: relative; }
+      .chat-head { display: flex; align-items: center; gap: 12px; padding: 24px 36px; border-bottom: 1px solid var(--line); font-size: 19px; font-weight: 600; }
+      .av { width: 40px; height: 40px; border-radius: 11px; background: var(--card-2); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .av img { width: 24px; height: auto; display: block; }
+      #ch-empty { position: absolute; left: 0; right: 0; top: 190px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+      #ch-empty .av { width: 84px; height: 84px; border-radius: 22px; box-shadow: 0 0 40px rgba(47,123,255,0.35); }
+      #ch-empty .av img { width: 48px; }
+      #ch-empty h3 { font-size: 34px; margin: 26px 0 10px; }
+      #ch-empty p { font-size: 18px; color: var(--text-2); margin: 0 0 26px; }
+      .qchips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 700px; }
+      .qchip { font-size: 16px; color: var(--text-2); padding: 10px 16px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); }
+      .inputbar { position: absolute; left: 36px; right: 36px; bottom: 34px; height: 70px; display: flex; align-items: center; gap: 14px; padding: 0 12px 0 24px; border-radius: 16px; background: var(--card); border: 1.5px solid rgba(91,155,255,0.55); box-shadow: 0 0 30px rgba(47,123,255,0.18); }
+      .inp { flex: 1; position: relative; font-size: 20px; height: 30px; }
+      #ch-ph { position: absolute; left: 0; top: 0; color: var(--muted); }
+      #ch-typed { position: absolute; left: 0; top: 0; white-space: pre; }
+      .send { width: 48px; height: 48px; border-radius: 12px; background: var(--blue); display: flex; align-items: center; justify-content: center; }
+      .send svg { width: 22px; height: 22px; color: #fff; }
+      #ch-msgs { position: absolute; left: 36px; right: 36px; top: 120px; }
+      #ch-user { display: flex; justify-content: flex-end; margin-bottom: 22px; }
+      #ch-user span { display: block; font-size: 20px; font-weight: 500; color: #fff; background: #2466e0; padding: 15px 22px; border-radius: 18px 18px 4px 18px; }
+      .ai-row { display: flex; gap: 14px; align-items: flex-start; }
+      #ch-dots { display: flex; gap: 8px; padding: 20px 22px; border-radius: 18px 18px 18px 4px; background: var(--card-2); }
+      #ch-dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--text-2); display: block; }
+      #ch-reply { max-width: 820px; font-size: 22px; line-height: 1.6; padding: 20px 26px; border-radius: 18px 18px 18px 4px; background: var(--card-2); color: var(--text); }
+      #ch-reply strong { color: #fff; font-weight: 700; }
+      #ch-reply .w { display: inline; }
+
+      /* outro */
+      #out-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #out-brand { display: flex; align-items: center; gap: 30px; }
+      #out-mark { width: 150px; height: auto; display: block; filter: drop-shadow(0 0 36px rgba(34,211,238,0.4)); }
+      #out-word { font-size: 132px; font-weight: 800; letter-spacing: -4px; line-height: 1.1; padding-bottom: 12px; }
+      #out-tag { font-size: 44px; font-weight: 600; letter-spacing: -1px; color: var(--text); margin: 26px 0 40px; }
+      #out-cta { display: flex; align-items: center; gap: 20px; font-size: 28px; font-weight: 600; }
+      #out-btn { display: flex; align-items: center; gap: 12px; background: #2466e0; color: #fff; padding: 20px 40px; border-radius: 16px; box-shadow: 0 10px 40px rgba(47,123,255,0.45); }
+      #out-url { color: #c3d0e8; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="47">
+
+      <div id="bg" class="clip" data-start="0" data-duration="47" data-track-index="0">
+        <div id="bg-base"></div>
+        <div id="bg-bright"></div>
+        <div id="blob-a" class="blob" data-layout-allow-overflow></div>
+        <div id="blob-b" class="blob" data-layout-allow-overflow></div>
+        <div id="vignette"></div>
+      </div>
+
+      <!-- 1 · tagline -->
+      <section id="s1" class="clip" data-start="0" data-duration="3" data-track-index="1">
+        <div class="title-scene" id="s1-in">
+          <div class="tline"><span class="tw" id="s1w1">Your</span><span class="tw" id="s1w2">Future.</span><span class="tw acc" id="s1w3">Figured</span><span class="tw acc" id="s1w4">Out.</span></div>
+        </div>
+      </section>
+
+      <!-- 2 · logo -->
+      <section id="s2" class="clip" data-start="3" data-duration="3" data-track-index="1">
+        <div id="logo-wrap">
+          <img id="logo-mark" src="assets/img/logo.png" alt="myFuturely logo" />
+          <div id="logo-sweep"><div id="sweep-bar"></div></div>
+        </div>
+      </section>
+
+      <!-- 3 · dashboard -->
+      <section id="s3" class="clip" data-start="6" data-duration="8" data-track-index="1">
+        <div class="stage">
+          <div class="cam" id="d3-cam">
+            <div class="device" id="d3-dev">
+              <div class="screen">
+                <div class="side" data-shell="d3" data-active="0"></div>
+                <div class="main">
+                  <div class="dash-top">
+                    <div><p class="greet">Good evening,</p><h1 class="h1" style="font-size:46px;">Maya</h1></div>
+                    <div class="pills"><span class="pill blue">Friday, September 18</span><span class="pill">Notifications</span></div>
+                  </div>
+                  <div class="dgrid">
+                    <div class="card gpa-card" id="d3-gpa">
+                      <span class="lbl">GPA</span>
+                      <div class="gpa-row">
+                        <div class="gpa-col"><span class="gnum" id="d3-uw">0.000</span><span class="gsub">Unweighted</span></div>
+                        <div class="gpa-col"><span class="gnum" id="d3-w" style="color:#5b9bff;">0.000</span><span class="gsub">Weighted</span></div>
+                      </div>
+                    </div>
+                    <div class="card due-card">
+                      <span class="lbl">Due today</span>
+                      <div class="due-item"><span class="due-dot"></span><div><div class="due-t">Cell Division Lab Report</div><div class="due-s">Honors Chemistry · 11:59 PM</div></div></div>
+                    </div>
+                    <div class="card stat d3-stat"><span class="snum">6</span><span class="ssub">Courses · Fall 2026</span></div>
+                    <div class="card stat d3-stat"><span class="snum">3</span><span class="ssub">Due This Week</span></div>
+                    <div class="card stat d3-stat"><span class="snum">0</span><span class="ssub">Pending</span></div>
+                    <div class="card stat d3-stat"><span class="snum" style="color:#fb923c;">12</span><span class="ssub">Day Streak</span></div>
+                  </div>
+                  <p class="lbl qa-lbl">Quick access</p>
+                  <div class="dgrid">
+                    <div class="card qa d3-qa"><i style="background:rgba(52,211,153,0.15);color:#34d399;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 20V10M12 20V4M18 20v-7"/></svg></i>Grades</div>
+                    <div class="card qa d3-qa"><i style="background:rgba(248,113,113,0.15);color:#f87171;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></i>Attendance</div>
+                    <div class="card qa d3-qa"><i style="background:rgba(139,92,246,0.18);color:#a78bfa;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg></i>Transcript</div>
+                    <div class="card qa d3-qa"><i style="background:rgba(47,123,255,0.15);color:#5b9bff;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg></i>Planner</div>
+                  </div>
+                  <div class="toasts">
+                    <div class="toast" id="d3-t1"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></i><div><b>WWII Primary Source Analysis is due in about an hour</b><span>U.S. History</span></div></div>
+                    <div class="toast" id="d3-t2"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></i><div><b>Unit 4 Test is tomorrow, 2nd period</b><span>AP Calculus BC</span></div></div>
+                  </div>
+                </div>
+                <div class="cursor" id="d3-cur"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d3-rip"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 · title -->
+      <section id="s4" class="clip" data-start="14" data-duration="2" data-track-index="1">
+        <div class="title-scene" id="s4-in"><div class="tline"><span class="tw" id="s4w1">Track</span><span class="tw" id="s4w2">your</span><span class="tw acc" id="s4w3">grades.</span></div></div>
+      </section>
+
+      <!-- 5 · grades -->
+      <section id="s5" class="clip" data-start="16" data-duration="8" data-track-index="1">
+        <div class="stage">
+          <div class="cam" id="d5-cam">
+            <div class="device" id="d5-dev">
+              <div class="screen">
+                <div class="side" data-shell="d5" data-active="1"></div>
+                <div class="main">
+                  <h1 class="h1">Grades</h1>
+                  <p class="lbl" style="margin:22px 0 0;">Grading period</p>
+                  <div class="select">1st 6 Wks <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></div>
+                  <div class="card gtable" id="g-table">
+                    <div class="grow head"><span>Course</span><span>Teacher</span><span>Period</span><span>Avg</span><span>Grade</span><span></span></div>
+                    <div class="grow g-r"><span class="c">AP English Language</span><span class="t">Ms. Rivera</span><span>1</span><span class="avg g-a" data-to="92">0</span><span data-layout-allow-overlap class="let g-a">A</span><span data-layout-allow-overlap class="wif">What-If</span></div>
+                    <div class="grow g-r"><span class="c">AP Calculus BC</span><span class="t">Mr. Johnson</span><span>2</span><span class="avg g-b" data-to="88" id="g-calc-avg">0</span><span data-layout-allow-overlap class="let g-b" id="g-calc-let">B</span><span data-layout-allow-overlap class="wif" id="g-calc-wif">What-If</span></div>
+                    <div class="grow g-r"><span class="c">U.S. History</span><span class="t">Mr. Williams</span><span>3</span><span class="avg g-a" data-to="95">0</span><span data-layout-allow-overlap class="let g-a">A</span><span data-layout-allow-overlap class="wif">What-If</span></div>
+                    <div class="grow g-r"><span class="c">Spanish III</span><span class="t">Sra. Martinez</span><span>4</span><span class="avg g-b" data-to="83">0</span><span data-layout-allow-overlap class="let g-b">B</span><span data-layout-allow-overlap class="wif">What-If</span></div>
+                    <div class="grow g-r"><span class="c">Honors Chemistry</span><span class="t">Dr. Patel</span><span>5</span><span class="avg g-b" data-to="87">0</span><span data-layout-allow-overlap class="let g-b">B</span><span data-layout-allow-overlap class="wif">What-If</span></div>
+                    <div class="grow g-r"><span class="c">Physical Education</span><span class="t">Coach Davis</span><span>6</span><span class="avg g-a" data-to="98">0</span><span data-layout-allow-overlap class="let g-a">A</span><span data-layout-allow-overlap class="wif">What-If</span></div>
+                  </div>
+                  <div id="g-scrim" data-layout-allow-overlap></div>
+                  <div id="wi-pop" data-layout-allow-overlap>
+                    <div class="wi-h"><b>AP Calculus BC</b><span>WHAT-IF</span></div>
+                    <div class="wi-in"><span>Unit 4 Test</span><em id="wi-score">95</em></div>
+                    <div class="wi-res">
+                      <div class="wi-box"><span class="lbl">New average</span><div class="wi-val"><s>88</s><span class="wi-arrow">→</span><span class="g-a" id="wi-avg">91</span></div></div>
+                      <div class="wi-box"><span class="lbl">Grade</span><div class="wi-val"><s>B</s><span class="wi-arrow">→</span><span class="g-a" id="wi-let">A</span></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="cursor" id="d5-cur"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d5-rip"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 · title -->
+      <section id="s6" class="clip" data-start="24" data-duration="2" data-track-index="1">
+        <div class="title-scene" id="s6-in"><div class="tline"><span class="tw" id="s6w1">Plan</span><span class="tw" id="s6w2">your</span><span class="tw acc" id="s6w3">future.</span></div></div>
+      </section>
+
+      <!-- 7 · my future -->
+      <section id="s7" class="clip" data-start="26" data-duration="8" data-track-index="1">
+        <div class="stage">
+          <div class="cam" id="d7-cam">
+            <div class="device" id="d7-dev">
+              <div class="screen">
+                <div class="side" data-shell="d7" data-active="4"></div>
+                <div class="main">
+                  <div class="mf-top"><h1 class="h1">My Future</h1><span class="pill blue">Ask AI about my plan</span></div>
+                  <div class="tabs"><div id="mf-tabhl"></div><div class="tab">Roadmap</div><div class="tab">Colleges</div></div>
+
+                  <div class="pane" id="rm">
+                    <div class="rm-l">
+                      <p class="lbl" style="margin:0;">Class of 2027</p>
+                      <div class="ring-box">
+                        <svg viewBox="0 0 240 240"><circle cx="120" cy="120" r="100" fill="none" stroke="#22314f" stroke-width="18"/><circle id="rm-arc" cx="120" cy="120" r="100" fill="none" stroke="url(#rg)" stroke-width="18" stroke-linecap="round" transform="rotate(-90 120 120)" stroke-dasharray="628.3" stroke-dashoffset="628.3"/><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c084fc"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs></svg>
+                        <div class="ring-txt"><b id="rm-pct">0%</b><span>toward graduation</span></div>
+                      </div>
+                      <div class="gpa2">
+                        <div class="card"><span class="lbl">Weighted GPA</span><b id="rm-w">3.90</b></div>
+                        <div class="card"><span class="lbl">Unweighted GPA</span><b id="rm-uw">3.60</b></div>
+                      </div>
+                    </div>
+                    <div class="rm-r">
+                      <p class="lbl" style="margin:0;">Credits by category</p>
+                      <div class="chips">
+                        <span class="chip rm-chip">English <span>1 cr</span></span><span class="chip rm-chip">Math <span>1 cr</span></span><span class="chip rm-chip">Science <span>1 cr</span></span><span class="chip rm-chip">Social Studies <span>1 cr</span></span><span class="chip rm-chip">Language <span>1 cr</span></span><span class="chip rm-chip">PE / Health <span>1 cr</span></span>
+                      </div>
+                      <div class="card credits"><div class="cr-top"><span>Total credits</span><b>6 / 26</b></div><div class="track"><span class="fill" id="rm-cr" style="width:23%; background:linear-gradient(90deg,#8b5cf6,#c084fc);"></span></div></div>
+                      <p class="lbl" style="margin:0;">4-year timeline</p>
+                      <div class="card tl-row rm-tl"><i>9</i><p>Explore interests, build strong foundations</p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l5 5 9-10"/></svg></div>
+                      <div class="card tl-row rm-tl"><i>10</i><p>Challenge yourself: consider AP or Honors courses</p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l5 5 9-10"/></svg></div>
+                      <div class="card tl-row rm-tl"><i>11</i><p>SAT/ACT prep, start college research</p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l5 5 9-10"/></svg></div>
+                      <div class="card tl-row rm-tl"><i>12</i><p>Apply to colleges, finalize your plans</p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" style="opacity:0.25"><path d="M5 12l5 5 9-10"/></svg></div>
+                    </div>
+                  </div>
+
+                  <div class="pane" id="cl">
+                    <p class="sub">Search and track the colleges you want to get into.</p>
+                    <div class="cstats">
+                      <div class="card"><span class="lbl">Unweighted GPA</span><b>3.600</b></div>
+                      <div class="card"><span class="lbl">Weighted GPA</span><b>3.900</b></div>
+                      <div class="card"><span class="lbl">Your SAT</span><b>1200</b></div>
+                      <div class="card"><span class="lbl">Colleges added</span><b>4</b></div>
+                    </div>
+                    <div class="card search">Search colleges…</div>
+                    <div class="card col-card cl-card"><div class="col-info"><b>Stanford University</b><small>Stanford, CA</small><div class="track"><span class="fill cl-fill" style="width:3%; background:#f87171;"></span></div></div><div class="col-score"><b class="cl-num" data-to="1" style="color:#f87171;">0</b><span style="color:#f87171;">Far Reach</span></div></div>
+                    <div class="card col-card cl-card"><div class="col-info"><b>The University of Texas at Dallas</b><small>Richardson, TX</small><div class="track"><span class="fill cl-fill" style="width:55%; background:#fbbf24;"></span></div></div><div class="col-score"><b class="cl-num" data-to="55" style="color:#fbbf24;">0</b><span style="color:#fbbf24;">Possible</span></div></div>
+                    <div class="card col-card cl-card"><div class="col-info"><b>The University of Texas at San Antonio</b><small>San Antonio, TX</small><div class="track"><span class="fill cl-fill" style="width:93%; background:#34d399;"></span></div></div><div class="col-score"><b class="cl-num" data-to="93" style="color:#34d399;">0</b><span style="color:#34d399;">Likely</span></div></div>
+                    <div class="card col-card cl-card"><div class="col-info"><b>Texas A&amp;M University-College Station</b><small>College Station, TX</small><div class="track"><span class="fill cl-fill" style="width:49%; background:#fb923c;"></span></div></div><div class="col-score"><b class="cl-num" data-to="49" style="color:#fb923c;">0</b><span style="color:#fb923c;">Reach</span></div></div>
+                  </div>
+                </div>
+                <div class="cursor" id="d7-cur"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d7-rip"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 · title -->
+      <section id="s8" class="clip" data-start="34" data-duration="2" data-track-index="1">
+        <div class="title-scene" id="s8-in"><div class="tline"><span class="tw" id="s8w1">Need</span><span class="tw" id="s8w2">guidance</span><span class="tw acc" id="s8w3">right</span><span class="tw acc" id="s8w4">now?</span></div></div>
+      </section>
+
+      <!-- 9 · AI chat -->
+      <section id="s9" class="clip" data-start="36" data-duration="6" data-track-index="1">
+        <div class="stage">
+          <div class="cam" id="d9-cam">
+            <div class="device" id="d9-dev">
+              <div class="screen">
+                <div class="side" data-shell="d9" data-active="5"></div>
+                <div class="chat-list">
+                  <div class="newchat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>New Chat</div>
+                  <p class="lbl" style="margin:0 0 10px 12px;">Recent</p>
+                  <div class="ch-item"><b>Weakest subject?</b><span>Today</span></div>
+                  <div class="ch-item"><b>College prep advice</b><span>Today</span></div>
+                  <div class="ch-item"><b>Study tips for finals</b><span>Today</span></div>
+                  <div class="ch-item"><b>What is my GPA?</b><span>Today</span></div>
+                  <div class="ch-item"><b>How many classes are left</b><span>Sep 17</span></div>
+                </div>
+                <div class="chat-main">
+                  <div class="chat-head"><div class="av"><img src="assets/img/logo.png" alt="" /></div>myFuturely AI</div>
+                  <div id="ch-empty">
+                    <div class="av"><img src="assets/img/logo.png" alt="" /></div>
+                    <h3>How can I help you today?</h3>
+                    <p>Ask about your grades, upcoming assignments, or college planning.</p>
+                    <div class="qchips"><span class="qchip">What is my GPA?</span><span class="qchip">Upcoming assignments?</span><span class="qchip">College prep advice</span><span class="qchip">Study tips for finals</span><span class="qchip">Weakest subject?</span></div>
+                  </div>
+                  <div id="ch-msgs">
+                    <div id="ch-user"><span>How can I improve my chances for NYU?</span></div>
+                    <div class="ai-row">
+                      <div class="av"><img src="assets/img/logo.png" alt="" /></div>
+                      <div id="ch-dots"><i></i><i></i><i></i></div>
+                      <div id="ch-reply"></div>
+                    </div>
+                  </div>
+                  <div class="inputbar"><div class="inp"><span id="ch-ph">Ask anything about your academics…</span><span id="ch-typed"></span></div><div class="send" id="ch-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h13M13 6l6 6-6 6"/></svg></div></div>
+                </div>
+                <div class="cursor" id="d9-cur"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d9-rip"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10 · outro -->
+      <section id="s10" class="clip" data-start="42" data-duration="5" data-track-index="1">
+        <div id="out-wrap">
+          <div id="out-brand"><img id="out-mark" src="assets/img/logo.png" alt="myFuturely logo" /><span id="out-word" class="acc">myFuturely</span></div>
+          <p id="out-tag">Your future. Figured out.</p>
+          <div id="out-cta"><span id="out-btn">Start for free <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span><span id="out-url">myfuturely.ai</span></div>
+        </div>
+      </section>
+
+      <!-- audio -->
+      <audio id="music" src="assets/music.mp3" data-start="0" data-duration="47" data-track-index="10" data-volume="0.7"></audio>
+      <audio id="a-riser1" src="assets/sfx/riser.mp3" data-start="3.6" data-media-start="7.6" data-duration="2.4" data-track-index="11" data-volume="0.45"></audio>
+      <audio id="a-whoosh1" src="assets/sfx/whoosh.mp3" data-start="5.55" data-duration="0.57" data-track-index="12" data-volume="0.8"></audio>
+      <audio id="a-impact1" src="assets/sfx/impact-bass-1.mp3" data-start="6.0" data-duration="2.1" data-track-index="13" data-volume="0.75"></audio>
+      <audio id="a-notif" src="assets/sfx/notification.mp3" data-start="10.9" data-duration="1.2" data-track-index="11" data-volume="0.4"></audio>
+      <audio id="a-click1" src="assets/sfx/click-soft.mp3" data-start="13.05" data-duration="0.37" data-track-index="12" data-volume="0.9"></audio>
+      <audio id="a-whoosh2" src="assets/sfx/whoosh-short.mp3" data-start="13.7" data-duration="0.57" data-track-index="13" data-volume="0.7"></audio>
+      <audio id="a-whoosh3" src="assets/sfx/whoosh.mp3" data-start="15.75" data-duration="0.57" data-track-index="11" data-volume="0.7"></audio>
+      <audio id="a-click2" src="assets/sfx/click-soft.mp3" data-start="20.85" data-duration="0.37" data-track-index="12" data-volume="0.9"></audio>
+      <audio id="a-pop" src="assets/sfx/pop.mp3" data-start="21.0" data-duration="0.72" data-track-index="13" data-volume="0.6"></audio>
+      <audio id="a-whoosh4" src="assets/sfx/whoosh-short.mp3" data-start="23.7" data-duration="0.57" data-track-index="11" data-volume="0.7"></audio>
+      <audio id="a-whoosh5" src="assets/sfx/whoosh.mp3" data-start="25.75" data-duration="0.57" data-track-index="12" data-volume="0.7"></audio>
+      <audio id="a-sparkle" src="assets/sfx/sparkle.mp3" data-start="27.9" data-duration="1.4" data-track-index="13" data-volume="0.5"></audio>
+      <audio id="a-click3" src="assets/sfx/click-soft.mp3" data-start="29.85" data-duration="0.37" data-track-index="11" data-volume="0.9"></audio>
+      <audio id="a-whoosh6" src="assets/sfx/whoosh-short.mp3" data-start="33.7" data-duration="0.57" data-track-index="12" data-volume="0.7"></audio>
+      <audio id="a-whoosh7" src="assets/sfx/whoosh.mp3" data-start="35.75" data-duration="0.57" data-track-index="13" data-volume="0.7"></audio>
+      <audio id="a-typing" src="assets/sfx/typing.mp3" data-start="36.9" data-duration="1.4" data-track-index="11" data-volume="0.55"></audio>
+      <audio id="a-click4" src="assets/sfx/click-soft.mp3" data-start="38.55" data-duration="0.37" data-track-index="12" data-volume="0.9"></audio>
+      <audio id="a-whoosh8" src="assets/sfx/whoosh.mp3" data-start="41.7" data-duration="0.57" data-track-index="13" data-volume="0.7"></audio>
+      <audio id="a-chime" src="assets/sfx/chime.mp3" data-start="43.4" data-duration="2.5" data-track-index="11" data-volume="0.45"></audio>
+    </div>
+
+    <script>
+      // ── static DOM setup ──────────────────────────────────────────────
+      const ICONS = [
+        '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+        '<path d="M6 20V10M12 20V4M18 20v-7"/>',
+        '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+        '<path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/>',
+        '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+        '<path d="M4 5h16v11H9l-5 4z"/>',
+        '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'
+      ];
+      const LABELS = ["Dashboard", "Grade Portal", "Planner", "Study Feed", "My Future", "AI Chat", "Settings"];
+      const NAV_TOP = 104, NAV_STEP = 54;
+      document.querySelectorAll("[data-shell]").forEach((el) => {
+        const p = el.dataset.shell, a = +el.dataset.active;
+        let h = '<div class="brand"><img src="assets/img/logo.png" alt="" /><span>myFuturely</span></div>';
+        h += '<div class="nav-hl" id="' + p + '-hl" style="top:' + (NAV_TOP + a * NAV_STEP) + 'px"></div>';
+        LABELS.forEach((l, i) => {
+          h += '<div class="nav' + (i === a ? " on" : "") + '" id="' + p + '-nav' + i + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' + ICONS[i] + "</svg>" + l + "</div>";
+        });
+        el.innerHTML = h;
+      });
+
+      // typed question → char spans
+      const Q = "How can I improve my chances for NYU?";
+      document.getElementById("ch-typed").innerHTML = Q.split("").map((c) => '<span class="ch">' + (c === " " ? "&nbsp;" : c) + "</span>").join("");
+      // AI reply → word spans (with bold phrases)
+      const REPLY = "To boost your chances for NYU, focus on excelling in rigorous courses and keeping your grades strong. Engage deeply in **extracurricular activities** that show leadership and impact. Craft a **compelling personal essay** that reflects who you are, and secure strong **recommendations** from teachers who know you well.";
+      const parts = REPLY.split(/(\*\*[^*]+\*\*)/).filter(Boolean);
+      let rh = "";
+      parts.forEach((pt) => {
+        const bold = pt.startsWith("**");
+        const words = pt.replace(/\*\*/g, "").split(" ").filter(Boolean);
+        words.forEach((w) => { rh += '<span class="w">' + (bold ? "<strong>" + w + "</strong>" : w) + " </span>"; });
+      });
+      document.getElementById("ch-reply").innerHTML = rh;
+
+      // ── timeline ──────────────────────────────────────────────────────
+      const tl = gsap.timeline({ paused: true });
+      const E = "expo.out", P3 = "power3.inOut";
+      const txt = (id, from, to, dec, at, dur, suffix) => {
+        const o = { v: from }, el = document.getElementById(id);
+        tl.to(o, { v: to, duration: dur, ease: "power2.out", onUpdate: () => { el.textContent = o.v.toFixed(dec) + (suffix || ""); } }, at);
+      };
+      const click = (p, at) => {
+        tl.fromTo("#" + p + "-cur", { scale: 1 }, { scale: 0.82, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out" }, at);
+        tl.fromTo("#" + p + "-rip", { scale: 0.3, opacity: 1 }, { scale: 1.6, opacity: 0, duration: 0.45, ease: "power2.out" }, at);
+      };
+      const titleCard = (ids, t0, tEnd) => {
+        ids.forEach((id, i) => {
+          tl.fromTo(id, { opacity: 0, y: 70, filter: "blur(14px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, ease: E }, t0 + 0.08 + i * 0.11);
+        });
+        tl.to(ids, { opacity: 0, y: -40, filter: "blur(10px)", duration: 0.28, ease: "power2.in", stagger: 0.03 }, tEnd - 0.34);
+      };
+
+      // background: bright on title cards, calmer under the device
+      tl.fromTo("#bg-bright", { opacity: 1 }, { opacity: 0.35, duration: 0.8, ease: "sine.inOut" }, 5.6);
+      [[14, 16], [24, 26], [34, 36]].forEach(([a, b]) => {
+        tl.to("#bg-bright", { opacity: 1, duration: 0.3, ease: "sine.out" }, a - 0.2);
+        tl.to("#bg-bright", { opacity: 0.35, duration: 0.5, ease: "sine.inOut" }, b - 0.1);
+      });
+      tl.to("#bg-bright", { opacity: 1, duration: 0.8, ease: "sine.inOut" }, 41.8);
+      tl.fromTo("#blob-a", { x: 0, y: 0, scale: 1 }, { x: -520, y: -260, scale: 1.25, duration: 47, ease: "sine.inOut" }, 0);
+      tl.fromTo("#blob-b", { x: 0, y: 0 }, { x: 380, y: 200, duration: 47, ease: "sine.inOut" }, 0);
+
+      // 1 · tagline 0–3
+      titleCard(["#s1w1", "#s1w2", "#s1w3", "#s1w4"], 0.1, 3.0);
+
+      // 2 · logo 3–6
+      tl.fromTo("#logo-mark", { opacity: 0, scale: 0.5, y: 40, rotation: -8 }, { opacity: 1, scale: 1, y: 0, rotation: 0, duration: 0.9, ease: "back.out(1.6)" }, 3.05);
+      tl.fromTo("#sweep-bar", { x: -120 }, { x: 360, duration: 0.8, ease: "power2.inOut" }, 3.9);
+      tl.to("#logo-mark", { scale: 1.06, duration: 0.7, ease: "sine.inOut", yoyo: true, repeat: 1 }, 4.0);
+      tl.to("#logo-mark", { scale: 9, opacity: 0, duration: 0.45, ease: "power3.in" }, 5.55);
+
+      // 3 · dashboard 6–14
+      tl.fromTo("#d3-dev", { rotationX: 38, rotationY: -26, rotationZ: 6, y: 520, z: -400, opacity: 0 },
+        { rotationX: 10, rotationY: -14, rotationZ: 1.5, y: 0, z: 0, opacity: 1, duration: 1.3, ease: E }, 6.0);
+      tl.to("#d3-dev", { rotationX: 6, rotationY: -8, rotationZ: 0.5, duration: 1.05, ease: "sine.inOut" }, 7.3);
+      tl.fromTo(".d3-stat", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: E, stagger: 0.07 }, 6.8);
+      tl.fromTo(".d3-qa", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: E, stagger: 0.06 }, 7.1);
+      txt("d3-uw", 0, 3.596, 3, 6.9, 1.4);
+      txt("d3-w", 0, 3.896, 3, 7.0, 1.4);
+      // push in on GPA card
+      tl.to("#d3-dev", { rotationX: 2, rotationY: -2, rotationZ: 0, duration: 1.0, ease: P3 }, 8.4);
+      tl.fromTo("#d3-cam", { x: 0, y: 0, scale: 1 }, { x: 300, y: 390, scale: 1.75, duration: 1.0, ease: P3 }, 8.4);
+      // pull back, toasts arrive
+      tl.to("#d3-cam", { x: -80, y: -40, scale: 1.12, duration: 0.9, ease: P3 }, 10.3);
+      tl.to("#d3-dev", { rotationX: 6, rotationY: 10, rotationZ: -0.8, duration: 0.9, ease: P3 }, 10.3);
+      tl.fromTo("#d3-t1", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, 10.9);
+      tl.fromTo("#d3-t2", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, 11.1);
+      // cursor → Grade Portal
+      tl.to("#d3-cam", { x: 180, y: 0, scale: 1.0, duration: 0.9, ease: P3 }, 12.0);
+      tl.fromTo("#d3-cur", { x: 900, y: 620, opacity: 0 }, { x: 110, y: 172, opacity: 1, duration: 0.95, ease: "power2.inOut" }, 12.05);
+      click("d3", 13.05);
+      tl.to("#d3-hl", { y: NAV_STEP, duration: 0.3, ease: E }, 13.1);
+      tl.to("#d3-dev", { rotationY: -30, x: -300, opacity: 0, duration: 0.45, ease: "power3.in" }, 13.55);
+
+      // 4 · title 14–16
+      titleCard(["#s4w1", "#s4w2", "#s4w3"], 14.0, 16.0);
+
+      // 5 · grades 16–24
+      tl.fromTo("#d5-dev", { rotationY: 34, rotationX: 8, x: 500, opacity: 0 }, { rotationY: 9, rotationX: 5, x: 0, opacity: 1, duration: 1.1, ease: E }, 16.0);
+      tl.fromTo(".g-r", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.4, ease: E, stagger: 0.09 }, 16.5);
+      document.querySelectorAll(".g-r .avg").forEach((el, i) => {
+        const o = { v: 0 }, to = +el.dataset.to;
+        tl.to(o, { v: to, duration: 0.9, ease: "power2.out", onUpdate: () => { el.textContent = Math.round(o.v); } }, 16.6 + i * 0.09);
+      });
+      tl.fromTo(".g-r .let", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(3)", stagger: 0.09 }, 17.3);
+      // punch in on Avg / Grade columns
+      tl.to("#d5-dev", { rotationY: -4, rotationX: 2, duration: 1.1, ease: P3 }, 18.3);
+      tl.fromTo("#d5-cam", { x: 0, y: 0, scale: 1 }, { x: -520, y: 80, scale: 1.6, duration: 1.1, ease: P3 }, 18.3);
+      // cursor → What-If on AP Calculus BC
+      tl.fromTo("#d5-cur", { x: 700, y: 820, opacity: 0 }, { x: 1398, y: 403, opacity: 1, duration: 1.0, ease: "power2.inOut" }, 19.8);
+      click("d5", 20.85);
+      tl.fromTo("#g-scrim", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.out" }, 20.95);
+      tl.fromTo("#wi-pop", { opacity: 0, y: 30, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "back.out(1.7)" }, 21.0);
+      tl.to("#d5-cur", { x: 1480, y: 700, opacity: 0, duration: 0.5, ease: "power2.in" }, 21.3);
+      tl.to("#d5-cam", { x: -360, y: -40, scale: 1.45, duration: 0.8, ease: P3 }, 21.2);
+      tl.fromTo("#wi-avg", { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.35, ease: E }, 21.6);
+      tl.fromTo("#wi-let", { opacity: 0, scale: 2 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(3)" }, 21.9);
+      tl.to("#d5-dev", { rotationY: 26, x: 400, opacity: 0, duration: 0.45, ease: "power3.in" }, 23.55);
+
+      // 6 · title 24–26
+      titleCard(["#s6w1", "#s6w2", "#s6w3"], 24.0, 26.0);
+
+      // 7 · my future 26–34
+      tl.set("#cl", { opacity: 0 }, 26.0);
+      tl.fromTo("#d7-dev", { rotationX: 30, rotationY: 30, rotationZ: -8, y: 400, opacity: 0 }, { rotationX: 14, rotationY: 16, rotationZ: -3, y: 0, opacity: 1, duration: 1.2, ease: E }, 26.0);
+      tl.fromTo("#rm-arc", { strokeDashoffset: 628.3 }, { strokeDashoffset: 628.3 * 0.77, duration: 1.4, ease: "power2.out" }, 26.6);
+      txt("rm-pct", 0, 23, 0, 26.6, 1.4, "%");
+      tl.fromTo(".rm-chip", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.3, ease: E, stagger: 0.05 }, 26.9);
+      tl.fromTo("#rm-cr", { scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: "power2.out" }, 27.3);
+      tl.fromTo(".rm-tl", { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.4, ease: E, stagger: 0.12 }, 27.4);
+      tl.to("#d7-dev", { rotationX: 6, rotationY: 6, rotationZ: -1, duration: 1.4, ease: "sine.inOut" }, 27.4);
+      // cursor → Colleges tab
+      tl.fromTo("#d7-cur", { x: 800, y: 600, opacity: 0 }, { x: 460, y: 142, opacity: 1, duration: 0.85, ease: "power2.inOut" }, 29.0);
+      click("d7", 29.85);
+      tl.to("#mf-tabhl", { x: 134, duration: 0.3, ease: E }, 29.9);
+      tl.to("#rm", { opacity: 0, x: -40, duration: 0.25, ease: "power2.in" }, 29.95);
+      tl.fromTo("#cl", { opacity: 0, x: 40 }, { opacity: 1, x: 0, duration: 0.35, ease: E }, 30.15);
+      tl.to("#d7-cur", { x: 1300, y: 900, opacity: 0, duration: 0.5, ease: "power2.in" }, 30.3);
+      tl.fromTo(".cl-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: E, stagger: 0.1 }, 30.3);
+      tl.fromTo(".cl-fill", { scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: "power2.out", stagger: 0.1 }, 30.5);
+      document.querySelectorAll(".cl-num").forEach((el, i) => {
+        const o = { v: 0 }, to = +el.dataset.to;
+        tl.to(o, { v: to, duration: 0.9, ease: "power2.out", onUpdate: () => { el.textContent = Math.round(o.v); } }, 30.5 + i * 0.1);
+      });
+      // tilt + push in on the college list
+      tl.to("#d7-dev", { rotationX: 10, rotationY: -12, rotationZ: 2, duration: 1.4, ease: P3 }, 31.3);
+      tl.fromTo("#d7-cam", { x: 0, y: 0, scale: 1 }, { x: -60, y: -300, scale: 1.4, duration: 1.4, ease: P3 }, 31.3);
+      tl.to("#d7-dev", { rotationX: -20, y: -500, opacity: 0, duration: 0.45, ease: "power3.in" }, 33.55);
+
+      // 8 · title 34–36
+      titleCard(["#s8w1", "#s8w2", "#s8w3", "#s8w4"], 34.0, 36.0);
+
+      // 9 · AI chat 36–42
+      tl.set(["#ch-msgs"], { opacity: 0 }, 36.0);
+      tl.fromTo("#d9-dev", { rotationX: -24, y: 460, scale: 0.9, opacity: 0 }, { rotationX: 4, y: 0, scale: 1, opacity: 1, duration: 1.0, ease: E }, 36.0);
+      tl.fromTo("#d9-cam", { x: 0, y: 0, scale: 1 }, { x: -120, y: -300, scale: 1.3, duration: 0.9, ease: P3 }, 36.5);
+      tl.set("#ch-ph", { opacity: 0 }, 36.9);
+      tl.fromTo("#ch-typed .ch", { opacity: 0 }, { opacity: 1, duration: 0.01, stagger: 0.036 }, 36.9);
+      tl.fromTo("#d9-cur", { x: 1300, y: 960, opacity: 0 }, { x: 1470, y: 876, opacity: 1, duration: 0.6, ease: "power2.inOut" }, 37.9);
+      click("d9", 38.55);
+      tl.fromTo("#ch-send", { scale: 1 }, { scale: 0.88, duration: 0.08, yoyo: true, repeat: 1 }, 38.55);
+      tl.to("#ch-typed", { opacity: 0, duration: 0.15 }, 38.65);
+      tl.set("#ch-ph", { opacity: 1 }, 38.8);
+      tl.to("#ch-empty", { opacity: 0, y: -30, duration: 0.25, ease: "power2.in" }, 38.6);
+      tl.to("#d9-cur", { opacity: 0, duration: 0.2 }, 38.8);
+      tl.to("#d9-cam", { x: -40, y: 180, scale: 1.3, duration: 0.8, ease: P3 }, 38.6);
+      tl.set("#ch-msgs", { opacity: 1 }, 38.7);
+      tl.fromTo("#ch-user", { opacity: 0, y: 30, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: "back.out(1.6)" }, 38.7);
+      tl.fromTo("#ch-dots", { opacity: 0 }, { opacity: 1, duration: 0.15 }, 38.95);
+      tl.fromTo("#ch-dots i", { y: 0 }, { y: -8, duration: 0.14, yoyo: true, repeat: 1, stagger: 0.09, ease: "sine.inOut" }, 39.0);
+      tl.set("#ch-dots", { display: "none" }, 39.35);
+      tl.fromTo("#ch-reply", { opacity: 0 }, { opacity: 1, duration: 0.01 }, 39.35);
+      tl.fromTo("#ch-reply .w", { opacity: 0 }, { opacity: 1, duration: 0.12, stagger: 0.034 }, 39.35);
+      tl.to("#d9-dev", { rotationY: -6, rotationX: 5, duration: 2.0, ease: "sine.inOut" }, 39.4);
+      tl.to("#d9-dev", { y: 700, rotationX: 30, opacity: 0, duration: 0.55, ease: "power3.in" }, 41.45);
+
+      // 10 · outro 42–47
+      tl.fromTo("#out-mark", { opacity: 0, scale: 0.4, rotation: -10 }, { opacity: 1, scale: 1, rotation: 0, duration: 0.8, ease: "back.out(1.7)" }, 42.05);
+      tl.fromTo("#out-word", { opacity: 0, x: -40, filter: "blur(12px)" }, { opacity: 1, x: 0, filter: "blur(0px)", duration: 0.7, ease: E }, 42.35);
+      tl.fromTo("#out-tag", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 43.3);
+      tl.fromTo("#out-cta", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 43.9);
+      tl.fromTo("#out-btn", { scale: 1 }, { scale: 1.05, duration: 0.35, yoyo: true, repeat: 1, ease: "sine.inOut" }, 45.0);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
