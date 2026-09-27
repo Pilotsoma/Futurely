@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>myFuturely promo v4</title>
+    <script src="assets/lib/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-800-normal.woff2") format("woff2"); font-weight: 800; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #060c18; color: #eaf0ff; font-family: "Inter", sans-serif; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #060c18; }
+      .clip { position: absolute; inset: 0; }
+
+      /* background */
+      #bg-base { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 50%, #0f2248 0%, #0a1630 45%, #050b18 100%); }
+      #bg-bright { position: absolute; inset: 0; background: radial-gradient(75% 75% at 60% 62%, #3170d8 0%, #1d4798 38%, rgba(10,22,48,0) 76%); }
+      #bg-pulse { position: absolute; inset: 0; opacity: 0; background: radial-gradient(55% 55% at 50% 50%, rgba(110,170,255,0.55) 0%, rgba(47,123,255,0.18) 45%, rgba(0,0,0,0) 75%); }
+      .blob { position: absolute; border-radius: 50%; }
+      #blob-a { width: 1200px; height: 1200px; left: 1050px; top: 350px; background: radial-gradient(circle, rgba(47,123,255,0.35) 0%, transparent 65%); }
+      #blob-b { width: 950px; height: 950px; left: -320px; top: -380px; background: radial-gradient(circle, rgba(34,211,238,0.13) 0%, transparent 65%); }
+      #blob-c { width: 800px; height: 800px; left: 560px; top: 700px; background: radial-gradient(circle, rgba(139,92,246,0.14) 0%, transparent 65%); }
+      #vignette { position: absolute; inset: 0; background: radial-gradient(90% 80% at 50% 50%, transparent 58%, rgba(0,0,0,0.5) 100%); }
+      #bg-dark { position: absolute; inset: 0; background: #02050b; opacity: 0; }
+
+      /* titles */
+      .title-scene { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; perspective: 1400px; }
+      .tline { display: flex; gap: 0.25em; font-weight: 800; font-size: 116px; letter-spacing: -3.5px; line-height: 1.1; }
+      .tw { display: inline-block; }
+      .acc { color: #7ab8ff; background: linear-gradient(90deg, #6fdcff 0%, #6aa4ff 35%, #aa98ff 65%, #6fdcff 100%); background-size: 220% 100%; background-position: 0% 50%;
+             -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; padding-bottom: 0.08em; }
+      .streak { display: block; width: 980px; height: 3px; margin-top: 26px; border-radius: 3px; background: linear-gradient(90deg, rgba(110,190,255,0), rgba(140,200,255,0.95), rgba(170,152,255,0)); transform-origin: 50% 50%; }
+      .shock { position: absolute; left: 50%; top: 50%; width: 400px; height: 400px; margin: -200px 0 0 -200px; border-radius: 50%; border: 3px solid rgba(140,200,255,0.8); opacity: 0; }
+
+      /* logo */
+      #logo-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      #logo-mark { position: relative; width: 230px; height: auto; display: block; filter: drop-shadow(0 0 44px rgba(34,211,238,0.5)); }
+      #logo-halo { position: absolute; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, rgba(90,190,255,0.45) 0%, rgba(47,123,255,0.12) 45%, transparent 70%); opacity: 0; }
+      #logo-sweep { position: absolute; width: 300px; height: 360px; overflow: hidden; }
+      #sweep-bar { position: absolute; top: -60px; width: 70px; height: 480px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); mix-blend-mode: overlay; }
+
+      /* device */
+      .stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      .cam { width: 1560px; height: 960px; flex-shrink: 0; perspective: 2400px; }
+      .device { position: relative; width: 1560px; height: 960px; border-radius: 46px; transform-style: preserve-3d;
+        background: linear-gradient(145deg, #2b4474 0%, #17243f 40%, #121d34 100%);
+        box-shadow: inset 0 0 0 2px rgba(150,195,255,0.45), 0 0 0 1px rgba(34,211,238,0.35), 0 0 60px rgba(34,211,238,0.28), 0 0 170px rgba(47,123,255,0.3), 0 70px 140px rgba(0,0,0,0.55); }
+      .screen { position: absolute; left: 14px; top: 14px; width: 1532px; height: 932px; border-radius: 32px; overflow: hidden; background: #0b1322; }
+      .lift { position: absolute; left: 14px; top: 14px; width: 1532px; height: 932px; transform-style: preserve-3d; transform: translateZ(1px); }
+      .full { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+      .wiwrap { position: absolute; inset: 0; border-radius: 32px; overflow: hidden; }
+      .pc { position: absolute; box-shadow: 0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0); }
+      .pc > img { display: block; width: 100%; height: 100%; }
+      .pc .num { position: absolute; white-space: nowrap; }
+      .pc .let { position: absolute; display: block; }
+      .fill { position: absolute; transform-origin: 0 50%; }
+      .navwrap { position: absolute; left: 0; top: 0; width: 262px; height: 932px; border-radius: 32px 0 0 32px; overflow: hidden; box-shadow: 18px 0 40px rgba(0,0,0,0.35); }
+      .sheen { position: absolute; top: -20%; left: 0; width: 30%; height: 140%; opacity: 0;
+        background: linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0) 100%); }
+      .cursor { position: absolute; left: 0; top: 0; width: 30px; height: 30px; }
+      .cursor svg { width: 30px; height: 30px; display: block; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55)); }
+      .ripple { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(120,180,255,0.9); opacity: 0; }
+      .dim { position: absolute; inset: 0; border-radius: 32px; background: rgba(4,9,20,0.62); opacity: 0; transform: translateZ(2px); }
+      .dots { position: absolute; display: flex; gap: 7px; padding: 14px 16px; border-radius: 16px 16px 16px 4px; background: #1c2b45; }
+      .dots i { width: 8px; height: 8px; border-radius: 50%; background: #9fb3d6; display: block; }
+
+      /* hero card */
+      #hero-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; perspective: 2000px; }
+      #hero-card { position: relative; width: 1140px; height: 240.36px; }
+      #hero-imgs { position: absolute; inset: 0; border-radius: 62px; overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,0.55), 0 0 0 1.5px rgba(120,175,255,0.35); }
+      #hero-imgs img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+      .hring { position: absolute; left: 0; top: 0; width: 1140px; height: 240.36px; border: 3px solid rgba(120,190,255,0.8); border-radius: 62px; opacity: 0; }
+      #hero-cur { position: absolute; left: 0; top: 0; width: 84px; height: 84px; opacity: 0; }
+      #hero-cur svg { width: 84px; height: 84px; display: block; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5)); }
+
+      /* outro */
+      #out-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #out-brand { display: flex; align-items: center; gap: 30px; }
+      #out-mark { width: 150px; height: auto; display: block; filter: drop-shadow(0 0 36px rgba(34,211,238,0.45)); }
+      #out-word { color: #d6e8ff; background-image: linear-gradient(90deg, #9be9ff 0%, #93bfff 35%, #c6b8ff 65%, #9be9ff 100%) !important; font-size: 138px; font-weight: 800; letter-spacing: -4px; line-height: 1.1; padding-bottom: 12px; }
+      #out-url { margin-top: 30px; font-size: 34px; font-weight: 600; color: #dbe6ff; padding: 16px 34px; border-radius: 40px; border: 1.5px solid rgba(140,190,255,0.45); background: rgba(20,40,80,0.45); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="60.3">
+
+      <div id="bg" class="clip" data-start="0" data-duration="60.3" data-track-index="0">
+        <div id="bg-base"></div>
+        <div id="bg-bright"></div>
+        <div id="blob-a" class="blob" data-layout-allow-overflow></div>
+        <div id="blob-b" class="blob" data-layout-allow-overflow></div>
+        <div id="blob-c" class="blob" data-layout-allow-overflow></div>
+        <div id="bg-pulse"></div>
+        <div id="vignette"></div>
+      </div>
+
+      <section id="s_t1" class="clip" data-start="0" data-duration="2.7" data-track-index="1">
+        <div class="title-scene">
+          <div class="tline"><span class="tw" id="t1w0">Your</span><span class="tw" id="t1w1">Future.</span><span class="tw acc" id="t1w2">Figured</span><span class="tw acc" id="t1w3">Out.</span></div>
+          <span class="streak" id="t1streak"></span>
+        </div>
+      </section>
+
+      <section id="s_logo" class="clip" data-start="2.35" data-duration="2.75" data-track-index="2">
+        <div id="logo-wrap">
+          <div id="logo-halo"></div>
+          <img id="logo-mark" src="assets/img/logo.png" alt="myFuturely logo" />
+          <div id="logo-sweep"><div id="sweep-bar"></div></div>
+        </div>
+      </section>
+
+      <section id="s_d1" class="clip" data-start="4.4" data-duration="13.4" data-track-index="3">
+        <div class="stage"><div class="cam" id="d1_cam"><div class="device" id="d1_dev"><div class="screen" id="d1_scr"><img class="full" id="d1_login" src="assets/f/login-filled.png" alt="" /><img class="full" id="d1_loginh" src="assets/f/login-hover.png" alt="" style="opacity:0" /><img class="full" id="d1_base" src="assets/f/dash-shell.png" alt="" style="opacity:0" /><div class="sheen" id="d1_sheen"></div></div><div class="lift" id="d1_lift"><div class="dim" id="d1_dim"></div><div class="pc " id="d1_btn" style="left:588.00px;top:617.45px;width:356.00px;height:50.00px;opacity:0;"><img src="assets/p/d1_btn.png" alt="" /></div><div class="pc " id="d1_hdrRight" style="left:1179.72px;top:42.00px;width:310.28px;height:42.14px;opacity:0;"><img src="assets/p/d1_hdrRight.png" alt="" /></div><div class="pc " id="d1_gpa" style="left:110.00px;top:164.14px;width:682.00px;height:175.14px;opacity:0;border-radius:16px;overflow:hidden;"><img src="assets/p/d1_gpa.png" alt="" /><span class="num" id="d1_gpaU" style="left:31.00px;top:70.00px;width:309.50px;height:48.00px;font-family:Inter;font-size:48px;font-weight:800;color:rgb(232, 238, 255);letter-spacing:-1.5px;line-height:48.00px;text-align:center;">0.000</span><span class="num" id="d1_gpaW" style="left:341.50px;top:70.00px;width:309.50px;height:48.00px;font-family:Inter;font-size:48px;font-weight:800;color:rgb(41, 121, 255);letter-spacing:-1.5px;line-height:48.00px;text-align:center;">0.000</span></div><div class="pc " id="d1_due" style="left:808.00px;top:164.14px;width:682.00px;height:175.14px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_due.png" alt="" /></div><div class="pc " id="d1_stat0" style="left:110.00px;top:375.28px;width:336.00px;height:128.83px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_stat0.png" alt="" /></div><div class="pc " id="d1_stat1" style="left:458.00px;top:375.28px;width:336.00px;height:128.83px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_stat1.png" alt="" /></div><div class="pc " id="d1_stat2" style="left:806.00px;top:375.28px;width:336.00px;height:128.83px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_stat2.png" alt="" /></div><div class="pc " id="d1_stat3" style="left:1154.00px;top:375.28px;width:336.00px;height:128.83px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_stat3.png" alt="" /></div><div class="pc " id="d1_qaLabel" style="left:110.00px;top:520.11px;width:1380.00px;height:22.59px;opacity:0;"><img src="assets/p/d1_qaLabel.png" alt="" /></div><div class="pc " id="d1_qa0" style="left:110.00px;top:552.70px;width:336.00px;height:74.00px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_qa0.png" alt="" /></div><div class="pc " id="d1_qa1" style="left:458.00px;top:552.70px;width:336.00px;height:74.00px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_qa1.png" alt="" /></div><div class="pc " id="d1_qa2" style="left:806.00px;top:552.70px;width:336.00px;height:74.00px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_qa2.png" alt="" /></div><div class="pc " id="d1_qa3" style="left:1154.00px;top:552.70px;width:336.00px;height:74.00px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_qa3.png" alt="" /></div><div class="pc " id="d1_askLabel" style="left:110.00px;top:666.70px;width:1380.00px;height:22.59px;opacity:0;"><img src="assets/p/d1_askLabel.png" alt="" /></div><div class="pc " id="d1_askBar" style="left:110.00px;top:695.30px;width:1380.00px;height:62.00px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_askBar.png" alt="" /></div><div class="pc " id="d1_qa0h" style="left:110.00px;top:552.70px;width:336.00px;height:74.00px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d1_qa0h.png" alt="" /></div><div class="pc " id="d1_toast0" style="left:1154.00px;top:635.73px;width:364.00px;height:87.42px;opacity:0;border-radius:12px;overflow:hidden;"><img src="assets/p/d1_toast0.png" alt="" /></div><div class="pc " id="d1_toast1" style="left:1154.00px;top:729.16px;width:364.00px;height:87.42px;opacity:0;border-radius:12px;overflow:hidden;"><img src="assets/p/d1_toast1.png" alt="" /></div><div class="pc " id="d1_toast2" style="left:1154.00px;top:822.58px;width:364.00px;height:87.42px;opacity:0;border-radius:12px;overflow:hidden;"><img src="assets/p/d1_toast2.png" alt="" /></div><div class="navwrap" id="d1_navwrap"><div class="pc navp" id="d1_nav_open" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d1_nav_open.png" alt="" /></div><div class="pc navp" id="d1_nav_dashboard" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d1_nav_dashboard.png" alt="" /></div><div class="pc navp" id="d1_nav_gradeportal" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d1_nav_gradeportal.png" alt="" /></div><div class="pc navp" id="d1_nav_planner" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d1_nav_planner.png" alt="" /></div><div class="pc navp" id="d1_nav_myfuture" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d1_nav_myfuture.png" alt="" /></div><div class="pc navp" id="d1_nav_aichat" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d1_nav_aichat.png" alt="" /></div><div class="pc navp" id="d1_nav_settings" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d1_nav_settings.png" alt="" /></div></div><div class="cursor" id="d1_cur" style="opacity:0"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d1_rip"></div></div></div></div></div></div>
+      </section>
+
+      <section id="s_t2" class="clip" data-start="17.3" data-duration="2.5" data-track-index="1">
+        <div class="title-scene"><div class="tline" id="t2line"><span class="tw" id="t2w0">Track</span><span class="tw" id="t2w1">your</span><span class="tw acc" id="t2w2">Grades</span></div></div>
+      </section>
+
+      <section id="s_hero" class="clip" data-start="19.4" data-duration="2.4" data-track-index="2">
+        <div id="hero-wrap">
+          <div id="hero-card">
+            <div id="hero-imgs"><img id="hero-a" src="assets/hi/qa0.png" alt="Grades quick access card" /><img id="hero-b" src="assets/hi/qa0h.png" alt="" style="opacity:0" /></div>
+            <div class="hring" id="hr0"></div><div class="hring" id="hr1"></div><div class="hring" id="hr2"></div>
+            <div id="hero-cur"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="s_d2" class="clip" data-start="21.0" data-duration="8.2" data-track-index="3">
+        <div class="stage"><div class="cam" id="d2_cam"><div class="device" id="d2_dev"><div class="screen" id="d2_scr"><img class="full" id="d2_base" src="assets/f/cw-shell.png" alt="" /><div class="sheen" id="d2_sheen"></div></div><div class="lift" id="d2_lift"><div class="dim" id="d2_dim"></div><div class="pc " id="d2_row0" style="left:112.00px;top:262.89px;width:1376.00px;height:51.80px;opacity:0;"><img src="assets/p/d2_row0.png" alt="" /><span class="num" id="d2_avg0" style="left:881.19px;top:17.44px;width:17.28px;height:16.00px;font-family:Inter;font-size:13.5px;font-weight:700;color:rgb(16, 185, 129);letter-spacing:normal;line-height:16.00px;text-align:left;">0</span><img class="let" id="d2_let0" src="assets/p/d2_let0.png" alt="" style="left:1004.27px;top:12.50px;width:17.95px;height:26.00px;opacity:0" /></div><div class="pc " id="d2_row1" style="left:112.00px;top:312.69px;width:1376.00px;height:51.80px;opacity:0;"><img src="assets/p/d2_row1.png" alt="" /><span class="num" id="d2_avg1" style="left:881.19px;top:17.44px;width:17.58px;height:16.00px;font-family:Inter;font-size:13.5px;font-weight:700;color:rgb(41, 121, 255);letter-spacing:normal;line-height:16.00px;text-align:left;">0</span><img class="let" id="d2_let1" src="assets/p/d2_let1.png" alt="" style="left:1004.27px;top:12.50px;width:16.59px;height:26.00px;opacity:0" /></div><div class="pc " id="d2_row2" style="left:112.00px;top:362.48px;width:1376.00px;height:51.80px;opacity:0;"><img src="assets/p/d2_row2.png" alt="" /><span class="num" id="d2_avg2" style="left:881.19px;top:17.44px;width:17.17px;height:16.00px;font-family:Inter;font-size:13.5px;font-weight:700;color:rgb(16, 185, 129);letter-spacing:normal;line-height:16.00px;text-align:left;">0</span><img class="let" id="d2_let2" src="assets/p/d2_let2.png" alt="" style="left:1004.27px;top:12.50px;width:17.95px;height:26.00px;opacity:0" /></div><div class="pc " id="d2_row3" style="left:112.00px;top:412.28px;width:1376.00px;height:51.80px;opacity:0;"><img src="assets/p/d2_row3.png" alt="" /><span class="num" id="d2_avg3" style="left:881.19px;top:17.44px;width:17.52px;height:16.00px;font-family:Inter;font-size:13.5px;font-weight:700;color:rgb(41, 121, 255);letter-spacing:normal;line-height:16.00px;text-align:left;">0</span><img class="let" id="d2_let3" src="assets/p/d2_let3.png" alt="" style="left:1004.27px;top:12.50px;width:16.59px;height:26.00px;opacity:0" /></div><div class="pc " id="d2_row4" style="left:112.00px;top:462.08px;width:1376.00px;height:51.80px;opacity:0;"><img src="assets/p/d2_row4.png" alt="" /><span class="num" id="d2_avg4" style="left:881.19px;top:17.44px;width:16.64px;height:16.00px;font-family:Inter;font-size:13.5px;font-weight:700;color:rgb(41, 121, 255);letter-spacing:normal;line-height:16.00px;text-align:left;">0</span><img class="let" id="d2_let4" src="assets/p/d2_let4.png" alt="" style="left:1004.27px;top:12.50px;width:16.59px;height:26.00px;opacity:0" /></div><div class="pc " id="d2_row5" style="left:112.00px;top:511.88px;width:1376.00px;height:51.30px;opacity:0;"><img src="assets/p/d2_row5.png" alt="" /><span class="num" id="d2_avg5" style="left:881.19px;top:17.43px;width:17.56px;height:16.00px;font-family:Inter;font-size:13.5px;font-weight:700;color:rgb(16, 185, 129);letter-spacing:normal;line-height:16.00px;text-align:left;">0</span><img class="let" id="d2_let5" src="assets/p/d2_let5.png" alt="" style="left:1004.27px;top:12.50px;width:17.95px;height:26.00px;opacity:0" /></div><div class="wiwrap" id="d2_wiwrap"><img class="full wi" id="d2_wi_wifh" src="assets/f/cw-wifhover.png" alt="" style="opacity:0" /><img class="full wi" id="d2_wi_open" src="assets/f/wi-open.png" alt="" style="opacity:0" /><img class="full wi" id="d2_wi_t0" src="assets/f/wi-t0.png" alt="" style="opacity:0" /><img class="full wi" id="d2_wi_t1" src="assets/f/wi-t1.png" alt="" style="opacity:0" /><img class="full wi" id="d2_wi_t2" src="assets/f/wi-t2.png" alt="" style="opacity:0" /><img class="full wi" id="d2_wi_t3" src="assets/f/wi-t3.png" alt="" style="opacity:0" /><img class="full wi" id="d2_wi_t4" src="assets/f/wi-t4.png" alt="" style="opacity:0" /><img class="full wi" id="d2_wi_t5" src="assets/f/wi-t5.png" alt="" style="opacity:0" /><img class="full wi" id="d2_wi_addh" src="assets/f/wi-addhover.png" alt="" style="opacity:0" /><img class="full wi" id="d2_wi_done" src="assets/f/wi-done.png" alt="" style="opacity:0" /></div><div class="pc " id="d2_score" style="left:148.00px;top:432.00px;width:1304.00px;height:54.00px;opacity:0;border-radius:12px;overflow:hidden;"><img src="assets/p/d2_score.png" alt="" /></div><div class="pc " id="d2_delta" style="left:1376.48px;top:434.72px;width:66.52px;height:31.00px;opacity:0;border-radius:10px;overflow:hidden;"><img src="assets/p/d2_delta.png" alt="" /></div><div class="pc " id="d2_sim" style="left:274.11px;top:441.75px;width:84.41px;height:35.00px;opacity:0;border-radius:10px;overflow:hidden;"><img src="assets/p/d2_sim.png" alt="" /></div><div class="cursor" id="d2_cur" style="opacity:0"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d2_rip"></div></div></div></div></div></div>
+      </section>
+
+      <section id="s_d3" class="clip" data-start="28.8" data-duration="12.6" data-track-index="4">
+        <div class="stage"><div class="cam" id="d3_cam"><div class="device" id="d3_dev"><div class="screen" id="d3_scr"><img class="full" id="d3_rmbase" src="assets/f/rm-shell.png" alt="" /><img class="full" id="d3_colbase" src="assets/f/col-shell.png" alt="" style="opacity:0" /><div class="sheen" id="d3_sheen"></div></div><div class="lift" id="d3_lift"><div class="dim" id="d3_dim"></div><div class="pc " id="d3_hdr" style="left:458.00px;top:42.00px;width:684.00px;height:44.30px;opacity:0;"><img src="assets/p/d3_hdr.png" alt="" /></div><div class="pc " id="d3_tabs" style="left:458.00px;top:102.30px;width:208.56px;height:44.00px;opacity:0;"><img src="assets/p/d3_tabs.png" alt="" /></div><div class="pc " id="d3_classOf" style="left:458.00px;top:162.30px;width:684.00px;height:24.14px;opacity:0;"><img src="assets/p/d3_classOf.png" alt="" /></div><div class="pc " id="d3_ring" style="left:718.00px;top:202.44px;width:164.00px;height:164.00px;opacity:0;"><img src="assets/p/d3_ring.png" alt="" /><svg id="d3_ringsvg" style="position:absolute;left:2.00px;top:2.00px;width:160.00px;height:160.00px;overflow:visible;transform:rotate(-90deg)" width="160" height="160" aria-label="Progress toward graduation: 23%" role="img"><circle cx="80" cy="80" r="64" fill="none" stroke="none" stroke-width="12"></circle><circle cx="80" cy="80" r="64" fill="none" stroke="#A855F7" stroke-width="12" stroke-linecap="round" stroke-dasharray="402.1238596594935" stroke-dashoffset="309.63537193781"></circle></svg><span class="num" id="d3_pct" style="left:41.66px;top:52.20px;width:80.67px;height:36.00px;font-family:Inter;font-size:36px;font-weight:800;color:rgb(168, 85, 247);letter-spacing:-1px;line-height:36.00px;text-align:center;">0%</span></div><div class="pc " id="d3_gpaW" style="left:458.00px;top:390.44px;width:337.00px;height:92.27px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d3_gpaW.png" alt="" /></div><div class="pc " id="d3_gpaU" style="left:805.00px;top:390.44px;width:337.00px;height:92.27px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d3_gpaU.png" alt="" /></div><div class="pc " id="d3_crLabel" style="left:458.00px;top:502.70px;width:684.00px;height:21.05px;opacity:0;"><img src="assets/p/d3_crLabel.png" alt="" /></div><div class="pc " id="d3_chip0" style="left:458.00px;top:529.75px;width:112.42px;height:37.38px;opacity:0;"><img src="assets/p/d3_chip0.png" alt="" /></div><div class="pc " id="d3_chip1" style="left:574.42px;top:529.75px;width:99.11px;height:37.38px;opacity:0;"><img src="assets/p/d3_chip1.png" alt="" /></div><div class="pc " id="d3_chip2" style="left:677.53px;top:529.75px;width:116.72px;height:37.38px;opacity:0;"><img src="assets/p/d3_chip2.png" alt="" /></div><div class="pc " id="d3_chip3" style="left:798.25px;top:529.75px;width:153.73px;height:37.38px;opacity:0;"><img src="assets/p/d3_chip3.png" alt="" /></div><div class="pc " id="d3_chip4" style="left:955.98px;top:529.75px;width:128.08px;height:37.38px;opacity:0;"><img src="assets/p/d3_chip4.png" alt="" /></div><div class="pc " id="d3_chip5" style="left:458.00px;top:571.13px;width:134.55px;height:37.38px;opacity:0;"><img src="assets/p/d3_chip5.png" alt="" /></div><div class="pc " id="d3_crCard" style="left:458.00px;top:618.50px;width:684.00px;height:68.59px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d3_crCard.png" alt="" /><div class="fill" id="d3_crfill" style="left:21.00px;top:43.59px;width:148.14px;height:8.00px;background:rgb(168, 85, 247);border-radius:6px"></div></div><div class="pc " id="d3_tlLabel" style="left:458.00px;top:707.09px;width:109.39px;height:21.05px;opacity:0;"><img src="assets/p/d3_tlLabel.png" alt="" /></div><div class="pc " id="d3_tl0" style="left:458.00px;top:734.14px;width:684.00px;height:72.00px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d3_tl0.png" alt="" /></div><div class="pc " id="d3_tl1" style="left:458.00px;top:810.14px;width:684.00px;height:72.00px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d3_tl1.png" alt="" /></div><div class="pc " id="d3_tl2" style="left:458.00px;top:886.14px;width:684.00px;height:45.86px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d3_tl2.png" alt="" /></div><div class="pc " id="d3_tabsh" style="left:458.00px;top:102.30px;width:208.56px;height:44.00px;opacity:0;"><img src="assets/p/d3_tabsh.png" alt="" /></div><div class="pc " id="d3_sub" style="left:458.00px;top:162.30px;width:684.00px;height:24.14px;opacity:0;"><img src="assets/p/d3_sub.png" alt="" /></div><div class="pc " id="d3_stats" style="left:458.00px;top:202.44px;width:684.00px;height:82.50px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d3_stats.png" alt="" /></div><div class="pc " id="d3_search" style="left:458.00px;top:300.94px;width:684.00px;height:48.00px;opacity:0;border-radius:14px;overflow:hidden;"><img src="assets/p/d3_search.png" alt="" /></div><div class="pc " id="d3_card0" style="left:458.00px;top:368.94px;width:684.00px;height:125.44px;opacity:0;border-radius:16px;overflow:hidden;"><img src="assets/p/d3_card0.png" alt="" /><span class="num" id="d3_score0" style="left:553.31px;top:39.19px;width:11.36px;height:28.00px;font-family:Inter;font-size:28px;font-weight:800;color:rgb(239, 68, 68);letter-spacing:-1px;line-height:28.00px;text-align:left;">0</span><div class="fill" id="d3_cfill0" style="left:23.00px;top:98.44px;width:4.94px;height:6.00px;background:rgb(239, 68, 68);border-radius:99px"></div></div><div class="pc " id="d3_card1" style="left:458.00px;top:502.38px;width:684.00px;height:125.44px;opacity:0;border-radius:16px;overflow:hidden;"><img src="assets/p/d3_card1.png" alt="" /><span class="num" id="d3_score1" style="left:542.25px;top:39.18px;width:33.50px;height:28.00px;font-family:Inter;font-size:28px;font-weight:800;color:rgb(245, 158, 11);letter-spacing:-1px;line-height:28.00px;text-align:left;">0</span><div class="fill" id="d3_cfill1" style="left:23.00px;top:98.43px;width:271.69px;height:6.00px;background:rgb(245, 158, 11);border-radius:99px"></div></div><div class="pc " id="d3_card2" style="left:458.00px;top:635.81px;width:684.00px;height:125.44px;opacity:0;border-radius:16px;overflow:hidden;"><img src="assets/p/d3_card2.png" alt="" /><span class="num" id="d3_score2" style="left:541.53px;top:39.19px;width:34.92px;height:28.00px;font-family:Inter;font-size:28px;font-weight:800;color:rgb(34, 197, 94);letter-spacing:-1px;line-height:28.00px;text-align:left;">0</span><div class="fill" id="d3_cfill2" style="left:23.00px;top:98.44px;width:459.41px;height:6.00px;background:rgb(34, 197, 94);border-radius:99px"></div></div><div class="pc " id="d3_card3" style="left:458.00px;top:769.25px;width:684.00px;height:125.44px;opacity:0;border-radius:16px;overflow:hidden;"><img src="assets/p/d3_card3.png" alt="" /><span class="num" id="d3_score3" style="left:541.09px;top:39.19px;width:35.81px;height:28.00px;font-family:Inter;font-size:28px;font-weight:800;color:rgb(249, 115, 22);letter-spacing:-1px;line-height:28.00px;text-align:left;">0</span><div class="fill" id="d3_cfill3" style="left:23.00px;top:98.44px;width:242.05px;height:6.00px;background:rgb(249, 115, 22);border-radius:99px"></div></div><div class="navwrap" id="d3_navwrap"><div class="pc navp" id="d3_nav_open" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d3_nav_open.png" alt="" /></div><div class="pc navp" id="d3_nav_gradeportal" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d3_nav_gradeportal.png" alt="" /></div><div class="pc navp" id="d3_nav_planner" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d3_nav_planner.png" alt="" /></div><div class="pc navp" id="d3_nav_myfuture" style="left:0.00px;top:0.00px;width:262.00px;height:932.00px;opacity:0;"><img src="assets/p/d3_nav_myfuture.png" alt="" /></div></div><div class="cursor" id="d3_cur" style="opacity:0"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d3_rip"></div></div></div></div></div></div>
+      </section>
+
+      <section id="s_t3" class="clip" data-start="41.3" data-duration="2.6" data-track-index="1">
+        <div class="title-scene">
+          <div class="shock" id="t3shock"></div>
+          <div class="tline"><span class="tw" id="t3w0">Need</span><span class="tw" id="t3w1">Guidance</span><span class="tw acc" id="t3w2">Right</span><span class="tw acc" id="t3w3">Now?</span></div>
+        </div>
+      </section>
+
+      <section id="s_d4" class="clip" data-start="43.6" data-duration="9.7" data-track-index="3">
+        <div class="stage"><div class="cam" id="d4_cam"><div class="device" id="d4_dev"><div class="screen" id="d4_scr"><img class="full" id="d4_empty" src="assets/f/ai-empty.png" alt="" /><img class="full" id="d4_t0" src="assets/f/ai-t0.png" alt="" style="opacity:0" /><img class="full" id="d4_t1" src="assets/f/ai-t1.png" alt="" style="opacity:0" /><img class="full" id="d4_t2" src="assets/f/ai-t2.png" alt="" style="opacity:0" /><img class="full" id="d4_t3" src="assets/f/ai-t3.png" alt="" style="opacity:0" /><img class="full" id="d4_t4" src="assets/f/ai-t4.png" alt="" style="opacity:0" /><img class="full" id="d4_t5" src="assets/f/ai-t5.png" alt="" style="opacity:0" /><img class="full" id="d4_t6" src="assets/f/ai-t6.png" alt="" style="opacity:0" /><img class="full" id="d4_t7" src="assets/f/ai-t7.png" alt="" style="opacity:0" /><img class="full" id="d4_t8" src="assets/f/ai-t8.png" alt="" style="opacity:0" /><img class="full" id="d4_sendh" src="assets/f/ai-sendhover.png" alt="" style="opacity:0" /><img class="full" id="d4_user" src="assets/f/ai-useronly.png" alt="" style="opacity:0" /><img class="full" id="d4_bubble" src="assets/f/ai-bubble.png" alt="" style="opacity:0" /><img class="full" id="d4_full" src="assets/f/ai-full.png" alt="" style="opacity:0" /><div class="sheen" id="d4_sheen"></div></div><div class="lift" id="d4_lift"><div class="dim" id="d4_dim"></div><div class="pc line" id="d4_line0" style="left:405.00px;top:184.69px;width:801.13px;height:21.00px;opacity:0;"><img src="assets/p/d4_line0.png" alt="" /></div><div class="pc line" id="d4_line1" style="left:405.00px;top:206.38px;width:803.86px;height:21.00px;opacity:0;"><img src="assets/p/d4_line1.png" alt="" /></div><div class="pc line" id="d4_line2" style="left:405.00px;top:228.06px;width:811.48px;height:21.00px;opacity:0;"><img src="assets/p/d4_line2.png" alt="" /></div><div class="pc line" id="d4_line3" style="left:405.00px;top:249.75px;width:62.39px;height:21.00px;opacity:0;"><img src="assets/p/d4_line3.png" alt="" /></div><div class="pc " id="d4_reply" style="left:389.00px;top:171.69px;width:847.83px;height:112.75px;opacity:0;border-radius:16px;overflow:hidden;"><img src="assets/p/d4_reply.png" alt="" /></div><div class="pc " id="d4_ubub" style="left:1178.38px;top:114.00px;width:306.63px;height:45.69px;opacity:0;border-radius:16px;overflow:hidden;"><img src="assets/p/d4_ubub.png" alt="" /></div><div class="dots" id="d4_dots" style="left:396.0px;top:249.4px;opacity:0"><i></i><i></i><i></i></div><div class="cursor" id="d4_cur" style="opacity:0"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d4_rip"></div></div></div></div></div></div>
+      </section>
+
+      <section id="s_t4" class="clip" data-start="53.1" data-duration="2.5" data-track-index="1">
+        <div class="title-scene"><div class="tline" style="font-size:104px"><span class="tw" id="t4w0">Start</span><span class="tw" id="t4w1">your</span><span class="tw acc" id="t4w2">journey</span><span class="tw acc" id="t4w3">today</span><span class="tw" id="t4w4">at</span></div></div>
+      </section>
+
+      <section id="s_end" class="clip" data-start="55.3" data-duration="5.0" data-track-index="2">
+        <div id="out-wrap">
+          <div id="out-brand"><img id="out-mark" src="assets/img/logo.png" alt="myFuturely logo" /><span id="out-word" class="acc">myFuturely</span></div>
+          <span id="out-url">myfuturely.ai</span>
+        </div>
+      </section>
+
+      <div id="darkclip" class="clip" data-start="58.3" data-duration="2.0" data-track-index="5"><div id="bg-dark"></div></div>
+
+      <audio id="music" data-timeline-role="music" src="assets/soundtrack.m4a" data-start="0" data-duration="60.3" data-track-index="10" data-volume="1"></audio>
+      <audio id="c1" src="assets/sfx/click-soft.mp3" data-start="5.58" data-duration="0.37" data-track-index="11" data-volume="0.35"></audio>
+      <audio id="c2" src="assets/sfx/click-soft.mp3" data-start="20.84" data-duration="0.37" data-track-index="11" data-volume="0.35"></audio>
+      <audio id="c3" src="assets/sfx/click-soft.mp3" data-start="24.9" data-duration="0.37" data-track-index="11" data-volume="0.35"></audio>
+      <audio id="c4" src="assets/sfx/click-soft.mp3" data-start="26.43" data-duration="0.37" data-track-index="11" data-volume="0.35"></audio>
+      <audio id="c5" src="assets/sfx/click-soft.mp3" data-start="29.99" data-duration="0.37" data-track-index="11" data-volume="0.35"></audio>
+      <audio id="c6" src="assets/sfx/click-soft.mp3" data-start="36.86" data-duration="0.37" data-track-index="11" data-volume="0.35"></audio>
+      <audio id="c7" src="assets/sfx/click-soft.mp3" data-start="45.25" data-duration="0.37" data-track-index="11" data-volume="0.3"></audio>
+      <audio id="c8" src="assets/sfx/click-soft.mp3" data-start="48.81" data-duration="0.37" data-track-index="11" data-volume="0.35"></audio>
+      <audio id="k1" src="assets/sfx/typing.mp3" data-start="25.38" data-duration="0.8" data-track-index="12" data-volume="0.28"></audio>
+      <audio id="k2" src="assets/sfx/typing.mp3" data-start="45.72" data-duration="1.1" data-track-index="12" data-volume="0.28"></audio>
+      <audio id="k3" src="assets/sfx/typing.mp3" data-start="46.82" data-duration="1.05" data-track-index="13" data-volume="0.28"></audio>
+    </div>
+
+    <script>
+      const GEO = {"login": {"button": {"x": 589, "y": 618.45, "w": 354, "h": 48}, "card": {"x": 546, "y": 128.25, "w": 440, "h": 675.48}, "logo": {"x": 733.98, "y": 177.25, "w": 64, "h": 64}}, "nav": {"Dashboard": {"x": 12, "y": 144, "w": 235, "h": 48.25}, "Grade Portal": {"x": 12, "y": 195.25, "w": 235, "h": 48.25}, "Planner": {"x": 12, "y": 246.5, "w": 235, "h": 48.25}, "My Future": {"x": 12, "y": 297.75, "w": 235, "h": 48.25}, "AI Chat": {"x": 12, "y": 349, "w": 235, "h": 48.25}, "Settings": {"x": 12, "y": 400.25, "w": 235, "h": 48.25}}, "dash": {"hdrRight": {"x": 1181.72, "y": 44, "w": 306.28, "h": 38.14}, "gpa": {"x": 112, "y": 166.14, "w": 678, "h": 171.14}, "due": {"x": 810, "y": 166.14, "w": 678, "h": 171.14}, "stat0": {"x": 112, "y": 377.28, "w": 332, "h": 124.83}, "stat1": {"x": 460, "y": 377.28, "w": 332, "h": 124.83}, "stat2": {"x": 808, "y": 377.28, "w": 332, "h": 124.83}, "stat3": {"x": 1156, "y": 377.28, "w": 332, "h": 124.83}, "qaLabel": {"x": 112, "y": 522.11, "w": 1376, "h": 18.59}, "qa0": {"x": 112, "y": 554.7, "w": 332, "h": 70}, "qa1": {"x": 460, "y": 554.7, "w": 332, "h": 70}, "qa2": {"x": 808, "y": 554.7, "w": 332, "h": 70}, "qa3": {"x": 1156, "y": 554.7, "w": 332, "h": 70}, "askLabel": {"x": 112, "y": 668.7, "w": 1376, "h": 18.59}, "askBar": {"x": 112, "y": 697.3, "w": 1376, "h": 58}, "toast0": {"x": 1156, "y": 637.73, "w": 360, "h": 83.42}, "toast1": {"x": 1156, "y": 731.16, "w": 360, "h": 83.42}, "toast2": {"x": 1156, "y": 824.58, "w": 360, "h": 83.42}}, "rows": [{"x": 113, "y": 263.89, "w": 1374, "h": 49.8}, {"x": 113, "y": 313.69, "w": 1374, "h": 49.8}, {"x": 113, "y": 363.48, "w": 1374, "h": 49.8}, {"x": 113, "y": 413.28, "w": 1374, "h": 49.8}, {"x": 113, "y": 463.08, "w": 1374, "h": 49.8}, {"x": 113, "y": 512.88, "w": 1374, "h": 49.3}], "avg": ["92", "88", "95", "83", "87", "98"], "wif1": {"x": 1283.84, "y": 326.58, "w": 62.41, "h": 24}, "wi": {"panel": {"x": 133, "y": 376.98, "w": 1334, "h": 233.41}, "title": {"x": 150, "y": 493.64, "w": 851.33, "h": 36}, "grade": {"x": 1009.33, "y": 493.64, "w": 440.67, "h": 36}, "select": {"x": 150, "y": 537.64, "w": 116, "h": 34}, "add": {"x": 274, "y": 537.64, "w": 67.13, "h": 34}, "calcRow": {"x": 113, "y": 315.69, "w": 1374, "h": 49.3}}, "rm": {"hdr": {"x": 460, "y": 44, "w": 680, "h": 40.3}, "tabs": {"x": 460, "y": 104.3, "w": 204.56, "h": 40}, "classOf": {"x": 460, "y": 164.3, "w": 680, "h": 20.14}, "ring": {"x": 720, "y": 204.44, "w": 160, "h": 160}, "gpaW": {"x": 460, "y": 392.44, "w": 333, "h": 88.27}, "gpaU": {"x": 807, "y": 392.44, "w": 333, "h": 88.27}, "crLabel": {"x": 460, "y": 504.7, "w": 680, "h": 17.05}, "chip0": {"x": 460, "y": 531.75, "w": 108.42, "h": 33.38}, "chip1": {"x": 576.42, "y": 531.75, "w": 95.11, "h": 33.38}, "chip2": {"x": 679.53, "y": 531.75, "w": 112.72, "h": 33.38}, "chip3": {"x": 800.25, "y": 531.75, "w": 149.73, "h": 33.38}, "chip4": {"x": 957.98, "y": 531.75, "w": 124.08, "h": 33.38}, "chip5": {"x": 460, "y": 573.13, "w": 130.55, "h": 33.38}, "crCard": {"x": 460, "y": 620.5, "w": 680, "h": 64.59}, "tlLabel": {"x": 460, "y": 709.09, "w": 105.39, "h": 17.05}, "tl0": {"x": 460, "y": 736.14, "w": 680, "h": 68}, "tl1": {"x": 460, "y": 812.14, "w": 680, "h": 68}, "tl2": {"x": 460, "y": 888.14, "w": 680, "h": 68}, "tabColleges": {"x": 567.5, "y": 108.3, "w": 93.06, "h": 32}}, "ring": {"dash": "402.124px", "off": "309.635px", "idx": 1}, "col": {"cards": [{"x": 460, "y": 370.94, "w": 680, "h": 121.44}, {"x": 460, "y": 504.38, "w": 680, "h": 121.44}, {"x": 460, "y": 637.81, "w": 680, "h": 121.44}, {"x": 460, "y": 771.25, "w": 680, "h": 121.44}], "scores": ["1", "55", "93", "49"]}, "ai": {"input": {"x": 365, "y": 838, "w": 1064, "h": 41}, "send": {"x": 1439, "y": 839, "w": 40, "h": 40}, "user": {"x": 1179.38, "y": 115, "w": 304.63, "h": 43.69}, "reply": {"x": 390, "y": 172.69, "w": 845.83, "h": 110.75}, "lines": [{"x": 407, "y": 186.69, "w": 797.13, "h": 17}, {"x": 407, "y": 208.38, "w": 799.86, "h": 17}, {"x": 407, "y": 230.06, "w": 807.48, "h": 17}, {"x": 407, "y": 251.75, "w": 58.39, "h": 17}]}};
+      const tl = gsap.timeline({ paused: true });
+      const b = (k) => +(0.242 + k * 0.25426).toFixed(3);      // eighth-note grid of the soundtrack
+      const E = "expo.out", P3 = "power3.inOut", P2 = "power2.inOut";
+      const F = (px, py, s) => ({ x: -(px - 766) * s, y: -(py - 466) * s, scale: s });
+      const $ = (id) => "#" + id;
+      const NOSH = "0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0)";
+      const LIFTSH = "0 50px 90px rgba(0,0,0,0.6), 0 0 0 1.5px rgba(120,175,255,0.55), 0 0 60px rgba(47,123,255,0.35)";
+      const show = (id, at, dur = 0.16) => tl.fromTo($(id), { opacity: 0 }, { opacity: 1, duration: dur, ease: "none" }, at);
+      const hide = (id, at, dur = 0.16) => tl.to($(id), { opacity: 0, duration: dur, ease: "none" }, at);
+      const count = (id, to, dec, at, dur, suffix = "") => {
+        const el = document.getElementById(id), o = { v: 0 };
+        tl.to(o, { v: to, duration: dur, ease: "power2.out", onUpdate: () => { el.textContent = o.v.toFixed(dec) + suffix; } }, at);
+      };
+      const curTo = (p, at, dur, x, y) => {
+        tl.to($(p + "_cur"), { x, duration: dur, ease: "power2.inOut" }, at);
+        tl.to($(p + "_cur"), { y, duration: dur, ease: "sine.inOut" }, at);
+      };
+      const click = (p, at) => {
+        tl.fromTo($(p + "_cur"), { scale: 1 }, { scale: 0.8, duration: 0.07, yoyo: true, repeat: 1, ease: "power2.out" }, at);
+        tl.fromTo($(p + "_rip"), { scale: 0.3, opacity: 1 }, { scale: 1.8, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+      };
+      const lift = (id, at, z, dur = 0.6, sc = 1.03) => tl.fromTo($(id), { z: 0, scale: 1, boxShadow: NOSH }, { z, scale: sc, boxShadow: LIFTSH, duration: dur, ease: "power3.out" }, at);
+      const drop = (id, at, dur = 0.55) => tl.to($(id), { z: 0, scale: 1, boxShadow: NOSH, duration: dur, ease: "power3.inOut" }, at);
+      const focusOn = (sel, at, on, dur = 0.5) => {
+        tl.to(sel, { filter: on ? "blur(2.5px) brightness(0.55)" : "blur(0px) brightness(1)", duration: dur, ease: "power2.inOut" }, at);
+        const p = sel.replace("#", "").split("_")[0];
+        tl.to("#" + p + "_dim", { opacity: on ? 1 : 0, duration: dur, ease: "power2.inOut" }, at);
+      };
+      const sheen = (p, at, dur = 1.1) => tl.fromTo($(p + "_sheen"), { x: -700, opacity: 1 }, { x: 1900, opacity: 1, duration: dur, ease: "power1.inOut" }, at);
+      const pulse = (at, amt) => tl.fromTo("#bg-pulse", { opacity: amt }, { opacity: 0, duration: 0.7, ease: "power2.out", immediateRender: false }, at);
+      const pieceIn = (ids, at, step, from = { opacity: 0, y: 26, scale: 0.98 }, dur = 0.55) =>
+        ids.forEach((id, i) => tl.fromTo($(id), from, { opacity: 1, x: 0, y: 0, scale: 1, rotationX: 0, duration: dur, ease: E }, at + i * step));
+      const words = (ids, times, from, exitAt, exitTo) => {
+        ids.forEach((id, i) => tl.fromTo($(id), from, { opacity: 1, x: 0, y: 0, rotationX: 0, filter: "blur(0px)", duration: 0.6, ease: E }, times[i]));
+        tl.to(ids.map($), { ...exitTo, duration: 0.32, ease: "power2.in", stagger: 0.035 }, exitAt);
+      };
+
+      // ── background: bright on titles, calmer under the device; accent pulses on strong beats ──
+      tl.fromTo("#bg-bright", { opacity: 1 }, { opacity: 0.35, duration: 0.6, ease: "sine.inOut" }, 4.45);
+      tl.to("#bg-bright", { opacity: 1, duration: 0.6, ease: "sine.inOut" }, 16.6);
+      tl.to("#bg-bright", { opacity: 0.35, duration: 0.7, ease: "sine.inOut" }, 21.3);
+      tl.to("#bg-bright", { opacity: 1, duration: 0.5, ease: "sine.inOut" }, 40.95);
+      tl.to("#bg-bright", { opacity: 0.35, duration: 0.6, ease: "sine.inOut" }, 43.6);
+      tl.to("#bg-bright", { opacity: 1, duration: 0.5, ease: "sine.inOut" }, 52.7);
+      tl.fromTo("#blob-a", { x: 0, y: 0, scale: 1 }, { x: -560, y: -300, scale: 1.25, duration: 60.3, ease: "sine.inOut" }, 0);
+      tl.fromTo("#blob-b", { x: 0, y: 0 }, { x: 420, y: 240, duration: 60.3, ease: "sine.inOut" }, 0);
+      tl.fromTo("#blob-c", { x: 0, y: 0 }, { x: -300, y: -420, duration: 60.3, ease: "sine.inOut" }, 0);
+      [[b(3), 0.22], [b(9), 0.3], [b(17), 0.55], [b(34), 0.22], [b(61), 0.4], [b(81), 0.45], [b(87), 0.35], [b(105), 0.3], [b(117), 0.25],
+       [b(145), 0.3], [b(153), 0.35], [b(165), 0.4], [b(166), 0.55], [b(192), 0.3], [b(209), 0.5], [b(220), 0.45]].forEach(([t, a]) => pulse(t, a));
+
+      // ── 1 · "Your Future. Figured Out." — one word per eighth ──
+      words(["t1w0", "t1w1", "t1w2", "t1w3"], [b(0), b(1), b(2), b(3)],
+        { opacity: 0, y: 60, rotationX: -75, filter: "blur(12px)" }, 2.05, { opacity: 0, y: -40, filter: "blur(10px)" });
+      tl.fromTo(["#t1w2", "#t1w3"], { backgroundPosition: "0% 50%" }, { backgroundPosition: "100% 50%", duration: 1.6, ease: "sine.inOut" }, b(3));
+      tl.fromTo("#t1streak", { scaleX: 0, opacity: 1 }, { scaleX: 1, opacity: 1, duration: 0.7, ease: E }, b(3));
+      tl.to("#t1streak", { opacity: 0, scaleX: 1.3, duration: 0.3, ease: "power2.in" }, 2.1);
+
+      // ── 2 · logo: in on the beat, inhale through the silence, dock into the login card on the drop ──
+      tl.fromTo("#logo-mark", { opacity: 0, scale: 0.6, filter: "blur(18px) drop-shadow(0 0 44px rgba(34,211,238,0.5))" },
+        { opacity: 1, scale: 1, filter: "blur(0px) drop-shadow(0 0 44px rgba(34,211,238,0.5))", duration: 0.8, ease: E }, b(9));
+      tl.fromTo("#logo-halo", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.9, ease: E }, b(9));
+      tl.fromTo("#sweep-bar", { x: -120 }, { x: 360, duration: 0.8, ease: "power2.inOut" }, 2.95);
+      tl.to("#logo-mark", { scale: 0.93, duration: 0.7, ease: "sine.inOut" }, 3.6);
+      tl.to("#logo-halo", { opacity: 0.35, scale: 0.8, duration: 0.7, ease: "sine.inOut" }, 3.6);
+      tl.to("#logo-mark", { y: -257, scale: 0.232, duration: 0.42, ease: "power3.inOut" }, 4.32);
+      tl.to("#logo-halo", { opacity: 0, duration: 0.3 }, 4.35);
+      tl.to("#logo-mark", { opacity: 0, duration: 0.18, ease: "none" }, 4.72);
+
+      // ── 3 · D1: login → dashboard → sidebar → the Grades card lifts off ──
+      tl.fromTo("#d1_cam", { x: 0, y: 0, scale: 1.15 }, { x: 0, y: 0, scale: 1, duration: 1.1, ease: E }, b(17));
+      tl.fromTo("#d1_dev", { opacity: 0, y: 80, rotationX: 14, rotationY: 0, rotationZ: 0 }, { opacity: 1, y: 0, rotationX: 0, rotationY: 0, rotationZ: 0, duration: 0.75, ease: E }, b(17));
+      tl.set("#d1_cur", { x: 1150, y: 880 }, 4.99); tl.fromTo("#d1_cur", { opacity: 0 }, { opacity: 1, duration: 0.2, immediateRender: false }, 5.0);
+      curTo("d1", 5.0, 0.52, GEO.login.button.x + GEO.login.button.w * 0.52, GEO.login.button.y + GEO.login.button.h * 0.55);
+      show("d1_loginh", 5.42, 0.12);
+      tl.set("#d1_btn", { opacity: 1 }, b(21));
+      tl.fromTo("#d1_btn", { scale: 1 }, { scale: 0.96, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out" }, b(21));
+      click("d1", b(21));
+      // page transition to the dashboard
+      tl.to("#d1_cur", { opacity: 0, duration: 0.15 }, 5.9);
+      show("d1_base", b(23), 0.25);
+      tl.to(["#d1_login", "#d1_loginh", "#d1_btn"], { opacity: 0, duration: 0.2, ease: "none" }, b(23) + 0.2);
+      tl.to("#d1_cam", { scale: 0.96, duration: 1.4, ease: P3 }, b(23));
+      tl.to("#d1_dev", { rotationY: -14, rotationX: 10, rotationZ: 1.5, duration: 1.4, ease: P3 }, b(23));
+      pieceIn(["d1_hdrRight"], b(23), 0);
+      pieceIn(["d1_gpa"], b(24), 0);
+      pieceIn(["d1_due"], b(25), 0);
+      pieceIn(["d1_stat0", "d1_stat1", "d1_stat2", "d1_stat3"], b(26), 0.127);
+      pieceIn(["d1_qaLabel", "d1_qa0", "d1_qa1", "d1_qa2", "d1_qa3"], b(28), 0.127);
+      pieceIn(["d1_askLabel", "d1_askBar"], b(30), 0.127);
+      count("d1_gpaU", 3.6, 3, b(24) + 0.1, 1.25);
+      count("d1_gpaW", 3.9, 3, b(24) + 0.18, 1.25);
+      tl.to("#d1_dev", { rotationY: -8, rotationX: 6, rotationZ: 0.5, duration: 1.1, ease: "sine.inOut" }, 7.5);
+      // B2: push in on GPA, lift it off the screen
+      tl.to("#d1_cam", { ...F(451, 252, 1.55), duration: 0.95, ease: P3 }, b(33));
+      tl.to("#d1_dev", { rotationY: -3, rotationX: 3, rotationZ: 0, duration: 0.95, ease: P3 }, b(33));
+      lift("d1_gpa", b(34), 95);
+      focusOn("#d1_scr", b(34), true);
+      sheen("d1", b(36));
+      drop("d1_gpa", b(38) + 0.05);
+      focusOn("#d1_scr", b(38) + 0.05, false);
+      // B3: pan right, reminders slide in on the beat
+      tl.to("#d1_cam", { ...F(1080, 560, 1.22), duration: 1.0, ease: P3 }, 10.1);
+      tl.to("#d1_dev", { rotationY: 10, rotationX: 6, rotationZ: -1, duration: 1.1, ease: P3 }, 10.1);
+      pieceIn(["d1_toast0", "d1_toast1", "d1_toast2"], b(40), 0.25426, { opacity: 0, x: 380, y: 0, scale: 1 }, 0.55);
+      sheen("d1", b(43));
+      tl.to("#d1_cam", { x: 150, y: 10, scale: 1.0, duration: 0.8, ease: P3 }, b(46));
+      tl.to("#d1_dev", { rotationY: -6, rotationX: 4, rotationZ: 0, duration: 0.8, ease: P3 }, b(46));
+      // B4: sidebar expands and the cursor walks the menu on the beat
+      tl.set("#d1_cur", { x: 900, y: 820 }, 12.39); tl.fromTo("#d1_cur", { opacity: 0 }, { opacity: 1, duration: 0.15, immediateRender: false }, 12.4);
+      curTo("d1", 12.4, 0.42, 34, 300);
+      tl.set("#d1_nav_open", { opacity: 1 }, b(49));
+      tl.fromTo("#d1_navwrap", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.34, ease: "power3.out" }, b(49));
+      const navSeq = [["dashboard", 168], ["gradeportal", 219], ["planner", 270], ["myfuture", 322], ["aichat", 373], ["settings", 424]];
+      let prev = null;
+      navSeq.forEach(([n, y], i) => {
+        const t = b(50 + i);
+        curTo("d1", t - 0.2, 0.2, 118, y);
+        tl.set("#d1_nav_" + n, { opacity: 1 }, t);
+        if (prev) tl.set("#d1_nav_" + prev, { opacity: 0 }, t);
+        prev = n;
+      });
+      // B5 (break): sidebar folds away, cursor heads for the Grades quick-access card
+      tl.set("#d1_nav_" + prev, { opacity: 0 }, 14.95);
+      tl.to("#d1_navwrap", { clipPath: "inset(0 100% 0 0)", duration: 0.3, ease: "power3.in" }, 14.95);
+      curTo("d1", 14.98, 0.5, GEO.dash.qa0.x + GEO.dash.qa0.w * 0.55, GEO.dash.qa0.y + GEO.dash.qa0.h * 0.5);
+      tl.to("#d1_cam", { ...F(278, 590, 1.6), duration: 1.0, ease: P3 }, 15.0);
+      tl.to("#d1_dev", { rotationY: 8, rotationX: 6, rotationZ: 0, duration: 1.0, ease: P3 }, 15.0);
+      tl.fromTo("#d1_qa0h", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "none" }, b(60));
+      tl.set("#d1_qa0", { opacity: 0 }, b(61));
+      lift("d1_qa0h", b(61), 170, 0.5, 1.06);
+      focusOn("#d1_scr", b(61), true, 0.4);
+      tl.to("#d1_cur", { opacity: 0, duration: 0.2 }, b(61) + 0.1);
+      tl.to("#d1_qa0h", { z: 1100, opacity: 0, duration: 0.6, ease: "power3.in" }, b(63));
+      tl.to("#d1_dev", { z: -420, opacity: 0, rotationX: 16, duration: 0.7, ease: "power3.in" }, b(63) + 0.12);
+
+      // ── 4 · "Track your Grades" ──
+      words(["t2w0", "t2w1", "t2w2"], [b(68), b(70), b(72)], { opacity: 0, x: 140, filter: "blur(14px)" }, 19.2, { opacity: 0, x: -160, filter: "blur(12px)" });
+      tl.fromTo("#t2line", { x: 50 }, { x: -50, duration: 2.2, ease: "none" }, b(68));
+      tl.fromTo("#t2w2", { backgroundPosition: "0% 50%" }, { backgroundPosition: "100% 50%", duration: 1.2, ease: "sine.inOut" }, b(72));
+
+      // ── 5 · the Grades card comes back: hover, click on the bar, zoom through ──
+      tl.fromTo("#hero-card", { z: -900, rotationY: -26, rotationX: 12, opacity: 0, scale: 1 },
+        { z: 0, rotationY: -8, rotationX: 6, opacity: 1, scale: 1, duration: 0.9, ease: E }, b(76));
+      tl.to("#hero-card", { rotationY: 0, rotationX: 0, duration: 1.0, ease: "sine.inOut" }, b(76) + 0.9);
+      tl.set("#hero-cur", { x: 1250, y: 520 }, 19.94); tl.fromTo("#hero-cur", { opacity: 0 }, { opacity: 1, duration: 0.2, immediateRender: false }, 19.95);
+      tl.to("#hero-cur", { x: 707, duration: 0.55, ease: "power2.inOut" }, 19.95);
+      tl.to("#hero-cur", { y: 118, duration: 0.55, ease: "sine.inOut" }, 19.95);
+      show("hero-b", 20.42, 0.12);
+      tl.to("#hero-imgs", { boxShadow: "0 40px 100px rgba(0,0,0,0.55), 0 0 0 2.5px rgba(140,200,255,0.9), 0 0 70px rgba(47,123,255,0.55)", duration: 0.25, ease: "power2.out" }, 20.42);
+      tl.fromTo("#hero-cur", { scale: 1 }, { scale: 0.82, duration: 0.08, yoyo: true, repeat: 1 }, b(81));
+      tl.fromTo("#hero-card", { scale: 1 }, { scale: 0.97, duration: 0.09, yoyo: true, repeat: 1 }, b(81));
+      ["hr0", "hr1", "hr2"].forEach((id, i) => tl.fromTo($(id), { scale: 1, opacity: 0.9 }, { scale: 1.45, opacity: 0, duration: 0.9, ease: "power2.out" }, b(81) + i * 0.14));
+      tl.to("#hero-cur", { opacity: 0, duration: 0.15 }, b(82));
+      tl.to("#hero-card", { scale: 5, opacity: 0, duration: 0.5, ease: "power3.in" }, b(82));
+
+      // ── 6 · D2: grades table builds on sixteenths, then the real What-If ──
+      tl.fromTo("#d2_cam", { ...F(760, 380, 1.9) }, { x: 0, y: 0, scale: 1, duration: 1.15, ease: P3 }, 21.2);
+      tl.fromTo("#d2_dev", { opacity: 0, rotationY: 0, rotationX: 0 }, { opacity: 1, duration: 0.35, ease: "none" }, 21.2);
+      tl.to("#d2_dev", { rotationY: 9, rotationX: 5, duration: 1.0, ease: P3 }, 21.4);
+      GEO.rows.forEach((r, i) => {
+        const t = b(87) + i * 0.127;
+        tl.fromTo("#d2_row" + i, { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, t);
+        count("d2_avg" + i, +GEO.avg[i], 0, t + 0.08, 0.7);
+        tl.fromTo("#d2_let" + i, { opacity: 0, scale: 2.2 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(3)" }, t + 0.42);
+      });
+      tl.to("#d2_cam", { ...F(1060, 390, 1.55), duration: 0.9, ease: P3 }, b(93));
+      tl.to("#d2_dev", { rotationY: -4, rotationX: 2, duration: 0.9, ease: P3 }, b(93));
+      tl.set("#d2_cur", { x: 1420, y: 820 }, b(94) - 0.01); tl.fromTo("#d2_cur", { opacity: 0 }, { opacity: 1, duration: 0.15, immediateRender: false }, b(94));
+      curTo("d2", b(94), 0.5, GEO.wif1.x + GEO.wif1.w * 0.5, GEO.wif1.y + GEO.wif1.h * 0.55);
+      show("d2_wi_wifh", b(96), 0.1);
+      click("d2", b(97));
+      tl.fromTo("#d2_wi_open", { opacity: 1, clipPath: "inset(0 0 " + ((932 - 366) / 932 * 100).toFixed(2) + "% 0)" },
+        { opacity: 1, clipPath: "inset(0 0 0% 0)", duration: 0.45, ease: "power2.out", immediateRender: false }, b(97) + 0.03);
+      tl.to("#d2_cam", { ...F(800, 500, 1.35), duration: 0.8, ease: P3 }, b(97) + 0.1);
+      tl.to("#d2_dev", { rotationY: 3, rotationX: 3, duration: 0.8, ease: P3 }, b(97) + 0.1);
+      curTo("d2", b(97) + 0.15, 0.3, GEO.wi.title.x + 40, GEO.wi.title.y + GEO.wi.title.h * 0.55);
+      [["t0", b(99)], ["t1", b(99) + 0.127], ["t2", b(100)]].forEach(([n, t]) => tl.set("#d2_wi_" + n, { opacity: 1 }, t));
+      curTo("d2", b(100) + 0.05, 0.2, GEO.wi.grade.x + GEO.wi.grade.w * 0.8, GEO.wi.grade.y + GEO.wi.grade.h * 0.55);
+      [["t3", b(102)], ["t4", b(102) + 0.127]].forEach(([n, t]) => tl.set("#d2_wi_" + n, { opacity: 1 }, t));
+      curTo("d2", b(102) + 0.13, 0.12, GEO.wi.select.x + GEO.wi.select.w * 0.5, GEO.wi.select.y + GEO.wi.select.h * 0.55);
+      tl.set("#d2_wi_t5", { opacity: 1 }, b(103));
+      curTo("d2", b(103) + 0.02, 0.14, GEO.wi.add.x + GEO.wi.add.w * 0.5, GEO.wi.add.y + GEO.wi.add.h * 0.55);
+      tl.set("#d2_wi_addh", { opacity: 1 }, b(103) + 0.16);
+      click("d2", b(104));
+      tl.set("#d2_wi_done", { opacity: 1 }, b(104) + 0.07);
+      tl.to("#d2_cur", { opacity: 0, duration: 0.2 }, b(104) + 0.3);
+      // B11: the result lifts off
+      tl.set("#d2_score", { opacity: 1 }, b(105));
+      focusOn("#d2_scr", b(105), true);
+      lift("d2_score", b(105), 60, 0.6, 1.02);
+      tl.set(["#d2_sim", "#d2_delta"], { opacity: 1 }, b(106));
+      lift("d2_sim", b(106), 140, 0.5, 1.12);
+      lift("d2_delta", b(106), 140, 0.5, 1.18);
+      sheen("d2", b(106));
+      tl.to("#d2_cam", { ...F(780, 470, 1.45), duration: 1.2, ease: "sine.inOut" }, b(107));
+      // whip left into the sidebar
+      tl.to("#d2_cam", { x: "+=1500", duration: 0.5, ease: "power3.in" }, b(111));
+      tl.to("#d2_dev", { filter: "blur(10px)", duration: 0.45, ease: "power2.in" }, b(111));
+
+      // ── 7 · D3: sidebar close-up → My Future roadmap → Colleges ──
+      tl.set("#d3_nav_open", { opacity: 1 }, 28.8);
+      tl.fromTo("#d3_cam", { ...F(150, 300, 1.75), x: -(150 - 766) * 1.75 - 1500 }, { ...F(150, 300, 1.75), duration: 0.45, ease: "power3.out" }, b(113));
+      tl.fromTo("#d3_dev", { rotationY: 12, rotationX: 4, filter: "blur(10px)" }, { rotationY: 12, rotationX: 4, filter: "blur(0px)", duration: 0.4, ease: "power2.out" }, b(113));
+      tl.set("#d3_cur", { x: 420, y: 160 }, 29.01); tl.fromTo("#d3_cur", { opacity: 0 }, { opacity: 1, duration: 0.15, immediateRender: false }, 29.02);
+      [["gradeportal", 219, b(114)], ["planner", 270, b(115)], ["myfuture", 322, b(116)]].forEach(([n, y, t], i, arr) => {
+        curTo("d3", t - 0.2, 0.2, 118, y);
+        tl.set("#d3_nav_" + n, { opacity: 1 }, t);
+        if (i > 0) tl.set("#d3_nav_" + arr[i - 1][0], { opacity: 0 }, t);
+      });
+      click("d3", b(117));
+      tl.set(["#d3_nav_open", "#d3_nav_myfuture"], { opacity: 0 }, b(118) + 0.35);
+      tl.fromTo("#d3_navwrap", { clipPath: "inset(0 0% 0 0)" }, { clipPath: "inset(0 100% 0 0)", duration: 0.34, ease: "power3.in" }, b(118));
+      tl.to("#d3_cur", { opacity: 0, duration: 0.2 }, b(118) + 0.05);
+      tl.to("#d3_cam", { x: 0, y: 0, scale: 1, duration: 0.95, ease: P3 }, b(118) + 0.05);
+      tl.to("#d3_dev", { rotationY: 16, rotationX: 12, rotationZ: -3, duration: 1.0, ease: P3 }, b(118) + 0.05);
+      pieceIn(["d3_hdr", "d3_tabs"], b(120), 0.127);
+      pieceIn(["d3_classOf", "d3_ring"], b(121), 0.06);
+      const prog = document.querySelectorAll("#d3_ringsvg circle")[GEO.ring.idx];
+      const dashLen = parseFloat(GEO.ring.dash), dashOff = parseFloat(GEO.ring.off);
+      tl.fromTo(prog, { strokeDashoffset: dashLen }, { strokeDashoffset: dashOff, duration: 1.3, ease: "power2.out" }, b(121) + 0.1);
+      count("d3_pct", 23, 0, b(121) + 0.1, 1.3, "%");
+      pieceIn(["d3_gpaW", "d3_gpaU"], b(122), 0.127);
+      pieceIn(["d3_crLabel", "d3_chip0", "d3_chip1", "d3_chip2", "d3_chip3", "d3_chip4", "d3_chip5"], b(123), 0.0636, { opacity: 0, y: 14, scale: 0.9 }, 0.45);
+      pieceIn(["d3_crCard"], b(124), 0);
+      tl.fromTo("#d3_crfill", { scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: "power2.out" }, b(124) + 0.2);
+      pieceIn(["d3_tlLabel"], b(125), 0);
+      pieceIn(["d3_tl0", "d3_tl1", "d3_tl2"], b(129), 0.25426, { opacity: 0, x: 60, y: 0, scale: 1 }, 0.5);
+      tl.to("#d3_cam", { ...F(800, 330, 1.35), duration: 1.6, ease: P3 }, 31.3);
+      tl.to("#d3_dev", { rotationY: 6, rotationX: 6, rotationZ: -1, duration: 1.6, ease: P3 }, 31.3);
+      lift("d3_ring", b(125), 80, 0.5, 1.06);
+      tl.fromTo("#d3_ring", { filter: "drop-shadow(0 0 0px rgba(168,85,247,0))" }, { filter: "drop-shadow(0 0 22px rgba(168,85,247,0.85))", duration: 0.35, yoyo: true, repeat: 1, ease: "sine.inOut" }, b(125));
+      drop("d3_ring", b(128));
+      tl.to("#d3_cam", { ...F(800, 720, 1.3), duration: 1.4, ease: P3 }, b(129));
+      tl.to("#d3_dev", { rotationY: -6, rotationX: 14, rotationZ: 1, duration: 1.4, ease: P3 }, b(129));
+      tl.to("#d3_cam", { ...F(790, 380, 1.12), duration: 1.3, ease: P3 }, b(137));
+      tl.to("#d3_dev", { rotationY: 12, rotationX: 8, rotationZ: -1, duration: 1.3, ease: P3 }, b(137));
+      sheen("d3", b(137));
+      tl.set("#d3_cur", { x: 1050, y: 700 }, b(140) - 0.01); tl.fromTo("#d3_cur", { opacity: 0 }, { opacity: 1, duration: 0.15, immediateRender: false }, b(140));
+      curTo("d3", b(140), 0.55, GEO.rm.tabColleges.x + GEO.rm.tabColleges.w * 0.5, GEO.rm.tabColleges.y + GEO.rm.tabColleges.h * 0.6);
+      show("d3_tabsh", b(143), 0.1);
+      click("d3", b(144));
+      const RMP = ["hdr", "tabs", "tabsh", "classOf", "ring", "gpaW", "gpaU", "crLabel", "chip0", "chip1", "chip2", "chip3", "chip4", "chip5", "crCard", "tlLabel", "tl0", "tl1", "tl2"];
+      tl.to(RMP.map((k) => "#d3_" + k), { opacity: 0, duration: 0.2, ease: "none" }, b(144) + 0.1);
+      show("d3_colbase", b(144) + 0.1, 0.2);
+      tl.to("#d3_cur", { opacity: 0, duration: 0.2 }, b(144) + 0.25);
+      pieceIn(["d3_sub", "d3_stats", "d3_search"], b(145), 0.127);
+      pieceIn(["d3_card0", "d3_card1", "d3_card2", "d3_card3"], b(145) + 0.38, 0.127, { opacity: 0, y: 40, rotationX: -12, scale: 1 }, 0.6);
+      GEO.col.scores.forEach((s, i) => {
+        const t = b(148) + i * 0.127;
+        tl.fromTo("#d3_cfill" + i, { scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: "power2.out" }, t);
+        count("d3_score" + i, +s, 0, t, 0.9);
+      });
+      tl.to("#d3_cam", { ...F(800, 600, 1.18), duration: 1.2, ease: P3 }, b(145));
+      tl.to("#d3_dev", { rotationY: -8, rotationX: 10, rotationZ: 1, duration: 1.2, ease: P3 }, b(145));
+      // B17: exploded stack
+      [0, 1, 2, 3].forEach((i) => lift("d3_card" + i, b(153) + i * 0.08, 50 + i * 45, 0.7, 1.0));
+      focusOn("#d3_scr", b(153), true);
+      tl.to("#d3_cam", { ...F(800, 640, 1.28), duration: 1.0, ease: P3 }, b(153));
+      tl.to("#d3_dev", { rotationY: -22, rotationX: 16, rotationZ: 2, duration: 1.0, ease: P3 }, b(153));
+      [0, 1, 2, 3].forEach((i) => drop("d3_card" + i, b(157) + i * 0.05));
+      focusOn("#d3_scr", b(157), false);
+      tl.to("#d3_dev", { rotationX: -25, y: -600, opacity: 0, duration: 0.5, ease: "power3.in" }, b(160));
+
+      // ── 8 · "Need Guidance Right Now?" — hits on the two strongest beats ──
+      words(["t3w0", "t3w1", "t3w2", "t3w3"], [b(163), b(165), b(166), b(167)],
+        { opacity: 0, y: 0, scale: 1, filter: "blur(16px)", rotationX: -60 }, b(169), { opacity: 0, y: -30, filter: "blur(10px)" });
+      tl.fromTo("#t3shock", { scale: 0.3, opacity: 0.9 }, { scale: 4.2, opacity: 0, duration: 0.9, ease: "power2.out" }, b(166));
+      tl.fromTo(["#t3w2", "#t3w3"], { backgroundPosition: "0% 50%" }, { backgroundPosition: "100% 50%", duration: 1.0, ease: "sine.inOut" }, b(166));
+
+      // ── 9 · D4: AI chat — real typing frames on the eighths, streamed answer ──
+      tl.fromTo("#d4_dev", { rotationX: -28, y: 500, opacity: 0, scale: 0.92 }, { rotationX: 4, y: 0, opacity: 1, scale: 1, duration: 0.9, ease: E }, b(171));
+      tl.to("#d4_cam", { ...F(900, 780, 1.4), duration: 0.9, ease: P3 }, b(176));
+      tl.to("#d4_dev", { rotationY: -8, rotationX: 8, duration: 0.9, ease: P3 }, b(176));
+      tl.set("#d4_cur", { x: 1300, y: 950 }, 44.94); tl.fromTo("#d4_cur", { opacity: 0 }, { opacity: 1, duration: 0.15, immediateRender: false }, 44.95);
+      curTo("d4", 44.95, 0.4, 560, 860);
+      click("d4", b(177));
+      for (let k = 0; k < 9; k++) tl.set("#d4_t" + k, { opacity: 1 }, b(179 + k));
+      tl.to("#d4_cam", { ...F(1010, 790, 1.4), duration: 2.1, ease: "sine.inOut" }, b(179));
+      curTo("d4", b(188), 0.35, GEO.ai.send.x + GEO.ai.send.w * 0.5, GEO.ai.send.y + GEO.ai.send.h * 0.55);
+      tl.set("#d4_sendh", { opacity: 1 }, b(190));
+      click("d4", b(191));
+      tl.set("#d4_user", { opacity: 1 }, b(192));
+      tl.fromTo("#d4_ubub", { opacity: 0, scale: 0.8, transformOrigin: "100% 50%" }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.8)" }, b(192));
+      tl.to("#d4_cur", { opacity: 0, duration: 0.2 }, b(192));
+      tl.to("#d4_cam", { ...F(840, 230, 1.35), duration: 0.8, ease: P3 }, b(192));
+      tl.to("#d4_dev", { rotationY: 6, rotationX: 4, duration: 0.8, ease: P3 }, b(192));
+      tl.fromTo("#d4_dots", { opacity: 0 }, { opacity: 1, duration: 0.15 }, b(193));
+      tl.fromTo("#d4_dots i", { y: 0 }, { y: -6, duration: 0.12, yoyo: true, repeat: 3, stagger: 0.08, ease: "sine.inOut" }, b(193) + 0.1);
+      tl.to("#d4_dots", { opacity: 0, duration: 0.12 }, b(197) - 0.05);
+      tl.set("#d4_bubble", { opacity: 1 }, b(197));
+      GEO.ai.lines.forEach((l, i) => {
+        const t = b(197) + 0.06 + i * 0.32;
+        tl.fromTo("#d4_line" + i, { opacity: 1, clipPath: "inset(0 100% 0 0)" }, { opacity: 1, clipPath: "inset(0 0% 0 0)", duration: i === GEO.ai.lines.length - 1 ? 0.15 : 0.42, ease: "none", immediateRender: false }, t);
+      });
+      tl.set("#d4_full", { opacity: 1 }, b(201) + 0.15);
+      tl.set(GEO.ai.lines.map((l, i) => "#d4_line" + i), { opacity: 0 }, b(201) + 0.2);
+      tl.set("#d4_reply", { opacity: 1 }, b(201) + 0.2);
+      lift("d4_reply", b(201) + 0.2, 80, 0.6, 1.02);
+      focusOn("#d4_scr", b(201) + 0.2, true);
+      sheen("d4", b(202));
+      drop("d4_reply", b(204));
+      focusOn("#d4_scr", b(204), false);
+      tl.to("#d4_dev", { z: -500, opacity: 0, rotationX: 15, duration: 0.5, ease: "power3.in" }, b(206));
+
+      // ── 10 · "Start your journey today at" → myFuturely ──
+      words(["t4w0", "t4w1", "t4w2", "t4w3", "t4w4"], [b(209), b(210), b(211), b(212), b(214)],
+        { opacity: 0, y: 50, rotationX: -70, filter: "blur(12px)" }, 55.12, { opacity: 0, y: -30, filter: "blur(10px)" });
+      tl.fromTo(["#t4w2", "#t4w3"], { backgroundPosition: "0% 50%" }, { backgroundPosition: "100% 50%", duration: 1.2, ease: "sine.inOut" }, b(211));
+      tl.fromTo("#out-mark", { opacity: 0, scale: 0.5, rotation: -10 }, { opacity: 1, scale: 1, rotation: 0, duration: 0.8, ease: "back.out(1.6)" }, b(217));
+      tl.fromTo("#out-word", { opacity: 0, x: -40, filter: "blur(12px)" }, { opacity: 1, x: 0, filter: "blur(0px)", duration: 0.7, ease: E }, b(218));
+      tl.fromTo("#out-word", { backgroundPosition: "0% 50%" }, { backgroundPosition: "100% 50%", duration: 1.6, ease: "sine.inOut" }, b(220));
+      tl.fromTo("#out-url", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, b(221));
+      tl.to("#out-wrap", { opacity: 0, scale: 0.98, duration: 0.9, ease: "power2.inOut" }, b(229));
+      tl.fromTo("#bg-dark", { opacity: 0 }, { opacity: 0.92, duration: 1.3, ease: "power1.in" }, 58.9);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
