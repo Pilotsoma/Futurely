@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>myFuturely promo v3</title>
+    <script src="assets/lib/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-latin-800-normal.woff2") format("woff2"); font-weight: 800; }
+
+      :root {
+        --bg: #0b1424; --screen: #0e1829; --card: #15223a; --card-2: #1b2b47; --line: #23355a;
+        --text: #eaf0ff; --text-2: #aebfdd; --muted: #8699bd;
+        --blue: #2f7bff; --blue-2: #5b9bff; --cyan: #22d3ee; --violet: #a78bfa; --purple: #8b5cf6;
+        --green: #34d399; --amber: #fbbf24; --orange: #fb923c; --red: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); font-family: "Inter", sans-serif; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #081122; }
+      .clip { position: absolute; inset: 0; }
+
+      /* ── background ── */
+      #bg-base { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 50%, #0f2248 0%, #0a1630 45%, #060d1c 100%); }
+      #bg-bright { position: absolute; inset: 0; background: radial-gradient(70% 70% at 62% 62%, #2f6fd6 0%, #1c4596 38%, rgba(10,22,48,0) 75%); }
+      .blob { position: absolute; border-radius: 50%; }
+      #blob-a { width: 1100px; height: 1100px; left: 1100px; top: 380px; background: radial-gradient(circle, rgba(47,123,255,0.35) 0%, transparent 65%); }
+      #blob-b { width: 900px; height: 900px; left: -300px; top: -350px; background: radial-gradient(circle, rgba(34,211,238,0.12) 0%, transparent 65%); }
+      #vignette { position: absolute; inset: 0; background: radial-gradient(90% 80% at 50% 50%, transparent 60%, rgba(0,0,0,0.45) 100%); }
+
+      /* ── title cards ── */
+      .title-scene { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+      .tline { display: flex; gap: 0.26em; font-weight: 800; font-size: 118px; letter-spacing: -3.5px; line-height: 1.08; }
+      .tw { display: inline-block; }
+      .acc { color: #6fb3ff; background: linear-gradient(90deg, #6fdcff 0%, #6aa4ff 55%, #aa98ff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; padding-bottom: 0.08em; }
+
+      /* ── logo scene ── */
+      #logo-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      #logo-mark { width: 230px; height: auto; display: block; filter: drop-shadow(0 0 40px rgba(34,211,238,0.45)); }
+      #logo-sweep { position: absolute; width: 300px; height: 360px; overflow: hidden; }
+      #sweep-bar { position: absolute; top: -60px; width: 70px; height: 480px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); mix-blend-mode: overlay; }
+
+      /* ── device ── */
+      .stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; perspective: 2600px; }
+      .cam { width: 1560px; height: 960px; flex-shrink: 0; perspective: 2600px; }
+      .device { position: relative; width: 1560px; height: 960px; border-radius: 46px; padding: 14px; background: linear-gradient(145deg, #2a4170 0%, #16233f 40%, #121d34 100%);
+        box-shadow: inset 0 0 0 2px rgba(150,195,255,0.45), 0 0 0 1px rgba(34,211,238,0.35), 0 0 60px rgba(34,211,238,0.28), 0 0 160px rgba(47,123,255,0.28), 0 70px 140px rgba(0,0,0,0.55); }
+      .screen { position: relative; width: 100%; height: 100%; border-radius: 32px; overflow: hidden; background: var(--screen); display: flex; }
+      .side { width: 250px; flex-shrink: 0; background: #0b1424; border-right: 1px solid var(--line); position: relative; padding: 30px 16px; }
+      .brand { display: flex; align-items: center; gap: 12px; padding: 0 12px; margin-bottom: 34px; }
+      .brand img { width: 34px; height: auto; display: block; }
+      .brand span { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
+      .nav-hl { position: absolute; left: 16px; right: 16px; height: 50px; border-radius: 12px; background: rgba(47,123,255,0.16); border: 1px solid rgba(91,155,255,0.35); }
+      .nav { position: relative; display: flex; align-items: center; gap: 14px; height: 50px; padding: 0 14px; margin-bottom: 4px; font-size: 18px; font-weight: 500; color: var(--text-2); }
+      .nav svg { width: 21px; height: 21px; flex-shrink: 0; }
+      .nav.on { color: #fff; }
+      .nav.on svg { color: var(--blue-2); }
+      .main { flex: 1; position: relative; padding: 38px 46px; overflow: hidden; }
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
+      .lbl { font-size: 13px; font-weight: 600; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); }
+      .h1 { font-size: 38px; font-weight: 700; letter-spacing: -0.8px; margin: 0; }
+
+      .cursor { position: absolute; left: 0; top: 0; width: 34px; height: 34px; z-index: 20; }
+      .cursor svg { width: 34px; height: 34px; display: block; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5)); }
+      .ripple { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(120,180,255,0.9); }
+
+      .shot { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      .screen { background: #0b1322; }
+      /* outro */
+      #out-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #out-brand { display: flex; align-items: center; gap: 30px; }
+      #out-mark { width: 150px; height: auto; display: block; filter: drop-shadow(0 0 36px rgba(34,211,238,0.4)); }
+      #out-word { font-size: 132px; font-weight: 800; letter-spacing: -4px; line-height: 1.1; padding-bottom: 12px; }
+      #out-tag { font-size: 44px; font-weight: 600; letter-spacing: -1px; color: var(--text); margin: 26px 0 40px; }
+      #out-cta { display: flex; align-items: center; gap: 20px; font-size: 28px; font-weight: 600; }
+      #out-btn { display: flex; align-items: center; gap: 12px; background: #2466e0; color: #fff; padding: 20px 40px; border-radius: 16px; box-shadow: 0 10px 40px rgba(47,123,255,0.45); }
+      #out-url { color: #c3d0e8; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="47">
+
+      <div id="bg" class="clip" data-start="0" data-duration="47" data-track-index="0">
+        <div id="bg-base"></div>
+        <div id="bg-bright"></div>
+        <div id="blob-a" class="blob" data-layout-allow-overflow></div>
+        <div id="blob-b" class="blob" data-layout-allow-overflow></div>
+        <div id="vignette"></div>
+      </div>
+
+      <!-- 1 · tagline -->
+      <section id="s1" class="clip" data-start="0" data-duration="3" data-track-index="1">
+        <div class="title-scene">
+          <div class="tline"><span class="tw" id="s1w1">Your</span><span class="tw" id="s1w2">Future.</span><span class="tw acc" id="s1w3">Figured</span><span class="tw acc" id="s1w4">Out.</span></div>
+        </div>
+      </section>
+
+      <!-- 2 · logo -->
+      <section id="s2" class="clip" data-start="3" data-duration="3" data-track-index="1">
+        <div id="logo-wrap">
+          <img id="logo-mark" src="assets/img/logo.png" alt="myFuturely logo" />
+          <div id="logo-sweep"><div id="sweep-bar"></div></div>
+        </div>
+      </section>
+
+      <!-- 3 · dashboard (real screens) -->
+      <section id="s3" class="clip" data-start="6" data-duration="8" data-track-index="1">
+        <div class="stage"><div class="cam" id="d3-cam"><div class="device" id="d3-dev"><div class="screen">
+          <img class="shot" id="d3-a" src="assets/screens/dash.png" alt="myFuturely dashboard" />
+          <img class="shot" id="d3-b" style="opacity:0" src="assets/screens/dashnav.png" alt="" />
+          <div class="cursor" id="d3-cur"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d3-rip"></div></div>
+        </div></div></div></div>
+      </section>
+
+      <!-- 4 · title -->
+      <section id="s4" class="clip" data-start="14" data-duration="2" data-track-index="1">
+        <div class="title-scene"><div class="tline"><span class="tw" id="s4w1">Track</span><span class="tw" id="s4w2">your</span><span class="tw acc" id="s4w3">grades.</span></div></div>
+      </section>
+
+      <!-- 5 · grades + What-If (real screens) -->
+      <section id="s5" class="clip" data-start="16" data-duration="8" data-track-index="1">
+        <div class="stage"><div class="cam" id="d5-cam"><div class="device" id="d5-dev"><div class="screen">
+          <img class="shot" id="d5-a" src="assets/screens/classwork.png" alt="myFuturely grades" />
+          <img class="shot" id="d5-b" style="opacity:0" src="assets/screens/wi-open.png" alt="" />
+          <img class="shot" id="d5-c" style="opacity:0" src="assets/screens/wi-typed.png" alt="" />
+          <img class="shot" id="d5-d" style="opacity:0" src="assets/screens/wi-done.png" alt="" />
+          <div class="cursor" id="d5-cur"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d5-rip"></div></div>
+        </div></div></div></div>
+      </section>
+
+      <!-- 6 · title -->
+      <section id="s6" class="clip" data-start="24" data-duration="2" data-track-index="1">
+        <div class="title-scene"><div class="tline"><span class="tw" id="s6w1">Plan</span><span class="tw" id="s6w2">your</span><span class="tw acc" id="s6w3">future.</span></div></div>
+      </section>
+
+      <!-- 7 · my future (real screens) -->
+      <section id="s7" class="clip" data-start="26" data-duration="8" data-track-index="1">
+        <div class="stage"><div class="cam" id="d7-cam"><div class="device" id="d7-dev"><div class="screen">
+          <img class="shot" id="d7-a" src="assets/screens/roadmap.png" alt="myFuturely roadmap" />
+          <img class="shot" id="d7-b" style="opacity:0" src="assets/screens/colleges.png" alt="" />
+          <div class="cursor" id="d7-cur"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d7-rip"></div></div>
+        </div></div></div></div>
+      </section>
+
+      <!-- 8 · title -->
+      <section id="s8" class="clip" data-start="34" data-duration="2" data-track-index="1">
+        <div class="title-scene"><div class="tline"><span class="tw" id="s8w1">Need</span><span class="tw" id="s8w2">guidance</span><span class="tw acc" id="s8w3">right</span><span class="tw acc" id="s8w4">now?</span></div></div>
+      </section>
+
+      <!-- 9 · AI chat (real screens) -->
+      <section id="s9" class="clip" data-start="36" data-duration="6" data-track-index="1">
+        <div class="stage"><div class="cam" id="d9-cam"><div class="device" id="d9-dev"><div class="screen">
+          <img class="shot" id="d9-a" src="assets/screens/aiempty.png" alt="myFuturely AI chat" />
+          <img class="shot d9-t" id="d9-t0" style="opacity:0" src="assets/screens/aitype0.png" alt="" />
+          <img class="shot d9-t" id="d9-t1" style="opacity:0" src="assets/screens/aitype1.png" alt="" />
+          <img class="shot d9-t" id="d9-t2" style="opacity:0" src="assets/screens/aitype2.png" alt="" />
+          <img class="shot d9-t" id="d9-t3" style="opacity:0" src="assets/screens/aitype3.png" alt="" />
+          <img class="shot d9-t" id="d9-t4" style="opacity:0" src="assets/screens/aitype4.png" alt="" />
+          <img class="shot d9-t" id="d9-t5" style="opacity:0" src="assets/screens/aitype5.png" alt="" />
+          <img class="shot d9-t" id="d9-t6" style="opacity:0" src="assets/screens/aitype6.png" alt="" />
+          <img class="shot d9-t" id="d9-t7" style="opacity:0" src="assets/screens/aitype7.png" alt="" />
+          <img class="shot" id="d9-c" style="opacity:0" src="assets/screens/aichat.png" alt="" />
+          <div class="cursor" id="d9-cur"><svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#0b1424" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="ripple" id="d9-rip"></div></div>
+        </div></div></div></div>
+      </section>
+
+      <!-- 10 · outro -->
+      <section id="s10" class="clip" data-start="42" data-duration="5" data-track-index="1">
+        <div id="out-wrap">
+          <div id="out-brand"><img id="out-mark" src="assets/img/logo.png" alt="myFuturely logo" /><span id="out-word" class="acc">myFuturely</span></div>
+          <p id="out-tag">Your future. Figured out.</p>
+          <div id="out-cta"><span id="out-btn">Start for free <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span><span id="out-url">myfuturely.ai</span></div>
+        </div>
+      </section>
+
+      <!-- audio -->
+      <audio id="music" src="assets/music.mp3" data-start="0" data-duration="47" data-track-index="10" data-volume="1"></audio>
+      <audio id="a-riser1" src="assets/sfx/riser.mp3" data-start="3.6" data-media-start="7.6" data-duration="2.4" data-track-index="11" data-volume="0.6"></audio>
+      <audio id="a-whoosh1" src="assets/sfx/whoosh.mp3" data-start="5.55" data-duration="0.57" data-track-index="12" data-volume="1"></audio>
+      <audio id="a-impact1" src="assets/sfx/impact-bass-1.mp3" data-start="6.0" data-duration="2.1" data-track-index="13" data-volume="0.9"></audio>
+      <audio id="a-click1" src="assets/sfx/click-soft.mp3" data-start="13.05" data-duration="0.37" data-track-index="12" data-volume="1"></audio>
+      <audio id="a-whoosh2" src="assets/sfx/whoosh-short.mp3" data-start="13.7" data-duration="0.57" data-track-index="13" data-volume="0.9"></audio>
+      <audio id="a-whoosh3" src="assets/sfx/whoosh.mp3" data-start="15.75" data-duration="0.57" data-track-index="11" data-volume="0.9"></audio>
+      <audio id="a-click2" src="assets/sfx/click-soft.mp3" data-start="20.85" data-duration="0.37" data-track-index="12" data-volume="1"></audio>
+      <audio id="a-typing1" src="assets/sfx/typing.mp3" data-start="21.3" data-duration="0.7" data-track-index="11" data-volume="0.6"></audio>
+      <audio id="a-pop" src="assets/sfx/pop.mp3" data-start="22.4" data-duration="0.72" data-track-index="13" data-volume="0.8"></audio>
+      <audio id="a-whoosh4" src="assets/sfx/whoosh-short.mp3" data-start="23.7" data-duration="0.57" data-track-index="12" data-volume="0.9"></audio>
+      <audio id="a-whoosh5" src="assets/sfx/whoosh.mp3" data-start="25.75" data-duration="0.57" data-track-index="11" data-volume="0.9"></audio>
+      <audio id="a-sparkle" src="assets/sfx/sparkle.mp3" data-start="27.0" data-duration="1.4" data-track-index="13" data-volume="0.6"></audio>
+      <audio id="a-click3" src="assets/sfx/click-soft.mp3" data-start="29.85" data-duration="0.37" data-track-index="12" data-volume="1"></audio>
+      <audio id="a-whoosh6" src="assets/sfx/whoosh-short.mp3" data-start="33.7" data-duration="0.57" data-track-index="11" data-volume="0.9"></audio>
+      <audio id="a-whoosh7" src="assets/sfx/whoosh.mp3" data-start="35.75" data-duration="0.57" data-track-index="13" data-volume="0.9"></audio>
+      <audio id="a-typing2" src="assets/sfx/typing.mp3" data-start="36.9" data-duration="1.4" data-track-index="11" data-volume="0.7"></audio>
+      <audio id="a-click4" src="assets/sfx/click-soft.mp3" data-start="38.55" data-duration="0.37" data-track-index="12" data-volume="1"></audio>
+      <audio id="a-notif" src="assets/sfx/notification.mp3" data-start="38.9" data-duration="1.2" data-track-index="13" data-volume="0.5"></audio>
+      <audio id="a-whoosh8" src="assets/sfx/whoosh.mp3" data-start="41.7" data-duration="0.57" data-track-index="11" data-volume="0.9"></audio>
+      <audio id="a-chime" src="assets/sfx/chime.mp3" data-start="43.4" data-duration="2.5" data-track-index="12" data-volume="0.55"></audio>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const E = "expo.out", P3 = "power3.inOut";
+      // Screen is 1532×932 (screenshot CSS px); centre (766,466) sits at the device centre.
+      const focus = (px, py, s) => ({ x: -(px - 766) * s, y: -(py - 466) * s, scale: s });
+      const click = (p, at) => {
+        tl.fromTo("#" + p + "-cur", { scale: 1 }, { scale: 0.82, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out" }, at);
+        tl.fromTo("#" + p + "-rip", { scale: 0.3, opacity: 1 }, { scale: 1.6, opacity: 0, duration: 0.45, ease: "power2.out" }, at);
+      };
+      const swap = (sel, at, dur) => tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: dur || 0.25, ease: "power1.inOut" }, at);
+      const titleCard = (ids, t0, tEnd) => {
+        ids.forEach((id, i) => {
+          tl.fromTo(id, { opacity: 0, y: 70, filter: "blur(14px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, ease: E }, t0 + 0.08 + i * 0.11);
+        });
+        tl.to(ids, { opacity: 0, y: -40, filter: "blur(10px)", duration: 0.28, ease: "power2.in", stagger: 0.03 }, tEnd - 0.34);
+      };
+
+      // background
+      tl.fromTo("#bg-bright", { opacity: 1 }, { opacity: 0.35, duration: 0.8, ease: "sine.inOut" }, 5.6);
+      [[14, 16], [24, 26], [34, 36]].forEach(([a, b]) => {
+        tl.to("#bg-bright", { opacity: 1, duration: 0.3, ease: "sine.out" }, a - 0.2);
+        tl.to("#bg-bright", { opacity: 0.35, duration: 0.5, ease: "sine.inOut" }, b - 0.1);
+      });
+      tl.to("#bg-bright", { opacity: 1, duration: 0.8, ease: "sine.inOut" }, 41.8);
+      tl.fromTo("#blob-a", { x: 0, y: 0, scale: 1 }, { x: -520, y: -260, scale: 1.25, duration: 47, ease: "sine.inOut" }, 0);
+      tl.fromTo("#blob-b", { x: 0, y: 0 }, { x: 380, y: 200, duration: 47, ease: "sine.inOut" }, 0);
+
+      // 1 · tagline
+      titleCard(["#s1w1", "#s1w2", "#s1w3", "#s1w4"], 0.1, 3.0);
+
+      // 2 · logo
+      tl.fromTo("#logo-mark", { opacity: 0, scale: 0.5, y: 40, rotation: -8 }, { opacity: 1, scale: 1, y: 0, rotation: 0, duration: 0.9, ease: "back.out(1.6)" }, 3.05);
+      tl.fromTo("#sweep-bar", { x: -120 }, { x: 360, duration: 0.8, ease: "power2.inOut" }, 3.9);
+      tl.to("#logo-mark", { scale: 1.06, duration: 0.7, ease: "sine.inOut", yoyo: true, repeat: 1 }, 4.0);
+      tl.to("#logo-mark", { scale: 9, opacity: 0, duration: 0.45, ease: "power3.in" }, 5.55);
+
+      // 3 · dashboard 6–14
+      tl.fromTo("#d3-dev", { rotationX: 38, rotationY: -26, rotationZ: 6, y: 520, z: -400, opacity: 0 },
+        { rotationX: 10, rotationY: -14, rotationZ: 1.5, y: 0, z: 0, opacity: 1, duration: 1.3, ease: E }, 6.0);
+      tl.to("#d3-dev", { rotationX: 6, rotationY: -8, rotationZ: 0.5, duration: 1.05, ease: "sine.inOut" }, 7.3);
+      tl.to("#d3-dev", { rotationX: 2, rotationY: -2, rotationZ: 0, duration: 1.0, ease: P3 }, 8.4);
+      tl.fromTo("#d3-cam", { x: 0, y: 0, scale: 1 }, { ...focus(390, 230, 1.8), duration: 1.0, ease: P3 }, 8.4);
+      tl.to("#d3-cam", { ...focus(900, 330, 1.25), duration: 1.0, ease: P3 }, 10.2);
+      tl.to("#d3-dev", { rotationX: 6, rotationY: 10, rotationZ: -0.8, duration: 1.0, ease: P3 }, 10.2);
+      tl.to("#d3-cam", { x: 180, y: 0, scale: 1.0, duration: 0.9, ease: P3 }, 11.6);
+      tl.to("#d3-dev", { rotationX: 4, rotationY: -6, rotationZ: 0, duration: 0.9, ease: P3 }, 11.6);
+      tl.fromTo("#d3-cur", { x: 800, y: 640, opacity: 0 }, { x: 22, y: 250, opacity: 1, duration: 0.7, ease: "power2.inOut" }, 11.8);
+      swap("#d3-b", 12.45, 0.25);
+      tl.to("#d3-cur", { x: 105, y: 218, duration: 0.45, ease: "power2.inOut" }, 12.5);
+      click("d3", 13.05);
+      tl.to("#d3-dev", { rotationY: -30, x: -300, opacity: 0, duration: 0.45, ease: "power3.in" }, 13.55);
+
+      // 4 · title
+      titleCard(["#s4w1", "#s4w2", "#s4w3"], 14.0, 16.0);
+
+      // 5 · grades 16–24 — real What-If: Unit 4 Test 98 → 88.00% to 89.50%
+      tl.fromTo("#d5-dev", { rotationY: 34, rotationX: 8, x: 500, opacity: 0 }, { rotationY: 9, rotationX: 5, x: 0, opacity: 1, duration: 1.1, ease: E }, 16.0);
+      tl.fromTo("#d5-cam", { x: 0, y: 0, scale: 1 }, { ...focus(760, 330, 1.35), duration: 1.2, ease: P3 }, 16.9);
+      tl.to("#d5-dev", { rotationY: -3, rotationX: 2, duration: 1.1, ease: P3 }, 17.1);
+      tl.to("#d5-cam", { ...focus(1080, 330, 1.65), duration: 1.1, ease: P3 }, 18.4);
+      tl.fromTo("#d5-cur", { x: 900, y: 760, opacity: 0 }, { x: 1314, y: 340, opacity: 1, duration: 0.95, ease: "power2.inOut" }, 19.8);
+      click("d5", 20.85);
+      swap("#d5-b", 20.95, 0.25);
+      tl.to("#d5-cam", { ...focus(800, 500, 1.5), duration: 0.9, ease: P3 }, 21.0);
+      tl.to("#d5-cur", { x: 1480, y: 900, opacity: 0, duration: 0.5, ease: "power2.in" }, 21.1);
+      swap("#d5-c", 21.6, 0.2);
+      swap("#d5-d", 22.35, 0.2);
+      tl.to("#d5-cam", { ...focus(785, 505, 1.2), duration: 0.9, ease: P3 }, 22.35);
+      tl.to("#d5-dev", { rotationY: 26, x: 400, opacity: 0, duration: 0.45, ease: "power3.in" }, 23.55);
+
+      // 6 · title
+      titleCard(["#s6w1", "#s6w2", "#s6w3"], 24.0, 26.0);
+
+      // 7 · my future 26–34
+      tl.fromTo("#d7-dev", { rotationX: 30, rotationY: 30, rotationZ: -8, y: 400, opacity: 0 }, { rotationX: 14, rotationY: 16, rotationZ: -3, y: 0, opacity: 1, duration: 1.2, ease: E }, 26.0);
+      tl.fromTo("#d7-cam", { x: 0, y: 0, scale: 1 }, { ...focus(790, 330, 1.45), duration: 1.3, ease: P3 }, 26.6);
+      tl.to("#d7-dev", { rotationX: 6, rotationY: 6, rotationZ: -1, duration: 1.1, ease: P3 }, 27.2);
+      tl.to("#d7-cam", { ...focus(790, 520, 1.3), duration: 1.0, ease: P3 }, 28.0);
+      tl.fromTo("#d7-cur", { x: 1000, y: 700, opacity: 0 }, { x: 613, y: 124, opacity: 1, duration: 0.85, ease: "power2.inOut" }, 29.0);
+      click("d7", 29.85);
+      swap("#d7-b", 29.95, 0.25);
+      tl.to("#d7-cur", { x: 1300, y: 900, opacity: 0, duration: 0.5, ease: "power2.in" }, 30.3);
+      tl.to("#d7-cam", { ...focus(796, 430, 1.25), duration: 0.9, ease: P3 }, 30.1);
+      tl.to("#d7-dev", { rotationX: 10, rotationY: -12, rotationZ: 2, duration: 1.4, ease: P3 }, 31.3);
+      tl.to("#d7-cam", { ...focus(796, 660, 1.5), duration: 1.4, ease: P3 }, 31.3);
+      tl.to("#d7-dev", { rotationX: -20, y: -500, opacity: 0, duration: 0.45, ease: "power3.in" }, 33.55);
+
+      // 8 · title
+      titleCard(["#s8w1", "#s8w2", "#s8w3", "#s8w4"], 34.0, 36.0);
+
+      // 9 · AI chat 36–42 — the typed question wipes in like typing, then the real reply
+      tl.fromTo("#d9-dev", { rotationX: -24, y: 460, scale: 0.9, opacity: 0 }, { rotationX: 4, y: 0, scale: 1, opacity: 1, duration: 1.0, ease: E }, 36.0);
+      tl.fromTo("#d9-cam", { x: 0, y: 0, scale: 1 }, { ...focus(1010, 800, 1.35), duration: 0.9, ease: P3 }, 36.4);
+      tl.set("#d9-t0", { opacity: 1 }, 36.85);
+      tl.set("#d9-t1", { opacity: 1 }, 37.02);
+      tl.set("#d9-t2", { opacity: 1 }, 37.19);
+      tl.set("#d9-t3", { opacity: 1 }, 37.36);
+      tl.set("#d9-t4", { opacity: 1 }, 37.53);
+      tl.set("#d9-t5", { opacity: 1 }, 37.70);
+      tl.set("#d9-t6", { opacity: 1 }, 37.87);
+      tl.set("#d9-t7", { opacity: 1 }, 38.04);
+      tl.fromTo("#d9-cur", { x: 1300, y: 920, opacity: 0 }, { x: 1458, y: 855, opacity: 1, duration: 0.55, ease: "power2.inOut" }, 37.95);
+      click("d9", 38.55);
+      swap("#d9-c", 38.7, 0.3);
+      tl.to(".d9-t", { opacity: 0, duration: 0.3 }, 38.7);
+      tl.to("#d9-cur", { opacity: 0, duration: 0.2 }, 38.75);
+      tl.to("#d9-cam", { ...focus(930, 230, 1.3), duration: 0.9, ease: P3 }, 38.7);
+      tl.to("#d9-dev", { rotationY: -6, rotationX: 5, duration: 2.0, ease: "sine.inOut" }, 39.4);
+      tl.to("#d9-dev", { y: 700, rotationX: 30, opacity: 0, duration: 0.55, ease: "power3.in" }, 41.45);
+
+      // 10 · outro
+      tl.fromTo("#out-mark", { opacity: 0, scale: 0.4, rotation: -10 }, { opacity: 1, scale: 1, rotation: 0, duration: 0.8, ease: "back.out(1.7)" }, 42.05);
+      tl.fromTo("#out-word", { opacity: 0, x: -40, filter: "blur(12px)" }, { opacity: 1, x: 0, filter: "blur(0px)", duration: 0.7, ease: E }, 42.35);
+      tl.fromTo("#out-tag", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 43.3);
+      tl.fromTo("#out-cta", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 43.9);
+      tl.fromTo("#out-btn", { scale: 1 }, { scale: 1.05, duration: 0.35, yoyo: true, repeat: 1, ease: "sine.inOut" }, 45.0);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
