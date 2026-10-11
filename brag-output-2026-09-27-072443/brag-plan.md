@@ -1,6 +1,6 @@
 # /brag plan v4: myFuturely promo on the original soundtrack
 
-**Soundtrack:** the audio track from `Futurely Promo Video 4K.mp4`, copied losslessly (AAC, 60.3s). It looks like a produced music bed with vocal-style synth leads. Speech-model downloads are blocked in this environment, so it couldn't be transcribed.
+**Soundtrack:** the audio track from `Futurely Promo Video 4K.mp4`, copied losslessly (AAC, 60.3s). It is a voiceover over a produced music bed. The narration wasn't transcribed because speech-model downloads are blocked in this environment.
 
 **Length:** 60.3s, matching the soundtrack and the original edit. Authored at 1920×1080, rendered at 3840×2160, 30fps.
 
@@ -47,9 +47,16 @@ Local-only data for the capture:
 The "TEST ACCOUNT" banner, the "What's New" popup and the Next.js dev badge were hidden while capturing.
 
 ## Audio mix
-- Original soundtrack at full level.
-- Quiet UI clicks on the 8 cursor clicks and soft typing under both typing moments.
-- Final file loudness-normalized to about -14 LUFS.
+**What the composition plays** (`composition/index.html`, tracks 10–13):
+- the original soundtrack at full level;
+- quiet UI clicks on the 8 cursor clicks;
+- soft typing under both typing moments.
 
-## Audio remix (narration forward)
-The soundtrack contains a voiceover mixed with music. The voice was isolated from the centre channel with RNNoise (bundled model, gated by its speech probability); music = original minus voice, lowered about 11 dB with a 2.5 kHz dip; voice high-passed at 90 Hz with a slight 3 kHz lift. Speech now sits about 13.4 dB above the music between phrases (was 4.5 dB). Typing sounds lowered under the narration. Final mix -14.4 LUFS, true peak -0.8 dB. Video stream unchanged.
+Rendering it as-is gives the first mix, normalized to about -14 LUFS.
+
+**What `brag.mp4` carries:** a narration-forward remix, muxed onto the rendered video afterwards. The video stream is unchanged.
+- **Voice:** isolated from the centre channel with RNNoise (its bundled model, gated by its own speech probability), high-passed at 90 Hz, with a slight 3 kHz lift.
+- **Music:** the original minus the voice, lowered about 11 dB, with a 2.5 kHz dip so it doesn't mask the voice.
+- **Result:** between phrases, speech now sits about 13.4 dB above the music (it was 4.5 dB).
+- **Sound effects:** the clicks are unchanged; the typing is lowered under the narration.
+- **Final level:** -14.4 LUFS, true peak -0.8 dB.
