@@ -50,3 +50,6 @@ The "TEST ACCOUNT" banner, the "What's New" popup and the Next.js dev badge were
 - Original soundtrack at full level.
 - Quiet UI clicks on the 8 cursor clicks and soft typing under both typing moments.
 - Final file loudness-normalized to about -14 LUFS.
+
+## Audio remix (narration forward)
+The soundtrack contains a voiceover mixed with music. The voice was isolated from the centre channel with RNNoise (bundled model, gated by its speech probability); music = original minus voice, lowered about 11 dB with a 2.5 kHz dip; voice high-passed at 90 Hz with a slight 3 kHz lift. Speech now sits about 13.4 dB above the music between phrases (was 4.5 dB). Typing sounds lowered under the narration. Final mix -14.4 LUFS, true peak -0.8 dB. Video stream unchanged.
