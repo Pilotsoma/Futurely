@@ -16,6 +16,8 @@ import type { GradesStackParamList } from './GradesNavigator'
 import type { StudyStackParamList } from './StudyNavigator'
 import type { FutureStackParamList } from './FutureNavigator'
 import { colors, fonts } from '../theme/tokens'
+import { AIContextProvider } from '../components/ai/AIContext'
+import AIFab from '../components/ai/AIFab'
 
 export type MainTabParamList = {
   Dashboard: undefined
@@ -57,6 +59,18 @@ export default function MainNavigator(): React.JSX.Element {
 
   return (
     <Tab.Navigator
+      layout={({ state, navigation, children }) => (
+        <AIContextProvider>
+          <View style={styles.flex}>
+            {children}
+            <AIFab
+              routeName={state.routes[state.index]?.name ?? ''}
+              tabBarHeight={64 + safeBottom + contentLift}
+              openChat={(params) => navigation.navigate('AIChat', params)}
+            />
+          </View>
+        </AIContextProvider>
+      )}
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
@@ -146,6 +160,7 @@ export default function MainNavigator(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   tabBar: {
     backgroundColor: '#071522',
     borderTopWidth: 1,
