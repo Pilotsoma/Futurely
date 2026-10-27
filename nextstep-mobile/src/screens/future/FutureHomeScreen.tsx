@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+import { useAIContext } from '../../components/ai/AIContext'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -22,6 +23,7 @@ interface HubState {
 // The colleges API (CollegeListItem) exposes no deadline field, so there is
 // deliberately no "Upcoming deadlines" card here.
 export default function FutureHomeScreen(): React.JSX.Element {
+  useAIContext('My future', 'Based on my grades, what colleges and next steps should I focus on?')
   const navigation = useNavigation<NativeStackNavigationProp<FutureStackParamList, 'FutureHome'>>()
   const [state, setState] = useState<HubState>({
     collegeCount: null,

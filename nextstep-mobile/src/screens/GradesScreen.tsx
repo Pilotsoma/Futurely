@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+import { useAIContext } from '../components/ai/AIContext'
 import {
   RefreshControl,
   ScrollView,
@@ -125,6 +126,7 @@ function resultMessage(error: unknown, fallback: string): string {
 }
 
 export default function GradesScreen(): React.JSX.Element {
+  useAIContext('My grades', 'Look at my current grades and tell me which class needs attention first and what I should do this week.')
   const navigation = useNavigation<Nav>()
 
   const [courses, setCourses] = useState<CurrentGradeCourse[]>([])

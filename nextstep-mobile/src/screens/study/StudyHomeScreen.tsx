@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+import { useAIContext } from '../../components/ai/AIContext'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -35,6 +36,7 @@ function HubRow({ icon, title, subtitle, onPress }: HubRowProps): React.JSX.Elem
 }
 
 export default function StudyHomeScreen(): React.JSX.Element {
+  useAIContext('Study', 'Help me make a study plan for my next test.')
   const navigation = useNavigation<NativeStackNavigationProp<StudyStackParamList, 'StudyHome'>>()
   const [sets, setSets] = useState<QuestionSet[] | null>(null)
   const [error, setError] = useState<string | null>(null)
