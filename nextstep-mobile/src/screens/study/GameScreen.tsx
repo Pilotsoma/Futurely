@@ -56,7 +56,6 @@ export default function GameScreen(): React.JSX.Element {
   const [actionError, setActionError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [myAnswer, setMyAnswer] = useState<MyAnswer | null>(null)
-  const [revealedIndex, setRevealedIndex] = useState<number | null>(null)
   const [secondsLeft, setSecondsLeft] = useState(0)
   const questionStart = useRef(Date.now())
   const trackedIndex = useRef<number | null>(null)
@@ -224,9 +223,9 @@ export default function GameScreen(): React.JSX.Element {
   }
 
   const mine = myAnswer?.qIndex === currentIndex ? myAnswer : null
-  const revealed = isHost ? revealedIndex === currentIndex : mine?.result != null
+  const revealed = session.revealed
   const isLast = currentIndex >= total - 1
-  const correctIndex = question.correctAnswer
+  const correctIndex = session.revealed ? session.correctAnswer : undefined
 
   return (
     <Screen>
@@ -247,7 +246,7 @@ export default function GameScreen(): React.JSX.Element {
           if (!isHost && mine && !selected) bg = colors.surface2
           if (revealed && isCorrect) bg = colors.success
           else if (revealed && selected && mine?.result && !mine.result.isCorrect) bg = colors.error
-          const disabled = isHost || !!mine || secondsLeft === 0
+          const disabled = isHost || !!mine || secondsLeft === 0 || revealed
           return (
             <Pressable
               key={i}
@@ -270,10 +269,16 @@ export default function GameScreen(): React.JSX.Element {
             <Text style={[styles.h, { color: mine.result.isCorrect ? colors.success : colors.error }]}>
               {mine.result.isCorrect ? `Correct! +${mine.result.pointsEarned}` : 'Not quite'}
             </Text>
-            <Text style={styles.sub}>Waiting for the host to move on...</Text>
+            <Text style={styles.sub}>{revealed ? 'Waiting for the host to move on...' : 'Waiting for the host to reveal...'}</Text>
           </Card>
         ) : null}
         {!isHost && !mine && secondsLeft === 0 ? <Text style={styles.sub}>Time is up for this question.</Text> : null}
+
+        {isHost && !revealed ? (
+          <Text style={styles.sub}>
+            {session.answerCount} / {session.participants.length} answered
+          </Text>
+        ) : null}
 
         {(revealed || isHost) && <Text style={styles.h}>Scores</Text>}
         {(revealed || isHost) && <Leaderboard session={session} meId={user?.id} />}
@@ -286,10 +291,7 @@ export default function GameScreen(): React.JSX.Element {
               style={styles.flex}
               loading={busy}
               disabled={revealed}
-              onPress={() => void run(async () => {
-                await revealResults(code)
-                setRevealedIndex(currentIndex)
-              })}
+              onPress={() => void run(() => revealResults(code))}
             />
             <Button
               label={isLast ? 'Finish game' : 'Next question'}

@@ -10,8 +10,6 @@ export interface LiveQuestion {
   questionType: 'MULTIPLE_CHOICE' | 'TRUE_FALSE'
   options: string[]
   timeLimit: number
-  /** Only populated for the host, and (currently) not even then; see backend gap notes. */
-  correctAnswer?: string
 }
 
 export interface GameParticipant {
@@ -35,6 +33,12 @@ export interface GameSession {
   set: { title: string; questions: LiveQuestion[] }
   host: { id: number; name: string | null }
   participants: GameParticipant[]
+  /** Host revealed the current question. */
+  revealed: boolean
+  /** Answers submitted for the current question. */
+  answerCount: number
+  /** Present only when revealed is true. */
+  correctAnswer?: string
 }
 
 const path = (code: string, suffix = ''): string => `/games/${encodeURIComponent(code.trim().toUpperCase())}${suffix}`
