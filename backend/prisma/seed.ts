@@ -32,7 +32,7 @@ async function main(): Promise<void> {
     create: {
       email: 'test@nextstep.com',
       passwordHash: await bcrypt.hash('nextstep123', 10),
-      name: 'Test Student',
+      name: 'Sample Student',
       role: 'STUDENT',
     },
   })
