@@ -8,11 +8,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import DashboardScreen from '../screens/DashboardScreen'
 import GradesNavigator from './GradesNavigator'
 import PlannerScreen from '../screens/PlannerScreen'
-import StudyFeedScreen from '../screens/StudyFeedScreen'
-import CollegesScreen from '../screens/CollegesScreen'
+import StudyNavigator from './StudyNavigator'
+import FutureNavigator from './FutureNavigator'
 import AIChatScreen from '../screens/AIChatScreen'
 import SettingsScreen from '../screens/SettingsScreen'
 import type { GradesStackParamList } from './GradesNavigator'
+import type { StudyStackParamList } from './StudyNavigator'
+import type { FutureStackParamList } from './FutureNavigator'
 import { colors, fonts } from '../theme/tokens'
 
 export type MainTabParamList = {
@@ -20,9 +22,9 @@ export type MainTabParamList = {
   Grades: NavigatorScreenParams<GradesStackParamList> | undefined
   AIChat: { initialPrompt?: string; requestId?: number } | undefined
   Planner: { assignmentId?: number } | undefined
-  Colleges: undefined
+  Study: NavigatorScreenParams<StudyStackParamList> | undefined
+  Future: NavigatorScreenParams<FutureStackParamList> | undefined
   Settings: undefined
-  StudyFeed: undefined
 }
 
 const Tab = createBottomTabNavigator<MainTabParamList>()
@@ -40,7 +42,7 @@ function TabIcon({
 function hideFromTabBar() {
   return {
     tabBarButton: () => null,
-    // Remove the hidden StudyFeed route from the tab bar layout entirely.
+    // Remove the hidden routes from the tab bar layout entirely.
     // Without this, React Navigation can reserve a seventh empty tab slot.
     tabBarItemStyle: { display: 'none' as const },
   }
@@ -76,7 +78,7 @@ export default function MainNavigator(): React.JSX.Element {
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          title: 'Home',
+          title: 'Today',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon focused={focused}>
               <Feather name="home" size={20} color={color} />
@@ -99,19 +101,6 @@ export default function MainNavigator(): React.JSX.Element {
       />
 
       <Tab.Screen
-        name="AIChat"
-        component={AIChatScreen}
-        options={{
-          title: 'AI',
-          tabBarIcon: ({ focused, color }) => (
-            <TabIcon focused={focused}>
-              <MaterialCommunityIcons name="brain" size={21} color={color} />
-            </TabIcon>
-          ),
-        }}
-      />
-
-      <Tab.Screen
         name="Planner"
         component={PlannerScreen}
         options={{
@@ -125,32 +114,33 @@ export default function MainNavigator(): React.JSX.Element {
       />
 
       <Tab.Screen
-        name="Colleges"
-        component={CollegesScreen}
+        name="Study"
+        component={StudyNavigator}
         options={{
-          title: 'Colleges',
+          title: 'Study',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon focused={focused}>
-              <Feather name="bookmark" size={20} color={color} />
+              <Feather name="book-open" size={20} color={color} />
             </TabIcon>
           ),
         }}
       />
 
       <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
+        name="Future"
+        component={FutureNavigator}
         options={{
-          title: 'Settings',
+          title: 'Future',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon focused={focused}>
-              <Feather name="settings" size={20} color={color} />
+              <Feather name="compass" size={20} color={color} />
             </TabIcon>
           ),
         }}
       />
 
-      <Tab.Screen name="StudyFeed" component={StudyFeedScreen} options={hideFromTabBar()} />
+      <Tab.Screen name="AIChat" component={AIChatScreen} options={hideFromTabBar()} />
+      <Tab.Screen name="Settings" component={SettingsScreen} options={hideFromTabBar()} />
     </Tab.Navigator>
   )
 }
