@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRoute, type RouteProp } from '@react-navigation/native'
 import { Screen } from '../../components/ui/Screen'
@@ -23,26 +23,21 @@ export default function FlashcardsScreen(): React.JSX.Element {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [progress, setProgress] = useState<FlashcardProgress>(emptyProgress)
-
-  const load = useCallback(async () => {
-    setError(null)
-    try {
-      setCards((await getSet(setId)).questions)
-    } catch (err) {
-      setError(errorMessage(err, 'Could not load this set.'))
-    }
-  }, [setId])
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
-    void load()
-  }, [load])
+    getSet(setId).then(
+      (set) => setCards(set.questions),
+      (err: unknown) => setError(errorMessage(err, 'Could not load this set.')),
+    )
+  }, [setId, reloadKey])
 
   const summary = useMemo(() => summarizeProgress(progress, cards?.length ?? 0), [progress, cards])
 
   if (error) {
     return (
       <Screen>
-        <ErrorRetryBlock message={error} onRetry={() => void load()} />
+        <ErrorRetryBlock message={error} onRetry={() => { setError(null); setReloadKey((k) => k + 1) }} />
       </Screen>
     )
   }

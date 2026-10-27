@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -36,29 +36,24 @@ export default function SetEditScreen(): React.JSX.Element {
   const [originalIds, setOriginalIds] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    if (setId === undefined) return
-    setLoading(true)
-    setLoadError(null)
-    try {
-      const set = await getSet(setId)
-      setTitle(set.title)
-      setDescription(set.description ?? '')
-      setSubject(set.subject ?? '')
-      setVisibility(set.visibility)
-      setDrafts(set.questions.map(draftFromQuestion))
-      setOriginalIds(set.questions.map((q) => q.id))
-    } catch (err) {
-      setLoadError(errorMessage(err, 'Could not load this set.'))
-    } finally {
-      setLoading(false)
-    }
-  }, [setId])
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
-    void load()
-  }, [load])
+    if (setId === undefined) return
+    getSet(setId)
+      .then(
+        (set) => {
+          setTitle(set.title)
+          setDescription(set.description ?? '')
+          setSubject(set.subject ?? '')
+          setVisibility(set.visibility)
+          setDrafts(set.questions.map(draftFromQuestion))
+          setOriginalIds(set.questions.map((q) => q.id))
+        },
+        (err: unknown) => setLoadError(errorMessage(err, 'Could not load this set.')),
+      )
+      .finally(() => setLoading(false))
+  }, [setId, reloadKey])
 
   async function save(): Promise<void> {
     if (!title.trim()) {
@@ -99,7 +94,7 @@ export default function SetEditScreen(): React.JSX.Element {
     } catch (err) {
       setSaveError(errorMessage(err, 'Could not save. Please try again.'))
       // A partial save may have changed server state, so re-sync ids before a retry.
-      if (setId !== undefined) void load()
+      if (setId !== undefined) { setLoading(true); setReloadKey((k) => k + 1) }
     } finally {
       setSaving(false)
     }
@@ -117,7 +112,7 @@ export default function SetEditScreen(): React.JSX.Element {
   if (loadError) {
     return (
       <Screen>
-        <ErrorRetryBlock message={loadError} onRetry={() => void load()} />
+        <ErrorRetryBlock message={loadError} onRetry={() => { setLoadError(null); setLoading(true); setReloadKey((k) => k + 1) }} />
       </Screen>
     )
   }

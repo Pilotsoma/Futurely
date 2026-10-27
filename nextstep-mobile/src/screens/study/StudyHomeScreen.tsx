@@ -76,7 +76,7 @@ export default function StudyHomeScreen(): React.JSX.Element {
         ) : sets === null ? (
           <ActivityIndicator color={colors.primary} />
         ) : sets.length === 0 ? (
-          <Text style={styles.rowSub}>No sets yet. Tap "New set" to make your first one.</Text>
+          <Text style={styles.rowSub}>No sets yet. Tap &quot;New set&quot; to make your first one.</Text>
         ) : (
           sets.map((s) => (
             <HubRow
