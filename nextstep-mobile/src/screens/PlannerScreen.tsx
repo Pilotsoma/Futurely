@@ -322,7 +322,7 @@ export default function PlannerScreen(): React.JSX.Element {
                 <Text style={styles.allCaughtUpTitle}>All caught up!</Text>
                 <Text style={styles.allCaughtUpSubtitle}>Every assignment is completed.</Text>
               </View>
-            ) : null
+            ) : undefined
           }
         />
       )}

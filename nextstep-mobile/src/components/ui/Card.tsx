@@ -29,7 +29,7 @@ export function Card({
     // (goes on the children) concerns.
     return (
       <View style={[styles.gradientCard, { borderRadius: radius }]}>
-        <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
           <Defs>
             <LinearGradient id="cardGradient" x1="0" y1="0" x2="1" y2="1">
               <Stop offset="0" stopColor={gradientColors[0]} stopOpacity={1} />

@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     paddingTop: 3,
   },
   decorativeLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
   glowOrbTop: {

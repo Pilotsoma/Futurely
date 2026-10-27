@@ -25,7 +25,7 @@ export function IconTile({ icon, label, onPress, gradientColors = gradients.acce
       accessibilityLabel={label}
     >
       <View style={styles.tile}>
-        <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
           <Defs>
             <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
               <Stop offset="0" stopColor={gradientColors[0]} stopOpacity={1} />
