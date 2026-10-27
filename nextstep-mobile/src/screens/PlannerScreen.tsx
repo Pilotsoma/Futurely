@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native'
 import { Feather } from '@expo/vector-icons'
@@ -21,6 +21,8 @@ import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
 import { ErrorRetryBlock } from '../components/ui/ErrorRetryBlock'
 import { EmptyState } from '../components/ui/EmptyState'
 import type { Assignment } from '../types/assignments'
+import { useAuth } from '../context/AuthContext'
+import { getCache, lastUpdatedLabel, setCache } from '../utils/offlineCache'
 import type { MainTabParamList } from '../navigation/MainNavigator'
 import { colors, fonts, radii, spacing, typography } from '../theme/tokens'
 
@@ -58,7 +60,17 @@ function groupFor(assignment: Assignment): Group {
   return 'Later'
 }
 
+interface PlannerCache {
+  assignments: Assignment[]
+  cursor: number | null
+  hasNextPage: boolean
+}
+
 export default function PlannerScreen(): React.JSX.Element {
+  const { user } = useAuth()
+  const userId = user?.id
+  const hasCache = useRef(false)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
   const route = useRoute<RouteProp<MainTabParamList, 'Planner'>>()
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [cursor, setCursor] = useState<number | null>(null)
@@ -81,6 +93,19 @@ export default function PlannerScreen(): React.JSX.Element {
   const [refreshing, setRefreshing] = useState(false)
   const syncingRef = useRef(false)
 
+  useEffect(() => {
+    if (userId === undefined) return
+    void getCache<PlannerCache>(userId, 'planner').then((entry) => {
+      if (!entry || hasCache.current) return
+      hasCache.current = true
+      setAssignments(entry.data.assignments)
+      setCursor(entry.data.cursor)
+      setHasNextPage(entry.data.hasNextPage)
+      setSavedAt(entry.savedAt)
+      setLoading(false)
+    })
+  }, [userId])
+
   const loadFirstPage = useCallback(async () => {
     setError(null)
     try {
@@ -88,12 +113,23 @@ export default function PlannerScreen(): React.JSX.Element {
       setAssignments(result.data)
       setCursor(result.meta.nextCursor)
       setHasNextPage(result.meta.hasNextPage)
+      if (userId !== undefined) {
+        hasCache.current = true
+        setSavedAt(new Date().toISOString())
+        void setCache<PlannerCache>(userId, 'planner', {
+          assignments: result.data,
+          cursor: result.meta.nextCursor,
+          hasNextPage: result.meta.hasNextPage,
+        })
+      }
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Could not load your planner.')
+      if (!hasCache.current) {
+        setError(err instanceof ApiRequestError ? err.message : 'Could not load your planner.')
+      }
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [userId])
 
   // A school portal that isn't linked makes this endpoint throw — that just means "no portal".
   const loadPortal = useCallback(async () => {
@@ -358,6 +394,12 @@ export default function PlannerScreen(): React.JSX.Element {
             </Text>
           </View>
         )
+      ) : null}
+
+      {lastUpdatedLabel(savedAt) ? (
+        <Text style={styles.syncLine} accessibilityLiveRegion="polite">
+          {lastUpdatedLabel(savedAt)}
+        </Text>
       ) : null}
 
       {syncing || syncError || lastSynced ? (

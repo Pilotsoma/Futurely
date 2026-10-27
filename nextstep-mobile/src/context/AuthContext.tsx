@@ -10,6 +10,7 @@ import {
   SESSION_EXPIRED_EVENT,
 } from '../api/client'
 import { clearTokens, loadTokens } from '../utils/storage'
+import { clearCache } from '../utils/offlineCache'
 import type { AuthUser, LoginRequest, RegisterRequest } from '../types/auth'
 
 type AuthStatus = 'initializing' | 'unauthenticated' | 'authenticated'
@@ -191,12 +192,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   )
 
   const signOut = useCallback(async () => {
+    const cachedUserId = user?.id
     await authApi.logout()
+    if (cachedUserId !== undefined) await clearCache(cachedUserId)
     setUser(null)
     setStatus('unauthenticated')
     setHasPortalConnection(null)
     setConsentRequired(false)
-  }, [])
+  }, [user?.id])
 
   const deleteAccount = useCallback(async (password?: string) => {
     await authApi.deleteAccount(password)

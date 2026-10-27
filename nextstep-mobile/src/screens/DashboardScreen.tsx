@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Pressable,
   ScrollView,
@@ -38,6 +38,7 @@ import { formatGpa, toFiniteNumber } from '../features/grades/academicSummary'
 import type { StudentMe } from '../types/student'
 import type { Assignment } from '../types/assignments'
 import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
+import { getCache, lastUpdatedLabel, setCache } from '../utils/offlineCache'
 import type { MainTabParamList } from '../navigation/MainNavigator'
 import { colors, fonts, spacing, typography } from '../theme/tokens'
 
@@ -54,6 +55,12 @@ function formatDate(): string {
     month: 'long',
     day: 'numeric',
   })
+}
+
+interface DashboardCache {
+  student: StudentMe
+  gpa: GpaSummary | null
+  courses: CurrentGradeCourse[]
 }
 
 export default function DashboardScreen(): React.JSX.Element {
@@ -75,6 +82,21 @@ export default function DashboardScreen(): React.JSX.Element {
   const [aiPrompt, setAiPrompt] = useState('')
   const [gpaHistory, setGpaHistory] = useState<GpaReading[]>([])
   const userId = user?.id
+  const hasCache = useRef(false)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (userId === undefined) return
+    void getCache<DashboardCache>(userId, 'dashboard').then((entry) => {
+      if (!entry || hasCache.current) return
+      hasCache.current = true
+      setStudent(entry.data.student)
+      setGpa(entry.data.gpa)
+      setCourses(entry.data.courses)
+      setSavedAt(entry.savedAt)
+      setLoading(false)
+    })
+  }, [userId])
 
   const load = useCallback(async () => {
     setError(null)
@@ -86,9 +108,24 @@ export default function DashboardScreen(): React.JSX.Element {
       gradesApi.getCurrentGrades(),
     ])
 
+    if (
+      userId !== undefined &&
+      studentResult.status === 'fulfilled' &&
+      gpaResult.status === 'fulfilled' &&
+      coursesResult.status === 'fulfilled'
+    ) {
+      hasCache.current = true
+      setSavedAt(new Date().toISOString())
+      void setCache<DashboardCache>(userId, 'dashboard', {
+        student: studentResult.value,
+        gpa: gpaResult.value,
+        courses: coursesResult.value.grades,
+      })
+    }
+
     if (studentResult.status === 'fulfilled') {
       setStudent(studentResult.value)
-    } else {
+    } else if (!hasCache.current) {
       setError(
         studentResult.reason instanceof ApiRequestError
           ? studentResult.reason.message
@@ -102,7 +139,7 @@ export default function DashboardScreen(): React.JSX.Element {
       if (userId !== undefined && currentGpa !== null) {
         void recordGpaReading(userId, currentGpa).then(setGpaHistory)
       }
-    } else {
+    } else if (!hasCache.current) {
       setGpa(null)
       setGpaError(
         gpaResult.reason instanceof ApiRequestError
@@ -114,7 +151,7 @@ export default function DashboardScreen(): React.JSX.Element {
 
     if (coursesResult.status === 'fulfilled') {
       setCourses(coursesResult.value.grades)
-    } else {
+    } else if (!hasCache.current) {
       setCourses([])
     }
 
@@ -484,6 +521,11 @@ export default function DashboardScreen(): React.JSX.Element {
           </View>
         </View>
 
+        {lastUpdatedLabel(savedAt) ? (
+          <Text style={styles.cacheLabel} accessibilityLiveRegion="polite">
+            {lastUpdatedLabel(savedAt)}
+          </Text>
+        ) : null}
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
       </ScrollView>
     </Screen>
@@ -903,6 +945,7 @@ const styles = StyleSheet.create({
     opacity: 0.80,
     transform: [{ scale: 0.987 }],
   },
+  cacheLabel: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm },
   inlineError: {
     ...typography.caption,
     color: colors.error,

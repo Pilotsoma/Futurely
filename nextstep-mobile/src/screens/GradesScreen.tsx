@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useAIContext } from '../components/ai/AIContext'
 import {
   RefreshControl,
@@ -20,6 +20,8 @@ import { GpaOverviewCard } from '../components/grades/GpaOverviewCard'
 import { Card } from '../components/ui/Card'
 import { WhatIfPanel } from '../components/grades/WhatIfPanel'
 import { parseAssignments } from '../lib/whatIf'
+import { useAuth } from '../context/AuthContext'
+import { getCache, lastUpdatedLabel, setCache } from '../utils/offlineCache'
 import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
 import type { GradesStackParamList } from '../navigation/GradesNavigator'
 import {
@@ -128,6 +130,10 @@ function resultMessage(error: unknown, fallback: string): string {
 export default function GradesScreen(): React.JSX.Element {
   useAIContext('My grades', 'Look at my current grades and tell me which class needs attention first and what I should do this week.')
   const navigation = useNavigation<Nav>()
+  const { user } = useAuth()
+  const userId = user?.id
+  const hasCache = useRef(false)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
 
   const [courses, setCourses] = useState<CurrentGradeCourse[]>([])
   const [gpa, setGpa] = useState<GpaSummary | null>(null)
@@ -136,6 +142,18 @@ export default function GradesScreen(): React.JSX.Element {
   const [syncing, setSyncing] = useState(false)
   const [inlineError, setInlineError] = useState<string | null>(null)
   const [gpaError, setGpaError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (userId === undefined) return
+    void getCache<{ courses: CurrentGradeCourse[]; gpa: GpaSummary | null }>(userId, 'grades').then((entry) => {
+      if (!entry || hasCache.current) return
+      hasCache.current = true
+      setCourses(entry.data.courses)
+      setGpa(entry.data.gpa)
+      setSavedAt(entry.savedAt)
+      setLoading(false)
+    })
+  }, [userId])
 
   const load = useCallback(async () => {
     setInlineError(null)
@@ -150,23 +168,31 @@ export default function GradesScreen(): React.JSX.Element {
       setCourses(currentResult.value.grades)
     }
 
+    if (currentResult.status === 'fulfilled' && gpaResult.status === 'fulfilled' && userId !== undefined) {
+      hasCache.current = true
+      setSavedAt(new Date().toISOString())
+      void setCache(userId, 'grades', { courses: currentResult.value.grades, gpa: gpaResult.value })
+    }
+
     if (gpaResult.status === 'fulfilled') {
       setGpa(gpaResult.value)
-    } else {
+    } else if (!hasCache.current) {
       setGpa(null)
     }
 
-    if (currentResult.status === 'rejected') {
+    if (hasCache.current) {
+      // Keep showing cached data instead of an error.
+    } else if (currentResult.status === 'rejected') {
       setInlineError(
         resultMessage(currentResult.reason, 'Your course list could not be loaded.'),
       )
     }
-    if (gpaResult.status === 'rejected') {
+    if (gpaResult.status === 'rejected' && !hasCache.current) {
       setGpaError(resultMessage(gpaResult.reason, 'Your GPA could not be loaded.'))
     }
 
     setLoading(false)
-  }, [])
+  }, [userId])
 
   useFocusEffect(
     useCallback(() => {
@@ -233,6 +259,12 @@ export default function GradesScreen(): React.JSX.Element {
             </Text>
           </View>
         </View>
+
+        {lastUpdatedLabel(savedAt) ? (
+          <Text allowFontScaling={false} style={styles.pageSubtitle} accessibilityLiveRegion="polite">
+            {lastUpdatedLabel(savedAt)}
+          </Text>
+        ) : null}
 
         <GpaOverviewCard
           summary={gpa}
