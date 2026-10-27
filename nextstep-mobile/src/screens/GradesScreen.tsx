@@ -16,6 +16,9 @@ import { Screen } from '../components/ui/Screen'
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
 import { ActionTile } from '../components/ui/ActionTile'
 import { GpaOverviewCard } from '../components/grades/GpaOverviewCard'
+import { Card } from '../components/ui/Card'
+import { WhatIfPanel } from '../components/grades/WhatIfPanel'
+import { parseAssignments } from '../lib/whatIf'
 import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
 import type { GradesStackParamList } from '../navigation/GradesNavigator'
 import {
@@ -239,6 +242,16 @@ export default function GradesScreen(): React.JSX.Element {
           testID="grades-gpa-card"
         />
 
+        {courses.map((course) => (
+          <Card key={course.id} style={styles.courseCard}>
+            <Text style={styles.courseName}>
+              {course.name}
+              {course.average !== null ? `  ${course.average}%` : ''}
+            </Text>
+            <WhatIfPanel assignments={parseAssignments(course.assignments)} />
+          </Card>
+        ))}
+
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderCopy}>
             <Text allowFontScaling={false} style={styles.sectionEyebrow}>
@@ -292,6 +305,8 @@ export default function GradesScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
+  courseCard: { gap: 8 },
+  courseName: { color: '#F7F9FF', fontFamily: fonts.semiBold, fontSize: 15 },
   scrollContent: {
     paddingTop: 10,
     paddingBottom: 118,
