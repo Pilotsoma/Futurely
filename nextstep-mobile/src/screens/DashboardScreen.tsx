@@ -12,6 +12,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '../context/AuthContext'
+import { useAIContext } from '../components/ai/AIContext'
 import * as studentsApi from '../api/studentsApi'
 import * as gradesApi from '../api/gradesApi'
 import { ApiRequestError } from '../api/client'
@@ -60,6 +61,7 @@ export default function DashboardScreen(): React.JSX.Element {
   const { user } = useAuth()
   const { hideGpa } = useDisplayPreferences()
   const { height, width } = useWindowDimensions()
+  useAIContext('Today', 'Look at what is due and my grades. What should I focus on today?')
   const compact = height < 810
   const veryCompact = height < 710
 
