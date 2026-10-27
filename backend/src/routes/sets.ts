@@ -184,7 +184,9 @@ router.put('/:id/questions/:qid', requireAuth, async (req: AuthRequest, res: Res
     const set = await prisma.questionSet.findUnique({ where: { id: setId }, select: { creatorId: true } })
     if (!set) { res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Set not found' } }); return }
     if (set.creatorId !== req.userId) { res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'Not your set' } }); return }
-    const question = await prisma.question.update({ where: { id: qid }, data: parse.data })
+    const { count } = await prisma.question.updateMany({ where: { id: qid, setId }, data: parse.data })
+    if (count === 0) { res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Question not found' } }); return }
+    const question = await prisma.question.findUnique({ where: { id: qid } })
     res.json({ data: question, error: null })
   } catch (err: unknown) {
     logger.error('question_update_error', { userId: req.userId, qid, error: err instanceof Error ? err.message : String(err) })
@@ -202,7 +204,8 @@ router.delete('/:id/questions/:qid', requireAuth, async (req: AuthRequest, res: 
     const set = await prisma.questionSet.findUnique({ where: { id: setId }, select: { creatorId: true } })
     if (!set) { res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Set not found' } }); return }
     if (set.creatorId !== req.userId) { res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'Not your set' } }); return }
-    await prisma.question.delete({ where: { id: qid } })
+    const { count } = await prisma.question.deleteMany({ where: { id: qid, setId } })
+    if (count === 0) { res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Question not found' } }); return }
     res.json({ data: { id: qid }, error: null })
   } catch (err: unknown) {
     logger.error('question_delete_error', { userId: req.userId, qid, error: err instanceof Error ? err.message : String(err) })
@@ -222,7 +225,7 @@ router.put('/:id/questions/reorder', requireAuth, async (req: AuthRequest, res: 
     if (!set) { res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Set not found' } }); return }
     if (set.creatorId !== req.userId) { res.status(403).json({ data: null, error: { code: 'FORBIDDEN', message: 'Not your set' } }); return }
     await prisma.$transaction(
-      parse.data.order.map((qid, i) => prisma.question.update({ where: { id: qid }, data: { orderIndex: i } }))
+      parse.data.order.map((qid, i) => prisma.question.updateMany({ where: { id: qid, setId }, data: { orderIndex: i } }))
     )
     res.json({ data: { ok: true }, error: null })
   } catch (err: unknown) {
