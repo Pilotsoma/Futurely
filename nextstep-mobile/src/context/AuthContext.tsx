@@ -185,7 +185,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 
   const updateDateOfBirth = useCallback(
     async (dateOfBirth: string) => {
-      await authApi.updateDateOfBirth(dateOfBirth)
+      try {
+        await authApi.updateDateOfBirth(dateOfBirth)
+      } catch (err) {
+        // The server already accepted a date of birth (e.g. an earlier attempt succeeded
+        // but this client never saw the status change). Nothing to correct: just re-sync.
+        if (!(err instanceof ApiRequestError && err.code === 'NO_CORRECTION_NEEDED')) throw err
+      }
       await refreshUser()
     },
     [refreshUser],
