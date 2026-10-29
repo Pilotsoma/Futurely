@@ -21,6 +21,7 @@ export function usePortalFetch<T>(fetcher: () => Promise<T>, deps: unknown[] = [
   const [unsupported, setUnsupported] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
+  const depsKey = JSON.stringify(deps)
 
   useFocusEffect(
     useCallback(() => {
@@ -51,7 +52,7 @@ export function usePortalFetch<T>(fetcher: () => Promise<T>, deps: unknown[] = [
       // fetcher is intentionally excluded — callers pass a new closure each render,
       // only reloadKey and their own explicit deps (e.g. period/date) should refetch.
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reloadKey, ...deps]),
+    }, [reloadKey, depsKey]),
   )
 
   return { data, loading, unsupported, error, reload: () => setReloadKey((k) => k + 1) }

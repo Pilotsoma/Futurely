@@ -14,6 +14,12 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (platform === 'web' && moduleName.includes('ReactDevToolsSettingsManager')) {
     return { type: 'empty' }
   }
+  // Expo's default resolver empties Node builtins in client web bundles; this
+  // custom resolver bypasses it. SDK 58's expo-font imports node:async_hooks
+  // for server rendering only.
+  if (platform === 'web' && moduleName.startsWith('node:')) {
+    return { type: 'empty' }
+  }
   return resolve({ ...context, resolveRequest: null }, moduleName, platform)
 }
 

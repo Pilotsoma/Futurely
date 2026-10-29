@@ -755,6 +755,7 @@ model GameSession {
   status          String            @default("WAITING")
   type            String            @default("QUIZ")
   currentQuestion Int               @default(0)
+  revealedQuestion Int?
   createdAt       DateTime          @default(now())
   set             QuestionSet       @relation(fields: [setId], references: [id])
   host            User              @relation("GameSessionHost", fields: [hostId], references: [id], onDelete: Cascade)

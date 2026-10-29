@@ -1049,6 +1049,9 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: '#02040B',
+    // The accents below sit partly off-screen; without clipping they widen
+    // the page on web, which zooms the whole screen out on phones.
+    overflow: 'hidden',
   },
   backgroundTopAccent: {
     position: 'absolute',

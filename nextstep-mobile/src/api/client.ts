@@ -7,6 +7,9 @@ import { clearTokens, loadTokens, storeTokens } from '../utils/storage'
 // error with tokens already cleared but no way back short of a manual sign-out.
 export const SESSION_EXPIRED_EVENT = 'futurely.session-expired'
 export const ACCOUNT_STATUS_CHANGED_EVENT = 'futurely.account-status-changed'
+// Emitted when the backend refuses a request until ToS/Privacy/age consent is
+// recorded (e.g. a new Google sign-in); AuthContext shows the consent screen.
+export const CONSENT_REQUIRED_EVENT = 'futurely.consent-required'
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
@@ -179,6 +182,9 @@ export async function requestEnvelope<T, M = undefined>(
     (code === 'DOB_VERIFICATION_REQUIRED' || code === 'ACCOUNT_BANNED')
   ) {
     DeviceEventEmitter.emit(ACCOUNT_STATUS_CHANGED_EVENT)
+  }
+  if (res.status === 403 && code === 'CONSENT_REQUIRED') {
+    DeviceEventEmitter.emit(CONSENT_REQUIRED_EVENT)
   }
   throw new ApiRequestError(message, res.status, code, body)
 }

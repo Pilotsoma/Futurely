@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext'
 import * as studentsApi from '../api/studentsApi'
 import * as gradesApi from '../api/gradesApi'
 import * as canvasApi from '../api/canvasApi'
+import { normalizeCanvasUrl } from '../utils/canvasUrl'
 import { ApiRequestError } from '../api/client'
 import { Screen } from '../components/ui/Screen'
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
@@ -109,17 +110,6 @@ function formatRelativeTime(value: string | null | undefined): string {
   if (hours < 24) return `Synced ${hours}h ago`
 
   return `Synced ${Math.floor(hours / 24)}d ago`
-}
-
-function normalizeCanvasUrl(value: string): string {
-  const trimmed = value.trim()
-  if (!trimmed) return ''
-
-  const withProtocol = /^https?:\/\//i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`
-
-  return withProtocol.replace(/\/+$/, '')
 }
 
 function hostname(value: string): string {

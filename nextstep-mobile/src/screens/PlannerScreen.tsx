@@ -1,8 +1,17 @@
-import React, { useCallback, useMemo, useState } from 'react'
-import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native'
 import { Feather } from '@expo/vector-icons'
 import * as assignmentsApi from '../api/assignmentsApi'
+import * as canvasApi from '../api/canvasApi'
+import * as gradesApi from '../api/gradesApi'
+import {
+  formatLastSynced,
+  selectPortalItems,
+  shouldAutoSyncCanvas,
+  type PortalItem,
+} from '../features/assignments/plannerSync'
+import type { CurrentGradeCourse } from '../types/grades'
 import { ApiRequestError } from '../api/client'
 import { Screen } from '../components/ui/Screen'
 import { Card } from '../components/ui/Card'
@@ -12,6 +21,8 @@ import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
 import { ErrorRetryBlock } from '../components/ui/ErrorRetryBlock'
 import { EmptyState } from '../components/ui/EmptyState'
 import type { Assignment } from '../types/assignments'
+import { useAuth } from '../context/AuthContext'
+import { getCache, lastUpdatedLabel, setCache } from '../utils/offlineCache'
 import type { MainTabParamList } from '../navigation/MainNavigator'
 import { colors, fonts, radii, spacing, typography } from '../theme/tokens'
 
@@ -49,7 +60,17 @@ function groupFor(assignment: Assignment): Group {
   return 'Later'
 }
 
+interface PlannerCache {
+  assignments: Assignment[]
+  cursor: number | null
+  hasNextPage: boolean
+}
+
 export default function PlannerScreen(): React.JSX.Element {
+  const { user } = useAuth()
+  const userId = user?.id
+  const hasCache = useRef(false)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
   const route = useRoute<RouteProp<MainTabParamList, 'Planner'>>()
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [cursor, setCursor] = useState<number | null>(null)
@@ -63,6 +84,27 @@ export default function PlannerScreen(): React.JSX.Element {
   const [newDueDate, setNewDueDate] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [portalCourses, setPortalCourses] = useState<CurrentGradeCourse[]>([])
+  const [addingKey, setAddingKey] = useState<string | null>(null)
+  const [portalError, setPortalError] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [lastSynced, setLastSynced] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const syncingRef = useRef(false)
+
+  useEffect(() => {
+    if (userId === undefined) return
+    void getCache<PlannerCache>(userId, 'planner').then((entry) => {
+      if (!entry || hasCache.current) return
+      hasCache.current = true
+      setAssignments(entry.data.assignments)
+      setCursor(entry.data.cursor)
+      setHasNextPage(entry.data.hasNextPage)
+      setSavedAt(entry.savedAt)
+      setLoading(false)
+    })
+  }, [userId])
 
   const loadFirstPage = useCallback(async () => {
     setError(null)
@@ -71,18 +113,94 @@ export default function PlannerScreen(): React.JSX.Element {
       setAssignments(result.data)
       setCursor(result.meta.nextCursor)
       setHasNextPage(result.meta.hasNextPage)
+      if (userId !== undefined) {
+        hasCache.current = true
+        setSavedAt(new Date().toISOString())
+        void setCache<PlannerCache>(userId, 'planner', {
+          assignments: result.data,
+          cursor: result.meta.nextCursor,
+          hasNextPage: result.meta.hasNextPage,
+        })
+      }
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Could not load your planner.')
+      if (!hasCache.current) {
+        setError(err instanceof ApiRequestError ? err.message : 'Could not load your planner.')
+      }
     } finally {
       setLoading(false)
+    }
+  }, [userId])
+
+  // A school portal that isn't linked makes this endpoint throw — that just means "no portal".
+  const loadPortal = useCallback(async () => {
+    try {
+      const result = await gradesApi.getCurrentGrades()
+      setPortalCourses(result.grades ?? [])
+    } catch {
+      setPortalCourses([])
+    }
+  }, [])
+
+  // Returns true when a sync actually ran. Never throws; failures show a quiet inline line.
+  const syncCanvasIfNeeded = useCallback(async (force: boolean): Promise<boolean> => {
+    if (syncingRef.current) return false
+    syncingRef.current = true
+    try {
+      const status = await canvasApi.getCanvasStatus()
+      setLastSynced(status.connected ? status.lastSynced : null)
+      if (!status.connected) return false
+      if (!force && !shouldAutoSyncCanvas(status, new Date())) return false
+      setSyncing(true)
+      setSyncError(null)
+      await canvasApi.syncCanvas()
+      setLastSynced(new Date().toISOString())
+      return true
+    } catch (err) {
+      setSyncError(err instanceof ApiRequestError ? err.message : 'Canvas sync failed.')
+      return false
+    } finally {
+      setSyncing(false)
+      syncingRef.current = false
     }
   }, [])
 
   useFocusEffect(
     useCallback(() => {
       void loadFirstPage()
-    }, [loadFirstPage]),
+      void loadPortal()
+      void syncCanvasIfNeeded(false).then((synced) => {
+        if (synced) void loadFirstPage()
+      })
+    }, [loadFirstPage, loadPortal, syncCanvasIfNeeded]),
   )
+
+  async function handleRefresh(): Promise<void> {
+    setRefreshing(true)
+    try {
+      await syncCanvasIfNeeded(true)
+      await Promise.all([loadFirstPage(), loadPortal()])
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  async function handleAddPortalItem(item: PortalItem): Promise<void> {
+    if (addingKey) return
+    setAddingKey(item.key)
+    setPortalError(null)
+    try {
+      await assignmentsApi.createAssignment({
+        title: item.title,
+        subject: item.courseName,
+        dueDate: item.dueKey,
+      })
+      await loadFirstPage()
+    } catch (err) {
+      setPortalError(err instanceof ApiRequestError ? err.message : 'Could not add that item.')
+    } finally {
+      setAddingKey(null)
+    }
+  }
 
   async function loadMore(): Promise<void> {
     if (!hasNextPage || cursor === null || loadingMore) return
@@ -164,6 +282,11 @@ export default function PlannerScreen(): React.JSX.Element {
       .filter((s) => s.data.length > 0)
     return { activeSections: active, completedItems: grouped.get('Completed') ?? [] }
   }, [assignments])
+
+  const portalItems = useMemo(
+    () => selectPortalItems(portalCourses, assignments, new Date()),
+    [portalCourses, assignments],
+  )
 
   // Folds the completed-items list into SectionList's own `sections` (instead of a
   // raw .map() in ListFooterComponent) so it's windowed/virtualized like the active
@@ -273,15 +396,50 @@ export default function PlannerScreen(): React.JSX.Element {
         )
       ) : null}
 
-      {activeSections.length === 0 && completedItems.length === 0 ? (
-        <EmptyState icon="check-circle" title="Nothing due" message="You're all caught up." />
-      ) : (
-        <SectionList
+      {lastUpdatedLabel(savedAt) ? (
+        <Text style={styles.syncLine} accessibilityLiveRegion="polite">
+          {lastUpdatedLabel(savedAt)}
+        </Text>
+      ) : null}
+
+      {syncing || syncError || lastSynced ? (
+        <Text
+          style={[styles.syncLine, syncError && !syncing && styles.syncLineError]}
+          accessibilityLiveRegion="polite"
+        >
+          {syncing
+            ? 'Syncing Canvas…'
+            : syncError
+              ? 'Canvas sync failed. Pull down to retry.'
+              : `Synced ${formatLastSynced(lastSynced, new Date())}`}
+        </Text>
+      ) : null}
+
+      {portalError ? (
+        <View style={styles.routeError} accessibilityRole="alert">
+          <Feather name="alert-circle" size={16} color={colors.error} />
+          <Text style={styles.routeErrorText}>{portalError}</Text>
+        </View>
+      ) : null}
+
+      <SectionList
           sections={sections}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void handleRefresh()}
+              tintColor={colors.textSecondary}
+            />
+          }
           onEndReached={() => void loadMore()}
           onEndReachedThreshold={0.4}
+          ListEmptyComponent={
+            portalItems.length === 0 ? (
+              <EmptyState icon="check-circle" title="Nothing due" message="You're all caught up." />
+            ) : undefined
+          }
           renderSectionHeader={({ section }) => {
             if (section.title === 'Completed') {
               return (
@@ -314,18 +472,38 @@ export default function PlannerScreen(): React.JSX.Element {
           }}
           renderItem={renderAssignment}
           ListFooterComponent={
-            activeSections.length === 0 && completedItems.length > 0 ? (
-              <View style={styles.allCaughtUp}>
-                <View style={styles.allCaughtUpIcon}>
-                  <Feather name="check" size={22} color={colors.success} />
+            <>
+              {activeSections.length === 0 && completedItems.length > 0 ? (
+                <View style={styles.allCaughtUp}>
+                  <View style={styles.allCaughtUpIcon}>
+                    <Feather name="check" size={22} color={colors.success} />
+                  </View>
+                  <Text style={styles.allCaughtUpTitle}>All caught up!</Text>
+                  <Text style={styles.allCaughtUpSubtitle}>Every assignment is completed.</Text>
                 </View>
-                <Text style={styles.allCaughtUpTitle}>All caught up!</Text>
-                <Text style={styles.allCaughtUpSubtitle}>Every assignment is completed.</Text>
-              </View>
-            ) : null
+              ) : null}
+              {portalItems.length > 0 ? (
+                <View>
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>From your school portal</Text>
+                    <View style={styles.countPill}>
+                      <Text style={styles.countPillText}>{portalItems.length}</Text>
+                    </View>
+                  </View>
+                  {portalItems.map((item) => (
+                    <PortalRow
+                      key={item.key}
+                      item={item}
+                      adding={addingKey === item.key}
+                      disabled={addingKey !== null}
+                      onAdd={() => void handleAddPortalItem(item)}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </>
           }
-        />
-      )}
+      />
     </Screen>
   )
 }
@@ -378,7 +556,61 @@ const AssignmentRow = React.memo(function AssignmentRow({
   )
 })
 
+interface PortalRowProps {
+  item: PortalItem
+  adding: boolean
+  disabled: boolean
+  onAdd: () => void
+}
+
+// Read-only: no complete/delete, just an "Add to planner" action.
+function PortalRow({ item, adding, disabled, onAdd }: PortalRowProps): React.JSX.Element {
+  const dueLabel = item.dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return (
+    <Card style={styles.assignmentCard}>
+      <View
+        style={styles.assignmentInfo}
+        accessible
+        accessibilityLabel={`${item.courseName}: ${item.title}, due ${dueLabel}, from your school portal`}
+      >
+        <Text style={styles.assignmentTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
+        <View style={styles.assignmentMetaRow}>
+          <Text style={styles.assignmentSubject}>{item.courseName}</Text>
+          <Text style={styles.assignmentSubject}>Due {dueLabel}</Text>
+        </View>
+      </View>
+      <Pressable
+        onPress={onAdd}
+        disabled={disabled}
+        hitSlop={8}
+        style={[styles.portalAddButton, disabled && styles.portalAddButtonDisabled]}
+        accessibilityRole="button"
+        accessibilityLabel={`Add ${item.title} to planner`}
+        accessibilityState={{ disabled, busy: adding }}
+      >
+        <Text style={styles.portalAddText}>{adding ? 'Adding…' : 'Add to planner'}</Text>
+      </Pressable>
+    </Card>
+  )
+}
+
 const styles = StyleSheet.create({
+  syncLine: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm },
+  syncLineError: { color: colors.textSecondary },
+  portalAddButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.sm,
+    backgroundColor: colors.surface2,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.ms,
+    minHeight: 32,
+    justifyContent: 'center',
+  },
+  portalAddButtonDisabled: { opacity: 0.5 },
+  portalAddText: { ...typography.caption, fontFamily: fonts.semiBold, fontWeight: '600', color: colors.text },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
