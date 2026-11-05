@@ -27,6 +27,26 @@ function participantIds(session: { participants: Array<{ userId: number }> }): n
   return session.participants.map(p => p.userId)
 }
 
+/** True only when the host revealed the question the game is currently on. */
+export function isRevealed(status: string, currentQuestion: number, revealedQuestion: number | null | undefined): boolean {
+  return status === 'ACTIVE' && revealedQuestion === currentQuestion
+}
+
+/** Adds revealed/answerCount and strips every correctAnswer unless revealed (anti-cheat). */
+export function shapeGameState<S extends { status: string; currentQuestion: number; revealedQuestion?: number | null; set: { questions: object[] } }>(
+  session: S,
+  answerCount: number,
+  correctAnswer: string | null | undefined,
+) {
+  const revealed = isRevealed(session.status, session.currentQuestion, session.revealedQuestion)
+  const questions = session.set.questions.map(q => {
+    const { correctAnswer: _omit, ...rest } = q as { correctAnswer?: string }
+    return rest
+  })
+  const { revealedQuestion: _marker, ...rest } = session
+  return { ...rest, set: { ...session.set, questions }, revealed, answerCount, ...(revealed && correctAnswer ? { correctAnswer } : {}) }
+}
+
 const sessionInclude = {
   set: {
     select: {
@@ -70,13 +90,15 @@ router.get('/:code', requireAuth, async (req: AuthRequest, res: Response): Promi
   try {
     const session = await prisma.gameSession.findUnique({ where: { joinCode: code }, include: sessionInclude })
     if (!session) { res.status(404).json({ data: null, error: { code: 'NOT_FOUND', message: 'Game not found' } }); return }
-    // Strip correctAnswer from questions (only host sees it)
-    const isHost = session.hostId === req.userId
-    const questions = session.set.questions.map(q => ({
-      ...q,
-      correctAnswer: isHost ? (q as unknown as { correctAnswer: string }).correctAnswer : undefined,
-    }))
-    res.json({ data: { ...session, set: { ...session.set, questions } }, error: null })
+    const current = session.set.questions[session.currentQuestion] as { id: number } | undefined
+    const revealed = isRevealed(session.status, session.currentQuestion, session.revealedQuestion)
+    const [answerCount, full] = current
+      ? await Promise.all([
+          prisma.gameAnswer.count({ where: { sessionId: session.id, questionId: current.id } }),
+          revealed ? prisma.question.findUnique({ where: { id: current.id }, select: { correctAnswer: true } }) : null,
+        ])
+      : [0, null]
+    res.json({ data: shapeGameState(session, answerCount, full?.correctAnswer), error: null })
   } catch (err: unknown) {
     logger.error('game_get_error', { userId: req.userId, code, error: err instanceof Error ? err.message : String(err) })
     res.status(500).json({ data: null, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch game' } })
@@ -197,6 +219,7 @@ router.post('/:code/reveal', requireAuth, async (req: AuthRequest, res: Response
     const fullQ = await prisma.question.findUnique({ where: { id: currentQ.id }, select: { correctAnswer: true } })
     const updatedSession = await prisma.gameSession.findUnique({ where: { joinCode: code }, include: { participants: { orderBy: { score: 'desc' }, include: { user: { select: { id: true, name: true } } } } } })
     const allUserIds = [session.hostId, ...participantIds(session)]
+    await prisma.gameSession.update({ where: { joinCode: code }, data: { revealedQuestion: session.currentQuestion } })
     sendToSession(allUserIds, 'GAME_RESULTS', {
       sessionId: session.id,
       questionId: currentQ.id,

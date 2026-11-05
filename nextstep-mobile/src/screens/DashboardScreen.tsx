@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Pressable,
   ScrollView,
@@ -12,6 +12,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '../context/AuthContext'
+import { useAIContext } from '../components/ai/AIContext'
 import * as studentsApi from '../api/studentsApi'
 import * as gradesApi from '../api/gradesApi'
 import { ApiRequestError } from '../api/client'
@@ -22,14 +23,22 @@ import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
 import { ErrorRetryBlock } from '../components/ui/ErrorRetryBlock'
 import { useCountUp } from '../hooks/useCountUp'
 import { useDisplayPreferences } from '../preferences/displayPreferences'
+import { GpaSparkline } from '../components/today/GpaSparkline'
 import {
   formatAssignmentDueTime,
   getAssignmentDestination,
-  getDueTodayAssignments,
 } from '../features/assignments/dueToday'
+import { buildAlerts, groupDueAssignments } from '../features/today/todayModel'
+import {
+  loadGpaHistory,
+  recordGpaReading,
+  type GpaReading,
+} from '../features/today/gpaHistory'
+import { formatGpa, toFiniteNumber } from '../features/grades/academicSummary'
 import type { StudentMe } from '../types/student'
 import type { Assignment } from '../types/assignments'
 import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
+import { getCache, lastUpdatedLabel, setCache } from '../utils/offlineCache'
 import type { MainTabParamList } from '../navigation/MainNavigator'
 import { colors, fonts, spacing, typography } from '../theme/tokens'
 
@@ -48,11 +57,18 @@ function formatDate(): string {
   })
 }
 
+interface DashboardCache {
+  student: StudentMe
+  gpa: GpaSummary | null
+  courses: CurrentGradeCourse[]
+}
+
 export default function DashboardScreen(): React.JSX.Element {
   const navigation = useNavigation<Nav>()
   const { user } = useAuth()
   const { hideGpa } = useDisplayPreferences()
   const { height, width } = useWindowDimensions()
+  useAIContext('Today', 'Look at what is due and my grades. What should I focus on today?')
   const compact = height < 810
   const veryCompact = height < 710
 
@@ -64,6 +80,23 @@ export default function DashboardScreen(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
+  const [gpaHistory, setGpaHistory] = useState<GpaReading[]>([])
+  const userId = user?.id
+  const hasCache = useRef(false)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (userId === undefined) return
+    void getCache<DashboardCache>(userId, 'dashboard').then((entry) => {
+      if (!entry || hasCache.current) return
+      hasCache.current = true
+      setStudent(entry.data.student)
+      setGpa(entry.data.gpa)
+      setCourses(entry.data.courses)
+      setSavedAt(entry.savedAt)
+      setLoading(false)
+    })
+  }, [userId])
 
   const load = useCallback(async () => {
     setError(null)
@@ -75,9 +108,24 @@ export default function DashboardScreen(): React.JSX.Element {
       gradesApi.getCurrentGrades(),
     ])
 
+    if (
+      userId !== undefined &&
+      studentResult.status === 'fulfilled' &&
+      gpaResult.status === 'fulfilled' &&
+      coursesResult.status === 'fulfilled'
+    ) {
+      hasCache.current = true
+      setSavedAt(new Date().toISOString())
+      void setCache<DashboardCache>(userId, 'dashboard', {
+        student: studentResult.value,
+        gpa: gpaResult.value,
+        courses: coursesResult.value.grades,
+      })
+    }
+
     if (studentResult.status === 'fulfilled') {
       setStudent(studentResult.value)
-    } else {
+    } else if (!hasCache.current) {
       setError(
         studentResult.reason instanceof ApiRequestError
           ? studentResult.reason.message
@@ -87,23 +135,28 @@ export default function DashboardScreen(): React.JSX.Element {
 
     if (gpaResult.status === 'fulfilled') {
       setGpa(gpaResult.value)
-    } else {
+      const currentGpa = toFiniteNumber(gpaResult.value?.weightedGpa ?? gpaResult.value?.gpa)
+      if (userId !== undefined && currentGpa !== null) {
+        void recordGpaReading(userId, currentGpa).then(setGpaHistory)
+      }
+    } else if (!hasCache.current) {
       setGpa(null)
       setGpaError(
         gpaResult.reason instanceof ApiRequestError
           ? gpaResult.reason.message
           : 'Your GPA could not be loaded.',
       )
+      if (userId !== undefined) void loadGpaHistory(userId).then(setGpaHistory)
     }
 
     if (coursesResult.status === 'fulfilled') {
       setCourses(coursesResult.value.grades)
-    } else {
+    } else if (!hasCache.current) {
       setCourses([])
     }
 
     setLoading(false)
-  }, [])
+  }, [userId])
 
   useFocusEffect(
     useCallback(() => {
@@ -134,9 +187,15 @@ export default function DashboardScreen(): React.JSX.Element {
     setAiPrompt('')
   }
 
-  const dueToday: Assignment[] = useMemo(() => {
-    return getDueTodayAssignments(student?.assignments ?? [])
-  }, [student])
+  const dueGroups = useMemo(
+    () => groupDueAssignments(student?.assignments ?? [], new Date()),
+    [student],
+  )
+  const dueToday: Assignment[] = dueGroups.today
+  const alerts = useMemo(
+    () => buildAlerts(student?.assignments ?? [], courses, new Date()),
+    [student, courses],
+  )
 
   const animCourses = useCountUp(student?.stats.totalCourses ?? 0)
   const animDueToday = useCountUp(dueToday.length)
@@ -166,10 +225,51 @@ export default function DashboardScreen(): React.JSX.Element {
 
   const displayName = (student?.name ?? user?.name ?? 'Student').split(' ')[0]
   const dueItemsPerRow = width >= 700 ? 2 : 1
-  const dueRows = Array.from(
-    { length: Math.ceil(dueToday.length / dueItemsPerRow) },
-    (_, index) => dueToday.slice(index * dueItemsPerRow, index * dueItemsPerRow + dueItemsPerRow),
-  )
+  const currentGpa = toFiniteNumber(gpa?.weightedGpa ?? gpa?.gpa)
+  const trendValues = gpaHistory.map((reading) => reading.gpa)
+
+  function renderDueTiles(list: Assignment[], keyPrefix: string, fallbackBadge: string) {
+    const rows = Array.from({ length: Math.ceil(list.length / dueItemsPerRow) }, (_, index) =>
+      list.slice(index * dueItemsPerRow, index * dueItemsPerRow + dueItemsPerRow),
+    )
+
+    return (
+      <View style={styles.dueGrid}>
+        {rows.map((row, rowIndex) => (
+          <View key={`${keyPrefix}-row-${rowIndex}`} style={styles.dueTileRow}>
+            {row.map((assignment) => {
+              const destination = getAssignmentDestination(assignment.id)
+              const priority = assignment.priority?.trim()
+              const source = assignment.source?.trim()
+
+              return (
+                <ActionTile
+                  key={assignment.id}
+                  title={assignment.title}
+                  subtitle={assignment.subject || 'No subject'}
+                  meta={`Due ${formatAssignmentDueTime(assignment)}${source ? ` · ${source}` : ''}`}
+                  badge={priority || fallbackBadge}
+                  icon="clipboard"
+                  color={priority?.toUpperCase() === 'HIGH' ? '#FF777A' : '#FFC547'}
+                  iconBackground="rgba(245,158,11,0.15)"
+                  disabled={destination === null}
+                  onPress={() => {
+                    if (destination) navigation.navigate('Planner', destination)
+                  }}
+                  accessibilityHint={
+                    destination
+                      ? `Open ${assignment.title} in Planner`
+                      : 'This assignment has no valid destination'
+                  }
+                  testID={`dashboard-${keyPrefix}-tile-${assignment.id}`}
+                />
+              )
+            })}
+          </View>
+        ))}
+      </View>
+    )
+  }
 
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
@@ -206,16 +306,65 @@ export default function DashboardScreen(): React.JSX.Element {
                 {formatDate()}
               </Text>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Notifications"
-              style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
-            >
-              <Feather name="bell" size={17} color="#B9C6DD" />
-              <View style={styles.notificationDot} />
-            </Pressable>
+            <View style={styles.headerButtons}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
+                style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+              >
+                <Feather name="bell" size={17} color="#B9C6DD" />
+                <View style={styles.notificationDot} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Settings"
+                onPress={() => navigation.navigate('Settings')}
+                style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+                testID="dashboard-settings-button"
+              >
+                <Feather name="settings" size={17} color="#B9C6DD" />
+              </Pressable>
+            </View>
           </View>
         </View>
+
+        {alerts.visible.length > 0 ? (
+          <View style={styles.alertsSection} testID="dashboard-alerts">
+            <Text style={styles.sectionEyebrow}>NEEDS ATTENTION</Text>
+            {alerts.visible.map((alert) => (
+              <Pressable
+                key={alert.key}
+                accessibilityRole="button"
+                accessibilityLabel={`${alert.title}. ${alert.detail}`}
+                style={({ pressed }) => [styles.alertRow, pressed && styles.pressed]}
+                onPress={() => {
+                  if (alert.kind === 'assignment') {
+                    const destination = getAssignmentDestination(alert.assignmentId)
+                    if (destination) navigation.navigate('Planner', destination)
+                  } else {
+                    navigation.navigate('Grades')
+                  }
+                }}
+              >
+                <Feather
+                  name={alert.kind === 'assignment' ? 'alert-circle' : 'trending-down'}
+                  size={16}
+                  color="#FF777A"
+                />
+                <View style={styles.alertCopy}>
+                  <Text style={styles.alertTitle} numberOfLines={1}>
+                    {alert.title}
+                  </Text>
+                  <Text style={styles.alertDetail}>{alert.detail}</Text>
+                </View>
+                <Feather name="chevron-right" size={16} color="#697892" />
+              </Pressable>
+            ))}
+            {alerts.hiddenCount > 0 ? (
+              <Text style={styles.alertMore}>+{alerts.hiddenCount} more</Text>
+            ) : null}
+          </View>
+        ) : null}
 
         <GpaOverviewCard
           summary={gpa}
@@ -227,6 +376,20 @@ export default function DashboardScreen(): React.JSX.Element {
           onSync={() => void handleResync()}
           testID="dashboard-gpa-card"
         />
+
+        {!hideGpa && currentGpa !== null ? (
+          <View style={styles.trendCard} testID="dashboard-gpa-trend">
+            <View style={styles.trendCopy}>
+              <Text style={styles.sectionEyebrow}>GPA TREND</Text>
+              <Text style={styles.trendValue}>{formatGpa(currentGpa)}</Text>
+            </View>
+            {trendValues.length >= 2 ? (
+              <GpaSparkline values={trendValues} />
+            ) : (
+              <Text style={styles.trendEmpty}>Trend appears after your next sync</Text>
+            )}
+          </View>
+        ) : null}
 
         <View style={styles.dueSection} testID="dashboard-due-today">
           <View style={styles.dueHeadingRow}>
@@ -252,40 +415,28 @@ export default function DashboardScreen(): React.JSX.Element {
               </View>
             </View>
           ) : (
-            <View style={styles.dueGrid}>
-              {dueRows.map((row, rowIndex) => (
-                <View key={`due-row-${rowIndex}`} style={styles.dueTileRow}>
-                  {row.map((assignment) => {
-                    const destination = getAssignmentDestination(assignment.id)
-                    const priority = assignment.priority?.trim()
-                    const source = assignment.source?.trim()
+            renderDueTiles(dueToday, 'due', 'Due today')
+          )}
+        </View>
 
-                    return (
-                      <ActionTile
-                        key={assignment.id}
-                        title={assignment.title}
-                        subtitle={assignment.subject || 'No subject'}
-                        meta={`Due ${formatAssignmentDueTime(assignment)}${source ? ` · ${source}` : ''}`}
-                        badge={priority || 'Due today'}
-                        icon="clipboard"
-                        color={priority?.toUpperCase() === 'HIGH' ? '#FF777A' : '#FFC547'}
-                        iconBackground="rgba(245,158,11,0.15)"
-                        disabled={destination === null}
-                        onPress={() => {
-                          if (destination) navigation.navigate('Planner', destination)
-                        }}
-                        accessibilityHint={
-                          destination
-                            ? `Open ${assignment.title} in Planner`
-                            : 'This assignment has no valid destination'
-                        }
-                        testID={`dashboard-due-tile-${assignment.id}`}
-                      />
-                    )
-                  })}
-                </View>
-              ))}
+        <View style={styles.dueSection} testID="dashboard-due-tomorrow">
+          <View style={styles.dueHeadingRow}>
+            <View>
+              <Text style={styles.sectionEyebrow}>TOMORROW</Text>
+              <Text style={[styles.cardTitle, compact && styles.cardTitleCompact]}>
+                Due tomorrow
+              </Text>
             </View>
+          </View>
+
+          {dueGroups.tomorrow.length === 0 ? (
+            <View style={styles.clearState} testID="dashboard-tomorrow-empty">
+              <View style={styles.clearTextWrap}>
+                <Text style={styles.clearTitle}>Nothing due tomorrow</Text>
+              </View>
+            </View>
+          ) : (
+            renderDueTiles(dueGroups.tomorrow, 'tomorrow', 'Due tomorrow')
           )}
         </View>
 
@@ -370,6 +521,11 @@ export default function DashboardScreen(): React.JSX.Element {
           </View>
         </View>
 
+        {lastUpdatedLabel(savedAt) ? (
+          <Text style={styles.cacheLabel} accessibilityLiveRegion="polite">
+            {lastUpdatedLabel(savedAt)}
+          </Text>
+        ) : null}
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
       </ScrollView>
     </Screen>
@@ -393,7 +549,7 @@ const styles = StyleSheet.create({
     paddingTop: 3,
   },
   decorativeLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
   glowOrbTop: {
@@ -485,6 +641,70 @@ const styles = StyleSheet.create({
     color: '#7AB4FF',
     flexShrink: 1,
     fontSize: 10,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  alertsSection: {
+    width: '100%',
+    gap: 8,
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: 'rgba(40, 20, 28, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 119, 122, 0.22)',
+  },
+  alertRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  alertCopy: {
+    flex: 1,
+  },
+  alertTitle: {
+    ...typography.body,
+    color: '#EDF3FF',
+    fontSize: 13,
+  },
+  alertDetail: {
+    ...typography.caption,
+    color: '#FF9C9E',
+    fontSize: 10,
+  },
+  alertMore: {
+    ...typography.caption,
+    color: '#8299BA',
+    fontSize: 11,
+  },
+  trendCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: 'rgba(17, 31, 52, 0.94)',
+    borderWidth: 1,
+    borderColor: 'rgba(72, 100, 139, 0.30)',
+  },
+  trendCopy: {
+    gap: 2,
+  },
+  trendValue: {
+    ...typography.h2,
+    color: '#EDF3FF',
+    fontSize: 22,
+  },
+  trendEmpty: {
+    ...typography.caption,
+    color: '#8299BA',
+    flexShrink: 1,
+    textAlign: 'right',
+    fontSize: 11,
   },
   notificationButton: {
     width: 32,
@@ -725,6 +945,7 @@ const styles = StyleSheet.create({
     opacity: 0.80,
     transform: [{ scale: 0.987 }],
   },
+  cacheLabel: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm },
   inlineError: {
     ...typography.caption,
     color: colors.error,

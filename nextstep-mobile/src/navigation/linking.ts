@@ -43,9 +43,20 @@ export const linking: LinkingOptions<RootLinkingParamList> = {
           assignmentId: String,
         },
       },
-      Colleges: 'colleges',
+      Study: {
+        path: 'study',
+        screens: {
+          StudyHome: '',
+          StudyFeed: 'feed',
+        },
+      },
+      Future: {
+        path: 'future',
+        screens: {
+          Colleges: '',
+        },
+      },
       Settings: 'settings',
-      StudyFeed: 'feed',
     },
   },
 }

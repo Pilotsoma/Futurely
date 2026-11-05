@@ -25,4 +25,16 @@ describe('application linking', () => {
     expect(state?.routes[0]?.params).toEqual({ assignmentId: 42 })
     expect(state ? getPathFromState(state, config) : null).toBe('/planner/42')
   })
+
+  it('maps nested Study and Future routes and can serialize them again', () => {
+    const config = linking.config
+    const feed = getStateFromPath('/study/feed', config)
+    expect(feed?.routes[0]?.name).toBe('Study')
+    expect(feed?.routes[0]?.state?.routes[0]?.name).toBe('StudyFeed')
+    expect(feed ? getPathFromState(feed, config) : null).toBe('/study/feed')
+
+    const future = getStateFromPath('/future', config)
+    expect(future?.routes[0]?.name).toBe('Future')
+    expect(future?.routes[0]?.state?.routes[0]?.name).toBe('Colleges')
+  })
 })

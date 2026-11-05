@@ -3,7 +3,9 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { useAuth } from '../context/AuthContext'
 import * as gradesApi from '../api/gradesApi'
+import * as canvasApi from '../api/canvasApi'
 import { ApiRequestError } from '../api/client'
+import { normalizeCanvasUrl } from '../utils/canvasUrl'
 import { Screen } from '../components/ui/Screen'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -23,7 +25,7 @@ function normalizeHacUrl(value: string): string {
 }
 
 export default function ConnectSchoolScreen(): React.JSX.Element {
-  const { markPortalConnected, signOut } = useAuth()
+  const { markPortalConnected, skipPortalConnection, signOut } = useAuth()
 
   const [search, setSearch] = useState('')
   const [selectedDistrict, setSelectedDistrict] = useState<ISDEntry | null>(null)
@@ -35,6 +37,12 @@ export default function ConnectSchoolScreen(): React.JSX.Element {
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [canvasOpen, setCanvasOpen] = useState(false)
+  const [canvasUrl, setCanvasUrl] = useState('')
+  const [canvasToken, setCanvasToken] = useState('')
+  const [canvasSubmitting, setCanvasSubmitting] = useState(false)
+  const [canvasError, setCanvasError] = useState<string | null>(null)
 
   const filteredDistricts = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -77,6 +85,30 @@ export default function ConnectSchoolScreen(): React.JSX.Element {
       setError(err instanceof ApiRequestError ? err.message : 'Could not connect. Please try again.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleCanvasConnect(): Promise<void> {
+    setCanvasError(null)
+    const normalizedUrl = normalizeCanvasUrl(canvasUrl)
+    const token = canvasToken.trim()
+    if (!normalizedUrl) {
+      setCanvasError('Enter your Canvas URL.')
+      return
+    }
+    if (!token) {
+      setCanvasError('Enter a Canvas access token.')
+      return
+    }
+
+    setCanvasSubmitting(true)
+    try {
+      await canvasApi.connectCanvas(normalizedUrl, token)
+      // Canvas-only students have no school portal; assignments arrive via Planner's Canvas sync.
+      await skipPortalConnection()
+    } catch (err) {
+      setCanvasError(err instanceof ApiRequestError ? err.message : 'Could not connect Canvas.')
+      setCanvasSubmitting(false)
     }
   }
 
@@ -158,6 +190,48 @@ export default function ConnectSchoolScreen(): React.JSX.Element {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Button label="Connect securely" onPress={() => void handleSubmit()} loading={submitting} />
+
+      <View style={styles.secondary}>
+        {canvasOpen ? (
+          <Card style={styles.credentialsCard}>
+            <Input
+              label="Canvas URL"
+              value={canvasUrl}
+              onChangeText={setCanvasUrl}
+              placeholder="https://yourschool.instructure.com"
+              autoCapitalize="none"
+              keyboardType="url"
+            />
+            <Input
+              label="Canvas access token"
+              value={canvasToken}
+              onChangeText={setCanvasToken}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <Text style={styles.hint}>
+              In Canvas, open Account, then Settings, then New Access Token.
+            </Text>
+            {canvasError ? <Text style={styles.error}>{canvasError}</Text> : null}
+            <Button
+              label="Connect Canvas"
+              onPress={() => void handleCanvasConnect()}
+              loading={canvasSubmitting}
+              variant="secondary"
+            />
+          </Card>
+        ) : (
+          <Button label="Use Canvas instead" onPress={() => setCanvasOpen(true)} variant="secondary" />
+        )}
+        <Pressable
+          onPress={() => void skipPortalConnection()}
+          accessibilityRole="button"
+          accessibilityLabel="Skip for now"
+          style={styles.skip}
+        >
+          <Text style={styles.skipText}>Skip for now</Text>
+        </Pressable>
+      </View>
     </Screen>
   )
 }
@@ -196,5 +270,9 @@ const styles = StyleSheet.create({
   districtState: { fontSize: typography.caption.fontSize, color: colors.textSecondary },
   credentialsCard: { gap: spacing.sm, marginBottom: spacing.md },
   error: { fontSize: typography.caption.fontSize, color: colors.error, marginBottom: spacing.md },
+  secondary: { gap: spacing.sm, marginTop: spacing.md },
+  hint: { fontSize: typography.caption.fontSize, color: colors.textSecondary },
+  skip: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
+  skipText: { fontSize: typography.body.fontSize, color: colors.textSecondary },
   signOutButton: { alignSelf: 'flex-end', height: 32, paddingHorizontal: spacing.sm, marginBottom: spacing.sm },
 })

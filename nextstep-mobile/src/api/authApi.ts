@@ -43,6 +43,10 @@ export async function sendOtp(payload: SendOtpRequest): Promise<{ sent: true }> 
   return api.post('/auth/send-otp', payload, { skipAuth: true })
 }
 
+export async function acceptConsent(): Promise<void> {
+  await api.post('/auth/consent', { agreedTos: true, agreedPrivacy: true, agreedAge: true })
+}
+
 export async function getMe(): Promise<MeResponse> {
   return api.get('/auth/me')
 }

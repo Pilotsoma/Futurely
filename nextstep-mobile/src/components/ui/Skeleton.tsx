@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   AccessibilityInfo,
   Animated,
@@ -20,7 +20,7 @@ export default function Skeleton({
   radius = 6,
   style,
 }: SkeletonProps): React.JSX.Element {
-  const opacity = useRef(new Animated.Value(0.4)).current
+  const [opacity] = useState(() => new Animated.Value(0.4))
   const [reduceMotion, setReduceMotion] = useState(false)
 
   useEffect(() => {

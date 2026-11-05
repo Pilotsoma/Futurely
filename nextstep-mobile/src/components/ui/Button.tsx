@@ -38,10 +38,10 @@ export function Button({
     <Pressable
       onPress={onPress}
       onPressIn={() => {
-        if (!isDisabled) scale.value = withSpring(0.96, animation.spring)
+        if (!isDisabled) scale.set(withSpring(0.96, animation.spring))
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, animation.spring)
+        scale.set(withSpring(1, animation.spring))
       }}
       disabled={isDisabled}
       accessibilityRole="button"

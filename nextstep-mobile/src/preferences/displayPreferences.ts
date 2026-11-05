@@ -207,6 +207,12 @@ function useStoredDisplayPreferences(
     cachedPreferences.get(scope) ?? DEFAULT_PREFERENCES,
   )
   const [loaded, setLoaded] = useState(false)
+  const [prevScope, setPrevScope] = useState(scope)
+  if (prevScope !== scope) {
+    setPrevScope(scope)
+    setPreferences(cachedPreferences.get(scope) ?? DEFAULT_PREFERENCES)
+    setLoaded(false)
+  }
   const pendingRef = useRef<Partial<Record<keyof DisplayPreferences, Promise<void>>>>({})
 
   const refresh = useCallback(async () => {
@@ -220,8 +226,6 @@ function useStoredDisplayPreferences(
 
   useEffect(() => {
     let active = true
-    setPreferences(cachedPreferences.get(scope) ?? DEFAULT_PREFERENCES)
-    setLoaded(false)
 
     void getDisplayPreferences(userId)
       .then((stored) => {

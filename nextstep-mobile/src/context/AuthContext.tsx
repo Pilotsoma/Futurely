@@ -1,12 +1,16 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { DeviceEventEmitter } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as authApi from '../api/authApi'
 import * as gradesApi from '../api/gradesApi'
 import {
   ACCOUNT_STATUS_CHANGED_EVENT,
+  ApiRequestError,
+  CONSENT_REQUIRED_EVENT,
   SESSION_EXPIRED_EVENT,
 } from '../api/client'
 import { clearTokens, loadTokens } from '../utils/storage'
+import { clearCache } from '../utils/offlineCache'
 import type { AuthUser, LoginRequest, RegisterRequest } from '../types/auth'
 
 type AuthStatus = 'initializing' | 'unauthenticated' | 'authenticated'
@@ -24,7 +28,14 @@ interface AuthContextValue {
   updateDateOfBirth: (dateOfBirth: string) => Promise<void>
   /** Called by ConnectSchoolScreen after a successful login+sync, to skip re-querying status. */
   markPortalConnected: () => void
+  /** Remembers (per user) that the student skipped connecting a portal, and proceeds. */
+  skipPortalConnection: () => Promise<void>
+  /** True once the backend has answered CONSENT_REQUIRED; RootNavigator shows ConsentScreen. */
+  consentRequired: boolean
+  acceptConsent: () => Promise<void>
 }
+
+const portalSkippedKey = (userId: number): string => `futurely.portalSkipped.${userId}`
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
@@ -32,13 +43,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   const [status, setStatus] = useState<AuthStatus>('initializing')
   const [user, setUser] = useState<AuthUser | null>(null)
   const [hasPortalConnection, setHasPortalConnection] = useState<boolean | null>(null)
+  const [consentRequired, setConsentRequired] = useState(false)
 
   const checkPortalStatus = useCallback(async () => {
     setHasPortalConnection(null)
     try {
       const status = await gradesApi.getPortalStatus()
-      setHasPortalConnection(status.connected)
-    } catch {
+      let connected = status.connected
+      if (!connected) {
+        try {
+          const me = await authApi.getMe()
+          connected = (await AsyncStorage.getItem(portalSkippedKey(me.id))) === 'true'
+        } catch {
+          // Storage/me failure: fall back to "not connected".
+        }
+      }
+      setHasPortalConnection(connected)
+    } catch (err) {
+      if (err instanceof ApiRequestError && err.status === 403 && err.code === 'CONSENT_REQUIRED') {
+        // Not "disconnected": consent is missing. Leave null; acceptConsent re-checks.
+        setConsentRequired(true)
+        return
+      }
       // A failed status check is treated as "not connected" — worst case the user
       // re-lands on ConnectSchool and reconnects, rather than getting stuck loading.
       setHasPortalConnection(false)
@@ -98,6 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       setUser(null)
       setStatus('unauthenticated')
       setHasPortalConnection(null)
+      setConsentRequired(false)
+    })
+    return () => subscription.remove()
+  }, [])
+
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener(CONSENT_REQUIRED_EVENT, () => {
+      setConsentRequired(true)
     })
     return () => subscription.remove()
   }, [])
@@ -151,29 +185,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 
   const updateDateOfBirth = useCallback(
     async (dateOfBirth: string) => {
-      await authApi.updateDateOfBirth(dateOfBirth)
+      try {
+        await authApi.updateDateOfBirth(dateOfBirth)
+      } catch (err) {
+        // The server already accepted a date of birth (e.g. an earlier attempt succeeded
+        // but this client never saw the status change). Nothing to correct: just re-sync.
+        if (!(err instanceof ApiRequestError && err.code === 'NO_CORRECTION_NEEDED')) throw err
+      }
       await refreshUser()
     },
     [refreshUser],
   )
 
   const signOut = useCallback(async () => {
+    const cachedUserId = user?.id
     await authApi.logout()
+    if (cachedUserId !== undefined) await clearCache(cachedUserId)
     setUser(null)
     setStatus('unauthenticated')
     setHasPortalConnection(null)
-  }, [])
+    setConsentRequired(false)
+  }, [user?.id])
 
   const deleteAccount = useCallback(async (password?: string) => {
     await authApi.deleteAccount(password)
     setUser(null)
     setStatus('unauthenticated')
     setHasPortalConnection(null)
+    setConsentRequired(false)
   }, [])
 
   const markPortalConnected = useCallback(() => {
     setHasPortalConnection(true)
   }, [])
+
+  const skipPortalConnection = useCallback(async () => {
+    if (user) {
+      await AsyncStorage.setItem(portalSkippedKey(user.id), 'true').catch(() => undefined)
+    }
+    setHasPortalConnection(true)
+  }, [user])
+
+  const acceptConsent = useCallback(async () => {
+    await authApi.acceptConsent()
+    setConsentRequired(false)
+    await checkPortalStatus()
+  }, [checkPortalStatus])
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -187,6 +244,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       deleteAccount,
       updateDateOfBirth,
       markPortalConnected,
+      skipPortalConnection,
+      consentRequired,
+      acceptConsent,
     }),
     [
       status,
@@ -199,6 +259,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       deleteAccount,
       updateDateOfBirth,
       markPortalConnected,
+      skipPortalConnection,
+      consentRequired,
+      acceptConsent,
     ],
   )
 

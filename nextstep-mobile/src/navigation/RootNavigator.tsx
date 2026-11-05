@@ -19,18 +19,22 @@ import AuthNavigator from './AuthNavigator'
 import ConnectSchoolNavigator from './ConnectSchoolNavigator'
 import MainNavigator from './MainNavigator'
 import AccountRestrictionScreen from '../screens/AccountRestrictionScreen'
+import ConsentScreen from '../screens/ConsentScreen'
 import { linking } from './linking'
 import { colors } from '../theme/tokens'
 
 export default function RootNavigator(): React.JSX.Element {
-  const { status, user, hasPortalConnection } = useAuth()
+  const { status, user, hasPortalConnection, consentRequired } = useAuth()
 
+  // A consent-blocked account never resolves its portal status, so it must not
+  // count as loading or the consent screen would never show.
   const isLoading =
     status === 'initializing' ||
     (
       status === 'authenticated' &&
       user?.accountStatus === 'ACTIVE' &&
-      hasPortalConnection === null
+      hasPortalConnection === null &&
+      !consentRequired
     )
 
   if (isLoading) {
@@ -44,6 +48,8 @@ export default function RootNavigator(): React.JSX.Element {
   let navigator: React.JSX.Element
   if (status === 'unauthenticated') {
     navigator = <AuthNavigator />
+  } else if (consentRequired) {
+    navigator = <ConsentScreen />
   } else if (user?.accountStatus !== 'ACTIVE') {
     navigator = <AccountRestrictionScreen />
   } else if (hasPortalConnection === false) {

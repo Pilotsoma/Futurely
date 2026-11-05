@@ -169,7 +169,7 @@ async function portalRequest<T>(
       ...options,
       headers,
     })
-  } catch (error: unknown) {
+  } catch {
     throw new Error(
       `Network request failed. The app could not reach the backend. Check API_BASE_URL in src/constants/api.ts. Current URL: ${url}`,
     )

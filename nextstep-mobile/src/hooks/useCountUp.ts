@@ -8,16 +8,10 @@ import { useDisplayPreferences } from '../preferences/displayPreferences'
 export function useCountUp(target: number | null, duration = 700): number {
   const [val, setVal] = useState(0)
   const { reduceMotion } = useDisplayPreferences()
+  const instant = reduceMotion || target === null || target === 0
 
   useEffect(() => {
-    if (reduceMotion) {
-      setVal(target ?? 0)
-      return
-    }
-    if (target === null || target === 0) {
-      setVal(target ?? 0)
-      return
-    }
+    if (instant) return
     const goal = target
     const start = Date.now()
     let raf: ReturnType<typeof requestAnimationFrame>
@@ -29,24 +23,18 @@ export function useCountUp(target: number | null, duration = 700): number {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [target, duration, reduceMotion])
+  }, [target, duration, instant])
 
-  return val
+  return instant ? (target ?? 0) : val
 }
 
 export function useCountUpFloat(target: number | null, duration = 900): number {
   const [val, setVal] = useState(0)
   const { reduceMotion } = useDisplayPreferences()
+  const instant = reduceMotion || target === null
 
   useEffect(() => {
-    if (reduceMotion) {
-      setVal(target ?? 0)
-      return
-    }
-    if (target === null) {
-      setVal(0)
-      return
-    }
+    if (instant) return
     const goal = target
     const start = Date.now()
     let raf: ReturnType<typeof requestAnimationFrame>
@@ -58,7 +46,7 @@ export function useCountUpFloat(target: number | null, duration = 900): number {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [target, duration, reduceMotion])
+  }, [target, duration, instant])
 
-  return val
+  return instant ? (target ?? 0) : val
 }
