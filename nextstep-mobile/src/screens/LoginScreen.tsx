@@ -455,6 +455,23 @@ export default function LoginScreen(): React.JSX.Element {
             'Enter the verification code sent to your email.',
         }
 
+        // Navigate to the step that owns the failing field so the error banner
+        // appears where the user can actually act on it. Without this, errors
+        // like INVALID_OTP would surface on the terms step even though the OTP
+        // field lives on the account step.
+        if (error.code === 'COPPA_BLOCK') {
+          setRegisterStep('dob')
+        } else if (
+          error.code === 'INVALID_OTP' ||
+          error.code === 'OTP_REQUIRED' ||
+          error.code === 'CONFLICT' ||
+          error.code === 'NAME_TAKEN'
+        ) {
+          setRegisterStep('account')
+        }
+        // VALIDATION_ERROR on consent fields or other terms-step errors:
+        // no navigation — stay on 'terms' so the user can retry there.
+
         setRegisterError(
           (error.code && messages[error.code]) || error.message,
         )

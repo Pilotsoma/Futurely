@@ -11,6 +11,10 @@ import { filterUsername } from '../lib/contentFilter'
 import { sendEmail } from '../lib/email'
 import { logger } from '../common/logger'
 import { validateDobInput, encryptDob, MAX_DOB_CORRECTION_ATTEMPTS, liftExpiredBanIfNeeded } from '../lib/dobVerification'
+import { passwordSchema } from '../modules/auth/validators/password.validator'
+import { RegisterDto } from '../modules/auth/dtos/register.dto'
+import { SendOtpDto } from '../modules/auth/dtos/send-otp.dto'
+import { ConsentDto } from '../modules/auth/dtos/consent.dto'
 
 const router = Router()
 
@@ -101,13 +105,6 @@ const resendVerifyLimiter = rateLimit({
 })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function validatePassword(password: string): string | null {
-  if (password.length < 8) return 'Password must be at least 8 characters'
-  if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter'
-  if (!/[0-9]/.test(password)) return 'Password must contain at least one number'
-  return null
-}
 
 // accountStatus is embedded as a convenience claim only (e.g. for optimistic
 // frontend UI) — it is never trusted as the source of truth for access
@@ -237,48 +234,21 @@ async function sendPasswordResetEmail(email: string, token: string): Promise<voi
 // ── POST /auth/register ───────────────────────────────────────────────────────
 
 router.post('/register', registerLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email, password, name, role: roleInput, otp, agreedTos, agreedPrivacy, agreedAge, dateOfBirth } = req.body as {
-    email?: string
-    password?: string
-    name?: string
-    role?: string
-    otp?: string
-    agreedTos?: unknown
-    agreedPrivacy?: unknown
-    agreedAge?: unknown
-    dateOfBirth?: string
-  }
-
-  if (!email || !password) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'VALIDATION_ERROR', message: 'email and password required' },
-    })
+  // Synchronous DTO validation: email format, password min-length, OTP format, consent.
+  // Async checks (DNS, DB, OTP token lookup) follow below.
+  const bodyParse = RegisterDto.safeParse(req.body)
+  if (!bodyParse.success) {
+    const message = bodyParse.error.errors[0]?.message ?? 'Validation error'
+    res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message } })
     return
   }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'VALIDATION_ERROR', message: 'Please enter a valid email address.' },
-    })
-    return
-  }
+  const { email, password, otp, name, role: roleInput, dateOfBirth } = bodyParse.data
 
   const domainValid = await hasValidMailDomain(email)
   if (!domainValid) {
     res.status(400).json({
       data: null,
-      error: { code: 'VALIDATION_ERROR', message: 'That email domain doesn\'t appear to be valid. Please check for typos.' },
-    })
-    return
-  }
-
-  const passError = validatePassword(password)
-  if (passError) {
-    res.status(400).json({
-      data: null,
-      error: { code: 'VALIDATION_ERROR', message: passError },
+      error: { code: 'VALIDATION_ERROR', message: "That email domain doesn't appear to be valid. Please check for typos." },
     })
     return
   }
@@ -294,18 +264,6 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
       })
       return
     }
-  }
-
-  // Consent is required before account creation — all three must be strictly true
-  if (agreedTos !== true || agreedPrivacy !== true || agreedAge !== true) {
-    res.status(400).json({
-      data: null,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'You must agree to the Terms of Service, Privacy Policy, and confirm your age to register.',
-      },
-    })
-    return
   }
 
   // Date of birth is required for students — it is later reconciled against
@@ -391,7 +349,7 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
           userId: created.id,
           resourceType: 'consent',
           resourceId: String(created.id),
-          action: 'ACCEPT',
+          action: 'CONSENT_ACCEPTED',
           ipAddress: req.ip ?? 'unknown',
         },
       })
@@ -708,8 +666,9 @@ router.post('/reset-password', passwordResetLimiter, async (req: Request, res: R
     return
   }
 
-  const passError = validatePassword(password)
-  if (passError) {
+  const passResult = passwordSchema.safeParse(password)
+  if (!passResult.success) {
+    const passError = passResult.error.errors[0]?.message ?? 'Validation error'
     res.status(400).json({
       data: null,
       error: { code: 'VALIDATION_ERROR', message: passError },
@@ -845,8 +804,8 @@ router.post('/resend-verification', resendVerifyLimiter, requireAuth, async (req
       data: { emailVerificationToken: verificationToken, emailVerificationExpiry: verificationExpiry },
     })
 
-    void sendVerificationEmail(user.email, verificationToken).catch((err) =>
-      console.error('Failed to send verification email:', err),
+    void sendVerificationEmail(user.email, verificationToken).catch((err: unknown) =>
+      logger.error('auth.error', { event: 'send_verification_email', error: err instanceof Error ? err.message : String(err) }),
     )
 
     res.json({ data: { message: 'Verification email sent' } })
@@ -1001,13 +960,8 @@ router.delete('/account', requireAuth, async (req: AuthRequest, res: Response): 
 // OAuth-created accounts (which start with null consent fields) can reach it.
 
 router.post('/consent', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
-  const { agreedTos, agreedPrivacy, agreedAge } = req.body as {
-    agreedTos?: unknown
-    agreedPrivacy?: unknown
-    agreedAge?: unknown
-  }
-
-  if (agreedTos !== true || agreedPrivacy !== true || agreedAge !== true) {
+  const consentParse = ConsentDto.safeParse(req.body)
+  if (!consentParse.success) {
     res.status(400).json({
       data: null,
       error: {
@@ -1053,7 +1007,7 @@ router.post('/consent', requireAuth, async (req: AuthRequest, res: Response): Pr
           userId,
           resourceType: 'consent',
           resourceId: String(userId),
-          action: 'ACCEPT',
+          action: 'CONSENT_ACCEPTED',
           ipAddress: req.ip ?? 'unknown',
         },
       })
@@ -1297,11 +1251,12 @@ router.get('/oauth/microsoft/callback', async (req: Request, res: Response): Pro
 
 // ── POST /auth/send-otp ──────────────────────────────────────────────────────
 router.post('/send-otp', otpLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email } = req.body as { email?: string }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const otpBodyParse = SendOtpDto.safeParse(req.body)
+  if (!otpBodyParse.success) {
     res.status(400).json({ data: null, error: { code: 'VALIDATION_ERROR', message: 'Valid email required.' } })
     return
   }
+  const { email } = otpBodyParse.data
 
   const domainValid = await hasValidMailDomain(email)
   if (!domainValid) {

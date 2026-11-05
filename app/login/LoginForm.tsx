@@ -26,6 +26,9 @@ export default function LoginForm() {
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
   const [registerStep, setRegisterStep] = useState<RegisterStep>('form')
+  // Account-type box at the top of the card. Drives which signup fields show;
+  // inert during login — login already resolves role server-side from credentials.
+  const [accountType, setAccountType] = useState<'student' | 'parent'>('student')
 
   const [email, setEmail]                     = useState('')
   const [password, setPassword]               = useState('')
@@ -143,6 +146,7 @@ export default function LoginForm() {
       const prefillEmail = searchParams.get('email') ?? ''
       const prefillName = searchParams.get('name') ?? ''
       setMode('register-student')
+      setAccountType('student')
       if (prefillEmail) setEmail(prefillEmail)
       if (prefillName) setName(prefillName)
       setError("We couldn’t find an account for that Google sign-in — let’s get you set up.")
@@ -167,6 +171,15 @@ export default function LoginForm() {
   }
   function reset() { setError(null); setHacError(null); setPortalDisconnected(false); setRegisterStep('form'); setOtpCode(''); setOtpError(null); setSchoolQuery(''); setSchoolResults([]); setSchoolOpen(false) }
   function fullReset() { reset(); setInstitution(''); setApplyAsCounselor(false) }
+  // Top account-type box. On login it just records the preference for when they
+  // sign up; on signup it switches which role's fields are shown immediately.
+  function selectAccountType(type: 'student' | 'parent') {
+    setAccountType(type)
+    if (mode === 'register-student' || mode === 'register-parent') {
+      setMode(type === 'parent' ? 'register-parent' : 'register-student')
+      fullReset()
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -333,6 +346,21 @@ export default function LoginForm() {
           }}>myFuturely</span>
         </div>
         <p style={styles.subheading}>{headingText}</p>
+
+        {registerStep === 'form' && mode !== 'register-teacher' && (
+          <div style={styles.roleToggleRow} role="tablist" aria-label="Account type">
+            <button type="button" role="tab" aria-selected={accountType === 'student'}
+              onClick={() => selectAccountType('student')}
+              style={accountType === 'student' ? styles.roleToggleBtnActive : styles.roleToggleBtn}>
+              Student
+            </button>
+            <button type="button" role="tab" aria-selected={accountType === 'parent'}
+              onClick={() => selectAccountType('parent')}
+              style={accountType === 'parent' ? styles.roleToggleBtnActive : styles.roleToggleBtn}>
+              Parent
+            </button>
+          </div>
+        )}
 
         {portalDisconnected && (
           <div style={styles.toastWarn}>
@@ -592,31 +620,20 @@ export default function LoginForm() {
         </form>}
 
         {mode === 'login' && (
-          <>
-            <p style={styles.switchText}>
-              Don&apos;t have an account?{' '}
-              <button type="button" onClick={() => { setMode('register-student'); fullReset() }} style={styles.switchLink}>Create one</button>
-            </p>
-            <p style={{ ...styles.switchText, marginTop: 4 }}>
-              Parent or guardian?{' '}
-              <button type="button" onClick={() => { setMode('register-parent'); fullReset() }} style={styles.switchLink}>Create a parent account</button>
-            </p>
+          <p style={styles.switchText}>
+            Don&apos;t have an account?{' '}
+            <button type="button"
+              onClick={() => { setMode(accountType === 'parent' ? 'register-parent' : 'register-student'); fullReset() }}
+              style={styles.switchLink}>Sign up</button>
             {/* Teacher/counselor signup entry point hidden from the UI for now — mode, form fields,
                 and API wiring below are untouched so it can be re-enabled by restoring this link. */}
-          </>
+          </p>
         )}
 
-        {mode === 'register-student' && (
-          <>
-            <p style={styles.switchText}>Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); fullReset() }} style={styles.switchLink}>Log In</button></p>
-            <p style={styles.switchText}>Parent or guardian?{' '}<button type="button" onClick={() => { setMode('register-parent'); fullReset() }} style={styles.switchLink}>Create a parent account instead</button></p>
-          </>
-        )}
-
-        {mode === 'register-parent' && (
+        {(mode === 'register-student' || mode === 'register-parent') && (
           <p style={styles.switchText}>
-            Already have an account?{' '}<button type="button" onClick={() => { setMode('login'); fullReset() }} style={styles.switchLink}>Log In</button>
-            {' · '}<button type="button" onClick={() => { setMode('register-student'); fullReset() }} style={styles.switchLink}>Student account</button>
+            Already have an account?{' '}
+            <button type="button" onClick={() => { setMode('login'); fullReset() }} style={styles.switchLink}>Log In</button>
           </p>
         )}
 
@@ -780,7 +797,10 @@ const styles: Record<string, React.CSSProperties> = {
   pageCosmic:      { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#04040e', padding: 20, position: 'relative', overflow: 'hidden' },
   cardCosmic:      { position: 'relative', zIndex: 2, width: '100%', maxWidth: 440, background: 'rgba(18,16,32,0.72)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(180,160,255,0.16)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(180,160,255,0.05)' },
   heading:         { fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 500, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 6 },
-  subheading:      { color: 'var(--text-secondary)', marginBottom: 28, textAlign: 'center', fontSize: 14 },
+  subheading:      { color: 'var(--text-secondary)', marginBottom: 16, textAlign: 'center', fontSize: 14 },
+  roleToggleRow:   { display: 'flex', width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, gap: 4, marginBottom: 20 },
+  roleToggleBtn:       { flex: 1, background: 'none', border: 'none', borderRadius: 7, padding: '9px 0', fontSize: 13.5, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer', transition: 'background 0.15s, color 0.15s' },
+  roleToggleBtnActive: { flex: 1, background: 'var(--primary)', border: 'none', borderRadius: 7, padding: '9px 0', fontSize: 13.5, fontWeight: 600, color: '#FFFFFF', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' },
   form:            { width: '100%', display: 'flex', flexDirection: 'column', gap: 14 },
   field:           { display: 'flex', flexDirection: 'column', gap: 6 },
   label:           { fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.2px' },
