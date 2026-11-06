@@ -87,7 +87,17 @@ export function WhatIfPanel({ assignments, weights }: Props): React.JSX.Element 
   }
 
   if (!on) {
-    return <Button label="What-if" variant="secondary" onPress={() => setOn(true)} style={styles.toggle} />
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityHint="Try different scores and see how this class average changes"
+        onPress={() => setOn(true)}
+        hitSlop={8}
+        style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed]}
+      >
+        <Text style={styles.toggleText}>Try different scores</Text>
+      </Pressable>
+    )
   }
 
   return (
@@ -207,7 +217,9 @@ export function WhatIfPanel({ assignments, weights }: Props): React.JSX.Element 
 }
 
 const styles = StyleSheet.create({
-  toggle: { alignSelf: 'flex-start', paddingHorizontal: spacing.md, height: 36 },
+  toggle: { alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center' },
+  togglePressed: { opacity: 0.7 },
+  toggleText: { ...typography.caption, fontSize: 13, color: '#A88BFF' },
   panel: { gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
   flex: { flex: 1 },

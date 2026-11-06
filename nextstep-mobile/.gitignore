@@ -9,6 +9,7 @@ dist/
 web-build/
 .playwright-cli/
 output/baseline-web/
+output/playwright/
 
 # Native
 .kotlin/

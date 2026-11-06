@@ -56,6 +56,21 @@ export function formatAssignmentDueTime(assignment: Assignment): string {
   })
 }
 
+/** Splits a due time into a clock face and period for the Today time rail ("15:30" → 3:30 / PM). */
+export function splitDueTime(assignment: Assignment): { clock: string; period: string } {
+  const raw = formatAssignmentDueTime(assignment)
+  const twentyFour = /^(\d{1,2}):(\d{2})$/.exec(raw)
+  if (twentyFour) {
+    const hour = Number(twentyFour[1])
+    if (hour <= 23) {
+      return { clock: `${hour % 12 || 12}:${twentyFour[2]}`, period: hour < 12 ? 'AM' : 'PM' }
+    }
+  }
+  const twelve = /^(\d{1,2}:\d{2})\s*([AaPp]\.?[Mm]\.?)$/.exec(raw)
+  if (twelve) return { clock: twelve[1], period: twelve[2].replace(/\./g, '').toUpperCase() }
+  return { clock: raw === 'Time unavailable' ? '—' : raw, period: '' }
+}
+
 export function getAssignmentDestination(assignmentId: number): {
   assignmentId: number
 } | null {

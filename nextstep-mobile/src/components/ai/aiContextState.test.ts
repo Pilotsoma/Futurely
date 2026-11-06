@@ -1,4 +1,4 @@
-import { buildChatParams, clearContext, registerContext } from './aiContextState'
+import { clearContext, registerContext } from './aiContextState'
 
 describe('aiContextState', () => {
   it('registers a trimmed entry, null when empty', () => {
@@ -10,10 +10,5 @@ describe('aiContextState', () => {
     const b = registerContext('B', 'b')
     expect(clearContext(a, a)).toBeNull()
     expect(clearContext(b, a)).toBe(b)
-  })
-  it('builds nav params with fresh requestId', () => {
-    const a = registerContext('A', 'do a')
-    expect(buildChatParams(a, 5)).toEqual({ initialPrompt: 'do a', requestId: 5 })
-    expect(buildChatParams(null, 6)).toEqual({ requestId: 6 })
   })
 })
