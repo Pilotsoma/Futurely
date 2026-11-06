@@ -1,5 +1,6 @@
 import React from 'react'
 import TestRenderer, { act } from 'react-test-renderer'
+import { Text } from 'react-native'
 import { describe, expect, it, jest } from '@jest/globals'
 
 import { ActionTile } from '../ActionTile'
@@ -35,7 +36,10 @@ describe('ActionTile', () => {
     const action = findAction(renderer)
     expect(action).toBeDefined()
     expect(action.props.accessibilityRole).toBe('button')
-    expect(action.props.accessibilityLabel).toBe('Classwork')
+    // Name comes from the visible title + subtitle (WCAG 2.5.3 label in name), not an override.
+    expect(action.props.accessibilityLabel).toBeUndefined()
+    const text = action.findAllByType(Text).flatMap((node) => node.props.children)
+    expect(text).toEqual(expect.arrayContaining(['Classwork', 'Assignments and averages']))
     act(() => action.props.onPress())
     expect(onPress).toHaveBeenCalledTimes(1)
   })

@@ -246,6 +246,8 @@ export default function AIChatScreen(): React.JSX.Element {
     }
   }
 
+  const contextSuggestion = route.params?.context?.prompt ? route.params.context : null
+
   useEffect(() => {
     const initialPrompt = route.params?.initialPrompt?.trim()
     const promptKey = `${route.params?.requestId ?? 'direct'}:${initialPrompt ?? ''}`
@@ -333,38 +335,31 @@ export default function AIChatScreen(): React.JSX.Element {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.heroCard}>
-              <View style={styles.heroTopRow}>
-                <View style={styles.heroBadge}>
-                  <Feather name="zap" size={15} color="#D9CFFF" />
-                  <Text style={styles.heroBadgeText}>YOUR AI COPILOT</Text>
-                </View>
-                <View style={styles.secureBadge}>
-                  <Feather name="shield" size={13} color="#78E9CE" />
-                  <Text style={styles.secureBadgeText}>Student-aware</Text>
-                </View>
-              </View>
-
               <Text style={styles.heroTitle}>Hi {firstName}, what can we work on?</Text>
               <Text style={styles.heroDescription}>
-                Get personalized support for school, planning, grades, and your path to college.
+                Ask about your grades, assignments, study plans or college. Answers use your school data.
               </Text>
-
-            </View>
-
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionEyebrow}>QUICK START</Text>
-                <Text style={styles.sectionTitle}>What do you need help with?</Text>
-              </View>
-              <Feather name="star" size={17} color="#8F78FF" />
             </View>
 
             <View style={styles.promptGrid}>
+              {contextSuggestion ? (
+                <ActionTile
+                  title={`Ask about ${contextSuggestion.label || 'this screen'}`}
+                  subtitle={contextSuggestion.prompt}
+                  icon="crosshair"
+                  color="#C5AEFF"
+                  iconBackground="rgba(127,34,254,0.2)"
+                  disabled={isSending}
+                  onPress={() => void handleSend(contextSuggestion.prompt)}
+                  testID="ai-prompt-context"
+                />
+              ) : null}
               {PROMPT_ROWS.map((row, rowIndex) => (
                 <View key={`prompt-row-${rowIndex}`} style={styles.promptRow}>
                   {row.map((prompt) => (
                     <ActionTile
                       key={prompt.label}
+                      variant="stacked"
                       title={prompt.label}
                       subtitle={prompt.subtitle}
                       icon={prompt.icon}
@@ -782,81 +777,23 @@ const styles = StyleSheet.create({
     gap: 17,
   },
   heroCard: {
-    padding: 17,
-    borderRadius: 24,
-    backgroundColor: '#151238',
-    borderWidth: 1,
-    borderColor: 'rgba(141,102,255,0.42)',
-    overflow: 'hidden',
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 16,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  heroBadgeText: {
-    color: '#BFB0F4',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.15,
-  },
-  secureBadge: {
-    minHeight: 27,
-    paddingHorizontal: 9,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderRadius: 10,
-    backgroundColor: 'rgba(20,49,55,0.68)',
-    borderWidth: 1,
-    borderColor: 'rgba(57,207,170,0.25)',
-  },
-  secureBadgeText: {
-    color: '#81E4C8',
-    fontSize: 9.5,
-    fontWeight: '700',
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   heroTitle: {
-    maxWidth: 310,
+    maxWidth: 320,
     color: '#FFFFFF',
-    fontSize: 25,
-    lineHeight: 31,
-    fontWeight: '800',
-    letterSpacing: -0.65,
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '700',
+    letterSpacing: -0.6,
   },
   heroDescription: {
     marginTop: 8,
-    color: '#AAA6C9',
-    fontSize: 11.5,
-    lineHeight: 17,
-    maxWidth: 315,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  sectionEyebrow: {
-    color: '#6888B5',
-    fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 1.15,
-  },
-  sectionTitle: {
-    marginTop: 3,
-    color: '#F4F6FD',
-    fontSize: 16.5,
-    lineHeight: 21,
-    fontWeight: '800',
-    letterSpacing: -0.25,
+    color: '#9497AE',
+    fontSize: 14,
+    lineHeight: 20,
+    maxWidth: 330,
   },
   promptGrid: {
     width: '100%',

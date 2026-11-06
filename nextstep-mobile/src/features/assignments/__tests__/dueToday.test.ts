@@ -2,6 +2,7 @@ import {
   formatAssignmentDueTime,
   getAssignmentDestination,
   getDueTodayAssignments,
+  splitDueTime,
 } from '../dueToday'
 import type { Assignment } from '../../../types/assignments'
 
@@ -72,5 +73,15 @@ describe('due today assignments', () => {
     expect(getAssignmentDestination(42)).toEqual({ assignmentId: 42 })
     expect(getAssignmentDestination(0)).toBeNull()
     expect(getAssignmentDestination(Number.NaN)).toBeNull()
+  })
+})
+
+describe('splitDueTime', () => {
+  it('splits 12-hour, 24-hour and missing times for the time rail', () => {
+    expect(splitDueTime(assignment({ dueTime: '3:30 PM' }))).toEqual({ clock: '3:30', period: 'PM' })
+    expect(splitDueTime(assignment({ dueTime: '15:30' }))).toEqual({ clock: '3:30', period: 'PM' })
+    expect(splitDueTime(assignment({ dueTime: '00:05' }))).toEqual({ clock: '12:05', period: 'AM' })
+    expect(splitDueTime(assignment({ dueTime: '11:59 p.m.' }))).toEqual({ clock: '11:59', period: 'PM' })
+    expect(splitDueTime(assignment({ dueTime: null, dueDate: 'not a date' }))).toEqual({ clock: '—', period: '' })
   })
 })

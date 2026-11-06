@@ -17,12 +17,13 @@ import type { StudyStackParamList } from './StudyNavigator'
 import type { FutureStackParamList } from './FutureNavigator'
 import { colors, fonts } from '../theme/tokens'
 import { AIContextProvider } from '../components/ai/AIContext'
-import AIFab from '../components/ai/AIFab'
+import { AskTabButton } from '../components/ai/AskTabButton'
+import type { AIContextEntry } from '../components/ai/aiContextState'
 
 export type MainTabParamList = {
   Dashboard: undefined
   Grades: NavigatorScreenParams<GradesStackParamList> | undefined
-  AIChat: { initialPrompt?: string; requestId?: number } | undefined
+  AIChat: { initialPrompt?: string; context?: AIContextEntry | null; requestId?: number } | undefined
   Planner: { assignmentId?: number } | undefined
   Study: NavigatorScreenParams<StudyStackParamList> | undefined
   Future: NavigatorScreenParams<FutureStackParamList> | undefined
@@ -53,24 +54,11 @@ function hideFromTabBar() {
 export default function MainNavigator(): React.JSX.Element {
   const insets = useSafeAreaInsets()
 
-  // Adds a little extra clearance above Android's system navigation/gesture bar.
   const safeBottom = Math.max(insets.bottom, 8)
-  const contentLift = 7
 
   return (
     <Tab.Navigator
-      layout={({ state, navigation, children }) => (
-        <AIContextProvider>
-          <View style={styles.flex}>
-            {children}
-            <AIFab
-              routeName={state.routes[state.index]?.name ?? ''}
-              tabBarHeight={64 + safeBottom + contentLift}
-              openChat={(params) => navigation.navigate('AIChat', params)}
-            />
-          </View>
-        </AIContextProvider>
-      )}
+      layout={({ children }) => <AIContextProvider>{children}</AIContextProvider>}
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
@@ -79,8 +67,8 @@ export default function MainNavigator(): React.JSX.Element {
         tabBarStyle: [
           styles.tabBar,
           {
-            height: 64 + safeBottom + contentLift,
-            paddingBottom: safeBottom + contentLift,
+            height: 60 + safeBottom,
+            paddingBottom: safeBottom,
           },
         ],
         tabBarItemStyle: styles.tabItem,
@@ -112,6 +100,22 @@ export default function MainNavigator(): React.JSX.Element {
             </TabIcon>
           ),
         }}
+      />
+
+      <Tab.Screen
+        name="AIChat"
+        component={AIChatScreen}
+        options={({ navigation }) => ({
+          title: 'Ask',
+          tabBarButton: (props) => (
+            <AskTabButton
+              {...props}
+              openChat={(context) =>
+                navigation.navigate('AIChat', { context, initialPrompt: undefined, requestId: Date.now() })
+              }
+            />
+          ),
+        })}
       />
 
       <Tab.Screen
@@ -153,25 +157,19 @@ export default function MainNavigator(): React.JSX.Element {
         }}
       />
 
-      <Tab.Screen name="AIChat" component={AIChatScreen} options={hideFromTabBar()} />
       <Tab.Screen name="Settings" component={SettingsScreen} options={hideFromTabBar()} />
     </Tab.Navigator>
   )
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   tabBar: {
-    backgroundColor: '#071522',
+    backgroundColor: '#0B0C16',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(102, 128, 165, 0.30)',
-    paddingTop: 7,
+    borderTopColor: 'rgba(255, 255, 255, 0.07)',
+    paddingTop: 6,
     paddingHorizontal: 2,
-    shadowColor: '#000000',
-    shadowOpacity: 0.32,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: -5 },
-    elevation: 18,
+    elevation: 0,
   },
   tabItem: {
     flex: 1,

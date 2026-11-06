@@ -4,7 +4,7 @@
  *   useAIContext('Chem grades', 'Explain my current grade in Chemistry and what I need to raise it')
  *
  * Registers what the student is looking at while the screen is focused; it is cleared on blur.
- * The floating AI button shows the label as a chip and opens AIChat with the prompt.
+ * The Ask tab passes it to AIChat, which offers it as a one-tap suggestion.
  */
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { useFocusEffect } from '@react-navigation/native'

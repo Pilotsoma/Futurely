@@ -27,6 +27,35 @@ test('Dashboard AI composer transfers its prompt and receives a visible reply', 
   expect(mockApi.requests.filter(({ path }) => path === '/ai/chat')).toHaveLength(1)
 })
 
+test('Ask tab carries the current screen as a suggestion without sending it', async ({ page, mockApi }) => {
+  await page.goto('/dashboard')
+  await page.getByRole('tab', { name: 'Ask AI, about Today' }).click()
+
+  await expect(page).toHaveURL(/\/ai(?:\?|$)/)
+  const suggestion = page.getByTestId('ai-prompt-context')
+  await expect(suggestion).toContainText('Ask about Today')
+  expect(mockApi.requests.filter(({ path }) => path === '/ai/chat')).toHaveLength(0)
+
+  await suggestion.click()
+  await expect(page.getByText(/Test coach reply for: Look at what is due/)).toBeVisible()
+  expect(mockApi.requests.filter(({ path }) => path === '/ai/chat')).toHaveLength(1)
+})
+
+test('Ask tab after a composer question does not resend the old question', async ({ page, mockApi }) => {
+  await page.goto('/dashboard')
+  await page.getByLabel('Ask myFuturely AI').fill('Build my finals study plan')
+  await page.getByLabel('Send question to myFuturely AI').click()
+  await expect(page.getByText('Test coach reply for: Build my finals study plan', { exact: true })).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Today' }).click()
+  await expect(page.getByTestId('dashboard-due-today')).toBeVisible()
+  await page.getByRole('tab', { name: 'Ask AI, about Today' }).click()
+  await expect(page).toHaveURL(/\/ai(?:\?|$)/)
+  await page.waitForTimeout(1000)
+
+  expect(mockApi.requests.filter(({ path }) => path === '/ai/chat')).toHaveLength(1)
+})
+
 test('Settings preferences persist across reload/navigation and profile failures are truthful', async ({ page, mockApi }) => {
   await page.goto('/settings')
 

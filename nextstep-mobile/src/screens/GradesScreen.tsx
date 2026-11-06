@@ -248,9 +248,6 @@ export default function GradesScreen(): React.JSX.Element {
       >
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text allowFontScaling={false} style={styles.eyebrow}>
-              ACADEMIC CENTER
-            </Text>
             <Text allowFontScaling={false} style={styles.pageTitle}>
               Grades
             </Text>
@@ -278,34 +275,19 @@ export default function GradesScreen(): React.JSX.Element {
 
         {courses.map((course) => (
           <Card key={course.id} style={styles.courseCard}>
-            <Text style={styles.courseName}>
-              {course.name}
-              {course.average !== null ? `  ${course.average}%` : ''}
-            </Text>
+            <View style={styles.courseRow}>
+              <Text style={styles.courseName} numberOfLines={2}>
+                {course.name}
+              </Text>
+              <Text style={styles.courseAverage}>
+                {course.average !== null ? `${course.average}%` : 'No average'}
+              </Text>
+            </View>
             <WhatIfPanel assignments={parseAssignments(course.assignments)} />
           </Card>
         ))}
 
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderCopy}>
-            <Text allowFontScaling={false} style={styles.sectionEyebrow}>
-              ACADEMIC TOOLS
-            </Text>
-            <Text allowFontScaling={false} style={styles.sectionTitle}>
-              Everything you need
-            </Text>
-            <Text allowFontScaling={false} style={styles.sectionSubtitle}>
-              Open your gradebook, reports, schedule and planning tools.
-            </Text>
-          </View>
-
-          <View style={styles.toolsCountBadge}>
-            <Feather name="grid" size={14} color="#A990FF" />
-            <Text allowFontScaling={false} style={styles.toolsCountText}>
-              {ACADEMIC_TOOLS.length}
-            </Text>
-          </View>
-        </View>
+        <Text style={styles.sectionTitle}>Gradebook and records</Text>
 
         <View style={styles.toolsGrid}>
           {ACADEMIC_TOOL_ROWS.map((row, rowIndex) => (
@@ -313,6 +295,7 @@ export default function GradesScreen(): React.JSX.Element {
               {row.map((item) => (
                 <ActionTile
                   key={item.route}
+                  variant={row.length > 1 ? 'stacked' : 'row'}
                   title={item.label}
                   subtitle={item.description}
                   icon={item.icon}
@@ -339,11 +322,13 @@ export default function GradesScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  courseCard: { gap: 8 },
-  courseName: { color: '#F7F9FF', fontFamily: fonts.semiBold, fontSize: 15 },
+  courseCard: { gap: 6 },
+  courseRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
+  courseName: { flex: 1, color: '#F7F9FF', fontFamily: fonts.semiBold, fontSize: 16 },
+  courseAverage: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 16, fontVariant: ['tabular-nums'] },
   scrollContent: {
     paddingTop: 10,
-    paddingBottom: 118,
+    paddingBottom: 32,
     gap: 16,
   },
   header: {
@@ -355,13 +340,6 @@ const styles = StyleSheet.create({
   headerCopy: {
     flex: 1,
     minWidth: 0,
-  },
-  eyebrow: {
-    color: '#7896C2',
-    fontFamily: fonts.semiBold,
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 1.35,
   },
   pageTitle: {
     color: '#F7F9FF',
@@ -380,58 +358,13 @@ const styles = StyleSheet.create({
     marginTop: 3,
     maxWidth: 270,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 4,
-  },
-  sectionHeaderCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  sectionEyebrow: {
-    color: '#6E91C0',
-    fontFamily: fonts.semiBold,
-    fontSize: 9.5,
-    fontWeight: '600',
-    letterSpacing: 1.25,
-  },
   sectionTitle: {
     color: colors.text,
-    fontFamily: fonts.bold,
-    fontSize: 19,
-    lineHeight: 24,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  sectionSubtitle: {
-    color: '#708098',
-    fontFamily: fonts.regular,
-    fontSize: 10.5,
-    lineHeight: 15,
-    marginTop: 2,
-    maxWidth: 265,
-  },
-  toolsCountBadge: {
-    minWidth: 48,
-    height: 31,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    borderRadius: 11,
-    backgroundColor: '#121729',
-    borderWidth: 1,
-    borderColor: 'rgba(151,119,255,0.24)',
-  },
-  toolsCountText: {
-    color: '#C5B5FF',
-    fontFamily: fonts.bold,
-    fontSize: 11,
-    fontWeight: '700',
+    fontFamily: fonts.semiBold,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '600',
+    marginTop: 8,
   },
   toolsGrid: {
     width: '100%',
