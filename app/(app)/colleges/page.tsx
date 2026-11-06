@@ -4,7 +4,7 @@ import React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { api, ApiError, type CollegeInsights, type CollegeInsightsStep, type CollegeListItem, type CollegeSearchResult, type StudentData, type RoadmapData } from '../../../lib/api'
-import { GraduationCapIcon } from '@/components/icons'
+import { GraduationCapIcon, XMarkIcon, CheckIcon } from '@/components/icons'
 import PageLoader from '../../../components/ui/PageLoader'
 
 const AgentPanel = dynamic(() => import('../../../components/agent/AgentPanel'))
@@ -19,7 +19,7 @@ function scoreColor(s: number): string {
 }
 
 const CATEGORY_COLORS: Record<CollegeInsightsStep['category'], string> = {
-  test:            '#2979FF',
+  test:            '#F59E0B',
   gpa:             '#10B981',
   essay:           '#7C3AED',
   extracurricular: '#F97316',
@@ -268,7 +268,9 @@ function RoadmapTab() {
       {/* Credits by category OR empty state */}
       {hasNoCredits ? (
         <div className="ns-card" style={{ padding: '32px 20px', textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 32, marginBottom: 10 }}>🎓</div>
+          <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--text-muted)', marginBottom: 10 }}>
+            <GraduationCapIcon size={32} />
+          </div>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
             Connect your school account to see your transcript data here.
           </p>
@@ -350,7 +352,7 @@ function RoadmapTab() {
                 </div>
 
                 {m.done && (
-                  <span style={{ flexShrink: 0, color: '#A855F7', fontSize: 16, fontWeight: 700 }}>✓</span>
+                  <span style={{ flexShrink: 0, color: '#A855F7', display: 'flex' }}><CheckIcon size={16} /></span>
                 )}
                 {isCurrent && !m.done && (
                   <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 6, padding: '2px 8px' }}>
@@ -541,7 +543,9 @@ function CollegesTab() {
             onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
           />
           {query && (
-            <button onClick={() => { setQuery(''); setSuggestions([]); setShowDropdown(false) }} style={S.clearBtn}>×</button>
+            <button onClick={() => { setQuery(''); setSuggestions([]); setShowDropdown(false) }} style={S.clearBtn} aria-label="Clear search">
+              <XMarkIcon size={14} />
+            </button>
           )}
         </div>
 
@@ -582,7 +586,7 @@ function CollegesTab() {
         <div className="ns-card" style={S.empty}>
           <div style={{ marginBottom: 10 }}><GraduationCapIcon size={32}/></div>
           <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>No colleges yet</p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Search above to add colleges you're interested in.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Search above to add colleges you&apos;re interested in.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -667,7 +671,7 @@ function CollegesTab() {
                     title="Remove"
                     aria-label={`Remove ${item.name}`}
                   >
-                    {removing === item.id ? '…' : '×'}
+                    {removing === item.id ? '…' : <XMarkIcon size={14} />}
                   </button>
                 </div>
 
@@ -764,7 +768,7 @@ const S: Record<string, React.CSSProperties> = {
   statDivider:  { width: 1, height: 36, background: 'var(--border)', flexShrink: 0 },
   searchWrap:   { display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '0 14px', height: 44, boxShadow: 'var(--neo-inset)' },
   searchInput:  { flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: 'var(--text)', padding: 0 },
-  clearBtn:     { background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: 0 },
+  clearBtn:     { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', lineHeight: 1, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   dropdown:     { position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: 'var(--neo-raised), var(--shadow-md)', zIndex: 100, overflow: 'hidden' },
   dropdownRow:  { display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '11px 16px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.1s' },
   dropdownName: { fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 },

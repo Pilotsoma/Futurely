@@ -157,7 +157,7 @@ export default function ParentStudentDetailPage() {
             <span style={S.gpaLbl}>UW GPA</span>
           </div>
           <div style={{ ...S.gpaChip, borderColor: 'var(--primary-glow)', background: 'var(--primary-dim)' }}>
-            <span style={{ ...S.gpaNum, ...gradientStyle }}>{wGpa}</span>
+            <span style={{ ...S.gpaNum, color: 'var(--primary)' }}>{wGpa}</span>
             <span style={S.gpaLbl}>W GPA</span>
           </div>
         </div>
@@ -262,7 +262,7 @@ export default function ParentStudentDetailPage() {
                 <div key={item.label} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                   {i > 0 && <div style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch', margin: '0 4px' }} />}
                   <div style={{ flex: 1, textAlign: 'center' as const }}>
-                    <div style={item.gradient ? { ...S.bigNum, ...gradientStyle } : S.bigNum}>{item.val}</div>
+                    <div style={item.gradient ? { ...S.bigNum, color: 'var(--primary)' } : S.bigNum}>{item.val}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</div>
                   </div>
                 </div>
@@ -318,7 +318,12 @@ export default function ParentStudentDetailPage() {
                         onClick={() => c.scores.length > 0 && toggleRow(i)}>
                         <td style={S.td}>
                           {c.name}
-                          {c.scores.length > 0 && <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 6 }}>{isExpanded ? '▲' : '▼'}</span>}
+                          {c.scores.length > 0 && (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                              style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 6, transition: 'transform 0.15s', transform: isExpanded ? 'rotate(180deg)' : 'none' }}>
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          )}
                         </td>
                         <td style={{ ...S.td, color: 'var(--text-secondary)' }}>{c.teacher || '—'}</td>
                         <td style={{ ...S.td, color: 'var(--text-secondary)' }}>{c.period || '—'}</td>
@@ -329,7 +334,7 @@ export default function ParentStudentDetailPage() {
                       </tr>,
                       isExpanded && (
                         <tr key={`${i}-exp`}>
-                          <td colSpan={5} style={{ background: 'rgba(0,0,0,0.25)', padding: '12px 20px' }}>
+                          <td colSpan={5} style={{ background: 'var(--surface-2)', padding: '12px 20px' }}>
                             <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.4px', marginBottom: 10 }}>
                               Assignments ({c.scores.length})
                             </div>
@@ -452,13 +457,6 @@ export default function ParentStudentDetailPage() {
       )}
     </div>
   )
-}
-
-const gradientStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
 }
 
 const S: Record<string, React.CSSProperties> = {

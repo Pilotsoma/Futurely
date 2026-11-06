@@ -4,7 +4,7 @@ import React from 'react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArcheryBowIcon } from '@/components/icons'
+import { ArcheryBowIcon, XMarkIcon } from '@/components/icons'
 import { api, QuestionSet, QuestionSetWithQuestions, QuestionInput } from '../../../lib/api'
 
 const SUBJECTS = ['Math', 'Science', 'English', 'History', 'Spanish', 'French', 'Biology', 'Chemistry', 'Physics', 'Computer Science', 'Economics', 'Psychology', 'Other']
@@ -48,7 +48,7 @@ function QuestionEditor({ q, index, onChange, onDelete }: { q: QDraft; index: nu
         <select value={q.timeLimit} onChange={e => onChange({ ...q, timeLimit: Number(e.target.value) })} style={{ ...S.select, width: 100 }}>
           {[5,10,15,20,30,45,60,90,120].map(t => <option key={t} value={t}>{t}s</option>)}
         </select>
-        <button onClick={onDelete} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px' }}>×</button>
+        <button onClick={onDelete} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', lineHeight: 1, padding: '0 4px', display: 'flex' }} aria-label="Delete question"><XMarkIcon size={16} /></button>
       </div>
       <input
         value={q.questionText}

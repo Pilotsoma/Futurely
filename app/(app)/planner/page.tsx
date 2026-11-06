@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import { api, type PlannerItem, type CanvasStatus } from '../../../lib/api'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
 import PageLoader from '../../../components/ui/PageLoader'
-import { CheckIcon, SparklesIcon, XMarkIcon, CalendarIcon, LinkIcon } from '@/components/icons'
+import { CheckIcon, SparklesIcon, XMarkIcon, CalendarIcon, LinkIcon, TrashIcon } from '@/components/icons'
 
 const CalendarView = dynamic(() => import('../../../components/planner/CalendarView'))
 const AgentPanel = dynamic(() => import('../../../components/agent/AgentPanel'))
@@ -470,6 +470,7 @@ export default function PlannerPage() {
             disabled={aiSorting}
             title="Score and sort assignments by AI priority"
             style={{
+              display: 'flex', alignItems: 'center', gap: 6,
               fontSize: 13,
               background: 'rgba(124,58,237,0.15)',
               color: '#A78BFA',
@@ -483,7 +484,8 @@ export default function PlannerPage() {
               whiteSpace: 'nowrap' as const,
             }}
           >
-            {aiSorting ? 'Scoring…' : '✦ AI Sorted'}
+            <SparklesIcon size={13} color="#A78BFA" />
+            {aiSorting ? 'Scoring…' : 'AI Sorted'}
           </button>
         </div>
         <div className="ns-planner-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1075,14 +1077,14 @@ function AssignmentCard({ item, toggling, onToggle, onDelete, draggable }: {
             {priority!.charAt(0) + priority!.slice(1).toLowerCase()}
           </span>
         )}
-        <button onClick={() => onDelete(item.id)} title="Delete task" style={{
+        <button onClick={() => onDelete(item.id)} title="Delete task" aria-label="Delete task" style={{
           background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
-          fontSize: 16, padding: 4, opacity: 0.5, transition: 'opacity 0.15s', flexShrink: 0,
+          padding: 4, opacity: 0.5, transition: 'opacity 0.15s', flexShrink: 0, display: 'flex',
         }}
-          onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '1' }}
-          onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '0.5' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.5' }}
         >
-          ×
+          <TrashIcon size={15} />
         </button>
       </div>
     </div>

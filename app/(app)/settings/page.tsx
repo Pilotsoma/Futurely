@@ -4,7 +4,7 @@ import React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, type StudentData, type CanvasStatus } from '../../../lib/api'
-import { CheckIcon, MoonIcon, SunIcon } from '@/components/icons'
+import { CheckIcon, MoonIcon, SunIcon, RefreshIcon } from '@/components/icons'
 import Link from 'next/link'
 import { clearWebAuth } from '../../../lib/authState'
 import { SORTED_ISD_LIST, isCollegeIsd } from '../../../lib/isds'
@@ -17,6 +17,12 @@ function DeleteAccountModal({ onClose, hasPassword }: { onClose: () => void; has
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
 
   async function handleDelete() {
     if (confirm !== 'DELETE') { setError('Type DELETE to confirm'); return }
@@ -173,7 +179,7 @@ export default function SettingsPage() {
         applyGradeColors(colors)
       }
     } catch {}
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   function applyGradeColors(colors: Record<string, string>) {
     const root = document.documentElement
@@ -541,7 +547,7 @@ export default function SettingsPage() {
                     >
                       {syncing ? (
                         <>
-                          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
+                          <span style={{ display: 'inline-flex', animation: 'spin 1s linear infinite' }}><RefreshIcon size={13} /></span>
                           Syncing…
                         </>
                       ) : (
@@ -592,7 +598,10 @@ export default function SettingsPage() {
                           : portalCustomUrl ? 'Other / Not listed'
                           : 'Search for your school district…'}
                       </span>
-                      <span style={{ fontSize: 11, flexShrink: 0 }}>{portalIsdOpen ? '▲' : '▼'}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                        style={{ flexShrink: 0, transition: 'transform 0.15s', transform: portalIsdOpen ? 'rotate(180deg)' : 'none' }}>
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
                     </button>
                     {portalIsdOpen && (
                       <div style={S.isdPanel}>
@@ -644,7 +653,7 @@ export default function SettingsPage() {
                   <div style={S.sysToggle}>
                     {(['HAC', 'PowerSchool'] as SystemType[]).map(s => (
                       <button key={s} onClick={() => { setPortalSystem(s); setPortalError(null) }}
-                        style={{ ...S.sysBtn, background: portalSystem === s ? 'var(--primary)' : 'transparent', color: portalSystem === s ? '#060D10' : 'var(--text-secondary)' }}>
+                        style={{ ...S.sysBtn, background: portalSystem === s ? 'var(--primary)' : 'transparent', color: portalSystem === s ? '#FFFFFF' : 'var(--text-secondary)' }}>
                         {s}
                       </button>
                     ))}

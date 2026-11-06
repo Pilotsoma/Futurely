@@ -186,7 +186,7 @@ function PagePanel({
     : undefined
 
   return (
-    <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', maxWidth: 560, height: '100%', background: 'var(--background)', borderLeft: '1px solid var(--border)', zIndex: 100, display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 24px rgba(0,0,0,0.18)' }}>
+    <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', maxWidth: 560, height: '100%', background: 'var(--bg)', borderLeft: '1px solid var(--border)', zIndex: 100, display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 24px rgba(0,0,0,0.18)' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)', borderRadius: 6, display: 'flex' }}>
@@ -350,7 +350,7 @@ function DiscussionPanel({
   const canvasUrl = data?.topic.html_url ?? ''
 
   return (
-    <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', maxWidth: 580, height: '100%', background: 'var(--background)', borderLeft: '1px solid var(--border)', zIndex: 100, display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 24px rgba(0,0,0,0.18)' }}>
+    <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', maxWidth: 580, height: '100%', background: 'var(--bg)', borderLeft: '1px solid var(--border)', zIndex: 100, display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 24px rgba(0,0,0,0.18)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)', borderRadius: 6, display: 'flex' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -465,7 +465,7 @@ function QuizTakerQuestion({
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                   borderRadius: 8, border: `1px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
-                  background: selected ? 'rgba(var(--primary-rgb),0.08)' : 'var(--surface-2)',
+                  background: selected ? 'var(--primary-dim)' : 'var(--surface-2)',
                   color: selected ? 'var(--primary)' : 'var(--text-secondary)',
                   fontWeight: selected ? 700 : 400, fontSize: 14, cursor: 'pointer', textAlign: 'left',
                   transition: 'border-color 0.15s, background 0.15s',
@@ -498,7 +498,7 @@ function QuizTakerQuestion({
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                   borderRadius: 8, border: `1px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
-                  background: selected ? 'rgba(var(--primary-rgb),0.08)' : 'var(--surface-2)',
+                  background: selected ? 'var(--primary-dim)' : 'var(--surface-2)',
                   color: selected ? 'var(--primary)' : 'var(--text-secondary)',
                   fontWeight: selected ? 700 : 400, fontSize: 14, cursor: 'pointer', textAlign: 'left',
                 }}
@@ -670,9 +670,9 @@ function QuizTakerPanel({
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: 'var(--background)', borderRadius: 14, width: '100%', maxWidth: 700,
+        background: 'var(--bg)', borderRadius: 14, width: '100%', maxWidth: 700,
         maxHeight: '90vh', display: 'flex', flexDirection: 'column',
-        boxShadow: '0 24px 80px rgba(0,0,0,0.5)', border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-xl)', border: '1px solid var(--border)',
         margin: '0 16px',
       }}>
         {/* Header */}
@@ -823,7 +823,7 @@ function QuizQuestionRow({ question, submissionData, showCorrect }: {
               <div key={ans.id} style={{
                 padding: '8px 12px', borderRadius: 7, fontSize: 13,
                 border: `1px solid ${isSelected ? (isCorrect === false ? '#EF4444' : 'var(--primary)') : isCorrectAnswer ? 'rgba(34,197,94,0.5)' : 'var(--border)'}`,
-                background: isSelected ? (isCorrect === false ? 'rgba(239,68,68,0.08)' : 'rgba(var(--primary-rgb),0.08)') : isCorrectAnswer ? 'rgba(34,197,94,0.06)' : 'transparent',
+                background: isSelected ? (isCorrect === false ? 'rgba(239,68,68,0.08)' : 'var(--primary-dim)') : isCorrectAnswer ? 'rgba(34,197,94,0.06)' : 'transparent',
                 color: isSelected ? 'var(--text)' : 'var(--text-secondary)',
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
@@ -879,7 +879,7 @@ function QuizPanel({
   const canvasUrl = data?.quiz.html_url || canvasItemUrl || ''
 
   return (
-    <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', maxWidth: 580, height: '100%', background: 'var(--background)', borderLeft: '1px solid var(--border)', zIndex: 100, display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 24px rgba(0,0,0,0.18)' }}>
+    <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', maxWidth: 580, height: '100%', background: 'var(--bg)', borderLeft: '1px solid var(--border)', zIndex: 100, display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 24px rgba(0,0,0,0.18)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)', borderRadius: 6, display: 'flex' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -1413,7 +1413,7 @@ function ModulesTab({
       {pending && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
           onClick={() => setPending(null)}>
-          <div style={{ background: 'var(--surface)', borderRadius: 16, padding: '28px 28px 24px', maxWidth: 400, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
+          <div style={{ background: 'var(--surface)', borderRadius: 16, padding: '28px 28px 24px', maxWidth: 400, width: '100%', boxShadow: 'var(--shadow-xl)' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ marginBottom: 12, textAlign: 'center', display: 'flex', justifyContent: 'center' }}>{moduleItemIcon(pending.type, 28)}</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 10, textAlign: 'center' }}>{pending.title}</div>

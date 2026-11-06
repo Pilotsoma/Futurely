@@ -449,7 +449,7 @@ function PortalSkeleton() {
 
 const S: Record<string, React.CSSProperties> = {
   backBtn:      { display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13, padding: '6px 12px', marginBottom: 20 },
-  errorBox:     { background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, padding: '12px 16px', color: '#DC2626', fontSize: 13 },
+  errorBox:     { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '12px 16px', color: 'var(--error)', fontSize: 13 },
   counselorAvatar: { width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, flexShrink: 0 },
   tabBar:       { display: 'flex', gap: 4, borderBottom: '1px solid var(--border)', marginBottom: 0 },
   tabBtn:       { padding: '9px 16px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', borderBottom: '2px solid transparent', marginBottom: -1, display: 'flex', alignItems: 'center', gap: 6, transition: 'color 0.15s' },

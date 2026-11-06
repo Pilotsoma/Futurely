@@ -188,7 +188,13 @@ export default function ClassworkPage() {
                   <tr key={i} className="ns-tr"
                     style={{ borderTop: '1px solid var(--border)', cursor: 'pointer' }}
                     onClick={() => toggleRow(i)}>
-                    <td style={S.td}>{c.name} <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{isExpanded ? '▲' : '▼'}</span></td>
+                    <td style={S.td}>
+                      {c.name}{' '}
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                        style={{ display: 'inline-block', verticalAlign: 'middle', transition: 'transform 0.15s', transform: isExpanded ? 'rotate(180deg)' : 'none' }}>
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </td>
                     <td style={{ ...S.td, color: 'var(--text-secondary)' }}>{c.teacher || '—'}</td>
                     <td style={{ ...S.td, color: 'var(--text-secondary)' }}>{c.period || '—'}</td>
                     <td style={{ ...S.td, color: avgColor(c.average), fontWeight: 700 }}>{c.average ?? '—'}</td>
@@ -198,14 +204,14 @@ export default function ClassworkPage() {
                     <td style={S.td} onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => setOpenWhatIf(openWhatIf === i ? null : i)}
-                        style={{ background: openWhatIf === i ? 'var(--primary)' : 'var(--primary-dim)', border: '1px solid var(--primary)', color: openWhatIf === i ? '#000' : 'var(--primary)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        style={{ background: openWhatIf === i ? 'var(--primary)' : 'var(--primary-dim)', border: '1px solid var(--primary)', color: openWhatIf === i ? '#FFFFFF' : 'var(--primary)', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                         What-If
                       </button>
                     </td>
                   </tr>,
                   openWhatIf === i && (
                     <tr key={`${i}-whatif`}>
-                      <td colSpan={6} style={{ background: 'rgba(0,0,0,0.15)', padding: '12px 20px' }}>
+                      <td colSpan={6} style={{ background: 'var(--surface-2)', padding: '12px 20px' }}>
                         <WhatIfScorer
                           currentAverage={parseFloat(c.average ?? '0') || 0}
                           existingAssignments={c.scores.map(a => ({ score: a.score, total: a.totalPoints, category: a.category, percentage: a.percentage }))}
@@ -217,7 +223,7 @@ export default function ClassworkPage() {
                   ),
                   isExpanded && (
                     <tr key={`${i}-exp`}>
-                      <td colSpan={6} style={{ background: 'rgba(0,0,0,0.25)', padding: '12px 20px' }}>
+                      <td colSpan={6} style={{ background: 'var(--surface-2)', padding: '12px 20px' }}>
                         <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.4px', marginBottom: 10 }}>
                           Assignments ({c.scores.length})
                         </div>

@@ -2462,8 +2462,9 @@ export default function MarketplacePage() {
               {onRemove && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onRemove(item) }}
-                  style={{ position: 'absolute', top: -6, right: -6, width: 16, height: 16, borderRadius: '50%', background: '#EF4444', border: '1px solid var(--surface)', color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, zIndex: 1 }}
-                >×</button>
+                  style={{ position: 'absolute', top: -6, right: -6, width: 16, height: 16, borderRadius: '50%', background: '#EF4444', border: '1px solid var(--surface)', color: '#fff', lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, zIndex: 1 }}
+                  aria-label="Remove"
+                ><XMarkIcon size={9} /></button>
               )}
               </div>
               </PriceTooltip>
@@ -4592,7 +4593,7 @@ export default function MarketplacePage() {
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
         >
           <div className="ns-card" style={{ width: '100%', maxWidth: 400, padding: 28, position: 'relative' }}>
-            <button onClick={() => setSpinStatsOpen(false)} style={{ position: 'absolute', top: 14, right: 14, background: 'transparent', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1 }}>×</button>
+            <button onClick={() => setSpinStatsOpen(false)} style={{ position: 'absolute', top: 14, right: 14, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1, display: 'flex' }} aria-label="Close"><XMarkIcon size={16} /></button>
             <p style={{ fontSize: 16, fontWeight: 800, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}><BarChartIcon size={18}/> Spin Stats</p>
 
             {spinStatsLoading && <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>Loading…</p>}

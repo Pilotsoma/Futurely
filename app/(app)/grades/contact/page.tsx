@@ -114,7 +114,7 @@ const S: Record<string, React.CSSProperties> = {
   courses:   { display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 5 },
   coursePill:{ fontSize: 11, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 7px', color: 'var(--text-secondary)' },
   meta:      { display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 4 },
-  metaChip:  { fontSize: 11, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 5, padding: '2px 7px', color: 'var(--primary)' },
+  metaChip:  { fontSize: 11, background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 5, padding: '2px 7px', color: 'var(--primary)' },
   email:     { fontSize: 11.5, color: 'var(--text-muted)' },
   emailBtn:  { flexShrink: 0, padding: '6px 14px', borderRadius: 8, background: 'var(--primary-dim)', border: '1px solid var(--primary)', color: 'var(--primary)', fontSize: 12, fontWeight: 600, textDecoration: 'none' },
 }

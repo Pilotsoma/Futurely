@@ -6,9 +6,9 @@ import { useSearchParams } from 'next/navigation'
 import { api, FeedPost, FeedComment, FeedUserProfile, AppNotification } from '@/lib/api'
 import { DevAdminPanel, ModPanel } from '@/components/ui/DevAdminPanel'
 import {
-  UserIcon, HeartFilledIcon, HeartOutlineIcon, BooksIcon,
-  ChatBubbleIcon, BanIcon, MuteIcon,
-  GlobeIcon, SchoolBuildingIcon, ArrowRightIcon,
+  HeartFilledIcon, HeartOutlineIcon,
+  BanIcon, MuteIcon,
+  GlobeIcon, SchoolBuildingIcon, ArrowRightIcon, XMarkIcon,
 } from '@/components/icons'
 
 function timeAgo(dateStr: string): string {
@@ -48,64 +48,6 @@ function initials(user: { name: string | null; hacName?: string | null }): strin
 function avatarContent(user: { name: string | null; avatarUrl?: string | null }): React.ReactNode {
   if (user.avatarUrl) return <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
   return initials(user)
-}
-
-// ── Notification row with clickable sender name ───────────────────────────────
-
-function NotifRow({ n, onOpenProfile, onClose }: { n: AppNotification; onOpenProfile: (id: number) => void; onClose: () => void }) {
-  const name = parseHacName(n.sender.name) || 'User'
-
-  function handleNameClick(e: React.MouseEvent) {
-    e.stopPropagation()
-    onClose()
-    onOpenProfile(n.fromUserId)
-  }
-
-  const nameEl = (
-    <button
-      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
-      onClick={handleNameClick}
-    >
-      {name}
-    </button>
-  )
-
-  let content: React.ReactNode
-  if (n.type === 'FOLLOW') content = <>{nameEl} started following you</>
-  else if (n.type === 'LIKE') content = <>{nameEl} liked your post</>
-  else if (n.type === 'COMMENT') content = n.preview ? <>{nameEl}: &quot;{n.preview}&quot;</> : <>{nameEl} commented on your post</>
-  else if (n.type === 'ASSIGNMENT_CREATED') content = <>{n.preview ?? 'New assignment added'}</>
-  else content = null
-
-  const icon: React.ReactNode = n.type === 'FOLLOW' ? <UserIcon size={15}/>
-    : n.type === 'LIKE' ? <HeartFilledIcon size={15}/>
-    : n.type === 'ASSIGNMENT_CREATED' ? <BooksIcon size={15}/>
-    : <ChatBubbleIcon size={15}/>
-
-  if (!content) return null
-
-  return (
-    <div style={{ ...N.item, background: n.read ? 'transparent' : 'rgba(43,74,142,0.07)' }}>
-      <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-        {icon}
-      </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={N.text}>{content}</div>
-        <div style={N.time}>{notifTimeAgo(n.createdAt)}</div>
-      </div>
-      {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, alignSelf: 'center' as const }} />}
-    </div>
-  )
-}
-
-function notifTimeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
 }
 
 // ── User Profile Overlay ──────────────────────────────────────────────────────
@@ -593,7 +535,9 @@ function CommentSection({ postId, onClose, onCommentAdded, currentUserId, onOpen
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#EF4444', marginBottom: 1 }}>Comment blocked</div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{commentError}</div>
                 </div>
-                <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0, flexShrink: 0 }} onClick={() => setCommentError(null)}>×</button>
+                <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', lineHeight: 1, padding: 0, flexShrink: 0, display: 'flex' }} onClick={() => setCommentError(null)} aria-label="Dismiss">
+                  <XMarkIcon size={14} />
+                </button>
               </div>
             )}
             <div style={{ display: 'flex', gap: 10 }}>
@@ -987,7 +931,9 @@ export default function StudyFeedPage() {
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#EF4444', marginBottom: 2 }}>Post blocked</div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{postError}</div>
                   </div>
-                  <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 0, flexShrink: 0 }} onClick={() => setPostError(null)}>×</button>
+                  <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', lineHeight: 1, padding: 0, flexShrink: 0, display: 'flex' }} onClick={() => setPostError(null)} aria-label="Dismiss">
+                    <XMarkIcon size={16} />
+                  </button>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
@@ -1130,20 +1076,6 @@ const P: Record<string, React.CSSProperties> = {
   followBtn:  { padding: '2px 9px', borderRadius: 5, border: '1px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontWeight: 600, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' as const },
   deleteBtn:  { marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, display: 'flex', alignItems: 'center' },
   actionBtn:  { background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 6, fontWeight: 600 },
-}
-
-
-const N: Record<string, React.CSSProperties> = {
-  panel:   { position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 320, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.35)', zIndex: 300, overflow: 'hidden' },
-  header:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' },
-  title:   { fontSize: 13.5, fontWeight: 700, color: 'var(--text)' },
-  markAll: { fontSize: 11.5, color: 'var(--primary)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600 },
-  list:    { maxHeight: 360, overflowY: 'auto' },
-  empty:   { padding: '28px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 },
-  item:    { display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--border)' },
-  text:    { fontSize: 13, color: 'var(--text)', lineHeight: 1.4 },
-  time:    { fontSize: 11, color: 'var(--text-muted)', marginTop: 2 },
-  toast:   { display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: '3px solid var(--primary)', borderRadius: 10, padding: '12px 14px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', minWidth: 260, maxWidth: 340, pointerEvents: 'auto', animation: 'fadeUp 0.25s ease' },
 }
 
 const O: Record<string, React.CSSProperties> = {

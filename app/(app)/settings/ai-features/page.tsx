@@ -118,7 +118,7 @@ function ConsentModal({
         </div>
 
         <p style={S.consentNote}>
-          By clicking "Turn on AI Check-ins" you confirm you have read the above and consent to
+          By clicking &quot;Turn on AI Check-ins&quot; you confirm you have read the above and consent to
           the AI periodically reviewing your academic information.
         </p>
 
@@ -258,7 +258,7 @@ export default function AiFeaturesPage() {
             <p style={S.coppaText}>
               Your parent or guardian must approve this feature in the{' '}
               <strong>Parent Portal</strong> before it can be enabled. Once they approve it
-              there, you'll be able to turn it on here.
+              there, you&apos;ll be able to turn it on here.
             </p>
           </div>
         </div>
@@ -533,7 +533,7 @@ const S: Record<string, React.CSSProperties> = {
     maxWidth: 560,
     maxHeight: '85vh',
     overflowY: 'auto' as const,
-    boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+    boxShadow: 'var(--shadow-xl)',
   },
   modalTitle: {
     fontSize: 17,

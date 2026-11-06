@@ -77,7 +77,7 @@ export default function CanvasTokenExpiredBanner() {
         padding: '36px 32px',
         maxWidth: 440,
         width: '90%',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+        boxShadow: 'var(--shadow-xl)',
         display: 'flex',
         flexDirection: 'column',
         gap: 16,
@@ -116,7 +116,7 @@ export default function CanvasTokenExpiredBanner() {
         }}>
           Canvas → Profile → Settings → Approved Integrations → New Access Token
           <br />
-          <span style={{ color: 'var(--text-tertiary)' }}>Set the expiry to <strong style={{ color: 'var(--text-secondary)' }}>120 days</strong> (maximum recommended)</span>
+          <span style={{ color: 'var(--text-muted)' }}>Set the expiry to <strong style={{ color: 'var(--text-secondary)' }}>120 days</strong> (maximum recommended)</span>
         </div>
 
         <form onSubmit={e => void handleSubmit(e)} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -144,7 +144,7 @@ export default function CanvasTokenExpiredBanner() {
         </form>
 
         {expiredConnections.length > 1 && (
-          <p style={{ margin: 0, fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
             {expiredConnections.length - 1} other Canvas connection{expiredConnections.length > 2 ? 's' : ''} also need{expiredConnections.length === 2 ? 's' : ''} a new token. You&apos;ll be prompted for each one.
           </p>
         )}

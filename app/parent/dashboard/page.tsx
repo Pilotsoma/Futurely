@@ -165,7 +165,10 @@ export default function ParentDashboard() {
                   style={{ ...S.input, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left', color: isdLabel ? 'var(--text)' : 'var(--text-muted)', width: '100%' }}
                   onClick={() => setIsdOpen(v => !v)} disabled={linking}>
                   <span>{isdLabel || 'Search for your school district…'}</span>
-                  <span style={{ fontSize: 11, marginLeft: 8, flexShrink: 0 }}>{isdOpen ? '▲' : '▼'}</span>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ flexShrink: 0, marginLeft: 8, transition: 'transform 0.15s', transform: isdOpen ? 'rotate(180deg)' : 'none' }}>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </button>
                 {isdOpen && (
                   <div style={S.dropdown}>
@@ -293,7 +296,7 @@ export default function ParentDashboard() {
                 </div>
                 <div style={S.gpaDivider} />
                 <div style={{ flex: 1, textAlign: 'center' as const }}>
-                  <div style={{ ...S.gpaVal, ...gradientStyle }}>{s.weightedGpa.toFixed(3)}</div>
+                  <div style={{ ...S.gpaVal, color: 'var(--primary)' }}>{s.weightedGpa.toFixed(3)}</div>
                   <div style={S.gpaLbl}>W GPA</div>
                 </div>
                 <div style={S.gpaDivider} />
@@ -337,13 +340,6 @@ export default function ParentDashboard() {
       )}
     </div>
   )
-}
-
-const gradientStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg,#2D6A4F,#2B4A8E)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
 }
 
 const S: Record<string, React.CSSProperties> = {

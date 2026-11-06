@@ -92,7 +92,7 @@ export default function ForcedLogoutWatcher() {
 
 const S: Record<string, React.CSSProperties> = {
   overlay:  { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  card:     { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '36px 32px', maxWidth: 380, width: '100%', textAlign: 'center', boxShadow: '0 24px 64px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 },
+  card:     { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '36px 32px', maxWidth: 380, width: '100%', textAlign: 'center', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 },
   iconWrap: { width: 64, height: 64, borderRadius: 18, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   title:    { fontSize: 18, fontWeight: 800, color: 'var(--text)', margin: 0 },
   sub:      { fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 },
