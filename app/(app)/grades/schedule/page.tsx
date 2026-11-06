@@ -224,5 +224,5 @@ const S: Record<string, React.CSSProperties> = {
   th:           { textAlign: 'left' as const, padding: '12px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.5px' },
   td:           { padding: '11px 14px', fontSize: 13.5, color: 'var(--text)' },
   semBtn:       { padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', boxShadow: 'var(--neo-raised)' },
-  semBtnActive: { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' },
+  semBtnActive: { background: 'var(--primary)', color: '#FFFFFF', border: '1px solid var(--primary)' },
 }

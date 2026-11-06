@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, animate, stagger, useReducedMotion } from 'framer-motion'
 import { api, type StudentData } from '../../../lib/api'
@@ -10,6 +9,7 @@ import { usePerformanceMode } from '../../../lib/performanceMode'
 import AiBar from '../../../components/ui/AiBar'
 import PageLoader from '../../../components/ui/PageLoader'
 import NotificationBell from '../../../components/ui/NotificationBell'
+import Modal from '../../../components/ui/Modal'
 import {
   BarChartIcon, DocumentIcon, CalendarIcon, ClipboardIcon,
   CheckCircleIcon, LightningBoltIcon, MedalIcon, DiamondIcon, CrownIcon,
@@ -18,10 +18,10 @@ import {
 } from '@/components/icons'
 
 const QUICK_ACCESS_LINKS: Array<{ href: string; label: string; icon: React.ReactNode; color: string; bg: string }> = [
-  { href: '/grades/classwork',  label: 'Grades',       icon: <BarChartIcon size={20}/>, color: '#10B981', bg: 'rgba(16,185,129,0.14)' },
-  { href: '/grades/attendance', label: 'Attendance',   icon: <CalendarIcon size={20}/>, color: '#EF4444', bg: 'rgba(239,68,68,0.14)' },
-  { href: '/grades/transcript', label: 'Transcript',   icon: <DocumentIcon size={20}/>, color: '#6366F1', bg: 'rgba(99,102,241,0.14)' },
-  { href: '/grades/report-card',label: 'Report Card',  icon: <ClipboardIcon size={20}/>, color: '#3B82F6', bg: 'rgba(59,130,246,0.14)' },
+  { href: '/grades/classwork',  label: 'Grades',       icon: <BarChartIcon size={20}/>, color: 'var(--success)', bg: 'rgba(16,185,129,0.14)' },
+  { href: '/grades/attendance', label: 'Attendance',   icon: <CalendarIcon size={20}/>, color: 'var(--error)', bg: 'rgba(239,68,68,0.14)' },
+  { href: '/grades/transcript', label: 'Transcript',   icon: <DocumentIcon size={20}/>, color: 'var(--purple)', bg: 'rgba(124,58,237,0.14)' },
+  { href: '/grades/report-card',label: 'Report Card',  icon: <ClipboardIcon size={20}/>, color: 'var(--warning)', bg: 'rgba(245,158,11,0.14)' },
 ]
 
 function streakEncouragement(days: number): string {
@@ -79,9 +79,6 @@ const STREAK_MILESTONES: Array<{ days: number; icon: React.ReactNode; tag?: stri
   { days: 50,  tag: 'Legend',  tagColor: '#EC4899', icon: <DiamondIcon size={16}/> },
   { days: 100, tag: 'GOAT',    tagColor: '#EAB308', icon: <CrownIcon size={16}/> },
 ]
-
-const GRADE_COLOR: Record<string, string> = { A: 'var(--gc-a)', B: 'var(--gc-b)', C: 'var(--gc-c)', D: 'var(--gc-d)', F: 'var(--gc-f)' }
-const gradeColor = (g: string) => GRADE_COLOR[g?.charAt(0).toUpperCase()] ?? 'var(--text-muted)'
 
 function formatDate() {
   return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -462,7 +459,7 @@ export default function DashboardPage() {
             </div>
             <div style={S.gpaDivider} />
             <div style={S.gpaBlock}>
-              <div className="ns-db-gpa-num" style={{ ...S.gpaNum, ...gradientStyle, ...(hideGpa ? { filter: 'blur(8px)', userSelect: 'none' } : {}) }}>{animWGpa}</div>
+              <div className="ns-db-gpa-num" style={{ ...S.gpaNum, color: 'var(--primary)', ...(hideGpa ? { filter: 'blur(8px)', userSelect: 'none' } : {}) }}>{animWGpa}</div>
               <div style={S.gpaTag}>Weighted</div>
             </div>
           </div>
@@ -472,7 +469,7 @@ export default function DashboardPage() {
               style={S.resyncBanner}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
-              Some data didn't load · Re-sync
+              Some data didn&apos;t load · Re-sync
             </button>
           )}
         </div>
@@ -541,10 +538,9 @@ export default function DashboardPage() {
       <div className="db-ai-gap" style={{ height: 24 }} />
 
       {/* Streak Milestone Celebration Popup */}
-      {streakMilestone && createPortal(
-        <div style={S.popupOverlay} onClick={() => setStreakMilestone(null)}>
-          <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setStreakMilestone(null)} style={S.popupClose}>×</button>
+      {streakMilestone && (
+        <Modal onClose={() => setStreakMilestone(null)}>
+          <div style={{ textAlign: 'center' as const }}>
             <div style={{ marginBottom: 14 }}>{streakMilestone.icon}</div>
             <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6, color: 'var(--text)', letterSpacing: '-0.5px' }}>
               {streakMilestone.days}-Day Streak!
@@ -556,15 +552,13 @@ export default function DashboardPage() {
               Let&apos;s go! <RocketIcon size={16}/>
             </button>
           </div>
-        </div>,
-        document.body
+        </Modal>
       )}
 
       {/* Streak Popup */}
-      {showStreakPopup && createPortal(
-        <div style={S.popupOverlay} onClick={() => setShowStreakPopup(false)}>
-          <div style={{ ...S.popupCard, textAlign: 'center' as const }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowStreakPopup(false)} style={S.popupClose}>×</button>
+      {showStreakPopup && (
+        <Modal onClose={() => setShowStreakPopup(false)}>
+          <div style={{ textAlign: 'center' as const }}>
             <div style={{ marginBottom: 14 }}><FlameIcon size={44}/></div>
             <h3 style={{ fontSize: 40, fontWeight: 800, marginBottom: 6, color: 'var(--text)', letterSpacing: '-1px' }}>
               {dayStreak}
@@ -579,15 +573,12 @@ export default function DashboardPage() {
               Got it!
             </button>
           </div>
-        </div>,
-        document.body
+        </Modal>
       )}
 
       {/* HAC session expired / resync popup */}
-      {showResyncPopup && createPortal(
-        <div style={S.popupOverlay} onClick={dismissResyncPopup}>
-          <div style={S.popupCard} onClick={e => e.stopPropagation()}>
-            <button onClick={dismissResyncPopup} style={S.popupClose}>×</button>
+      {showResyncPopup && (
+        <Modal onClose={dismissResyncPopup}>
             <div style={{ marginBottom: 12 }}>{needsReconnect ? <LinkIcon size={36}/> : <RefreshIcon size={36}/>}</div>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
               {needsReconnect ? 'Reconnect your school account' : 'Some school data didn\'t load'}
@@ -634,16 +625,12 @@ export default function DashboardPage() {
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Don&apos;t show this again</span>
               </label>
             )}
-          </div>
-        </div>,
-        document.body
+        </Modal>
       )}
 
       {/* School portal genuinely unreachable — informational only, no retry action */}
-      {showPortalDownNotice && createPortal(
-        <div style={S.popupOverlay} onClick={dismissPortalDownNotice}>
-          <div style={S.popupCard} onClick={e => e.stopPropagation()}>
-            <button onClick={dismissPortalDownNotice} style={S.popupClose}>×</button>
+      {showPortalDownNotice && (
+        <Modal onClose={dismissPortalDownNotice}>
             <div style={{ marginBottom: 12 }}><WarningIcon size={36}/></div>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
               Your school portal is down
@@ -665,16 +652,12 @@ export default function DashboardPage() {
               />
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Don&apos;t show this again</span>
             </label>
-          </div>
-        </div>,
-        document.body
+        </Modal>
       )}
 
       {/* ── Connect school account modal (shown after OAuth sign-up) ── */}
-      {showConnectModal && createPortal(
-        <div style={S.popupOverlay} onClick={dismissConnectModal}>
-          <div style={S.popupCard} onClick={e => e.stopPropagation()}>
-            <button onClick={dismissConnectModal} style={S.popupClose}>×</button>
+      {showConnectModal && (
+        <Modal onClose={dismissConnectModal}>
             <div style={{ marginBottom: 12 }}><GraduationCapIcon size={40}/></div>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>
               Connect your school account
@@ -703,9 +686,7 @@ export default function DashboardPage() {
               />
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Don&apos;t show this again</span>
             </label>
-          </div>
-        </div>,
-        document.body
+        </Modal>
       )}
 
       {/* AI bar */}
@@ -716,10 +697,6 @@ export default function DashboardPage() {
 
     </div>
   )
-}
-
-const gradientStyle: React.CSSProperties = {
-  color: 'var(--primary)',
 }
 
 const S: Record<string, React.CSSProperties> = {
@@ -751,10 +728,6 @@ const S: Record<string, React.CSSProperties> = {
   quickAccessTile:  { display: 'flex', alignItems: 'center', gap: 10, padding: '16px 18px', cursor: 'pointer', textAlign: 'left' as const, width: '100%' },
   quickAccessLabel: { fontSize: 14, fontWeight: 700, color: 'var(--text)' },
   aiBarWrap:  { paddingBottom: 24 },
-  popupOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 },
-  popupCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, maxWidth: 380, width: '100%', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' },
-  popupClose: { position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', padding: 4, lineHeight: 1 },
-  popupBenefit: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', background: 'var(--surface-2)', borderRadius: 10 },
   popupButton: { width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#FFFFFF', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 16 },
-  resyncBanner: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(154,124,48,0.3)', background: 'rgba(154,124,48,0.08)', color: 'var(--warning)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.1px' },
+  resyncBanner: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.08)', color: 'var(--warning)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.1px' },
 }

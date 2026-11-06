@@ -8,7 +8,7 @@ import {
   UserIcon, HeartFilledIcon, BooksIcon,
   ClipboardIcon, SchoolBuildingIcon, HandshakeIcon, PencilIcon, SparklesIcon,
   CheckCircleIcon, ChatBubbleIcon, BellIcon,
-  BarChartIcon,
+  BarChartIcon, XMarkIcon,
 } from '@/components/icons'
 
 // Module-level dedup set — shared across all instances so toasts fire only once
@@ -178,7 +178,7 @@ export default function NotificationBell({ showToasts = false, collapsed = false
       {showPanel && (
         <div
           ref={panelRef}
-          style={{ position: 'fixed', top: panelPos.top, left: panelPos.left, width: 320, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 1000, overflow: 'hidden' }}
+          style={{ position: 'fixed', top: panelPos.top, left: panelPos.left, width: 320, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-lg)', zIndex: 1000, overflow: 'hidden' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
             <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Notifications</span>
@@ -286,13 +286,13 @@ export default function NotificationBell({ showToasts = false, collapsed = false
               }
             })()
             return (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `4px solid ${accent}`, borderRadius: 12, padding: '13px 14px', boxShadow: '0 6px 24px rgba(0,0,0,0.4)', pointerEvents: 'auto', animation: 'fadeUp 0.2s ease' }}>
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `4px solid ${accent}`, borderRadius: 12, padding: '13px 14px', boxShadow: 'var(--shadow-lg)', pointerEvents: 'auto', animation: 'fadeUp 0.2s ease' }}>
                 <span style={{ flexShrink: 0, lineHeight: 1, display: 'flex', alignItems: 'center', color: accent }}>{toastIcon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{text}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{timeAgo(t.notif.createdAt)}</div>
                 </div>
-                <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1, flexShrink: 0, padding: '0 0 0 4px', pointerEvents: 'auto' }} onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}>×</button>
+                <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', lineHeight: 1, flexShrink: 0, padding: '0 0 0 4px', pointerEvents: 'auto', display: 'flex' }} onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} aria-label="Dismiss"><XMarkIcon size={14} /></button>
               </div>
             )
           })}

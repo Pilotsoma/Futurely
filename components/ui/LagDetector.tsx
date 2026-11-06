@@ -68,7 +68,7 @@ export default function LagDetector() {
       position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
       background: 'var(--surface)', border: '1px solid var(--border)',
       borderRadius: 14, padding: '16px 18px', maxWidth: 300,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+      boxShadow: 'var(--shadow-lg)',
       display: 'flex', flexDirection: 'column', gap: 12,
     }}>
       <div>

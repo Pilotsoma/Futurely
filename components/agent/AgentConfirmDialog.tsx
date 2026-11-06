@@ -88,7 +88,7 @@ const S: Record<string, React.CSSProperties> = {
     padding: 24,
     width: '100%',
     maxWidth: 420,
-    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+    boxShadow: 'var(--shadow-xl)',
   },
   iconRow: {
     display: 'flex',

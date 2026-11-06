@@ -248,5 +248,5 @@ const S: Record<string, React.CSSProperties> = {
   reinstateBtn:  { height: 32, padding: '0 14px', fontSize: 13, fontWeight: 600, background: '#16a34a', color: '#FFFFFF', border: 'none', borderRadius: 7, cursor: 'pointer' },
   badgeTeacher:  { display: 'inline-block', background: 'var(--primary-dim)', border: '1px solid var(--primary-glow)', borderRadius: 5, padding: '2px 8px', fontSize: 11, fontWeight: 700, color: 'var(--primary)' },
   badgeCounselor: { display: 'inline-block', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 5, padding: '2px 8px', fontSize: 11, fontWeight: 700, color: '#7c3aed' },
-  errorBox:    { background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, padding: '12px 16px', color: '#DC2626', fontSize: 13 },
+  errorBox:    { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '12px 16px', color: 'var(--error)', fontSize: 13 },
 }

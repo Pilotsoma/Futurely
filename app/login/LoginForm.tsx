@@ -100,6 +100,16 @@ export default function LoginForm() {
     return () => document.removeEventListener('mousedown', onOutsideClick)
   }, [])
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
+      if (showForgot) setShowForgot(false)
+      else if (showPrivacyModal) setShowPrivacyModal(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [showForgot, showPrivacyModal])
+
   // Debounced school search
   useEffect(() => {
     if (schoolQuery.length < 2) { setSchoolResults([]); setSchoolOpen(false); return }
@@ -493,7 +503,10 @@ export default function LoginForm() {
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {isdDisplayLabel || 'Search for your school district...'}
                       </span>
-                      <span style={{ fontSize: 12, marginLeft: 8, flexShrink: 0 }}>{isdOpen ? '▲' : '▼'}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                        style={{ flexShrink: 0, marginLeft: 8, transition: 'transform 0.15s', transform: isdOpen ? 'rotate(180deg)' : 'none' }}>
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
                     </button>
                     {isdOpen && (
                       <div style={styles.dropdownPanel}>
@@ -796,7 +809,6 @@ const styles: Record<string, React.CSSProperties> = {
   card:            { width: '100%', maxWidth: 440, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 40px rgba(26,21,14,0.08), 0 2px 10px rgba(26,21,14,0.05)' },
   pageCosmic:      { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#04040e', padding: 20, position: 'relative', overflow: 'hidden' },
   cardCosmic:      { position: 'relative', zIndex: 2, width: '100%', maxWidth: 440, background: 'rgba(18,16,32,0.72)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(180,160,255,0.16)', borderRadius: 22, padding: '48px 42px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 8px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(180,160,255,0.05)' },
-  heading:         { fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 500, letterSpacing: '-0.5px', color: 'var(--text)', marginBottom: 6 },
   subheading:      { color: 'var(--text-secondary)', marginBottom: 16, textAlign: 'center', fontSize: 14 },
   roleToggleRow:   { display: 'flex', width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, gap: 4, marginBottom: 20 },
   roleToggleBtn:       { flex: 1, background: 'none', border: 'none', borderRadius: 7, padding: '9px 0', fontSize: 13.5, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer', transition: 'background 0.15s, color 0.15s' },
@@ -817,7 +829,7 @@ const styles: Record<string, React.CSSProperties> = {
   testHint:        { marginTop: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' as const },
   switchText:      { marginTop: 12, fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' as const },
   switchLink:      { background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: 0 },
-  toastWarn:       { width: '100%', background: 'rgba(154,124,48,0.08)', border: '1px solid rgba(154,124,48,0.25)', borderRadius: 9, padding: '10px 14px', color: 'var(--warning)', fontSize: 13, lineHeight: 1.5, marginBottom: 10, textAlign: 'center' as const },
+  toastWarn:       { width: '100%', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 9, padding: '10px 14px', color: 'var(--warning)', fontSize: 13, lineHeight: 1.5, marginBottom: 10, textAlign: 'center' as const },
   dropdownPanel:   { position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 8px 32px rgba(26,21,14,0.10)', marginTop: 4, overflow: 'hidden' },
   dropdownList:    { maxHeight: 220, overflowY: 'auto' as const, padding: '4px 8px 8px' },
   dropdownItem:    { display: 'flex', alignItems: 'center', width: '100%', padding: '9px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13, textAlign: 'left' as const, transition: 'background 0.1s' },
@@ -825,9 +837,9 @@ const styles: Record<string, React.CSSProperties> = {
   dropdownDivider: { height: 1, background: 'var(--border)', margin: '4px 0' },
 
   modalBackdrop:  { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  modalCard:      { width: '100%', maxWidth: 540, maxHeight: '88vh', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, display: 'flex', flexDirection: 'column' as const, boxShadow: '0 24px 80px rgba(0,0,0,0.35)' },
+  modalCard:      { width: '100%', maxWidth: 540, maxHeight: '88vh', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, display: 'flex', flexDirection: 'column' as const, boxShadow: '0 24px 80px rgba(26,21,14,0.35)' },
   modalHeader:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', flexShrink: 0 },
-  modalClose:     { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16, padding: '2px 6px', borderRadius: 6 },
+  modalClose:     { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px 6px', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   modalBody:      { overflowY: 'auto' as const, padding: '20px 22px', flex: 1 },
   modalFooter:    { padding: '16px 22px 20px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column' as const, gap: 12, flexShrink: 0 },
   ppMeta:         { fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 14 },

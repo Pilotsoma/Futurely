@@ -304,7 +304,7 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: 16,
     width: '100%',
     maxWidth: 520,
-    boxShadow: '0 24px 72px rgba(0,0,0,0.55)',
+    boxShadow: 'var(--shadow-xl)',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',

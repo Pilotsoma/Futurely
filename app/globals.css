@@ -366,10 +366,15 @@ a:focus-visible > .ns-nav-link { box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.45);
     transform    var(--dur-base) var(--ease-out-expo);
   will-change: transform, box-shadow;
 }
-.ns-card:hover {
+.ns-card:hover,
+.ns-card:focus-visible {
   border-color: var(--border-hover);
   box-shadow: var(--neo-raised), var(--shadow-md);
   transform: translateY(-2px);
+}
+.ns-card:focus-visible {
+  outline: none;
+  box-shadow: var(--neo-raised), var(--shadow-md), 0 0 0 2px rgba(41, 121, 255, 0.45);
 }
 
 /* ── Inputs ─────────────────────────────────────────────────────────────── */
@@ -486,14 +491,6 @@ a:focus-visible > .ns-nav-link { box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.45);
 .ns-chip:active {
   transform: scale(0.97);
   box-shadow: var(--neo-inset);
-}
-
-/* ── Gradient text ─────────────────────────────────────────────────────── */
-.gradient-text {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-blue) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 /* ── Badge chips ─────────────────────────────────────────────────────────── */
@@ -887,6 +884,13 @@ a:focus-visible > .ns-nav-link { box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.45);
 .canvas-page-body pre { padding: 12px; overflow-x: auto; }
 .canvas-page-body code { padding: 1px 5px; }
 .canvas-page-body blockquote { border-left: 3px solid var(--primary); margin: 0.8em 0; padding: 6px 14px; color: var(--text-secondary); background: var(--surface-2); border-radius: 0 6px 6px 0; }
+
+/* ── Modal close button ───────────────────────────────────────────────────── */
+.ns-modal-close {
+  transition: color var(--dur-fast) var(--ease-out-quart), background var(--dur-fast) var(--ease-out-quart);
+}
+.ns-modal-close:hover { color: var(--text); background: var(--surface-2); }
+.ns-modal-close:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* ── FAQ accordion (native <details>/<summary>, kept crawlable for SEO) ──── */
 .ns-faq-item > summary {

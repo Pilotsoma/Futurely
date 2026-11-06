@@ -113,7 +113,11 @@ function ResetPasswordForm() {
           {requirements.map(r => (
             <li key={r.label} style={{ fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 7,
               color: r.met ? 'var(--success)' : 'var(--text-muted)' }}>
-              <span style={{ display: 'flex', alignItems: 'center' }}>{r.met ? <CheckIcon size={14}/> : <span style={{ fontSize: 14 }}>○</span>}</span>
+              <span style={{ display: 'flex', alignItems: 'center' }}>
+                {r.met
+                  ? <CheckIcon size={14}/>
+                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/></svg>}
+              </span>
               {r.label}
             </li>
           ))}

@@ -153,7 +153,7 @@ export default function ReportCardPage() {
                     ...S.semBtn,
                     background: isActive ? 'var(--primary)' : 'var(--surface)',
                     border: isActive ? 'none' : '1px solid var(--border)',
-                    color: isActive ? '#000' : 'var(--text-secondary)',
+                    color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
                   }}
                 >
                   <span style={{ fontWeight: 700, fontSize: 14 }}>{label}</span>

@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { XMarkIcon } from '@/components/icons'
+import { XMarkIcon, RefreshIcon } from '@/components/icons'
 
 const POLL_INTERVAL = 7_000  // 7s
 const LOADED_SHA = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? 'dev'
@@ -35,15 +35,15 @@ export default function UpdateBanner() {
       position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
       zIndex: 9999, display: 'flex', alignItems: 'center', gap: 12,
       background: 'var(--surface)', border: '1px solid var(--primary-glow)',
-      borderRadius: 12, padding: '12px 18px', boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+      borderRadius: 12, padding: '12px 18px', boxShadow: 'var(--shadow-lg)',
       fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap',
     }}>
-      <span style={{ color: 'var(--primary)' }}>⟳</span>
+      <span style={{ color: 'var(--primary)', display: 'flex' }}><RefreshIcon size={14}/></span>
       New update available
       <button
         onClick={() => window.location.reload()}
         style={{
-          background: 'var(--primary)', color: '#000', border: 'none',
+          background: 'var(--primary)', color: '#FFFFFF', border: 'none',
           borderRadius: 8, padding: '6px 14px', fontSize: 12,
           fontWeight: 700, cursor: 'pointer',
         }}
@@ -52,7 +52,8 @@ export default function UpdateBanner() {
       </button>
       <button
         onClick={() => setShow(false)}
-        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14, padding: '0 2px' }}
+        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0 2px', display: 'flex' }}
+        aria-label="Dismiss"
       >
         <XMarkIcon size={14}/>
       </button>

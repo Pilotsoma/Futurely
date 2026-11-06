@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import {
@@ -25,8 +24,8 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     title: 'Report Card',
     desc: 'Official grades by reporting period',
     icon: <ClipboardIcon size={24}/>,
-    iconBg: 'rgba(59,130,246,0.16)',
-    iconColor: '#3B82F6',
+    iconBg: 'rgba(124,58,237,0.14)',
+    iconColor: 'var(--purple)',
   },
   {
     href: '/grades/schedule',
@@ -65,8 +64,8 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
     title: 'Transcript',
     desc: 'Credits & GPA history',
     icon: <DocumentIcon size={24}/>,
-    iconBg: 'rgba(99,102,241,0.16)',
-    iconColor: '#6366F1',
+    iconBg: 'rgba(0,188,212,0.14)',
+    iconColor: 'var(--info)',
   },
   {
     href: '/grades/attendance',
@@ -80,7 +79,6 @@ const CARDS: Array<{ href: string; title: string; desc: string; icon: React.Reac
 
 export default function GradesHubPage() {
   const router = useRouter()
-  const [hovered, setHovered] = useState<string | null>(null)
   return (
     <div className="fade-up">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
@@ -95,10 +93,9 @@ export default function GradesHubPage() {
         {CARDS.map(card => (
           <button
             key={card.href}
+            className="ns-card"
             onClick={() => router.push(card.href)}
-            onMouseEnter={() => setHovered(card.href)}
-            onMouseLeave={() => setHovered(null)}
-            style={{ ...S.card, ...(hovered === card.href ? { transform: 'translateY(-2px)', boxShadow: 'var(--neo-raised), var(--shadow-md)', borderColor: 'var(--border-hover)' } : {}) }}
+            style={S.card}
           >
             <div style={{ ...S.iconBox, background: card.iconBg }}>
               <span style={{ display: 'flex', alignItems: 'center', color: card.iconColor }}>{card.icon}</span>
@@ -118,9 +115,8 @@ export default function GradesHubPage() {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  title:    { fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px' },
   grid:     { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 },
-  card:     { display: 'flex', alignItems: 'center', gap: 20, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '24px 24px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s', boxShadow: 'var(--neo-raised)' },
+  card:     { display: 'flex', alignItems: 'center', gap: 20, padding: '24px 24px', cursor: 'pointer', textAlign: 'left', width: '100%' },
   iconBox:  { width: 56, height: 56, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   cardTitle:{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 4 },
   cardDesc: { fontSize: 13.5, color: 'var(--text-secondary)' },

@@ -22,14 +22,8 @@ interface IPRData {
   courses: IPRCourse[]
 }
 
-function avgColor(avg: string): string {
-  const n = parseFloat(avg)
-  if (isNaN(n)) return 'var(--text-muted)'
-  if (n >= 90) return '#22C55E'
-  if (n >= 80) return '#10B981'
-  if (n >= 70) return '#F59E0B'
-  return '#EF4444'
-}
+const GRADE_COLOR: Record<string, string> = { A: 'var(--gc-a)', B: 'var(--gc-b)', C: 'var(--gc-c)', D: 'var(--gc-d)', F: 'var(--gc-f)' }
+const avgColor = (letter: string) => GRADE_COLOR[letter?.toUpperCase().charAt(0)] ?? 'var(--text-muted)'
 
 export default function ProgressReportPage() {
   const router = useRouter()
@@ -93,7 +87,7 @@ export default function ProgressReportPage() {
                       flexShrink: 0, padding: '8px 16px', borderRadius: 999, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
                       border: selectedDate === date ? 'none' : '1px solid var(--border)',
                       background: selectedDate === date ? 'var(--primary)' : 'var(--surface)',
-                      color: selectedDate === date ? '#000' : 'var(--text-secondary)',
+                      color: selectedDate === date ? '#FFFFFF' : 'var(--text-secondary)',
                       transition: 'all 0.15s',
                     }}
                   >
@@ -121,7 +115,7 @@ export default function ProgressReportPage() {
                     {c.teacher && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 3 }}>{c.teacher}</div>}
                   </div>
                   <div style={{ textAlign: 'right' as const }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: avgColor(c.average) }}>{c.average || '—'}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: avgColor(c.letterGrade) }}>{c.average || '—'}</div>
                     {c.letterGrade && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{c.letterGrade}</div>}
                   </div>
                 </div>

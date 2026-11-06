@@ -63,6 +63,15 @@ let demoAccountPromise: Promise<void> | null = null
 export function ensureDemoAccount(): Promise<void> {
   if (demoAccountPromise) return demoAccountPromise
   demoAccountPromise = (async () => {
+    // Skip entirely when there's no database to provision into. Letting the
+    // upsert below attempt a connection anyway doesn't just fail cleanly —
+    // the Neon serverless driver's connection-timeout cleanup path throws an
+    // uncaught TypeError in this failure mode, which crashes the whole
+    // process (not just this promise). Failing fast here avoids that crash.
+    if (!process.env.DATABASE_URL) {
+      console.warn('[startup] DATABASE_URL not set — skipping demo account provisioning.')
+      return
+    }
     try {
       const passwordHash = await bcrypt.hash(DEMO_ACCOUNT_PASSWORD, 10)
       // Name is deliberately just two words — the initials avatar (see

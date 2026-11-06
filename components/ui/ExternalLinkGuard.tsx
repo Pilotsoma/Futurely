@@ -39,7 +39,7 @@ export default function ExternalLinkGuard() {
       onClick={() => setPending(null)}
     >
       <div
-        style={{ background: 'var(--surface)', borderRadius: 16, padding: '28px 28px 24px', maxWidth: 440, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
+        style={{ background: 'var(--surface)', borderRadius: 16, padding: '28px 28px 24px', maxWidth: 440, width: '100%', boxShadow: 'var(--shadow-xl)' }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ textAlign: 'center', marginBottom: 14 }}><LinkIcon size={30}/></div>
