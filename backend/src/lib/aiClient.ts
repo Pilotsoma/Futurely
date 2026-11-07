@@ -200,7 +200,15 @@ let advancedTierCircuitOpenUntil = 0
  * failure, it just won't itself retry-in-place after a fresh failure.
  */
 export async function createChatCompletion(
-  params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'> & { model?: string },
+  params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'> & {
+    model?: string
+    // OpenRouter-specific, not part of the OpenAI SDK's type: lets a caller
+    // suppress a reasoning model's chain-of-thought tokens. Without this, the
+    // 'openrouter/free' auto-router can land on a reasoning model that spends
+    // its entire max_tokens budget on invisible reasoning tokens, leaving
+    // content null/truncated even though the call "succeeded".
+    reasoning?: { enabled?: boolean }
+  },
   options: { retryOnFailure?: boolean } = {}
 ): Promise<ChatCompletion> {
   const { retryOnFailure = true } = options

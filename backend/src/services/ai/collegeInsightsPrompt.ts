@@ -261,20 +261,48 @@ export async function generateCollegeInsights(
   throw lastError
 }
 
+// The default OpenRouter model ('openrouter/free') is an auto-router across
+// free-tier models, several of which are reasoning models — confirmed in
+// practice, where a request landed on one that spent its entire max_tokens
+// budget on invisible chain-of-thought ("reasoning") tokens, leaving
+// content null, and another that spent most of it, leaving content cut off
+// mid-string (e.g. `"step": "Develop a compelling` with no closing quote or
+// braces). `reasoning: { enabled: false }` suppresses that chain-of-thought
+// so the full budget goes to the actual JSON response.
+//
+// A 150-250 word narrative plus 3-5 detailed actionable steps plus JSON
+// structure also runs past a tight token cap on its own, so on top of
+// disabling reasoning: if the primary attempt still gets cut off
+// (finish_reason: 'length'), retry once immediately with a larger budget —
+// otherwise the outer 3-attempt retry loop below just repeats the same
+// doomed call at the same cap and fails identically every time.
+const COLLEGE_INSIGHTS_MAX_TOKENS = 900
+const COLLEGE_INSIGHTS_MAX_TOKENS_RETRY = 1500
+
 async function generateCollegeInsightsOnce(
   input: CollegeInsightsPromptInput
 ): Promise<CollegeInsightsPayload> {
   const startMs = Date.now()
+  const messages = [
+    { role: 'system' as const, content: buildSystemPrompt() },
+    { role: 'user' as const, content: buildUserPrompt(input) },
+  ]
+  const reasoning = { enabled: false }
 
   let raw: string
   try {
-    const response = await createChatCompletion({
-      max_tokens: 600,
-      messages: [
-        { role: 'system', content: buildSystemPrompt() },
-        { role: 'user', content: buildUserPrompt(input) },
-      ],
-    })
+    let response = await createChatCompletion({ max_tokens: COLLEGE_INSIGHTS_MAX_TOKENS, messages, reasoning })
+
+    if (response.choices[0]?.finish_reason === 'length') {
+      logger.warn('College insights response truncated — retrying with a larger token budget', {
+        feature: 'collegeInsights',
+        latencyMs: Date.now() - startMs,
+      })
+      response = await createChatCompletion(
+        { max_tokens: COLLEGE_INSIGHTS_MAX_TOKENS_RETRY, messages, reasoning },
+        { retryOnFailure: false }
+      )
+    }
 
     raw = response.choices[0]?.message?.content ?? ''
   } catch (sdkError) {
