@@ -1,5 +1,15 @@
 import { IntentClassificationSchema } from '../intentRouter'
 
+jest.mock('../../../lib/aiClient', () => ({
+  createChatCompletion: jest.fn(),
+  getAiModel: jest.fn(() => 'test-model'),
+}))
+
+import { createChatCompletion } from '../../../lib/aiClient'
+import { chatIntentRouter } from '../intentRouter'
+
+const mockCreateChatCompletion = createChatCompletion as jest.MockedFunction<typeof createChatCompletion>
+
 describe('IntentClassificationSchema refine constraint', () => {
   describe('invalid payloads', () => {
     it('rejects allowed:true with complexityScore:null', () => {
@@ -60,5 +70,32 @@ describe('IntentClassificationSchema refine constraint', () => {
       expect(result.complexityScore).toBeNull()
       expect(result.category).toBe('off_topic')
     })
+  })
+})
+
+describe('ChatIntentRouter.analyze fail-open behavior', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('fails open to "personalized" for an obviously self-referential question when the classifier call throws', async () => {
+    mockCreateChatCompletion.mockRejectedValueOnce(new Error('Provider timeout'))
+    const result = await chatIntentRouter.analyze('What is my GPA?')
+    expect(result.allowed).toBe(true)
+    expect(result.intent).toBe('personalized')
+  })
+
+  it('fails open to "personalized" for "my grades" phrasing when the classifier returns malformed JSON', async () => {
+    mockCreateChatCompletion.mockResolvedValueOnce({
+      choices: [{ message: { content: 'not json at all' } }],
+    } as never)
+    const result = await chatIntentRouter.analyze('can you check my grades real quick')
+    expect(result.allowed).toBe(true)
+    expect(result.intent).toBe('personalized')
+  })
+
+  it('still fails open to "surface" for an ambiguous question when the classifier call throws', async () => {
+    mockCreateChatCompletion.mockRejectedValueOnce(new Error('Provider timeout'))
+    const result = await chatIntentRouter.analyze('How does weighted GPA work?')
+    expect(result.allowed).toBe(true)
+    expect(result.intent).toBe('surface')
   })
 })

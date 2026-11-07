@@ -125,6 +125,22 @@ function fastPathBlock(message: string): boolean {
   return FAST_BLOCK_PATTERNS.some((pattern) => pattern.test(message))
 }
 
+// Used only when the classifier call itself fails (API error, timeout, bad
+// JSON) — never on the happy path. Catches obviously self-referential
+// phrasing ("what's my GPA", "my grades") so a transient classifier outage
+// doesn't silently drop a clearly personal question into the data-less
+// surface path, where the model is told it has no access to the student's
+// data and will say so. Ambiguous messages still fail open to "surface" —
+// this only reclassifies the unambiguous cases.
+const PERSONALIZED_FALLBACK_PATTERNS: RegExp[] = [
+  /\bmy\s+(gpa|grades?|courses?|classes?|assignments?|homework|schedule|attendance|transcript|credits?|roadmap|class rank)\b/i,
+  /\b(what'?s|what is|how'?s|how is|show me|check)\s+my\s+(gpa|grades?|courses?|classes?|assignments?|schedule|attendance|transcript|credits?)\b/i,
+]
+
+function looksPersonalized(message: string): boolean {
+  return PERSONALIZED_FALLBACK_PATTERNS.some((pattern) => pattern.test(message))
+}
+
 // Intent classification is a cheap/small task (~1 short JSON object out) that
 // doesn't need a large model — confirmed via direct API test that the 8B
 // model classifies correctly in well under a second, versus 10-15s+ measured
@@ -290,11 +306,13 @@ export class ChatIntentRouter {
     try {
       return await classifyOnce(message, history)
     } catch (err) {
-      logger.warn('Intent classification failed — failing open to surface intent', {
+      const intent: ChatIntent = looksPersonalized(message) ? 'personalized' : 'surface'
+      logger.warn('Intent classification failed — failing open', {
         feature: 'intentRouter',
         errorType: err instanceof Error ? err.constructor.name : 'UnknownError',
+        fallbackIntent: intent,
       })
-      return { allowed: true, intent: 'surface', complexityScore: null, category: 'basic_academics' }
+      return { allowed: true, intent, complexityScore: null, category: 'basic_academics' }
     }
   }
 
