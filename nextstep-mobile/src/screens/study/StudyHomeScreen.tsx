@@ -4,14 +4,20 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Feather } from '@expo/vector-icons'
-import { Screen } from '../../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../../components/ui/Screen'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { ErrorRetryBlock } from '../../components/ui/ErrorRetryBlock'
 import { errorMessage } from '../../components/study/util'
 import { listSets, type QuestionSet } from '../../api/setsApi'
 import type { StudyStackParamList } from '../../navigation/StudyNavigator'
-import { colors, spacing, typography } from '../../theme/tokens'
+import { colors, radii, spacing, typography } from '../../theme/tokens'
+
+const HUB_ROW_ICON_COLORS: Record<string, { color: string; bg: string }> = {
+  layers: { color: colors.primary, bg: colors.primaryDim },
+  'play-circle': { color: '#10B981', bg: 'rgba(16,185,129,0.14)' },
+  users: { color: colors.accent2, bg: 'rgba(0,229,255,0.12)' },
+}
 
 interface HubRowProps {
   icon: React.ComponentProps<typeof Feather>['name']
@@ -21,15 +27,23 @@ interface HubRowProps {
 }
 
 function HubRow({ icon, title, subtitle, onPress }: HubRowProps): React.JSX.Element {
+  const palette = HUB_ROW_ICON_COLORS[icon as string] ?? { color: colors.textSecondary, bg: colors.surface2 }
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      onPress={onPress}
+      style={({ pressed }) => [pressed && { opacity: 0.84, transform: [{ scale: 0.985 }] }]}
+    >
       <Card style={styles.row}>
-        <Feather name={icon} size={20} color={colors.text} />
+        <View style={[styles.rowIconTile, { backgroundColor: palette.bg }]}>
+          <Feather name={icon} size={19} color={palette.color} />
+        </View>
         <View style={styles.rowText}>
           <Text style={styles.rowTitle}>{title}</Text>
           <Text style={styles.rowSub}>{subtitle}</Text>
         </View>
-        <Feather name="chevron-right" size={20} color={colors.textMuted} />
+        <Feather name="chevron-right" size={18} color={colors.textMuted} />
       </Card>
     </Pressable>
   )
@@ -112,12 +126,13 @@ export default function StudyHomeScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.ms, paddingBottom: spacing.massive },
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
+  content: { gap: spacing.ms, paddingBottom: FLOATING_TAB_CLEARANCE },
+  title: { ...typography.title, color: colors.text, marginBottom: spacing.xs },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm },
   section: { ...typography.h2, color: colors.text, marginTop: spacing.sm },
-  newBtn: { height: 40, minHeight: 40, paddingHorizontal: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms },
+  newBtn: { height: 40, minHeight: 40, paddingHorizontal: spacing.md, borderRadius: 20 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, paddingVertical: 4 },
+  rowIconTile: { width: 42, height: 42, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1 },
   rowTitle: { ...typography.h3, color: colors.text },
   rowSub: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },

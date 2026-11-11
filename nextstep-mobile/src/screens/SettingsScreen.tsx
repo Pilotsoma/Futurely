@@ -21,7 +21,7 @@ import * as gradesApi from '../api/gradesApi'
 import * as canvasApi from '../api/canvasApi'
 import { normalizeCanvasUrl } from '../utils/canvasUrl'
 import { ApiRequestError } from '../api/client'
-import { Screen } from '../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../components/ui/Screen'
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
 import { ErrorRetryBlock } from '../components/ui/ErrorRetryBlock'
 import type { PortalStatus } from '../types/grades'
@@ -39,7 +39,9 @@ import {
   colors,
   elevation,
   fonts,
+  radii,
   spacing,
+  typography,
 } from '../theme/tokens'
 
 function confirmDestructiveAction(
@@ -332,7 +334,7 @@ function SettingRow({
         disabled={disabled}
         accessibilityLabel={title}
         accessibilityState={{ checked: value, disabled }}
-        trackColor={{ false: '#263853', true: '#6B42EA' }}
+        trackColor={{ false: colors.border, true: colors.primary }}
         thumbColor="#FFFFFF"
         ios_backgroundColor="#263853"
       />
@@ -746,7 +748,7 @@ export default function SettingsScreen(): React.JSX.Element {
         >
           <View style={styles.pageHeader}>
             <View style={styles.pageHeaderIcon}>
-              <Feather name="settings" size={21} color="#BDAAFF" />
+              <Feather name="settings" size={21} color={colors.primary} />
             </View>
 
             <View style={styles.pageHeaderCopy}>
@@ -1556,7 +1558,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
     paddingTop: spacing.md,
-    paddingBottom: spacing.huge,
+    paddingBottom: FLOATING_TAB_CLEARANCE,
     gap: spacing.lg,
   },
 
@@ -1572,9 +1574,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 15,
-    backgroundColor: '#211752',
+    backgroundColor: `${colors.primary}18`,
     borderWidth: 1,
-    borderColor: 'rgba(167,139,250,0.34)',
+    borderColor: `${colors.primary}45`,
   },
   pageHeaderCopy: {
     flex: 1,
@@ -1589,12 +1591,8 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     marginTop: 2,
+    ...typography.title,
     color: colors.text,
-    fontFamily: fonts.bold,
-    fontSize: 25,
-    lineHeight: 30,
-    fontWeight: '700',
-    letterSpacing: -0.45,
   },
   pageSubtitle: {
     marginTop: 4,
@@ -1607,29 +1605,29 @@ const styles = StyleSheet.create({
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
-    padding: 15,
-    borderRadius: 20,
-    backgroundColor: '#132038',
+    gap: 14,
+    padding: 16,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#2A4261',
+    borderColor: colors.border,
     ...elevation.sm,
   },
   avatar: {
-    width: 54,
-    height: 54,
+    width: 64,
+    height: 64,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 27,
-    backgroundColor: '#235C68',
-    borderWidth: 1,
-    borderColor: '#3A7A83',
+    borderRadius: 32,
+    backgroundColor: `${colors.primary}22`,
+    borderWidth: 1.5,
+    borderColor: `${colors.primary}55`,
   },
   avatarText: {
-    color: '#F4F8FF',
+    color: colors.text,
     fontFamily: fonts.bold,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
   },
   profileCopy: {
@@ -1804,8 +1802,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   primaryButton: {
-    backgroundColor: '#7048F4',
-    borderColor: '#7E5AFF',
+    backgroundColor: colors.primaryDark,
+    borderColor: '#143e8e',
   },
   secondaryButton: {
     backgroundColor: '#15243A',

@@ -2,7 +2,7 @@ import React from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import * as gradesApi from '../../api/gradesApi'
 import { usePortalFetch } from '../../hooks/usePortalFetch'
-import { Screen } from '../../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../../components/ui/Screen'
 import { Card } from '../../components/ui/Card'
 import { GradeBadge } from '../../components/ui/GradeBadge'
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton'
@@ -55,7 +55,7 @@ export default function ClassworkScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  scroll: { gap: spacing.md, paddingVertical: spacing.lg },
+  scroll: { gap: spacing.md, paddingTop: spacing.lg, paddingBottom: FLOATING_TAB_CLEARANCE },
   classCard: { gap: spacing.sm },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   className: { ...typography.h3, color: colors.text, flex: 1 },

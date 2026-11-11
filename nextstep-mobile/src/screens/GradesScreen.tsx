@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useAIContext } from '../components/ai/AIContext'
 import {
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,22 +14,26 @@ import { Feather } from '@expo/vector-icons'
 
 import * as gradesApi from '../api/gradesApi'
 import { ApiRequestError } from '../api/client'
-import { Screen } from '../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../components/ui/Screen'
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
 import { ActionTile } from '../components/ui/ActionTile'
 import { GpaOverviewCard } from '../components/grades/GpaOverviewCard'
-import { Card } from '../components/ui/Card'
+import { ProgressRing } from '../components/ui/ProgressRing'
 import { WhatIfPanel } from '../components/grades/WhatIfPanel'
+// Card removed - CourseRow has its own inline card style
 import { parseAssignments } from '../lib/whatIf'
 import { useAuth } from '../context/AuthContext'
 import { getCache, lastUpdatedLabel, setCache } from '../utils/offlineCache'
 import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
 import type { GradesStackParamList } from '../navigation/GradesNavigator'
+import { averageToLetter } from '../constants/gradeScale'
 import {
   colors,
   fonts,
+  gradeColors,
   radii,
   spacing,
+  typography,
 } from '../theme/tokens'
 
 type Nav = NativeStackNavigationProp<GradesStackParamList>
@@ -73,8 +78,8 @@ const ACADEMIC_TOOLS: AcademicTool[] = [
     description: 'Simulate grade and GPA changes',
     route: 'GpaSimulator',
     icon: 'percent',
-    color: '#B49AFF',
-    iconBackground: 'rgba(127,34,254,0.18)',
+    color: '#7FB0FF',
+    iconBackground: 'rgba(41,121,255,0.16)',
   },
   {
     label: 'Teachers',
@@ -89,8 +94,8 @@ const ACADEMIC_TOOLS: AcademicTool[] = [
     description: 'Review interim grade reports',
     route: 'ProgressReport',
     icon: 'trending-up',
-    color: '#C0A7FF',
-    iconBackground: 'rgba(167,139,250,0.16)',
+    color: '#5FD3E6',
+    iconBackground: 'rgba(0,229,255,0.12)',
   },
   {
     label: 'Transcript',
@@ -126,6 +131,145 @@ const ACADEMIC_TOOL_ROWS: AcademicTool[][] = Array.from(
 function resultMessage(error: unknown, fallback: string): string {
   return error instanceof ApiRequestError ? error.message : fallback
 }
+
+interface CourseRowProps {
+  course: CurrentGradeCourse
+  avg: number | null
+  letter: string | null
+  ringColor: string
+  onWhatIf: () => void
+}
+
+function CourseRow({ course, avg, letter, ringColor, onWhatIf }: CourseRowProps): React.JSX.Element {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <View style={courseRowStyles.card}>
+      <View style={courseRowStyles.row}>
+        {/* 36pt progress ring */}
+        <ProgressRing
+          progress={avg ?? 0}
+          size={36}
+          strokeWidth={3}
+          color={ringColor}
+          trackColor="rgba(255,255,255,0.08)"
+        />
+
+        {/* Name + teacher */}
+        <View style={courseRowStyles.copy}>
+          <Text style={courseRowStyles.name} numberOfLines={1}>{course.name}</Text>
+          {course.teacher ? (
+            <Text style={courseRowStyles.teacher} numberOfLines={1}>{course.teacher}</Text>
+          ) : null}
+        </View>
+
+        {/* Score + letter badge + what-if pill */}
+        <View style={courseRowStyles.trailing}>
+          {avg !== null ? (
+            <Text style={courseRowStyles.score}>{avg}%</Text>
+          ) : null}
+          {letter ? (
+            <View style={[courseRowStyles.letterBadge, { borderColor: `${ringColor}66`, backgroundColor: `${ringColor}18` }]}>
+              <Text style={[courseRowStyles.letterText, { color: ringColor }]}>{letter}</Text>
+            </View>
+          ) : null}
+          <Pressable
+            onPress={() => setExpanded((v) => !v)}
+            style={({ pressed }) => [courseRowStyles.whatIfPill, pressed && { opacity: 0.75 }]}
+            accessibilityRole="button"
+            accessibilityLabel={`Toggle What-If for ${course.name}`}
+          >
+            <Text style={courseRowStyles.whatIfPillText}>What-If</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {expanded ? (
+        <View style={courseRowStyles.panelWrap}>
+          <WhatIfPanel assignments={parseAssignments(course.assignments)} />
+        </View>
+      ) : null}
+    </View>
+  )
+}
+
+const courseRowStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 0,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  name: {
+    color: colors.text,
+    fontFamily: fonts.semiBold,
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '600',
+  },
+  teacher: {
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 10,
+    lineHeight: 13,
+  },
+  trailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  score: {
+    ...typography.numeric,
+    color: colors.text,
+    fontSize: 15,
+  },
+  letterBadge: {
+    minWidth: 24,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  letterText: {
+    fontFamily: fonts.groteskBold,
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
+  },
+  whatIfPill: {
+    height: 28,
+    paddingHorizontal: 9,
+    borderRadius: 99,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  whatIfPillText: {
+    color: colors.textSecondary,
+    fontFamily: fonts.semiBold,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  panelWrap: {
+    marginTop: 10,
+  },
+})
 
 export default function GradesScreen(): React.JSX.Element {
   useAIContext('My grades', 'Look at my current grades and tell me which class needs attention first and what I should do this week.')
@@ -276,15 +420,21 @@ export default function GradesScreen(): React.JSX.Element {
           testID="grades-gpa-card"
         />
 
-        {courses.map((course) => (
-          <Card key={course.id} style={styles.courseCard}>
-            <Text style={styles.courseName}>
-              {course.name}
-              {course.average !== null ? `  ${course.average}%` : ''}
-            </Text>
-            <WhatIfPanel assignments={parseAssignments(course.assignments)} />
-          </Card>
-        ))}
+        {courses.map((course) => {
+          const avg = course.average !== null ? Math.round(course.average) : null
+          const letter = avg !== null ? averageToLetter(avg) : null
+          const ringColor = letter ? (gradeColors[letter as keyof typeof gradeColors] ?? colors.textSecondary) : colors.textSecondary
+          return (
+            <CourseRow
+              key={course.id}
+              course={course}
+              avg={avg}
+              letter={letter}
+              ringColor={ringColor}
+              onWhatIf={() => navigation.navigate('GpaSimulator')}
+            />
+          )
+        })}
 
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderCopy}>
@@ -300,7 +450,7 @@ export default function GradesScreen(): React.JSX.Element {
           </View>
 
           <View style={styles.toolsCountBadge}>
-            <Feather name="grid" size={14} color="#A990FF" />
+            <Feather name="grid" size={14} color={colors.accentLight} />
             <Text allowFontScaling={false} style={styles.toolsCountText}>
               {ACADEMIC_TOOLS.length}
             </Text>
@@ -339,11 +489,9 @@ export default function GradesScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  courseCard: { gap: 8 },
-  courseName: { color: '#F7F9FF', fontFamily: fonts.semiBold, fontSize: 15 },
   scrollContent: {
     paddingTop: 10,
-    paddingBottom: 118,
+    paddingBottom: FLOATING_TAB_CLEARANCE,
     gap: 16,
   },
   header: {
@@ -407,7 +555,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sectionSubtitle: {
-    color: '#708098',
+    color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: 10.5,
     lineHeight: 15,

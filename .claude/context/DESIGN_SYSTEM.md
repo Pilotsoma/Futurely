@@ -9,23 +9,25 @@
 
 ### Brand Primaries
 ```
-Primary Cyan:    #00E5FF  (electric cyan — accent, info)
 Primary Blue:    #2979FF  (interactive — buttons, links, focus)
-Primary Purple:  #7C3AED  (deep accent)
-Accent Teal:     #00BCD4
-Accent Lavender: #A855F7
+Primary Dark:    #1B4DB0  (pressed / darker variant)
+Accent Cyan:     #00E5FF  (progress rings, bars, data highlights)
+Accent Light:    #7FB0FF  (secondary accent, pill text)
+Purple:          #7C3AED  (deep accent, AI features)
 ```
 
-### Semantic Tokens (mobile: colors.ts / web: CSS vars)
+### Semantic Tokens (mobile: src/theme/tokens.ts / web: CSS vars)
 ```
-primary:        #2979FF   --primary
-primaryDark:    #1B4DB0   --primary-dark
-background:     #0D1829   --bg
+primary:        #2979FF   --primary           primaryDim: rgba(41,121,255,0.14)
+primaryDark:    #1B4DB0   --primary-dark       primaryGlow: rgba(41,121,255,0.35)
+accent2:        #00E5FF   (cyan — progress, bars)
+accentLight:    #7FB0FF   (secondary text/icons)
+bg:             #0D1829   --bg
 surface:        #162235   --surface
 surface2:       #1C2D47   --surface-2
 border:         #273D5E   --border
 borderHover:    #2F4970   --border-hover
-textPrimary:    #E8EEFF   --text
+text:           #E8EEFF   --text
 textSecondary:  #96AACC   --text-secondary
 textMuted:      #52698A   --text-muted
 success:        #10B981
@@ -46,16 +48,18 @@ F: #EF4444  (red)
 ```
 
 ## Typography
-- **Font:** System font stack (SF Pro on iOS, Roboto on Android via React Native defaults)
+- **Mobile fonts:** Inter (body/captions) + Plus Jakarta Sans (headings/labels) + Space Grotesk (numeric)
 - **Web:** Inter (body) + Space Grotesk (display) via next/font
 - **Scale:**
-  - Display: 32px / weight 700
-  - H1: 24px / weight 700
-  - H2: 20px / weight 600
-  - H3: 16px / weight 600
-  - Body: 15px / weight 400 / line-height 1.6
-  - Caption: 12px / weight 400
-  - Label: 12px / weight 500 / uppercase + letter-spacing
+  - Display: 32px / Plus Jakarta Sans 700
+  - Title: 24px / Plus Jakarta Sans 800 ExtraBold / letterSpacing -0.4  ← screen titles
+  - H1: 24px / Plus Jakarta Sans 700
+  - H2: 20px / Plus Jakarta Sans SemiBold 600
+  - H3: 16px / Plus Jakarta Sans Bold 700
+  - Body: 15px / Inter 400 / line-height 1.6
+  - Caption: 12px / Inter 400
+  - Label: 11px / Plus Jakarta Sans 700 / uppercase / letterSpacing 0.9
+  - Numeric: Space Grotesk 700 / letterSpacing -0.5  ← GPA, scores, stats
 
 ## Logo & Brand Mark
 - **FuturelyLogo** component (mobile: `nextstep-mobile/src/components/ui/FuturelyLogo.tsx`)
@@ -79,7 +83,7 @@ F: #EF4444  (red)
 ### Cards
 - Background: surface (`#162235`)
 - Border: 1px solid border (`#273D5E`)
-- Border-radius: 12px
+- Border-radius: 18px (radii.md)
 - Shadow: none (flat design — dark theme)
 - Padding: 16px
 

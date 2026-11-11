@@ -1,19 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Keyboard, Pressable, StyleSheet, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { colors, fonts } from '../../theme/tokens'
+import { colors } from '../../theme/tokens'
 import { useCurrentAIContext } from './AIContext'
 import { buildChatParams, type AIChatParams } from './aiContextState'
 
 type Props = {
   routeName: string
-  tabBarHeight: number
   openChat: (params: AIChatParams) => void
 }
 
-export default function AIFab({ routeName, tabBarHeight, openChat }: Props): React.JSX.Element | null {
+const FAB_ICON_COLOR = '#FFFFFF' // max contrast on the primary-blue FAB
+
+export default function AIFab({ routeName, openChat }: Props): React.JSX.Element | null {
   const insets = useSafeAreaInsets()
   const ctx = useCurrentAIContext()
   const [keyboardOpen, setKeyboardOpen] = useState(false)
@@ -35,32 +36,45 @@ export default function AIFab({ routeName, tabBarHeight, openChat }: Props): Rea
     openChat(buildChatParams(ctx, requestIdRef.current))
   }
 
+  // Position FAB so it clears the floating pill tab bar.
+  // Tab bar: bottom = max(insets.bottom, 12) + 8, height = 64.
+  // FAB bottom = tab bar's top + 12 gap.
+  const tabBarBottom = Math.max(insets.bottom, 12) + 8
+  const fabBottom = tabBarBottom + 64 + 12
+
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.wrap, { bottom: tabBarHeight + 12, right: Math.max(insets.right, 0) + 16 }]}
+      style={[
+        styles.wrap,
+        {
+          bottom: fabBottom,
+          right: Math.max(insets.right, 0) + 16,
+        },
+      ]}
     >
-      {ctx?.label ? (
-        <View style={styles.chip}>
-          <Text style={styles.chipText} numberOfLines={1}>
-            {ctx.label}
-          </Text>
-        </View>
-      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={ctx?.label ? `Ask AI about ${ctx.label}` : 'Ask AI'}
+        accessibilityHint={ctx?.label ? `Opens AI chat in context of ${ctx.label}` : 'Opens AI chat'}
         onPress={onPress}
-        style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85 }]}
+        style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
       >
-        <MaterialCommunityIcons name="brain" size={26} color="#FFFFFF" />
+        <MaterialCommunityIcons name="brain" size={26} color={FAB_ICON_COLOR} />
       </Pressable>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // Column layout: chip stacks above the FAB, both right-aligned.
+  // This prevents the chip from overlapping scroll content to the left of the FAB.
+  wrap: {
+    position: 'absolute',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 6,
+  },
   fab: {
     width: 52,
     height: 52,
@@ -74,14 +88,4 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
   },
-  chip: {
-    maxWidth: 180,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: '#071522',
-    borderWidth: 1,
-    borderColor: 'rgba(197, 174, 255, 0.28)',
-  },
-  chipText: { color: '#C5AEFF', fontSize: 12, fontFamily: fonts.semiBold },
 })

@@ -1,150 +1,227 @@
 import React, { useCallback, useState } from 'react'
-import { useAIContext } from '../../components/ai/AIContext'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
+import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack'
+import type { CompositeNavigationProp } from '@react-navigation/native'
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import { Feather } from '@expo/vector-icons'
 import { Screen } from '../../components/ui/Screen'
-import { Card } from '../../components/ui/Card'
-import * as collegesApi from '../../api/collegesApi'
+import { SegmentedControl } from '../../components/ui/SegmentedControl'
+import { RoadmapPanel } from '../../components/future/RoadmapPanel'
+import { CollegesPanel } from '../../components/future/CollegesPanel'
 import * as counselorApi from '../../api/counselorApi'
 import { countUnread } from '../../components/future/chatUtils'
 import { loadLastSeenId } from '../../components/future/chatSeen'
 import type { FutureStackParamList } from '../../navigation/FutureNavigator'
-import { colors, spacing, typography } from '../../theme/tokens'
+import type { MainTabParamList } from '../../navigation/MainNavigator'
+import { colors, fonts, spacing, typography } from '../../theme/tokens'
 
-interface HubState {
-  collegeCount: number | null
-  counselorName: string | null
-  hasCounselor: boolean | null
-  unread: number
-}
+type FutureHomeProps = NativeStackScreenProps<FutureStackParamList, 'FutureHome'>
 
-// The colleges API (CollegeListItem) exposes no deadline field, so there is
-// deliberately no "Upcoming deadlines" card here.
+type NavProp = CompositeNavigationProp<
+  NativeStackNavigationProp<FutureStackParamList, 'FutureHome'>,
+  BottomTabNavigationProp<MainTabParamList>
+>
+
+const SEGMENTS = ['Roadmap', 'Colleges'] as const
+type Segment = (typeof SEGMENTS)[number]
+
 export default function FutureHomeScreen(): React.JSX.Element {
-  useAIContext('My future', 'Based on my grades, what colleges and next steps should I focus on?')
-  const navigation = useNavigation<NativeStackNavigationProp<FutureStackParamList, 'FutureHome'>>()
-  const [state, setState] = useState<HubState>({
-    collegeCount: null,
-    counselorName: null,
-    hasCounselor: null,
-    unread: 0,
-  })
+  const navigation = useNavigation<NavProp>()
+  const route = useRoute<FutureHomeProps['route']>()
+
+  const initialTab: Segment =
+    route.params?.tab === 'colleges' ? 'Colleges' : 'Roadmap'
+
+  const [segment, setSegment] = useState<Segment>(initialTab)
+  const [unread, setUnread] = useState(0)
 
   useFocusEffect(
     useCallback(() => {
       let active = true
       void (async () => {
-        const [colleges, links] = await Promise.all([
-          collegesApi.listSavedColleges().catch(() => null),
-          counselorApi.listActiveCounselorLinks().catch(() => null),
-        ])
-        let unread = 0
+        const links = await counselorApi.listActiveCounselorLinks().catch(() => null)
         const link = links?.[0]
-        if (link) {
-          const [page, lastSeen] = await Promise.all([
-            counselorApi.getCounselorChat(link.counselorId).catch(() => null),
-            loadLastSeenId(link.counselorId),
-          ])
-          if (page) unread = countUnread(page.messages, link.counselorId, lastSeen)
+        if (!link) {
+          if (active) setUnread(0)
+          return
         }
+        const [page, lastSeen] = await Promise.all([
+          counselorApi.getCounselorChat(link.counselorId).catch(() => null),
+          loadLastSeenId(link.counselorId),
+        ])
         if (!active) return
-        setState({
-          collegeCount: colleges ? colleges.length : null,
-          counselorName: link ? (link.counselor.name ?? link.counselor.email) : null,
-          hasCounselor: links ? links.length > 0 : null,
-          unread,
-        })
+        const count = page ? countUnread(page.messages, link.counselorId, lastSeen) : 0
+        setUnread(count)
       })()
-      return () => {
-        active = false
-      }
+      return () => { active = false }
     }, []),
   )
 
-  const collegeSub =
-    state.collegeCount === null
-      ? 'Track and compare schools'
-      : state.collegeCount === 0
-        ? 'Add schools to start your list'
-        : `${state.collegeCount} ${state.collegeCount === 1 ? 'college' : 'colleges'} saved`
+  // Sync segment when navigated here with a tab param
+  useFocusEffect(
+    useCallback(() => {
+      const tab = route.params?.tab
+      if (tab === 'colleges') setSegment('Colleges')
+      else if (tab === 'roadmap') setSegment('Roadmap')
+    }, [route.params?.tab]),
+  )
 
-  const counselorSub =
-    state.hasCounselor === false
-      ? 'No counselor linked yet'
-      : (state.counselorName ?? 'Message your school counselor')
+  const subtitle =
+    segment === 'Roadmap'
+      ? 'Your graduation & milestone plan'
+      : 'Search and track the colleges you want'
+
+  function openAIChat(): void {
+    navigation.navigate('AIChat', {
+      initialPrompt:
+        'Based on my grades and college list, what should I focus on to reach my college and career goals?',
+    })
+  }
+
+  function openCounselorChat(): void {
+    navigation.navigate('CounselorChat')
+  }
 
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Future</Text>
-        <HubCard icon="award" title="My colleges" sub={collegeSub} onPress={() => navigation.navigate('Colleges')} />
-        <HubCard icon="map" title="Roadmap" sub="Your plan for the next steps" onPress={() => navigation.navigate('Roadmap')} />
-        <HubCard
-          icon="message-circle"
-          title="My counselor"
-          sub={counselorSub}
-          badge={state.unread}
-          onPress={() => navigation.navigate('CounselorChat')}
+    <Screen edges={['top', 'left', 'right']} padded={false}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>My Future</Text>
+          <Text style={styles.subtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </View>
+
+        <View style={styles.headerRight}>
+          {/* Ask AI pill */}
+          <Pressable
+            onPress={openAIChat}
+            style={({ pressed }) => [styles.aiPill, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Ask AI about college and roadmap planning"
+          >
+            <Feather name="zap" size={13} color={colors.accentLight} />
+            <Text style={styles.aiPillText}>Ask AI</Text>
+          </Pressable>
+
+          {/* Counselor chat icon */}
+          <Pressable
+            onPress={openCounselorChat}
+            style={({ pressed }) => [styles.counselorButton, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={
+              unread > 0 ? `Counselor chat, ${unread} unread messages` : 'Counselor chat'
+            }
+          >
+            <Feather name="message-circle" size={20} color={colors.text} />
+            {unread > 0 ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unread > 99 ? '99+' : unread}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Segmented control */}
+      <View style={styles.segmentWrap}>
+        <SegmentedControl
+          segments={SEGMENTS}
+          value={segment}
+          onChange={setSegment}
         />
-      </ScrollView>
+      </View>
+
+      {/* Panel */}
+      <View style={styles.panelWrap}>
+        {segment === 'Roadmap' ? (
+          <View style={styles.panelInner}>
+            <RoadmapPanel />
+          </View>
+        ) : (
+          <CollegesPanel />
+        )}
+      </View>
     </Screen>
   )
 }
 
-function HubCard({
-  icon,
-  title,
-  sub,
-  badge,
-  onPress,
-}: {
-  icon: React.ComponentProps<typeof Feather>['name']
-  title: string
-  sub: string
-  badge?: number
-  onPress: () => void
-}): React.JSX.Element {
-  const unread = badge ?? 0
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={unread > 0 ? `${title}, ${unread} unread` : title}
-      onPress={onPress}
-    >
-      <Card style={styles.row}>
-        <Feather name={icon} size={20} color={colors.text} />
-        <View style={styles.rowText}>
-          <Text style={styles.rowTitle}>{title}</Text>
-          <Text style={styles.rowSub}>{sub}</Text>
-        </View>
-        {unread > 0 ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{unread > 99 ? '99+' : unread}</Text>
-          </View>
-        ) : null}
-        <Feather name="chevron-right" size={20} color={colors.textMuted} />
-      </Card>
-    </Pressable>
-  )
-}
-
 const styles = StyleSheet.create({
-  content: { gap: spacing.ms, paddingBottom: spacing.xl },
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms },
-  rowText: { flex: 1 },
-  rowTitle: { ...typography.h3, color: colors.text },
-  rowSub: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.ms,
+    gap: spacing.sm,
+  },
+  headerLeft: { flex: 1, minWidth: 0 },
+  title: { ...typography.title, color: colors.text },
+  subtitle: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexShrink: 0,
+  },
+  aiPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 99,
+    backgroundColor: colors.primaryDim,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  aiPillText: {
+    fontSize: 12,
+    fontFamily: fonts.jakartaBold,
+    fontWeight: '700',
+    color: colors.accentLight,
+  },
+  counselorButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+  },
   badge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    paddingHorizontal: 6,
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: { ...typography.caption, color: colors.text, fontWeight: '600' },
+  badgeText: {
+    fontSize: 9,
+    fontFamily: fonts.bold,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  pressed: { opacity: 0.8 },
+  segmentWrap: {
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.ms,
+  },
+  panelWrap: { flex: 1 },
+  panelInner: {
+    flex: 1,
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: spacing.sm,
+  },
 })

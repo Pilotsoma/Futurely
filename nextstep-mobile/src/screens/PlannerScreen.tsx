@@ -13,7 +13,7 @@ import {
 } from '../features/assignments/plannerSync'
 import type { CurrentGradeCourse } from '../types/grades'
 import { ApiRequestError } from '../api/client'
-import { Screen } from '../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../components/ui/Screen'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -27,6 +27,8 @@ import type { MainTabParamList } from '../navigation/MainNavigator'
 import { colors, fonts, radii, spacing, typography } from '../theme/tokens'
 
 type Group = 'Overdue' | 'Today' | 'Tomorrow' | 'This Week' | 'Later' | 'Completed'
+
+const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const
 
 const GROUP_ORDER: Group[] = ['Overdue', 'Today', 'Tomorrow', 'This Week', 'Later', 'Completed']
 
@@ -274,6 +276,33 @@ export default function PlannerScreen(): React.JSX.Element {
       ? null
       : assignments.find((assignment) => assignment.id === requestedAssignmentId) ?? null
 
+  const today = useMemo(() => startOfDay(new Date()), [])
+
+  // Mon–Sun strip for the current week (decorative — shows today + days with assignments)
+  const weekDays = useMemo(() => {
+    const days: Date[] = []
+    const dayOfWeek = today.getDay() // 0=Sun
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    const monday = new Date(today)
+    monday.setDate(today.getDate() + mondayOffset)
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday)
+      d.setDate(monday.getDate() + i)
+      days.push(d)
+    }
+    return days
+  }, [today])
+
+  const assignmentsByDay = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const a of assignments) {
+      if (a.completed) continue
+      const key = startOfDay(new Date(a.dueDate)).toISOString()
+      map.set(key, (map.get(key) ?? 0) + 1)
+    }
+    return map
+  }, [assignments])
+
   const { activeSections, completedItems } = useMemo(() => {
     const grouped = new Map<Group, Assignment[]>(GROUP_ORDER.map((g) => [g, []]))
     for (const assignment of assignments) grouped.get(groupFor(assignment))?.push(assignment)
@@ -338,7 +367,12 @@ export default function PlannerScreen(): React.JSX.Element {
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Planner</Text>
+        <View>
+          <Text style={styles.title}>Planner</Text>
+          <Text style={styles.headerDate}>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </Text>
+        </View>
         <Pressable
           onPress={() => setShowCreate((v) => !v)}
           style={styles.addButton}
@@ -347,6 +381,26 @@ export default function PlannerScreen(): React.JSX.Element {
         >
           <Feather name={showCreate ? 'x' : 'plus'} size={20} color={colors.text} />
         </Pressable>
+      </View>
+
+      <View style={styles.weekStrip}>
+        {weekDays.map((date) => {
+          const isToday = date.getTime() === today.getTime()
+          const count = assignmentsByDay.get(date.toISOString()) ?? 0
+          return (
+            <View key={date.toISOString()} style={[styles.dayPill, isToday && styles.dayPillSelected]}>
+              <Text style={[styles.dayInitial, isToday && styles.dayInitialSelected]}>
+                {DAY_INITIALS[date.getDay()]}
+              </Text>
+              <Text style={[styles.dayDate, isToday && styles.dayDateSelected]}>{date.getDate()}</Text>
+              <View style={styles.dayDots}>
+                {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
+                  <View key={i} style={[styles.dayDot, isToday && styles.dayDotSelected]} />
+                ))}
+              </View>
+            </View>
+          )
+        })}
       </View>
 
       {showCreate ? (
@@ -515,6 +569,12 @@ interface AssignmentRowProps {
   onDelete: () => void
 }
 
+function priorityBarColor(priority: string | undefined | null): string {
+  if (priority === 'HIGH') return colors.error
+  if (priority === 'MEDIUM') return colors.warning
+  return colors.textMuted
+}
+
 const AssignmentRow = React.memo(function AssignmentRow({
   item,
   selected,
@@ -529,6 +589,9 @@ const AssignmentRow = React.memo(function AssignmentRow({
         selected && styles.assignmentCardSelected,
       ]}
     >
+      {item.priority ? (
+        <View style={[styles.priorityBar, { backgroundColor: priorityBarColor(item.priority) }]} />
+      ) : null}
       <Pressable
         testID={`planner-assignment-${item.id}`}
         style={styles.assignmentMain}
@@ -617,7 +680,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  title: { ...typography.h1, color: colors.text },
+  title: { ...typography.title, color: colors.text },
+  headerDate: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+  weekStrip: { flexDirection: 'row', gap: 6, marginBottom: spacing.md },
+  dayPill: {
+    flex: 1,
+    height: 60,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  dayPillSelected: { backgroundColor: colors.primary, borderColor: colors.primaryDark },
+  dayInitial: { ...typography.label, fontSize: 10, color: colors.textMuted },
+  dayInitialSelected: { color: 'rgba(255,255,255,0.72)' },
+  dayDate: { fontFamily: fonts.groteskBold, fontWeight: '700', fontSize: 16, color: colors.text, lineHeight: 20 },
+  dayDateSelected: { color: colors.text },
+  dayDots: { flexDirection: 'row', gap: 2, height: 6, alignItems: 'center' },
+  dayDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.primary },
+  dayDotSelected: { backgroundColor: 'rgba(255,255,255,0.72)' },
   addButton: {
     width: 40,
     height: 40,
@@ -670,7 +754,7 @@ const styles = StyleSheet.create({
   },
   routeErrorText: { ...typography.caption, flex: 1, color: colors.error },
   error: { ...typography.caption, color: colors.error },
-  listContent: { paddingBottom: spacing.xl },
+  listContent: { paddingBottom: FLOATING_TAB_CLEARANCE },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -694,6 +778,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.sm,
     padding: spacing.ms,
+    overflow: 'hidden',
+  },
+  priorityBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
   },
   assignmentCardCompleted: { opacity: 0.6 },
   assignmentCardSelected: {

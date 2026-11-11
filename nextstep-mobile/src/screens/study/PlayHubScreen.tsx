@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Screen } from '../../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../../components/ui/Screen'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -111,7 +111,7 @@ export default function PlayHubScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.sm, paddingVertical: spacing.md, paddingBottom: spacing.massive },
+  content: { gap: spacing.sm, paddingTop: spacing.md, paddingBottom: FLOATING_TAB_CLEARANCE },
   header: { gap: spacing.md, marginBottom: spacing.sm },
   joinCard: { gap: spacing.md },
   h: { ...typography.h3, color: colors.text },

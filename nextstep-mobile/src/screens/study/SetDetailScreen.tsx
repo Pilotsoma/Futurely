@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Feather } from '@expo/vector-icons'
-import { Screen } from '../../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../../components/ui/Screen'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { ErrorRetryBlock } from '../../components/ui/ErrorRetryBlock'
@@ -172,7 +172,7 @@ export default function SetDetailScreen(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { gap: spacing.md, paddingVertical: spacing.md, paddingBottom: spacing.massive },
+  content: { gap: spacing.md, paddingTop: spacing.md, paddingBottom: FLOATING_TAB_CLEARANCE },
   title: { ...typography.h1, color: colors.text },
   desc: { ...typography.body, color: colors.textSecondary },
   meta: { ...typography.caption, color: colors.textMuted },

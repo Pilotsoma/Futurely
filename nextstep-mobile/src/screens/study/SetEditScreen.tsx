@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Screen } from '../../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../../components/ui/Screen'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { ErrorRetryBlock } from '../../components/ui/ErrorRetryBlock'
@@ -178,7 +178,7 @@ export default function SetEditScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { gap: spacing.md, paddingVertical: spacing.md, paddingBottom: spacing.massive },
+  content: { gap: spacing.md, paddingTop: spacing.md, paddingBottom: FLOATING_TAB_CLEARANCE },
   section: { ...typography.h3, color: colors.text, marginTop: spacing.sm },
   visRow: { flexDirection: 'row', gap: spacing.sm },
   visChip: {

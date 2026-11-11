@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons'
 import * as feedApi from '../api/feedApi'
 import { ApiRequestError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
-import { Screen } from '../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../components/ui/Screen'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
   profileStats: { ...typography.caption, color: colors.textSecondary },
   composeCard: { gap: spacing.sm, marginVertical: spacing.md },
   error: { ...typography.caption, color: colors.error, marginBottom: spacing.sm },
-  listContent: { gap: spacing.md, paddingBottom: spacing.xl },
+  listContent: { gap: spacing.md, paddingBottom: FLOATING_TAB_CLEARANCE },
   postCard: { gap: spacing.sm },
   postHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },

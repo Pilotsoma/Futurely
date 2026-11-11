@@ -21,10 +21,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useAuth } from '../context/AuthContext'
 import { sendChatMessage } from '../api/aiApi'
 import * as studentsApi from '../api/studentsApi'
-import { ActionTile } from '../components/ui/ActionTile'
 import { createActionLock } from '../utils/actionLock'
 import type { StudentMe } from '../types/student'
 import type { MainTabParamList } from '../navigation/MainNavigator'
+import { FLOATING_TAB_CLEARANCE } from '../components/ui/Screen'
+import { colors as themeColors, fonts as themeFonts, typography as themeTypography } from '../theme/tokens'
 
 
 interface ChatMessage {
@@ -110,10 +111,6 @@ function formatChatDate(timestamp: number): string {
   })
 }
 
-const PROMPT_ROWS: PromptOption[][] = Array.from(
-  { length: Math.ceil(PROMPTS.length / 2) },
-  (_, index) => PROMPTS.slice(index * 2, index * 2 + 2),
-)
 
 export default function AIChatScreen(): React.JSX.Element {
   const route = useRoute<RouteProp<MainTabParamList, 'AIChat'>>()
@@ -352,31 +349,33 @@ export default function AIChatScreen(): React.JSX.Element {
             </View>
 
             <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionEyebrow}>QUICK START</Text>
-                <Text style={styles.sectionTitle}>What do you need help with?</Text>
-              </View>
-              <Feather name="star" size={17} color="#8F78FF" />
+              <Text style={styles.sectionEyebrow}>QUICK START</Text>
+              <Text style={styles.sectionTitle}>What do you need help with?</Text>
             </View>
 
-            <View style={styles.promptGrid}>
-              {PROMPT_ROWS.map((row, rowIndex) => (
-                <View key={`prompt-row-${rowIndex}`} style={styles.promptRow}>
-                  {row.map((prompt) => (
-                    <ActionTile
-                      key={prompt.label}
-                      title={prompt.label}
-                      subtitle={prompt.subtitle}
-                      icon={prompt.icon}
-                      color={prompt.color}
-                      iconBackground={prompt.background}
-                      disabled={isSending}
-                      onPress={() => void handleSend(prompt.prompt)}
-                      accessibilityHint={`Start a chat: ${prompt.subtitle}`}
-                      testID={`ai-prompt-${prompt.label.toLowerCase().replace(/\s+/g, '-')}`}
-                    />
-                  ))}
-                </View>
+            <View style={styles.promptChips}>
+              {PROMPTS.map((prompt) => (
+                <Pressable
+                  key={prompt.label}
+                  testID={`ai-prompt-${prompt.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  style={({ pressed }) => [
+                    styles.promptChip,
+                    pressed && !isSending && styles.promptChipPressed,
+                    isSending && styles.promptChipDisabled,
+                  ]}
+                  onPress={() => void handleSend(prompt.prompt)}
+                  disabled={isSending}
+                  accessibilityRole="button"
+                >
+                  <View style={[styles.promptChipIcon, { backgroundColor: prompt.background }]}>
+                    <Feather name={prompt.icon} size={17} color={prompt.color} />
+                  </View>
+                  <View style={styles.promptChipCopy}>
+                    <Text style={styles.promptChipLabel} numberOfLines={1}>{prompt.label}</Text>
+                    <Text style={styles.promptChipSub} numberOfLines={1}>{prompt.subtitle}</Text>
+                  </View>
+                  <Feather name="chevron-right" size={16} color="#7186A5" />
+                </Pressable>
               ))}
             </View>
 
@@ -683,7 +682,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(113,132,165,0.14)',
-    backgroundColor: '#070A12',
+    backgroundColor: themeColors.bg,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -778,7 +777,7 @@ const styles = StyleSheet.create({
   homeContent: {
     paddingHorizontal: 15,
     paddingTop: 15,
-    paddingBottom: 20,
+    paddingBottom: FLOATING_TAB_CLEARANCE,
     gap: 17,
   },
   heroCard: {
@@ -839,36 +838,66 @@ const styles = StyleSheet.create({
     maxWidth: 315,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: 3,
   },
   sectionEyebrow: {
-    color: '#6888B5',
-    fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 1.15,
+    ...themeTypography.label,
+    color: themeColors.textSecondary,
   },
   sectionTitle: {
-    marginTop: 3,
-    color: '#F4F6FD',
-    fontSize: 16.5,
-    lineHeight: 21,
-    fontWeight: '800',
-    letterSpacing: -0.25,
+    color: themeColors.text,
+    fontSize: 17,
+    lineHeight: 22,
+    fontFamily: themeFonts.jakartaBold,
+    fontWeight: '700' as const,
+    letterSpacing: -0.3,
   },
-  promptGrid: {
-    width: '100%',
-    alignSelf: 'stretch',
-    gap: 11,
+  promptChips: {
+    gap: 10,
   },
-  promptRow: {
-    width: '100%',
-    alignSelf: 'stretch',
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 11,
+  promptChip: {
+    minHeight: 60,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
+    backgroundColor: themeColors.surface,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+  },
+  promptChipPressed: {
+    opacity: 0.84,
+    transform: [{ scale: 0.985 }],
+  },
+  promptChipDisabled: {
+    opacity: 0.5,
+  },
+  promptChipIcon: {
+    width: 40,
+    height: 40,
+    flexShrink: 0,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderRadius: 12,
+  },
+  promptChipCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  promptChipLabel: {
+    color: themeColors.text,
+    fontFamily: themeFonts.semiBold,
+    fontSize: 13.5,
+    fontWeight: '600' as const,
+  },
+  promptChipSub: {
+    color: themeColors.textSecondary,
+    fontFamily: themeFonts.regular,
+    fontSize: 11,
+    lineHeight: 14,
   },
   modalBackdrop: {
     flex: 1,
@@ -1101,9 +1130,9 @@ const styles = StyleSheet.create({
   userBubble: {
     borderRadius: 17,
     borderBottomRightRadius: 5,
-    backgroundColor: '#6840E8',
+    backgroundColor: themeColors.purple,
     borderWidth: 1,
-    borderColor: 'rgba(209,196,255,0.26)',
+    borderColor: 'rgba(124,58,237,0.5)',
   },
   messageAuthor: {
     marginBottom: 4,
@@ -1112,9 +1141,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   messageText: {
-    color: '#E8EDF8',
-    fontSize: 12.5,
-    lineHeight: 18,
+    color: themeColors.text,
+    fontSize: 15,
+    lineHeight: 23,
+    fontFamily: themeFonts.regular,
   },
   userMessageText: {
     color: '#FFFFFF',
@@ -1136,8 +1166,10 @@ const styles = StyleSheet.create({
   composerArea: {
     paddingHorizontal: 10,
     paddingTop: 8,
-    paddingBottom: 6,
-    backgroundColor: '#070A12',
+    // Extends below the composer content to fill the space covered by the
+    // floating tab bar (FLOATING_TAB_CLEARANCE minus the paddingTop).
+    paddingBottom: FLOATING_TAB_CLEARANCE,
+    backgroundColor: themeColors.bg,
     borderTopWidth: 1,
     borderTopColor: 'rgba(98,120,156,0.16)',
   },
@@ -1181,7 +1213,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: '#7048FF',
+    backgroundColor: themeColors.primary,
   },
   sendButtonDisabled: {
     backgroundColor: '#26334A',

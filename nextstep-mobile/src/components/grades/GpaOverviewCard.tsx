@@ -11,7 +11,7 @@ import { Feather } from '@expo/vector-icons'
 import type { CurrentGradeCourse, GpaSummary } from '../../types/grades'
 import { getGpaDisplayValues, formatGpa } from '../../features/grades/academicSummary'
 import { Card } from '../ui/Card'
-import { elevation, fonts } from '../../theme/tokens'
+import { elevation, fonts, gradients } from '../../theme/tokens'
 
 interface GpaOverviewCardProps {
   summary: GpaSummary | null
@@ -54,7 +54,6 @@ export function GpaOverviewCard({
       <Pressable
       testID={testID}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel="GPA overview"
       accessibilityHint={onPress ? 'Opens the GPA simulator' : undefined}
       accessibilityValue={{ text: stateLabel }}
       disabled={!onPress}
@@ -72,7 +71,7 @@ export function GpaOverviewCard({
     >
       <Card
         variant="gradient"
-        gradientColors={['#6430F1', '#493DEB']}
+        gradientColors={gradients.accent}
         radius={24}
         style={styles.gpaContent}
       >
@@ -310,7 +309,7 @@ const styles = StyleSheet.create({
   },
   gpaNumber: {
     color: '#FFFFFF',
-    fontFamily: fonts.bold,
+    fontFamily: fonts.groteskBold,
     fontSize: 33,
     lineHeight: 39,
     fontWeight: '700',

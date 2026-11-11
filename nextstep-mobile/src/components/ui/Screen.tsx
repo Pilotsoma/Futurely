@@ -11,6 +11,10 @@ import Animated, {
 import { animation, colors, spacing } from '../../theme/tokens'
 import { useDisplayPreferences } from '../../preferences/displayPreferences'
 
+// Re-exported here so screens that already import Screen don't need a second
+// import. The source of truth is tabBarConstants.ts (no heavy native deps).
+export { FLOATING_TAB_CLEARANCE } from './tabBarConstants'
+
 interface ScreenProps {
   children: React.ReactNode
   padded?: boolean

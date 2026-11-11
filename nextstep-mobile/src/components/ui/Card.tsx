@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native'
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg'
 import { colors, gradients, radii, spacing } from '../../theme/tokens'
@@ -21,6 +21,11 @@ export function Card({
   gradientColors = gradients.hero,
   radius = radii.md,
 }: CardProps): React.JSX.Element {
+  // Track layout dimensions so the SVG gradient gets explicit pixel-accurate
+  // width/height instead of relying on percentage strings, which can produce
+  // a narrower SVG viewport and leave a dark band on the right edge.
+  const [dim, setDim] = useState({ w: 0, h: 0 })
+
   if (variant === 'gradient') {
     // `style` (gap/padding/alignItems etc.) applies to the content layer, not the
     // outer wrapper — the outer wrapper only owns the radius/border/gradient clip,
@@ -28,16 +33,29 @@ export function Card({
     // can't cleanly split "visual" (goes on the gradient wrapper) from "layout"
     // (goes on the children) concerns.
     return (
-      <View style={[styles.gradientCard, { borderRadius: radius }]}>
-        <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Defs>
-            <LinearGradient id="cardGradient" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor={gradientColors[0]} stopOpacity={1} />
-              <Stop offset="1" stopColor={gradientColors[1]} stopOpacity={1} />
-            </LinearGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#cardGradient)" />
-        </Svg>
+      <View
+        style={[styles.gradientCard, { borderRadius: radius }]}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout
+          setDim({ w: Math.round(width), h: Math.round(height) })
+        }}
+      >
+        {dim.w > 0 ? (
+          <Svg
+            style={StyleSheet.absoluteFill}
+            width={dim.w}
+            height={dim.h}
+            pointerEvents="none"
+          >
+            <Defs>
+              <LinearGradient id="cardGradient" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor={gradientColors[0]} stopOpacity={1} />
+                <Stop offset="1" stopColor={gradientColors[1]} stopOpacity={1} />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width={dim.w} height={dim.h} fill="url(#cardGradient)" />
+          </Svg>
+        ) : null}
         <View style={[styles.gradientContent, style]}>{children}</View>
       </View>
     )
@@ -56,8 +74,8 @@ const styles = StyleSheet.create({
   },
   gradientCard: {
     overflow: 'hidden',
-    borderWidth: 0.8,
-    borderColor: 'rgba(142, 81, 255, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(41,121,255,0.25)',
   },
   gradientContent: {
     padding: spacing.cardPadding,

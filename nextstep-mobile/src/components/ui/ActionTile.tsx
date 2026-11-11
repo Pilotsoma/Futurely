@@ -59,8 +59,7 @@ export function ActionTile({
       <Pressable
         testID={testID}
         accessibilityRole="button"
-        accessibilityLabel={title}
-        accessibilityHint={accessibilityHint ?? subtitle}
+        accessibilityHint={accessibilityHint}
         accessibilityState={{ disabled }}
         disabled={disabled}
         onFocus={() => setFocused(true)}
@@ -112,7 +111,7 @@ export function ActionTile({
         </View>
 
         <View pointerEvents="none" style={styles.chevron}>
-          <Feather name="chevron-right" size={16} color="#8EA4C1" />
+          <Feather name="chevron-right" size={16} color={colors.textSecondary} />
         </View>
       </Pressable>
     </View>
@@ -127,9 +126,9 @@ const styles = StyleSheet.create({
     minHeight: 94,
     overflow: 'hidden',
     borderRadius: 17,
-    backgroundColor: '#16243A',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#2B4262',
+    borderColor: colors.border,
     borderLeftWidth: 3,
   },
   pressable: {
@@ -139,21 +138,21 @@ const styles = StyleSheet.create({
     width: '100%',
     minWidth: 0,
     justifyContent: 'center',
-    paddingLeft: 64,
-    paddingRight: 42,
+    paddingLeft: 60,
+    paddingRight: 36,
     paddingVertical: 12,
   },
   hovered: {
     borderColor: colors.borderHover,
-    backgroundColor: '#192A43',
+    backgroundColor: colors.surface2,
   },
   focused: {
-    borderColor: '#A990FF',
+    borderColor: colors.primary,
     borderWidth: 2,
   },
   pressed: {
     opacity: 0.88,
-    backgroundColor: '#1D304B',
+    backgroundColor: colors.surface2,
   },
   disabled: {
     opacity: 0.45,
@@ -218,14 +217,14 @@ const styles = StyleSheet.create({
   },
   chevron: {
     position: 'absolute',
-    right: 8,
+    right: 6,
     top: 29,
-    width: 28,
-    height: 36,
+    width: 24,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 9,
-    backgroundColor: '#0D1726',
+    borderRadius: 8,
+    backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: 'rgba(123,151,188,0.25)',
   },

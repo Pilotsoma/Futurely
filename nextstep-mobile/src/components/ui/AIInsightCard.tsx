@@ -29,8 +29,8 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     gap: spacing.sm,
-    backgroundColor: 'rgba(127, 34, 254, 0.08)',
-    borderColor: 'rgba(127, 34, 254, 0.2)',
+    backgroundColor: colors.primaryDim,
+    borderColor: colors.primaryGlow,
   },
   iconBadge: {
     width: 32,

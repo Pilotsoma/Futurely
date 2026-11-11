@@ -2,7 +2,7 @@ import React from 'react'
 import { ScrollView, StyleSheet } from 'react-native'
 import * as gradesApi from '../../api/gradesApi'
 import { usePortalFetch } from '../../hooks/usePortalFetch'
-import { Screen } from '../../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../../components/ui/Screen'
 import { Card } from '../../components/ui/Card'
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton'
 import { ErrorRetryBlock } from '../../components/ui/ErrorRetryBlock'
@@ -33,5 +33,5 @@ export default function ReportCardScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingVertical: spacing.lg },
+  scroll: { paddingTop: spacing.lg, paddingBottom: FLOATING_TAB_CLEARANCE },
 })

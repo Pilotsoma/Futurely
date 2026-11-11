@@ -16,7 +16,7 @@ import { useAIContext } from '../components/ai/AIContext'
 import * as studentsApi from '../api/studentsApi'
 import * as gradesApi from '../api/gradesApi'
 import { ApiRequestError } from '../api/client'
-import { Screen } from '../components/ui/Screen'
+import { Screen, FLOATING_TAB_CLEARANCE } from '../components/ui/Screen'
 import { ActionTile } from '../components/ui/ActionTile'
 import { GpaOverviewCard } from '../components/grades/GpaOverviewCard'
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 14,
     paddingTop: 8,
-    paddingBottom: 118,
+    paddingBottom: FLOATING_TAB_CLEARANCE,
   },
   pageCompact: {
     gap: 12,
@@ -835,12 +835,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 10,
     borderRadius: 17,
-    backgroundColor: '#111F34',
+    backgroundColor: 'rgba(22,34,53,0.92)',
     borderWidth: 1,
-    borderColor: 'rgba(91, 126, 176, 0.36)',
+    borderColor: 'rgba(39,61,94,0.80)',
     shadowColor: '#000000',
-    shadowOpacity: 0.18,
-    shadowRadius: 9,
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
     overflow: 'hidden',
@@ -857,10 +857,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statValue: {
-    ...typography.h2,
+    ...typography.numeric,
     color: '#F4F7FF',
-    fontSize: 21,
-    lineHeight: 23,
+    fontSize: 22,
+    lineHeight: 24,
   },
   statLabel: {
     ...typography.caption,

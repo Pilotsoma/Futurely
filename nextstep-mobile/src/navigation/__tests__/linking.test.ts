@@ -35,6 +35,6 @@ describe('application linking', () => {
 
     const future = getStateFromPath('/future', config)
     expect(future?.routes[0]?.name).toBe('Future')
-    expect(future?.routes[0]?.state?.routes[0]?.name).toBe('Colleges')
+    expect(future?.routes[0]?.state?.routes[0]?.name).toBe('FutureHome')
   })
 })
