@@ -11,7 +11,7 @@ import { Feather } from '@expo/vector-icons'
 import type { CurrentGradeCourse, GpaSummary } from '../../types/grades'
 import { getGpaDisplayValues, formatGpa } from '../../features/grades/academicSummary'
 import { Card } from '../ui/Card'
-import { elevation, fonts } from '../../theme/tokens'
+import { elevation, fonts, gradients } from '../../theme/tokens'
 
 interface GpaOverviewCardProps {
   summary: GpaSummary | null
@@ -54,7 +54,6 @@ export function GpaOverviewCard({
       <Pressable
       testID={testID}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel="GPA overview"
       accessibilityHint={onPress ? 'Opens the GPA simulator' : undefined}
       accessibilityValue={{ text: stateLabel }}
       disabled={!onPress}
@@ -72,7 +71,7 @@ export function GpaOverviewCard({
     >
       <Card
         variant="gradient"
-        gradientColors={['#6430F1', '#493DEB']}
+        gradientColors={gradients.accent}
         radius={24}
         style={styles.gpaContent}
       >
@@ -82,18 +81,11 @@ export function GpaOverviewCard({
 
         <View style={styles.gpaTopRow}>
           <View style={styles.gpaHeading} pointerEvents="none">
-            <Text style={styles.gpaEyebrow}>GPA OVERVIEW</Text>
-            <Text style={styles.gpaTitle}>Academic standing</Text>
+            <Text style={styles.gpaTitle}>GPA</Text>
           </View>
 
           <View style={[styles.gpaTopActions, onSync && styles.gpaTopActionsWithSync]}>
-            <View style={styles.portalPill} pointerEvents="none">
-              <View style={styles.portalDot} />
-              <Text style={styles.portalPillText}>
-                {summary?.systemType ?? 'Portal'}
-              </Text>
-            </View>
-
+            <Text style={styles.portalText}>School portal</Text>
           </View>
         </View>
 
@@ -159,6 +151,8 @@ export function GpaOverviewCard({
           testID={`${testID}-sync`}
           disabled={syncing}
           onPress={onSync}
+          // The pill is 30pt tall; the slop brings the touch target to 44pt.
+          hitSlop={{ top: 7, bottom: 7, left: 6, right: 6 }}
           style={({ pressed }) => [
             styles.gpaSyncButton,
             styles.gpaSyncButtonOverlay,
@@ -166,7 +160,7 @@ export function GpaOverviewCard({
             syncing && styles.disabled,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Re-sync grades"
+          accessibilityLabel={syncing ? 'Syncing grades' : 'Re-sync grades'}
           accessibilityState={{ disabled: syncing, busy: syncing }}
         >
           {syncing ? (
@@ -240,7 +234,7 @@ const styles = StyleSheet.create({
     right: -75,
   },
   gpaTopRow: {
-    minHeight: 48,
+    minHeight: 30,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
@@ -250,20 +244,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  gpaEyebrow: {
-    color: 'rgba(255,255,255,0.72)',
-    fontFamily: fonts.semiBold,
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-  },
   gpaTitle: {
     color: '#FFFFFF',
     fontFamily: fonts.bold,
-    fontSize: 20,
-    lineHeight: 25,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: '700',
-    marginTop: 2,
   },
   gpaTopActions: {
     flexDirection: 'row',
@@ -273,27 +259,12 @@ const styles = StyleSheet.create({
   gpaTopActionsWithSync: {
     marginRight: 88,
   },
-  portalPill: {
-    minHeight: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 9,
-    borderRadius: 999,
-    backgroundColor: 'rgba(19,16,66,0.24)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  portalDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#65E6C1',
-  },
-  portalPillText: {
+  // Plain text, no pill and no dot: the source of the numbers, beside the sync action.
+  portalText: {
     color: 'rgba(255,255,255,0.82)',
     fontFamily: fonts.semiBold,
-    fontSize: 9.5,
+    fontSize: 11,
+    lineHeight: 30,
     fontWeight: '600',
   },
   gpaMetricsRow: {
@@ -310,7 +281,7 @@ const styles = StyleSheet.create({
   },
   gpaNumber: {
     color: '#FFFFFF',
-    fontFamily: fonts.bold,
+    fontFamily: fonts.jakartaExtraBold,
     fontSize: 33,
     lineHeight: 39,
     fontWeight: '700',
@@ -364,7 +335,7 @@ const styles = StyleSheet.create({
   heroStatText: {
     color: 'rgba(255,255,255,0.80)',
     fontFamily: fonts.medium,
-    fontSize: 9.5,
+    fontSize: 11,
     fontWeight: '500',
   },
   heroStatDivider: {
@@ -396,7 +367,7 @@ const styles = StyleSheet.create({
   gpaSyncButtonText: {
     color: '#FFFFFF',
     fontFamily: fonts.semiBold,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
   },
   disabled: {

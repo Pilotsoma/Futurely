@@ -35,7 +35,9 @@ describe('ActionTile', () => {
     const action = findAction(renderer)
     expect(action).toBeDefined()
     expect(action.props.accessibilityRole).toBe('button')
-    expect(action.props.accessibilityLabel).toBe('Classwork')
+    // Name comes from visible text (WCAG 2.5.3 label-in-name); no overriding label.
+    expect(action.props.accessibilityLabel).toBeUndefined()
+    expect(action.findAllByType('Text').some((t) => t.props.children === 'Classwork')).toBe(true)
     act(() => action.props.onPress())
     expect(onPress).toHaveBeenCalledTimes(1)
   })

@@ -30,8 +30,8 @@ export default function ResetButton({
       accessibilityState={{ disabled }}
       testID={testID}
     >
-      <ResetIcon size={18} color={disabled ? '#52698A' : '#E8EEFF'}/>
-      <Text className={`text-[15px] font-semibold ${disabled ? 'text-[#52698A]' : 'text-[#E8EEFF]'}`}>{label}</Text>
+      <ResetIcon size={18} color={disabled ? '#8A96AD' : '#E8EEFF'}/>
+      <Text className={`text-[15px] font-semibold ${disabled ? 'text-[#8A96AD]' : 'text-[#E8EEFF]'}`}>{label}</Text>
     </TouchableOpacity>
   )
 }

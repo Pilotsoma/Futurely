@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import { ApiRequestError } from '../api/client'
+import { toUserMessage } from '../utils/errorMessage'
 
 interface PortalFetchState<T> {
   data: T | null
@@ -39,7 +40,7 @@ export function usePortalFetch<T>(fetcher: () => Promise<T>, deps: unknown[] = [
           if (err instanceof ApiRequestError && err.code === 'UNSUPPORTED') {
             setUnsupported(true)
           } else {
-            setError(err instanceof ApiRequestError ? err.message : 'Something went wrong.')
+            setError(toUserMessage(err, "We couldn't load this from your school portal."))
           }
         })
         .finally(() => {

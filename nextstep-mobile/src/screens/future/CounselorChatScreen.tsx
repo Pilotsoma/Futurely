@@ -21,6 +21,7 @@ import * as counselorApi from '../../api/counselorApi'
 import type { CounselorChatMessage, CounselorLink, CounselorPortal } from '../../api/counselorApi'
 import { groupMessagesByDay, latestMessageId, mergeMessages } from '../../components/future/chatUtils'
 import { saveLastSeenId } from '../../components/future/chatSeen'
+import { toUserMessage } from '../../utils/errorMessage'
 import { colors, radii, spacing, typography } from '../../theme/tokens'
 
 // The web app gets new messages via Supabase realtime broadcast; the mobile app has
@@ -79,7 +80,7 @@ export default function CounselorChatScreen(): React.JSX.Element {
         markSeen(first.counselorId, list) // opening the chat marks everything read
       }
     } catch (e) {
-      setError(errMsg(e))
+      setError(toUserMessage(e, "We couldn't load your counselor chat."))
     } finally {
       setLoading(false)
     }

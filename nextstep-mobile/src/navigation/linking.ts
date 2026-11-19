@@ -53,7 +53,7 @@ export const linking: LinkingOptions<RootLinkingParamList> = {
       Future: {
         path: 'future',
         screens: {
-          Colleges: '',
+          FutureHome: '',
         },
       },
       Settings: 'settings',

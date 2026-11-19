@@ -18,7 +18,7 @@ export function AIInsightCard({ message, title = 'AI Insight' }: AIInsightCardPr
         <MaterialCommunityIcons name="brain" size={16} color={colors.primary} />
       </View>
       <View style={styles.content}>
-        <Text style={styles.label}>{title.toUpperCase()}</Text>
+        <Text style={styles.label}>{title}</Text>
         <Text style={styles.message}>{message}</Text>
       </View>
     </Card>
@@ -29,8 +29,8 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     gap: spacing.sm,
-    backgroundColor: 'rgba(127, 34, 254, 0.08)',
-    borderColor: 'rgba(127, 34, 254, 0.2)',
+    backgroundColor: colors.primaryDim,
+    borderColor: colors.primaryGlow,
   },
   iconBadge: {
     width: 32,

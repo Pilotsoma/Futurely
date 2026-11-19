@@ -18,7 +18,7 @@ test('AI quick prompt sends exactly one request under rapid repeated activation'
 
 test('Dashboard AI composer transfers its prompt and receives a visible reply', async ({ page, mockApi }) => {
   await page.goto('/dashboard')
-  await page.getByLabel('Ask myFuturely AI').fill('Build my finals study plan')
+  await page.getByLabel('Ask about your grades or your week').fill('Build my finals study plan')
   await page.getByLabel('Send question to myFuturely AI').click()
 
   await expect(page).toHaveURL(/\/ai(?:\?|$)/)
@@ -47,7 +47,7 @@ test('Settings preferences persist across reload/navigation and profile failures
   const sat = page.getByLabel('SAT Score')
   await sat.scrollIntoViewIfNeeded()
   await sat.fill('1300')
-  await page.getByRole('button', { name: 'Save academic profile' }).click()
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(page.getByText('Profile save rejected by test server.', { exact: true })).toBeVisible()
   await expect(page.getByText('Academic profile saved.', { exact: true })).toHaveCount(0)
 })

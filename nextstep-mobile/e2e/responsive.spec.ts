@@ -10,7 +10,7 @@ for (const viewport of [
     await page.goto('/dashboard')
     await expect(page.getByTestId('dashboard-gpa-card')).toBeVisible()
     await expect(page.getByTestId('dashboard-due-tile-101')).toBeVisible()
-    await expect(page.getByLabel('Ask myFuturely AI')).toBeVisible()
+    await expect(page.getByLabel('Ask about your grades or your week')).toBeVisible()
     await page.screenshot({
       path: testInfo.outputPath(`dashboard-${viewport.name}.png`),
       fullPage: true,

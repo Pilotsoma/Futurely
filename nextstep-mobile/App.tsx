@@ -11,6 +11,11 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter'
+import {
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans'
 
 import { AuthProvider } from './src/context/AuthContext'
 import { DisplayPreferencesProvider } from './src/preferences/displayPreferences'
@@ -37,6 +42,9 @@ export default function App(): React.JSX.Element | null {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
   })
 
   if (!fontsLoaded) {

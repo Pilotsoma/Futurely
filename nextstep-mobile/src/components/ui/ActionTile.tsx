@@ -49,7 +49,6 @@ export function ActionTile({
     <View
       style={[
         styles.shell,
-        { borderLeftColor: color },
         hovered && !disabled && styles.hovered,
         focused && !disabled && styles.focused,
         disabled && styles.disabled,
@@ -59,8 +58,7 @@ export function ActionTile({
       <Pressable
         testID={testID}
         accessibilityRole="button"
-        accessibilityLabel={title}
-        accessibilityHint={accessibilityHint ?? subtitle}
+        accessibilityHint={accessibilityHint}
         accessibilityState={{ disabled }}
         disabled={disabled}
         onFocus={() => setFocused(true)}
@@ -112,7 +110,7 @@ export function ActionTile({
         </View>
 
         <View pointerEvents="none" style={styles.chevron}>
-          <Feather name="chevron-right" size={16} color="#8EA4C1" />
+          <Feather name="chevron-right" size={16} color={colors.textSecondary} />
         </View>
       </Pressable>
     </View>
@@ -124,36 +122,36 @@ const styles = StyleSheet.create({
     flex: 1,
     flexBasis: 0,
     minWidth: 0,
-    minHeight: 94,
+    minHeight: 88,
     overflow: 'hidden',
     borderRadius: 17,
-    backgroundColor: '#16243A',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#2B4262',
-    borderLeftWidth: 3,
+    borderColor: colors.border,
   },
   pressable: {
     position: 'relative',
     flex: 1,
-    minHeight: 94,
+    minHeight: 88,
     width: '100%',
     minWidth: 0,
     justifyContent: 'center',
-    paddingLeft: 64,
-    paddingRight: 42,
+    paddingLeft: 60,
+    paddingRight: 36,
     paddingVertical: 12,
   },
   hovered: {
     borderColor: colors.borderHover,
-    backgroundColor: '#192A43',
+    backgroundColor: colors.surface2,
   },
   focused: {
-    borderColor: '#A990FF',
+    borderColor: colors.primary,
     borderWidth: 2,
   },
   pressed: {
     opacity: 0.88,
-    backgroundColor: '#1D304B',
+    backgroundColor: colors.surface2,
+    transform: [{ scale: 0.975 }],
   },
   disabled: {
     opacity: 0.45,
@@ -183,21 +181,21 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     color: '#F5F7FF',
     fontFamily: fonts.bold,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
   },
   subtitle: {
-    color: '#8494AB',
+    color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 11,
+    lineHeight: 16,
   },
   meta: {
     color: '#A9B7CC',
     fontFamily: fonts.medium,
-    fontSize: 9.5,
-    lineHeight: 13,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '500',
   },
   badge: {
@@ -206,26 +204,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 3,
     backgroundColor: 'rgba(7, 8, 15, 0.42)',
   },
   badgeText: {
     fontFamily: fonts.bold,
-    fontSize: 8,
-    lineHeight: 10,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '700',
-    textTransform: 'uppercase',
   },
   chevron: {
     position: 'absolute',
-    right: 8,
+    right: 6,
     top: 29,
-    width: 28,
-    height: 36,
+    width: 24,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 9,
-    backgroundColor: '#0D1726',
+    borderRadius: 8,
+    backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: 'rgba(123,151,188,0.25)',
   },

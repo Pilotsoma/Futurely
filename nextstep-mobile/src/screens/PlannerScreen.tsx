@@ -12,8 +12,8 @@ import {
   type PortalItem,
 } from '../features/assignments/plannerSync'
 import type { CurrentGradeCourse } from '../types/grades'
-import { ApiRequestError } from '../api/client'
-import { Screen } from '../components/ui/Screen'
+import { Screen, SCROLL_BOTTOM_CLEARANCE } from '../components/ui/Screen'
+import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -23,12 +23,18 @@ import { EmptyState } from '../components/ui/EmptyState'
 import type { Assignment } from '../types/assignments'
 import { useAuth } from '../context/AuthContext'
 import { getCache, lastUpdatedLabel, setCache } from '../utils/offlineCache'
+import { toUserMessage } from '../utils/errorMessage'
+import { formatClockTime } from '../utils/formatTime'
+import { formatPriorityLabel } from '../features/assignments/dueToday'
+import { confirmDestructiveAction } from '../utils/confirm'
 import type { MainTabParamList } from '../navigation/MainNavigator'
 import { colors, fonts, radii, spacing, typography } from '../theme/tokens'
 
-type Group = 'Overdue' | 'Today' | 'Tomorrow' | 'This Week' | 'Later' | 'Completed'
+type Group = 'Overdue' | 'Today' | 'Tomorrow' | 'This week' | 'Later' | 'Completed'
 
-const GROUP_ORDER: Group[] = ['Overdue', 'Today', 'Tomorrow', 'This Week', 'Later', 'Completed']
+const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const
+
+const GROUP_ORDER: Group[] = ['Overdue', 'Today', 'Tomorrow', 'This week', 'Later', 'Completed']
 
 // Mirrors web's GROUP_META (app/(app)/planner/page.tsx) — only Overdue/Today get a
 // distinct urgency color, everything else reads as neutral.
@@ -40,7 +46,8 @@ const GROUP_META: Partial<Record<Group, { color: string; bg: string }>> = {
 function formatDueDate(assignment: Assignment): string {
   const date = new Date(assignment.dueDate)
   const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  return assignment.dueTime ? `${dateStr} at ${assignment.dueTime}` : dateStr
+  const time = formatClockTime(assignment.dueTime)
+  return time ? `${dateStr} at ${time}` : dateStr
 }
 
 function startOfDay(d: Date): Date {
@@ -56,7 +63,7 @@ function groupFor(assignment: Assignment): Group {
   if (diffDays < 0) return 'Overdue'
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Tomorrow'
-  if (diffDays <= 7) return 'This Week'
+  if (diffDays <= 7) return 'This week'
   return 'Later'
 }
 
@@ -124,7 +131,7 @@ export default function PlannerScreen(): React.JSX.Element {
       }
     } catch (err) {
       if (!hasCache.current) {
-        setError(err instanceof ApiRequestError ? err.message : 'Could not load your planner.')
+        setError(toUserMessage(err, 'Could not load your planner.'))
       }
     } finally {
       setLoading(false)
@@ -156,7 +163,7 @@ export default function PlannerScreen(): React.JSX.Element {
       setLastSynced(new Date().toISOString())
       return true
     } catch (err) {
-      setSyncError(err instanceof ApiRequestError ? err.message : 'Canvas sync failed.')
+      setSyncError(toUserMessage(err, 'Canvas sync failed.'))
       return false
     } finally {
       setSyncing(false)
@@ -196,7 +203,7 @@ export default function PlannerScreen(): React.JSX.Element {
       })
       await loadFirstPage()
     } catch (err) {
-      setPortalError(err instanceof ApiRequestError ? err.message : 'Could not add that item.')
+      setPortalError(toUserMessage(err, 'Could not add that item.'))
     } finally {
       setAddingKey(null)
     }
@@ -258,7 +265,7 @@ export default function PlannerScreen(): React.JSX.Element {
       setNewDueDate('')
       setShowCreate(false)
     } catch (err) {
-      setCreateError(err instanceof ApiRequestError ? err.message : 'Could not create task.')
+      setCreateError(toUserMessage(err, 'Could not create task.'))
     } finally {
       setCreating(false)
     }
@@ -273,6 +280,33 @@ export default function PlannerScreen(): React.JSX.Element {
     requestedAssignmentId === undefined
       ? null
       : assignments.find((assignment) => assignment.id === requestedAssignmentId) ?? null
+
+  const today = useMemo(() => startOfDay(new Date()), [])
+
+  // Mon–Sun strip for the current week (decorative — shows today + days with assignments)
+  const weekDays = useMemo(() => {
+    const days: Date[] = []
+    const dayOfWeek = today.getDay() // 0=Sun
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    const monday = new Date(today)
+    monday.setDate(today.getDate() + mondayOffset)
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday)
+      d.setDate(monday.getDate() + i)
+      days.push(d)
+    }
+    return days
+  }, [today])
+
+  const assignmentsByDay = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const a of assignments) {
+      if (a.completed) continue
+      const key = startOfDay(new Date(a.dueDate)).toISOString()
+      map.set(key, (map.get(key) ?? 0) + 1)
+    }
+    return map
+  }, [assignments])
 
   const { activeSections, completedItems } = useMemo(() => {
     const grouped = new Map<Group, Assignment[]>(GROUP_ORDER.map((g) => [g, []]))
@@ -306,7 +340,14 @@ export default function PlannerScreen(): React.JSX.Element {
         item={item}
         selected={item.id === requestedAssignmentId}
         onToggle={() => void handleToggleComplete(item)}
-        onDelete={() => void handleDelete(item)}
+        onDelete={() =>
+          confirmDestructiveAction(
+            'Delete task?',
+            `"${item.title}" will be removed from your planner.`,
+            'Delete',
+            () => void handleDelete(item),
+          )
+        }
       />
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -337,16 +378,40 @@ export default function PlannerScreen(): React.JSX.Element {
 
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Planner</Text>
-        <Pressable
-          onPress={() => setShowCreate((v) => !v)}
-          style={styles.addButton}
-          accessibilityRole="button"
-          accessibilityLabel={showCreate ? 'Cancel new task' : 'New task'}
-        >
-          <Feather name={showCreate ? 'x' : 'plus'} size={20} color={colors.text} />
-        </Pressable>
+      <ScreenHeader
+        variant="root"
+        title="Planner"
+        subtitle={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        right={
+          <Pressable
+            onPress={() => setShowCreate((v) => !v)}
+            style={styles.addButton}
+            accessibilityRole="button"
+            accessibilityLabel={showCreate ? 'Cancel new task' : 'New task'}
+          >
+            <Feather name={showCreate ? 'x' : 'plus'} size={20} color={colors.text} />
+          </Pressable>
+        }
+      />
+
+      <View style={styles.weekStrip}>
+        {weekDays.map((date) => {
+          const isToday = date.getTime() === today.getTime()
+          const count = assignmentsByDay.get(date.toISOString()) ?? 0
+          return (
+            <View key={date.toISOString()} style={[styles.dayPill, isToday && styles.dayPillSelected]}>
+              <Text style={[styles.dayInitial, isToday && styles.dayInitialSelected]}>
+                {DAY_INITIALS[date.getDay()]}
+              </Text>
+              <Text style={[styles.dayDate, isToday && styles.dayDateSelected]}>{date.getDate()}</Text>
+              <View style={styles.dayDots}>
+                {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
+                  <View key={i} style={[styles.dayDot, isToday && styles.dayDotSelected]} />
+                ))}
+              </View>
+            </View>
+          )
+        })}
       </View>
 
       {showCreate ? (
@@ -372,7 +437,7 @@ export default function PlannerScreen(): React.JSX.Element {
                 <Feather name="clipboard" size={17} color={colors.warning} />
               </View>
               <View style={styles.selectedAssignmentCopy}>
-                <Text style={styles.selectedAssignmentEyebrow}>OPENED ASSIGNMENT</Text>
+                <Text style={styles.selectedAssignmentEyebrow}>Opened assignment</Text>
                 <Text style={styles.selectedAssignmentTitle}>{selectedAssignment.title}</Text>
               </View>
             </View>
@@ -381,7 +446,7 @@ export default function PlannerScreen(): React.JSX.Element {
             </Text>
             <Text style={styles.selectedAssignmentMeta}>
               {selectedAssignment.completed ? 'Completed' : 'Incomplete'}
-              {selectedAssignment.priority ? ` · ${selectedAssignment.priority} priority` : ''}
+              {selectedAssignment.priority ? ` · ${formatPriorityLabel(selectedAssignment.priority) ?? selectedAssignment.priority} priority` : ''}
             </Text>
           </Card>
         ) : (
@@ -437,7 +502,7 @@ export default function PlannerScreen(): React.JSX.Element {
           onEndReachedThreshold={0.4}
           ListEmptyComponent={
             portalItems.length === 0 ? (
-              <EmptyState icon="check-circle" title="Nothing due" message="You're all caught up." />
+              <EmptyState icon="check-circle" title="Nothing due" message="Add an assignment with the plus button." />
             ) : undefined
           }
           renderSectionHeader={({ section }) => {
@@ -478,8 +543,7 @@ export default function PlannerScreen(): React.JSX.Element {
                   <View style={styles.allCaughtUpIcon}>
                     <Feather name="check" size={22} color={colors.success} />
                   </View>
-                  <Text style={styles.allCaughtUpTitle}>All caught up!</Text>
-                  <Text style={styles.allCaughtUpSubtitle}>Every assignment is completed.</Text>
+                  <Text style={styles.allCaughtUpTitle}>Everything here is done.</Text>
                 </View>
               ) : null}
               {portalItems.length > 0 ? (
@@ -515,12 +579,19 @@ interface AssignmentRowProps {
   onDelete: () => void
 }
 
+function priorityBarColor(priority: string | undefined | null): string {
+  if (priority === 'HIGH') return colors.error
+  if (priority === 'MEDIUM') return colors.warning
+  return colors.textMuted
+}
+
 const AssignmentRow = React.memo(function AssignmentRow({
   item,
   selected,
   onToggle,
   onDelete,
 }: AssignmentRowProps): React.JSX.Element {
+  const isHigh = item.priority?.trim().toUpperCase() === 'HIGH'
   return (
     <Card
       style={[
@@ -529,6 +600,9 @@ const AssignmentRow = React.memo(function AssignmentRow({
         selected && styles.assignmentCardSelected,
       ]}
     >
+      {item.priority ? (
+        <View style={[styles.priorityBar, { backgroundColor: priorityBarColor(item.priority) }]} />
+      ) : null}
       <Pressable
         testID={`planner-assignment-${item.id}`}
         style={styles.assignmentMain}
@@ -546,11 +620,21 @@ const AssignmentRow = React.memo(function AssignmentRow({
           <View style={styles.assignmentMetaRow}>
             {item.subject ? <Text style={styles.assignmentSubject}>{item.subject}</Text> : null}
             <Text style={styles.assignmentSubject}>Due {formatDueDate(item)}</Text>
+            {isHigh ? (
+              <View style={styles.priorityChip}>
+                <Text style={styles.priorityChipText}>{formatPriorityLabel(item.priority)}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
       </Pressable>
-      <Pressable onPress={onDelete} hitSlop={8} style={styles.deleteButton} accessibilityLabel="Delete task">
-        <Feather name="x" size={16} color={colors.textMuted} />
+      <Pressable
+        onPress={onDelete}
+        style={({ pressed }) => [styles.deleteButton, pressed && styles.deleteButtonPressed]}
+        accessibilityRole="button"
+        accessibilityLabel="Delete task"
+      >
+        <Feather name="trash-2" size={17} color={colors.textMuted} />
       </Pressable>
     </Card>
   )
@@ -587,7 +671,7 @@ function PortalRow({ item, adding, disabled, onAdd }: PortalRowProps): React.JSX
         hitSlop={8}
         style={[styles.portalAddButton, disabled && styles.portalAddButtonDisabled]}
         accessibilityRole="button"
-        accessibilityLabel={`Add ${item.title} to planner`}
+        accessibilityLabel={`Add to planner: ${item.title}`}
         accessibilityState={{ disabled, busy: adding }}
       >
         <Text style={styles.portalAddText}>{adding ? 'Adding…' : 'Add to planner'}</Text>
@@ -611,17 +695,30 @@ const styles = StyleSheet.create({
   },
   portalAddButtonDisabled: { opacity: 0.5 },
   portalAddText: { ...typography.caption, fontFamily: fonts.semiBold, fontWeight: '600', color: colors.text },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  weekStrip: { flexDirection: 'row', gap: 6, marginTop: spacing.xs, marginBottom: spacing.md },
+  dayPill: {
+    flex: 1,
+    height: 60,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'center',
+    gap: 2,
   },
-  title: { ...typography.h1, color: colors.text },
+  dayPillSelected: { backgroundColor: colors.primary, borderColor: colors.primaryDark },
+  dayInitial: { ...typography.label, fontSize: 10, color: colors.textMuted },
+  dayInitialSelected: { color: 'rgba(255,255,255,0.72)' },
+  dayDate: { fontFamily: fonts.jakartaExtraBold, fontWeight: '700', fontSize: 16, color: colors.text, lineHeight: 20 },
+  dayDateSelected: { color: colors.text },
+  dayDots: { flexDirection: 'row', gap: 2, height: 6, alignItems: 'center' },
+  dayDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.primary },
+  dayDotSelected: { backgroundColor: 'rgba(255,255,255,0.72)' },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
@@ -652,7 +749,7 @@ const styles = StyleSheet.create({
   selectedAssignmentEyebrow: {
     ...typography.label,
     color: colors.warning,
-    fontSize: 9,
+    fontSize: 11,
   },
   selectedAssignmentTitle: { ...typography.h3, color: colors.text },
   selectedAssignmentMeta: { ...typography.caption, color: colors.textSecondary },
@@ -670,7 +767,7 @@ const styles = StyleSheet.create({
   },
   routeErrorText: { ...typography.caption, flex: 1, color: colors.error },
   error: { ...typography.caption, color: colors.error },
-  listContent: { paddingBottom: spacing.xl },
+  listContent: { paddingBottom: SCROLL_BOTTOM_CLEARANCE },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -694,6 +791,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.sm,
     padding: spacing.ms,
+    overflow: 'hidden',
+  },
+  priorityBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
   },
   assignmentCardCompleted: { opacity: 0.6 },
   assignmentCardSelected: {
@@ -712,12 +817,34 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
-  assignmentInfo: { flex: 1, gap: 3, marginRight: spacing.sm },
+  assignmentInfo: { flex: 1, gap: 3 },
   assignmentTitle: { ...typography.h3, fontSize: 14.5, color: colors.text },
   completedText: { textDecorationLine: 'line-through', color: colors.textMuted },
-  assignmentMetaRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  assignmentMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   assignmentSubject: { ...typography.caption, color: colors.textSecondary },
-  deleteButton: { padding: spacing.xs },
+  // Same chip the Today screen uses for HIGH priority, so the red stripe has a legend.
+  priorityChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,119,122,0.14)',
+  },
+  priorityChipText: {
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    lineHeight: 15,
+    color: '#FF777A',
+  },
+  deleteButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  deleteButtonPressed: { backgroundColor: 'rgba(255,255,255,0.06)' },
   completedToggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -745,6 +872,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.ms,
   },
-  allCaughtUpTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
-  allCaughtUpSubtitle: { ...typography.caption, color: colors.textSecondary },
+  allCaughtUpTitle: { ...typography.h3, color: colors.text },
 })

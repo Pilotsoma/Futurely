@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useAIContext } from '../components/ai/AIContext'
 import {
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -12,23 +13,26 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Feather } from '@expo/vector-icons'
 
 import * as gradesApi from '../api/gradesApi'
-import { ApiRequestError } from '../api/client'
-import { Screen } from '../components/ui/Screen'
+import { Screen, SCROLL_BOTTOM_CLEARANCE } from '../components/ui/Screen'
+import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
-import { ActionTile } from '../components/ui/ActionTile'
 import { GpaOverviewCard } from '../components/grades/GpaOverviewCard'
-import { Card } from '../components/ui/Card'
+import { ProgressRing } from '../components/ui/ProgressRing'
 import { WhatIfPanel } from '../components/grades/WhatIfPanel'
 import { parseAssignments } from '../lib/whatIf'
 import { useAuth } from '../context/AuthContext'
+import { toUserMessage } from '../utils/errorMessage'
 import { getCache, lastUpdatedLabel, setCache } from '../utils/offlineCache'
 import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
 import type { GradesStackParamList } from '../navigation/GradesNavigator'
+import { averageToLetter } from '../constants/gradeScale'
 import {
   colors,
   fonts,
+  gradeColors,
   radii,
   spacing,
+  typography,
 } from '../theme/tokens'
 
 type Nav = NativeStackNavigationProp<GradesStackParamList>
@@ -36,7 +40,7 @@ type FeatherName = React.ComponentProps<typeof Feather>['name']
 
 interface AcademicTool {
   label: string
-  description: string
+  description?: string
   route: keyof GradesStackParamList
   icon: FeatherName
   color: string
@@ -46,11 +50,19 @@ interface AcademicTool {
 const ACADEMIC_TOOLS: AcademicTool[] = [
   {
     label: 'Classwork',
-    description: 'Assignments and current averages',
+    description: 'Every assignment and its score',
     route: 'Classwork',
     icon: 'bar-chart-2',
     color: '#36D5A5',
     iconBackground: 'rgba(16,185,129,0.14)',
+  },
+  {
+    label: 'What-If',
+    description: 'Simulate grade and GPA changes',
+    route: 'GpaSimulator',
+    icon: 'percent',
+    color: colors.violetText,
+    iconBackground: colors.violetDim,
   },
   {
     label: 'Report Card',
@@ -62,23 +74,22 @@ const ACADEMIC_TOOLS: AcademicTool[] = [
   },
   {
     label: 'Schedule',
-    description: 'Your classes and periods',
     route: 'Schedule',
     icon: 'clock',
     color: '#FFC547',
     iconBackground: 'rgba(245,158,11,0.15)',
   },
   {
-    label: 'What-If',
-    description: 'Simulate grade and GPA changes',
-    route: 'GpaSimulator',
-    icon: 'percent',
-    color: '#B49AFF',
-    iconBackground: 'rgba(127,34,254,0.18)',
+    label: 'Transcript',
+    description: 'Credits and GPA history',
+    route: 'Transcript',
+    icon: 'file-text',
+    color: '#8794FF',
+    iconBackground: 'rgba(99,102,241,0.16)',
   },
   {
     label: 'Teachers',
-    description: 'Quickly contact your teachers',
+    description: 'Email addresses and rooms',
     route: 'ContactTeachers',
     icon: 'mail',
     color: '#FF9A56',
@@ -89,16 +100,8 @@ const ACADEMIC_TOOLS: AcademicTool[] = [
     description: 'Review interim grade reports',
     route: 'ProgressReport',
     icon: 'trending-up',
-    color: '#C0A7FF',
-    iconBackground: 'rgba(167,139,250,0.16)',
-  },
-  {
-    label: 'Transcript',
-    description: 'Credits and GPA history',
-    route: 'Transcript',
-    icon: 'file-text',
-    color: '#8794FF',
-    iconBackground: 'rgba(99,102,241,0.16)',
+    color: '#5FD3E6',
+    iconBackground: 'rgba(0,229,255,0.12)',
   },
   {
     label: 'Attendance',
@@ -118,14 +121,143 @@ const ACADEMIC_TOOLS: AcademicTool[] = [
   },
 ]
 
-const ACADEMIC_TOOL_ROWS: AcademicTool[][] = Array.from(
-  { length: Math.ceil(ACADEMIC_TOOLS.length / 2) },
-  (_, index) => ACADEMIC_TOOLS.slice(index * 2, index * 2 + 2),
-)
-
-function resultMessage(error: unknown, fallback: string): string {
-  return error instanceof ApiRequestError ? error.message : fallback
+interface CourseRowProps {
+  course: CurrentGradeCourse
+  avg: number | null
+  letter: string | null
+  ringColor: string
 }
+
+function CourseRow({ course, avg, letter, ringColor }: CourseRowProps): React.JSX.Element {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <View style={courseRowStyles.card}>
+      <View style={courseRowStyles.row}>
+        {/* 36pt progress ring */}
+        <ProgressRing
+          progress={avg ?? 0}
+          size={36}
+          strokeWidth={3}
+          color={ringColor}
+          trackColor="rgba(255,255,255,0.08)"
+        />
+
+        {/* Name + teacher */}
+        <View style={courseRowStyles.copy}>
+          <Text style={courseRowStyles.name} numberOfLines={1}>{course.name}</Text>
+          {course.teacher ? (
+            <Text style={courseRowStyles.teacher} numberOfLines={1}>{course.teacher}</Text>
+          ) : null}
+        </View>
+
+        {/* Score + letter badge + per-assignment what-if toggle */}
+        <View style={courseRowStyles.trailing}>
+          {avg !== null ? (
+            <Text style={courseRowStyles.score}>{avg}%</Text>
+          ) : null}
+          {letter ? (
+            <View style={[courseRowStyles.letterBadge, { borderColor: `${ringColor}66`, backgroundColor: `${ringColor}18` }]}>
+              <Text style={[courseRowStyles.letterText, { color: ringColor }]}>{letter}</Text>
+            </View>
+          ) : null}
+          <Pressable
+            onPress={() => setExpanded((v) => !v)}
+            hitSlop={8}
+            style={({ pressed }) => [courseRowStyles.whatIfPill, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}
+            accessibilityRole="button"
+            accessibilityLabel={`Toggle What-If for ${course.name}`}
+            accessibilityState={{ expanded }}
+          >
+            <Text style={courseRowStyles.whatIfPillText}>What-If</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {expanded ? (
+        <View style={courseRowStyles.panelWrap}>
+          <WhatIfPanel assignments={parseAssignments(course.assignments)} />
+        </View>
+      ) : null}
+    </View>
+  )
+}
+
+const courseRowStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface1,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 0,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  name: {
+    color: colors.text,
+    fontFamily: fonts.semiBold,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+  },
+  teacher: {
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  trailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  score: {
+    ...typography.numeric,
+    color: colors.text,
+    fontSize: 16,
+  },
+  letterBadge: {
+    minWidth: 24,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  letterText: {
+    fontFamily: fonts.jakartaExtraBold,
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
+  },
+  whatIfPill: {
+    height: 28,
+    paddingHorizontal: 9,
+    borderRadius: 99,
+    backgroundColor: colors.violetDim,
+    borderWidth: 1,
+    borderColor: 'rgba(122, 92, 255, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  whatIfPillText: {
+    color: colors.violetText,
+    fontFamily: fonts.semiBold,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  panelWrap: {
+    marginTop: 10,
+  },
+})
 
 export default function GradesScreen(): React.JSX.Element {
   useAIContext('My grades', 'Look at my current grades and tell me which class needs attention first and what I should do this week.')
@@ -184,11 +316,11 @@ export default function GradesScreen(): React.JSX.Element {
       // Keep showing cached data instead of an error.
     } else if (currentResult.status === 'rejected') {
       setInlineError(
-        resultMessage(currentResult.reason, 'Your course list could not be loaded.'),
+        toUserMessage(currentResult.reason, 'Your course list could not be loaded.'),
       )
     }
     if (gpaResult.status === 'rejected' && !hasCache.current) {
-      setGpaError(resultMessage(gpaResult.reason, 'Your GPA could not be loaded.'))
+      setGpaError(toUserMessage(gpaResult.reason, 'Your GPA could not be loaded.'))
     }
 
     setLoading(false)
@@ -217,7 +349,7 @@ export default function GradesScreen(): React.JSX.Element {
       await gradesApi.syncProfile()
       await load()
     } catch (error) {
-      setGpaError(resultMessage(error, 'Grade sync failed. Please try again.'))
+      setGpaError(toUserMessage(error, 'Grade sync failed. Please try again.'))
     } finally {
       setSyncing(false)
     }
@@ -246,26 +378,15 @@ export default function GradesScreen(): React.JSX.Element {
           />
         }
       >
-        <View style={styles.header}>
-          <View style={styles.headerCopy}>
-            <Text allowFontScaling={false} style={styles.eyebrow}>
-              ACADEMIC CENTER
-            </Text>
-            <Text allowFontScaling={false} style={styles.pageTitle}>
-              Grades
-            </Text>
-            <Text allowFontScaling={false} style={styles.pageSubtitle}>
-              Your GPA, classes and academic progress in one place.
-            </Text>
-          </View>
-        </View>
+        <ScreenHeader variant="root" title="Grades" />
 
         {lastUpdatedLabel(savedAt) ? (
-          <Text allowFontScaling={false} style={styles.pageSubtitle} accessibilityLiveRegion="polite">
+          <Text allowFontScaling={false} style={styles.cacheLabel} accessibilityLiveRegion="polite">
             {lastUpdatedLabel(savedAt)}
           </Text>
         ) : null}
 
+        {/* ── GPA hero (gradient card stays here) ── */}
         <GpaOverviewCard
           summary={gpa}
           courses={courses}
@@ -276,54 +397,52 @@ export default function GradesScreen(): React.JSX.Element {
           testID="grades-gpa-card"
         />
 
-        {courses.map((course) => (
-          <Card key={course.id} style={styles.courseCard}>
-            <Text style={styles.courseName}>
-              {course.name}
-              {course.average !== null ? `  ${course.average}%` : ''}
-            </Text>
-            <WhatIfPanel assignments={parseAssignments(course.assignments)} />
-          </Card>
-        ))}
+        {/* ── Course rows ── */}
+        {courses.map((course) => {
+          const avg = course.average !== null ? Math.round(course.average) : null
+          const letter = avg !== null ? averageToLetter(avg) : null
+          const ringColor = letter ? (gradeColors[letter as keyof typeof gradeColors] ?? colors.textSecondary) : colors.textSecondary
+          return (
+            <CourseRow
+              key={course.id}
+              course={course}
+              avg={avg}
+              letter={letter}
+              ringColor={ringColor}
+            />
+          )
+        })}
 
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderCopy}>
-            <Text allowFontScaling={false} style={styles.sectionEyebrow}>
-              ACADEMIC TOOLS
-            </Text>
-            <Text allowFontScaling={false} style={styles.sectionTitle}>
-              Everything you need
-            </Text>
-            <Text allowFontScaling={false} style={styles.sectionSubtitle}>
-              Open your gradebook, reports, schedule and planning tools.
-            </Text>
-          </View>
+        {/* ── Academic tools - iOS Settings-style grouped list ── */}
+        <Text style={styles.toolsSectionLabel}>Academic tools</Text>
 
-          <View style={styles.toolsCountBadge}>
-            <Feather name="grid" size={14} color="#A990FF" />
-            <Text allowFontScaling={false} style={styles.toolsCountText}>
-              {ACADEMIC_TOOLS.length}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.toolsGrid}>
-          {ACADEMIC_TOOL_ROWS.map((row, rowIndex) => (
-            <View key={`academic-tool-row-${rowIndex}`} style={styles.toolRow}>
-              {row.map((item) => (
-                <ActionTile
-                  key={item.route}
-                  title={item.label}
-                  subtitle={item.description}
-                  icon={item.icon}
-                  color={item.color}
-                  iconBackground={item.iconBackground}
-                  onPress={() => navigation.navigate(item.route)}
-                  accessibilityHint={`Open ${item.description.toLowerCase()}`}
-                  testID={`grades-tile-${item.route}`}
-                />
-              ))}
-            </View>
+        <View style={styles.toolsCard}>
+          {ACADEMIC_TOOLS.map((tool, index) => (
+            <React.Fragment key={tool.route}>
+              <Pressable
+                testID={`grades-tile-${tool.route}`}
+                accessibilityRole="button"
+                onPress={() => navigation.navigate(tool.route)}
+                style={({ pressed }) => [styles.toolRow, pressed && styles.toolRowPressed]}
+              >
+                {/* 32pt coloured icon tile */}
+                <View style={[styles.toolIcon, { backgroundColor: tool.iconBackground }]}>
+                  <Feather name={tool.icon} size={16} color={tool.color} />
+                </View>
+                {/* Title + subtitle */}
+                <View style={styles.toolCopy}>
+                  <Text style={styles.toolLabel} numberOfLines={1}>{tool.label}</Text>
+                  {tool.description ? (
+                    <Text style={styles.toolDescription} numberOfLines={1}>{tool.description}</Text>
+                  ) : null}
+                </View>
+                <Feather name="chevron-right" size={16} color={colors.textMuted} />
+              </Pressable>
+              {/* Hairline divider inset past the icon */}
+              {index < ACADEMIC_TOOLS.length - 1 ? (
+                <View style={styles.toolDivider} />
+              ) : null}
+            </React.Fragment>
           ))}
         </View>
 
@@ -338,112 +457,81 @@ export default function GradesScreen(): React.JSX.Element {
   )
 }
 
+const TOOL_ICON_SIZE = 32
+const TOOL_ROW_HEIGHT = 52
+const DIVIDER_LEFT_INSET = spacing.screenPadding + TOOL_ICON_SIZE + 12 // paddingLeft + iconWidth + gap
+
 const styles = StyleSheet.create({
-  courseCard: { gap: 8 },
-  courseName: { color: '#F7F9FF', fontFamily: fonts.semiBold, fontSize: 15 },
   scrollContent: {
-    paddingTop: 10,
-    paddingBottom: 118,
-    gap: 16,
+    paddingBottom: SCROLL_BOTTOM_CLEARANCE,
+    gap: 14,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 16,
+  cacheLabel: {
+    ...typography.bodySm,
+    color: colors.textMuted,
+    marginTop: -8,
   },
-  headerCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  eyebrow: {
-    color: '#7896C2',
+  toolsSectionLabel: {
+    fontSize: 13,
     fontFamily: fonts.semiBold,
-    fontSize: 10,
     fontWeight: '600',
-    letterSpacing: 1.35,
-  },
-  pageTitle: {
-    color: '#F7F9FF',
-    fontFamily: fonts.bold,
-    fontSize: 31,
-    lineHeight: 36,
-    fontWeight: '700',
-    letterSpacing: -0.8,
-    marginTop: 2,
-  },
-  pageSubtitle: {
-    color: '#77859A',
-    fontFamily: fonts.regular,
-    fontSize: 12,
+    color: colors.textSecondary,
     lineHeight: 18,
-    marginTop: 3,
-    maxWidth: 270,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
     marginTop: 4,
+    marginBottom: -6,
   },
-  sectionHeaderCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  sectionEyebrow: {
-    color: '#6E91C0',
-    fontFamily: fonts.semiBold,
-    fontSize: 9.5,
-    fontWeight: '600',
-    letterSpacing: 1.25,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontFamily: fonts.bold,
-    fontSize: 19,
-    lineHeight: 24,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  sectionSubtitle: {
-    color: '#708098',
-    fontFamily: fonts.regular,
-    fontSize: 10.5,
-    lineHeight: 15,
-    marginTop: 2,
-    maxWidth: 265,
-  },
-  toolsCountBadge: {
-    minWidth: 48,
-    height: 31,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    borderRadius: 11,
-    backgroundColor: '#121729',
-    borderWidth: 1,
-    borderColor: 'rgba(151,119,255,0.24)',
-  },
-  toolsCountText: {
-    color: '#C5B5FF',
-    fontFamily: fonts.bold,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  toolsGrid: {
+  toolsCard: {
     width: '100%',
-    alignSelf: 'stretch',
-    gap: 11,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface1,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   toolRow: {
-    width: '100%',
-    alignSelf: 'stretch',
     flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 11,
+    alignItems: 'center',
+    minHeight: TOOL_ROW_HEIGHT,
+    paddingHorizontal: spacing.screenPadding,
+    paddingVertical: 10,
+    gap: 12,
+  },
+  toolRowPressed: {
+    backgroundColor: colors.surface2,
+  },
+  toolIcon: {
+    width: TOOL_ICON_SIZE,
+    height: TOOL_ICON_SIZE,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  toolCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  toolLabel: {
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    color: colors.text,
+    lineHeight: 20,
+  },
+  toolDescription: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  },
+  toolDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.055)',
+    marginLeft: DIVIDER_LEFT_INSET,
   },
   inlineErrorCard: {
     flexDirection: 'row',

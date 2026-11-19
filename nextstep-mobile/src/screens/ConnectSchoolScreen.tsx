@@ -133,7 +133,7 @@ export default function ConnectSchoolScreen(): React.JSX.Element {
         {!useCustomUrl ? (
           <>
             <Input
-              label="Search your district"
+              label="Your district"
               value={search}
               onChangeText={(text) => {
                 setSearch(text)
@@ -182,14 +182,14 @@ export default function ConnectSchoolScreen(): React.JSX.Element {
       <View style={styles.securityNote}>
         <Feather name="shield" size={14} color={colors.success} />
         <Text style={styles.securityNoteText}>
-          Your school login is sent directly to your portal to connect your account — it is not shared anywhere
+          Your school login goes straight to your portal to connect your account. It is not shared anywhere
           else.
         </Text>
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Button label="Connect securely" onPress={() => void handleSubmit()} loading={submitting} />
+      <Button label="Connect" onPress={() => void handleSubmit()} loading={submitting} />
 
       <View style={styles.secondary}>
         {canvasOpen ? (

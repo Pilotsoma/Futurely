@@ -1,5 +1,6 @@
 import {
   formatAssignmentDueTime,
+  formatPriorityLabel,
   getAssignmentDestination,
   getDueTodayAssignments,
 } from '../dueToday'
@@ -69,8 +70,24 @@ describe('due today assignments', () => {
 
   it('uses the explicit due time and validates destinations', () => {
     expect(formatAssignmentDueTime(assignment())).toBe('3:30 PM')
+    expect(formatAssignmentDueTime(assignment({ dueTime: '15:30' }))).toBe('3:30 PM')
     expect(getAssignmentDestination(42)).toEqual({ assignmentId: 42 })
     expect(getAssignmentDestination(0)).toBeNull()
     expect(getAssignmentDestination(Number.NaN)).toBeNull()
+  })
+})
+
+describe('priority label', () => {
+  it('shows stored upper-case priorities in sentence case', () => {
+    expect(formatPriorityLabel('HIGH')).toBe('High')
+    expect(formatPriorityLabel('MEDIUM')).toBe('Medium')
+    expect(formatPriorityLabel('low')).toBe('Low')
+    expect(formatPriorityLabel('  hIGH ')).toBe('High')
+  })
+
+  it('returns null when there is no priority to show', () => {
+    expect(formatPriorityLabel(undefined)).toBeNull()
+    expect(formatPriorityLabel(null)).toBeNull()
+    expect(formatPriorityLabel('   ')).toBeNull()
   })
 })

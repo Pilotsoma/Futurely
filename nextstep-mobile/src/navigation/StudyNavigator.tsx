@@ -7,7 +7,7 @@ import SetEditScreen from '../screens/study/SetEditScreen'
 import FlashcardsScreen from '../screens/study/FlashcardsScreen'
 import PlayHubScreen from '../screens/study/PlayHubScreen'
 import GameScreen from '../screens/study/GameScreen'
-import { colors, fonts } from '../theme/tokens'
+import { renderStackHeader } from '../components/ui/ScreenHeader'
 
 export type StudyStackParamList = {
   StudyHome: undefined
@@ -26,10 +26,9 @@ export default function StudyNavigator(): React.JSX.Element {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.text,
-        headerTitleStyle: { fontFamily: fonts.semiBold, fontWeight: '600' },
-        headerShadowVisible: false,
+        // One JS header on every pushed screen: same look on iOS, Android and web,
+        // and a back chevron even when the screen was opened by deep link.
+        header: (props) => renderStackHeader(props, 'StudyHome'),
       }}
     >
       <Stack.Screen name="StudyHome" component={StudyHomeScreen} options={{ headerShown: false }} />

@@ -30,7 +30,7 @@ export class ApiRequestError extends Error {
 
 export class SessionExpiredError extends Error {
   constructor() {
-    super('Session expired — please sign in again.')
+    super('Your session expired. Sign in again.')
     this.name = 'SessionExpiredError'
   }
 }

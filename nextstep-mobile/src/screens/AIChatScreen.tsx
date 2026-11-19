@@ -14,17 +14,24 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native'
+import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native'
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import { Feather } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { useAuth } from '../context/AuthContext'
 import { sendChatMessage } from '../api/aiApi'
 import * as studentsApi from '../api/studentsApi'
-import { ActionTile } from '../components/ui/ActionTile'
 import { createActionLock } from '../utils/actionLock'
 import type { StudentMe } from '../types/student'
 import type { MainTabParamList } from '../navigation/MainNavigator'
+import { FLOATING_TAB_CLEARANCE } from '../components/ui/Screen'
+import { ScreenHeader } from '../components/ui/ScreenHeader'
+import {
+  colors as themeColors,
+  fonts as themeFonts,
+  spacing as themeSpacing,
+} from '../theme/tokens'
 
 
 interface ChatMessage {
@@ -68,8 +75,8 @@ const PROMPTS: PromptOption[] = [
     background: 'rgba(96,165,250,0.13)',
   },
   {
-    label: 'Study smarter',
-    subtitle: 'Create a better study routine',
+    label: 'Study plan',
+    subtitle: 'Prepare for an upcoming test',
     prompt: 'Help me create a focused study plan for an upcoming test.',
     icon: 'book-open',
     color: '#A78BFA',
@@ -110,13 +117,10 @@ function formatChatDate(timestamp: number): string {
   })
 }
 
-const PROMPT_ROWS: PromptOption[][] = Array.from(
-  { length: Math.ceil(PROMPTS.length / 2) },
-  (_, index) => PROMPTS.slice(index * 2, index * 2 + 2),
-)
 
 export default function AIChatScreen(): React.JSX.Element {
   const route = useRoute<RouteProp<MainTabParamList, 'AIChat'>>()
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>()
   const { user } = useAuth()
   const [studentData, setStudentData] = useState<StudentMe | null>(null)
   const [input, setInput] = useState('')
@@ -275,19 +279,42 @@ export default function AIChatScreen(): React.JSX.Element {
   }
 
 
+  // AI Chat is a hidden tab route: back returns to the tab the user came from
+  // (tab history), or Today when it was opened by a direct link.
+  function goBackToPreviousTab(): void {
+    if (navigation.canGoBack()) navigation.goBack()
+    else navigation.navigate('Dashboard')
+  }
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    // The stack-style ScreenHeader applies the top inset itself.
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <KeyboardAvoidingView
         role="main"
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        <Header
-          showChat={showChat}
-          historyCount={history.length}
-          onBack={() => setShowChat(false)}
-          onOpenHistory={() => setHistoryVisible(true)}
+        <ScreenHeader
+          variant="stack"
+          title="Ask"
+          padded
+          onBack={showChat ? () => setShowChat(false) : goBackToPreviousTab}
+          right={
+            <Pressable
+              onPress={() => setHistoryVisible(true)}
+              style={({ pressed }) => [styles.historyButton, pressed && styles.pressed]}
+              accessibilityRole="button"
+            >
+              <Feather name="clock" size={16} color="#C9BBFF" />
+              <Text style={styles.historyButtonText}>Chats</Text>
+              {history.length > 0 ? (
+                <View style={styles.historyCount}>
+                  <Text style={styles.historyCountText}>{Math.min(history.length, 99)}</Text>
+                </View>
+              ) : null}
+            </Pressable>
+          }
         />
 
         <PastChatsModal
@@ -333,50 +360,39 @@ export default function AIChatScreen(): React.JSX.Element {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.heroCard}>
-              <View style={styles.heroTopRow}>
-                <View style={styles.heroBadge}>
-                  <Feather name="zap" size={15} color="#D9CFFF" />
-                  <Text style={styles.heroBadgeText}>YOUR AI COPILOT</Text>
-                </View>
-                <View style={styles.secureBadge}>
-                  <Feather name="shield" size={13} color="#78E9CE" />
-                  <Text style={styles.secureBadgeText}>Student-aware</Text>
-                </View>
-              </View>
-
               <Text style={styles.heroTitle}>Hi {firstName}, what can we work on?</Text>
               <Text style={styles.heroDescription}>
-                Get personalized support for school, planning, grades, and your path to college.
+                Ask about grades, homework or colleges.
               </Text>
-
             </View>
 
             <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionEyebrow}>QUICK START</Text>
-                <Text style={styles.sectionTitle}>What do you need help with?</Text>
-              </View>
-              <Feather name="star" size={17} color="#8F78FF" />
+              <Text style={styles.sectionTitle}>Try one</Text>
             </View>
 
-            <View style={styles.promptGrid}>
-              {PROMPT_ROWS.map((row, rowIndex) => (
-                <View key={`prompt-row-${rowIndex}`} style={styles.promptRow}>
-                  {row.map((prompt) => (
-                    <ActionTile
-                      key={prompt.label}
-                      title={prompt.label}
-                      subtitle={prompt.subtitle}
-                      icon={prompt.icon}
-                      color={prompt.color}
-                      iconBackground={prompt.background}
-                      disabled={isSending}
-                      onPress={() => void handleSend(prompt.prompt)}
-                      accessibilityHint={`Start a chat: ${prompt.subtitle}`}
-                      testID={`ai-prompt-${prompt.label.toLowerCase().replace(/\s+/g, '-')}`}
-                    />
-                  ))}
-                </View>
+            <View style={styles.promptChips}>
+              {PROMPTS.map((prompt) => (
+                <Pressable
+                  key={prompt.label}
+                  testID={`ai-prompt-${prompt.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  style={({ pressed }) => [
+                    styles.promptChip,
+                    pressed && !isSending && styles.promptChipPressed,
+                    isSending && styles.promptChipDisabled,
+                  ]}
+                  onPress={() => void handleSend(prompt.prompt)}
+                  disabled={isSending}
+                  accessibilityRole="button"
+                >
+                  <View style={[styles.promptChipIcon, { backgroundColor: prompt.background }]}>
+                    <Feather name={prompt.icon} size={17} color={prompt.color} />
+                  </View>
+                  <View style={styles.promptChipCopy}>
+                    <Text style={styles.promptChipLabel} numberOfLines={1}>{prompt.label}</Text>
+                    <Text style={styles.promptChipSub} numberOfLines={1}>{prompt.subtitle}</Text>
+                  </View>
+                  <Feather name="chevron-right" size={16} color="#7186A5" />
+                </Pressable>
               ))}
             </View>
 
@@ -392,64 +408,6 @@ export default function AIChatScreen(): React.JSX.Element {
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
-  )
-}
-
-interface HeaderProps {
-  showChat: boolean
-  historyCount: number
-  onBack: () => void
-  onOpenHistory: () => void
-}
-
-function Header({
-  showChat,
-  historyCount,
-  onBack,
-  onOpenHistory,
-}: HeaderProps): React.JSX.Element {
-  return (
-    <View style={styles.header}>
-      <View style={styles.headerLeft}>
-        {showChat ? (
-          <Pressable
-            onPress={onBack}
-            style={({ pressed }) => [styles.headerIconButton, pressed && styles.pressed]}
-            accessibilityRole="button"
-            accessibilityLabel="Back to AI home"
-          >
-            <Feather name="arrow-left" size={20} color="#E8ECF7" />
-          </Pressable>
-        ) : (
-          <View style={styles.logoWrap}>
-            <Image source={APP_LOGO} style={styles.headerLogo} resizeMode="contain" />
-          </View>
-        )}
-
-        <View style={styles.headerCopy}>
-          <Text style={styles.headerTitle}>myFuturely AI</Text>
-          <View style={styles.onlineRow}>
-            <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>Online and ready</Text>
-          </View>
-        </View>
-      </View>
-
-      <Pressable
-        onPress={onOpenHistory}
-        style={({ pressed }) => [styles.historyButton, pressed && styles.pressed]}
-        accessibilityRole="button"
-        accessibilityLabel="View past chats"
-      >
-        <Feather name="clock" size={16} color="#C9BBFF" />
-        <Text style={styles.historyButtonText}>Chats</Text>
-        {historyCount > 0 ? (
-          <View style={styles.historyCount}>
-            <Text style={styles.historyCountText}>{Math.min(historyCount, 99)}</Text>
-          </View>
-        ) : null}
-      </Pressable>
-    </View>
   )
 }
 
@@ -482,7 +440,7 @@ function PastChatsModal({
         <View style={styles.historySheet}>
           <View style={styles.historySheetHeader}>
             <View>
-              <Text style={styles.historyEyebrow}>MYFUTURELY AI</Text>
+              <Text style={styles.historyEyebrow}>Ask</Text>
               <Text style={styles.historyTitle}>Past chats</Text>
               <Text style={styles.historySubtitle}>
                 Continue a previous conversation.
@@ -527,7 +485,6 @@ function PastChatsModal({
                     pressed && styles.historyCardPressed,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Open chat: ${item.title}`}
                 >
                   <View style={styles.historyCardIcon}>
                     <Feather name="message-circle" size={17} color="#B9A7FF" />
@@ -555,7 +512,6 @@ function PastChatsModal({
               pressed && styles.historyNewButtonPressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Start a new chat"
           >
             <Feather name="plus" size={17} color="#FFFFFF" />
             <Text style={styles.historyNewButtonText}>Start new chat</Text>
@@ -585,14 +541,14 @@ function Composer({ value, onChangeText, onSend, canSend, isSending }: ComposerP
           value={value}
           onChangeText={onChangeText}
           style={styles.input}
-          placeholder="Ask myFuturely AI anything..."
+          placeholder="Ask a question"
           placeholderTextColor="#6F809A"
           editable={!isSending}
           multiline
           maxLength={1200}
           returnKeyType="send"
           blurOnSubmit={false}
-          accessibilityLabel="Ask myFuturely AI"
+          accessibilityLabel="Ask a question"
         />
         <Pressable
           onPress={onSend}
@@ -674,75 +630,8 @@ const styles = StyleSheet.create({
     opacity: 0.84,
     transform: [{ scale: 0.985 }],
   },
-  header: {
-    minHeight: 72,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(113,132,165,0.14)',
-    backgroundColor: '#070A12',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-  },
-  logoWrap: {
-    width: 45,
-    height: 45,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0E1421',
-    borderWidth: 1,
-    borderColor: 'rgba(112,152,222,0.34)',
-    overflow: 'hidden',
-  },
-  headerLogo: {
-    width: 37,
-    height: 37,
-  },
-  headerIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#26344C',
-  },
-  headerCopy: {
-    gap: 3,
-  },
-  headerTitle: {
-    color: '#F5F7FF',
-    fontSize: 19,
-    lineHeight: 23,
-    fontWeight: '800',
-    letterSpacing: -0.35,
-  },
-  onlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#27D6A2',
-  },
-  onlineText: {
-    color: '#77DDBF',
-    fontSize: 10.5,
-    fontWeight: '600',
-  },
   historyButton: {
-    minHeight: 39,
+    minHeight: 44,
     paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
@@ -755,7 +644,7 @@ const styles = StyleSheet.create({
   },
   historyButtonText: {
     color: '#D4C9FF',
-    fontSize: 10.5,
+    fontSize: 12,
     fontWeight: '800',
   },
   historyCount: {
@@ -776,9 +665,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   homeContent: {
-    paddingHorizontal: 15,
+    paddingHorizontal: themeSpacing.screenPadding,
     paddingTop: 15,
-    paddingBottom: 20,
+    paddingBottom: FLOATING_TAB_CLEARANCE,
     gap: 17,
   },
   heroCard: {
@@ -788,40 +677,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(141,102,255,0.42)',
     overflow: 'hidden',
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 16,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  heroBadgeText: {
-    color: '#BFB0F4',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.15,
-  },
-  secureBadge: {
-    minHeight: 27,
-    paddingHorizontal: 9,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderRadius: 10,
-    backgroundColor: 'rgba(20,49,55,0.68)',
-    borderWidth: 1,
-    borderColor: 'rgba(57,207,170,0.25)',
-  },
-  secureBadgeText: {
-    color: '#81E4C8',
-    fontSize: 9.5,
-    fontWeight: '700',
   },
   heroTitle: {
     maxWidth: 310,
@@ -839,36 +694,62 @@ const styles = StyleSheet.create({
     maxWidth: 315,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  sectionEyebrow: {
-    color: '#6888B5',
-    fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 1.15,
+    gap: 3,
   },
   sectionTitle: {
-    marginTop: 3,
-    color: '#F4F6FD',
-    fontSize: 16.5,
-    lineHeight: 21,
-    fontWeight: '800',
-    letterSpacing: -0.25,
+    color: themeColors.text,
+    fontSize: 17,
+    lineHeight: 22,
+    fontFamily: themeFonts.jakartaBold,
+    fontWeight: '700' as const,
+    letterSpacing: -0.3,
   },
-  promptGrid: {
-    width: '100%',
-    alignSelf: 'stretch',
-    gap: 11,
+  promptChips: {
+    gap: 10,
   },
-  promptRow: {
-    width: '100%',
-    alignSelf: 'stretch',
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 11,
+  promptChip: {
+    minHeight: 60,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
+    backgroundColor: themeColors.surface,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+  },
+  promptChipPressed: {
+    opacity: 0.84,
+    transform: [{ scale: 0.985 }],
+  },
+  promptChipDisabled: {
+    opacity: 0.5,
+  },
+  promptChipIcon: {
+    width: 40,
+    height: 40,
+    flexShrink: 0,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderRadius: 12,
+  },
+  promptChipCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  promptChipLabel: {
+    color: themeColors.text,
+    fontFamily: themeFonts.semiBold,
+    fontSize: 13.5,
+    fontWeight: '600' as const,
+  },
+  promptChipSub: {
+    color: themeColors.textSecondary,
+    fontFamily: themeFonts.regular,
+    fontSize: 11,
+    lineHeight: 14,
   },
   modalBackdrop: {
     flex: 1,
@@ -896,9 +777,8 @@ const styles = StyleSheet.create({
   },
   historyEyebrow: {
     color: '#7E93B7',
-    fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 1.15,
+    fontSize: 10,
+    fontWeight: '700',
   },
   historyTitle: {
     marginTop: 3,
@@ -915,8 +795,8 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
   historyCloseButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
@@ -1101,9 +981,9 @@ const styles = StyleSheet.create({
   userBubble: {
     borderRadius: 17,
     borderBottomRightRadius: 5,
-    backgroundColor: '#6840E8',
+    backgroundColor: themeColors.purple,
     borderWidth: 1,
-    borderColor: 'rgba(209,196,255,0.26)',
+    borderColor: 'rgba(124,58,237,0.5)',
   },
   messageAuthor: {
     marginBottom: 4,
@@ -1112,9 +992,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   messageText: {
-    color: '#E8EDF8',
-    fontSize: 12.5,
-    lineHeight: 18,
+    color: themeColors.text,
+    fontSize: 15,
+    lineHeight: 23,
+    fontFamily: themeFonts.regular,
   },
   userMessageText: {
     color: '#FFFFFF',
@@ -1134,10 +1015,12 @@ const styles = StyleSheet.create({
     height: 4,
   },
   composerArea: {
-    paddingHorizontal: 10,
+    paddingHorizontal: themeSpacing.screenPadding,
     paddingTop: 8,
-    paddingBottom: 6,
-    backgroundColor: '#070A12',
+    // Extends below the composer content to fill the space covered by the
+    // floating tab bar (FLOATING_TAB_CLEARANCE minus the paddingTop).
+    paddingBottom: FLOATING_TAB_CLEARANCE,
+    backgroundColor: themeColors.bg,
     borderTopWidth: 1,
     borderTopColor: 'rgba(98,120,156,0.16)',
   },
@@ -1154,8 +1037,8 @@ const styles = StyleSheet.create({
     borderColor: '#2A4368',
   },
   composerIcon: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1164,24 +1047,24 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: 38,
+    minHeight: 44,
     maxHeight: 88,
     paddingHorizontal: 3,
-    paddingTop: Platform.OS === 'ios' ? 10 : 8,
-    paddingBottom: Platform.OS === 'ios' ? 9 : 7,
+    paddingTop: Platform.OS === 'ios' ? 13 : 11,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 10,
     color: '#EEF2FC',
     fontSize: 12.5,
     lineHeight: 18,
     textAlignVertical: 'center',
   },
   sendButton: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: '#7048FF',
+    backgroundColor: themeColors.primary,
   },
   sendButtonDisabled: {
     backgroundColor: '#26334A',
@@ -1194,7 +1077,8 @@ const styles = StyleSheet.create({
   composerHint: {
     marginTop: 5,
     color: '#8798B0',
-    fontSize: 8.5,
+    fontSize: 11,
+    lineHeight: 15,
     textAlign: 'center',
   },
 })

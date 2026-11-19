@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   summaryCol: { flex: 1, gap: spacing.xs },
   caption: { ...typography.caption, color: colors.textSecondary },
   value: { ...typography.body, color: colors.text },
-  projected: { color: colors.primary },
+  projected: { color: colors.violetText },
   sectionLabel: { ...typography.label, color: colors.textSecondary, marginTop: spacing.sm },
   assignment: {
     flexDirection: 'row',

@@ -4,32 +4,47 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Feather } from '@expo/vector-icons'
-import { Screen } from '../../components/ui/Screen'
+import { Screen, SCROLL_BOTTOM_CLEARANCE } from '../../components/ui/Screen'
+import { ScreenHeader } from '../../components/ui/ScreenHeader'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { ErrorRetryBlock } from '../../components/ui/ErrorRetryBlock'
 import { errorMessage } from '../../components/study/util'
 import { listSets, type QuestionSet } from '../../api/setsApi'
 import type { StudyStackParamList } from '../../navigation/StudyNavigator'
-import { colors, spacing, typography } from '../../theme/tokens'
+import { colors, radii, spacing, typography } from '../../theme/tokens'
+
+const HUB_ROW_ICON_COLORS: Record<string, { color: string; bg: string }> = {
+  layers: { color: colors.primary, bg: colors.primaryDim },
+  'play-circle': { color: '#10B981', bg: 'rgba(16,185,129,0.14)' },
+  users: { color: colors.accent2, bg: 'rgba(0,229,255,0.12)' },
+}
 
 interface HubRowProps {
   icon: React.ComponentProps<typeof Feather>['name']
   title: string
-  subtitle: string
+  subtitle?: string
   onPress: () => void
 }
 
 function HubRow({ icon, title, subtitle, onPress }: HubRowProps): React.JSX.Element {
+  const palette = HUB_ROW_ICON_COLORS[icon as string] ?? { color: colors.textSecondary, bg: colors.surface2 }
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [pressed && { opacity: 0.84, transform: [{ scale: 0.985 }] }]}
+    >
       <Card style={styles.row}>
-        <Feather name={icon} size={20} color={colors.text} />
+        <View style={[styles.rowIconTile, { backgroundColor: palette.bg }]}>
+          <Feather name={icon} size={19} color={palette.color} />
+        </View>
         <View style={styles.rowText}>
           <Text style={styles.rowTitle}>{title}</Text>
-          <Text style={styles.rowSub}>{subtitle}</Text>
+          {subtitle ? <Text style={styles.rowSub}>{subtitle}</Text> : null}
         </View>
-        <Feather name="chevron-right" size={20} color={colors.textMuted} />
+        <Feather name="chevron-right" size={18} color={colors.textMuted} />
       </Card>
     </Pressable>
   )
@@ -57,14 +72,18 @@ export default function StudyHomeScreen(): React.JSX.Element {
     }, [load]),
   )
 
+  const openNewSet = useCallback(() => navigation.navigate('SetEdit', {}), [navigation])
+  // The empty state carries its own "New set" action, so the header button
+  // only shows once there is a list to add to.
+  const showHeaderNewSet = !error && sets !== null && sets.length > 0
+
   return (
     <Screen edges={['top', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Study</Text>
-
+      <ScreenHeader variant="root" title="Study" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.section}>My study sets</Text>
-          <Button label="New set" onPress={() => navigation.navigate('SetEdit', {})} style={styles.newBtn} />
+          <Text style={styles.section} accessibilityRole="header">My study sets</Text>
+          {showHeaderNewSet ? <Button label="New set" onPress={openNewSet} style={styles.newBtn} /> : null}
         </View>
         {error ? (
           <ErrorRetryBlock
@@ -78,7 +97,13 @@ export default function StudyHomeScreen(): React.JSX.Element {
         ) : sets === null ? (
           <ActivityIndicator color={colors.primary} />
         ) : sets.length === 0 ? (
-          <Text style={styles.rowSub}>No sets yet. Tap &quot;New set&quot; to make your first one.</Text>
+          <EmptyState
+            icon="layers"
+            title="No study sets yet"
+            message="Create a set to practise with flashcards or host a game."
+            ctaLabel="New set"
+            onPressCta={openNewSet}
+          />
         ) : (
           sets.map((s) => (
             <HubRow
@@ -91,7 +116,7 @@ export default function StudyHomeScreen(): React.JSX.Element {
           ))
         )}
 
-        <Text style={styles.section}>Play</Text>
+        <Text style={[styles.section, styles.sectionSpaced]} accessibilityRole="header">Play</Text>
         <HubRow
           icon="play-circle"
           title="Play a game"
@@ -99,11 +124,10 @@ export default function StudyHomeScreen(): React.JSX.Element {
           onPress={() => navigation.navigate('PlayHub')}
         />
 
-        <Text style={styles.section}>Community</Text>
+        <Text style={[styles.section, styles.sectionSpaced]} accessibilityRole="header">Community</Text>
         <HubRow
           icon="users"
           title="Study Feed"
-          subtitle="See what other students are sharing"
           onPress={() => navigation.navigate('StudyFeed')}
         />
       </ScrollView>
@@ -112,12 +136,16 @@ export default function StudyHomeScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.ms, paddingBottom: spacing.massive },
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm },
-  section: { ...typography.h2, color: colors.text, marginTop: spacing.sm },
-  newBtn: { height: 40, minHeight: 40, paddingHorizontal: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms },
+  content: { gap: spacing.ms, paddingBottom: SCROLL_BOTTOM_CLEARANCE },
+  // minHeight keeps the row the same height whether or not the button shows.
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
+  section: { ...typography.sectionLabel, color: colors.textSecondary },
+  sectionSpaced: { marginTop: spacing.sm },
+  // Button applies its style to both layers, so no horizontal padding here (it would double and
+  // inset the visible pill from the right gutter); the Button's own 20pt padding is kept.
+  newBtn: { height: 44, minHeight: 44, borderRadius: 22 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms, paddingVertical: 4 },
+  rowIconTile: { width: 42, height: 42, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1 },
   rowTitle: { ...typography.h3, color: colors.text },
   rowSub: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },

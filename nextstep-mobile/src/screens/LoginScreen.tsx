@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg'
 import { Feather } from '@expo/vector-icons'
 
 import { useAuth } from '../context/AuthContext'
@@ -18,6 +19,7 @@ import * as authApi from '../api/authApi'
 import { ApiRequestError } from '../api/client'
 import { GoogleLogo } from '../components/ui/GoogleLogo'
 import {
+  colors,
   elevation,
   fonts,
   spacing,
@@ -516,12 +518,26 @@ export default function LoginScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brandHeader}>
-          <View style={styles.logoShell}>
-            <Image
-              source={APP_LOGO}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+          <View style={styles.logoContainer}>
+            <View pointerEvents="none" style={styles.logoGlowWrap}>
+              <Svg width={110} height={110}>
+                <Defs>
+                  <RadialGradient id="logoGlow" cx="50%" cy="50%" r="50%">
+                    <Stop offset="0%" stopColor={colors.primary} stopOpacity={0.38} />
+                    <Stop offset="55%" stopColor={colors.primary} stopOpacity={0.1} />
+                    <Stop offset="100%" stopColor={colors.primary} stopOpacity={0} />
+                  </RadialGradient>
+                </Defs>
+                <Rect x={0} y={0} width={110} height={110} fill="url(#logoGlow)" />
+              </Svg>
+            </View>
+            <View style={styles.logoShell}>
+              <Image
+                source={APP_LOGO}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
           </View>
 
           <View style={styles.brandCopy}>
@@ -1104,16 +1120,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  logoShell: {
+  logoContainer: {
     width: 48,
     height: 48,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logoGlowWrap: {
+    position: 'absolute',
+    top: -31,
+    left: -31,
+    width: 110,
+    height: 110,
+    pointerEvents: 'none' as const,
+  },
+  logoShell: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 15,
-    backgroundColor: '#071528',
+    backgroundColor: `${colors.primary}18`,
     borderWidth: 1,
-    borderColor: '#1A4D6B',
+    borderColor: `${colors.primary}45`,
     ...elevation.sm,
   },
   logo: {
@@ -1176,7 +1206,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
   },
   heroTitleAccent: {
-    color: '#A78BFA',
+    color: colors.accent2,
   },
   heroSubtitle: {
     maxWidth: 345,
@@ -1237,9 +1267,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   modeButtonActive: {
-    backgroundColor: '#21184A',
+    backgroundColor: `${colors.primary}18`,
     borderWidth: 1,
-    borderColor: 'rgba(167,139,250,0.35)',
+    borderColor: `${colors.primary}50`,
   },
   modeButtonText: {
     color: '#71819A',
@@ -1248,7 +1278,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modeButtonTextActive: {
-    color: '#D1C5FF',
+    color: colors.text,
   },
 
   formHeader: {
@@ -1316,8 +1346,8 @@ const styles = StyleSheet.create({
     borderColor: '#2A3C56',
   },
   stepCircleActive: {
-    backgroundColor: '#6741DE',
-    borderColor: '#8D6BFF',
+    backgroundColor: colors.primary,
+    borderColor: colors.primaryDark,
   },
   stepCircleComplete: {
     backgroundColor: '#168765',
@@ -1339,7 +1369,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   stepLabelActive: {
-    color: '#C7B9FF',
+    color: colors.accentLight,
   },
   stepLine: {
     flex: 1,
@@ -1420,8 +1450,8 @@ const styles = StyleSheet.create({
     borderColor: '#263954',
   },
   inputShellFocused: {
-    borderColor: '#7555E8',
-    backgroundColor: '#0A1120',
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}0A`,
   },
   inputIcon: {
     width: 43,
@@ -1446,7 +1476,7 @@ const styles = StyleSheet.create({
   },
 
   actionButton: {
-    minHeight: 47,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1456,8 +1486,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   primaryButton: {
-    backgroundColor: '#7048F4',
-    borderColor: '#8565FF',
+    backgroundColor: colors.primary,
+    borderColor: colors.primaryDark,
   },
   secondaryButton: {
     backgroundColor: '#151F31',
@@ -1643,8 +1673,8 @@ const styles = StyleSheet.create({
     borderColor: '#3A4C65',
   },
   checkboxBoxChecked: {
-    backgroundColor: '#7048F4',
-    borderColor: '#8D71FF',
+    backgroundColor: colors.primary,
+    borderColor: colors.primaryDark,
   },
   checkboxCopy: {
     flex: 1,

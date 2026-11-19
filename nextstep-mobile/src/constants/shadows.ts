@@ -13,7 +13,7 @@ import type { ViewStyle } from 'react-native'
  * (i.e. `colors.background` inside a `colors.surface` container).
  *
  * All values are tuned for the dark base palette:
- *   background: #0D1829   surface: #162235   border: #273D5E
+ *   background: #070C16   surface: #162235   border: #273D5E
  */
 
 export const shadows = {
