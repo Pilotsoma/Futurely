@@ -2,16 +2,17 @@ import React, { useCallback, useState } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { Feather } from '@expo/vector-icons'
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg'
 
 import * as roadmapApi from '../../api/roadmapApi'
-import { ApiRequestError } from '../../api/client'
-import { Card } from '../ui/Card'
 import { ProgressRing } from '../ui/ProgressRing'
 import { LoadingSkeleton } from '../ui/LoadingSkeleton'
 import { ErrorRetryBlock } from '../ui/ErrorRetryBlock'
+import { formatGpa } from '../../features/grades/academicSummary'
+import { toUserMessage } from '../../utils/errorMessage'
 import type { Roadmap } from '../../types/roadmap'
-import { colors, fonts, spacing, typography } from '../../theme/tokens'
-import { FLOATING_TAB_CLEARANCE } from '../ui/tabBarConstants'
+import { colors, fonts, radii, spacing, typography } from '../../theme/tokens'
+import { SCROLL_BOTTOM_CLEARANCE } from '../ui/tabBarConstants'
 
 function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd']
@@ -37,7 +38,7 @@ function useRoadmap(): { data: Roadmap | null; loading: boolean; error: string |
           if (!cancelled) setData(result)
         })
         .catch((err: unknown) => {
-          if (!cancelled) setError(err instanceof ApiRequestError ? err.message : 'Something went wrong.')
+          if (!cancelled) setError(toUserMessage(err, "We couldn't load your roadmap."))
         })
         .finally(() => {
           if (!cancelled) setLoading(false)
@@ -58,6 +59,20 @@ function isOnTrack(percentComplete: number, gradeLevel: number): boolean {
   return percentComplete >= expected
 }
 
+const CATEGORY_COLORS = [
+  colors.primary,
+  colors.accent2,
+  colors.purple,
+  colors.success,
+  colors.warning,
+  colors.accentLight,
+]
+
+/** Shared surface treatment for all section cards - surface1, xxl radius, top-highlight */
+function CardHighlight(): React.JSX.Element {
+  return <View style={styles.cardHighlightBar} pointerEvents="none" />
+}
+
 export function RoadmapPanel(): React.JSX.Element {
   const { data, loading, error, reload } = useRoadmap()
 
@@ -70,319 +85,349 @@ export function RoadmapPanel(): React.JSX.Element {
   }
 
   if (error || !data) {
-    return <ErrorRetryBlock message={error ?? 'Could not load your roadmap.'} onRetry={reload} />
+    return <ErrorRetryBlock message={error ?? "We couldn't load your roadmap."} onRetry={reload} />
   }
 
   const categories = Object.entries(data.creditsByCategory).filter(([, credits]) => credits > 0)
-  const remaining = data.creditsRequired - data.creditsCompleted
+  const remaining = Math.max(0, data.creditsRequired - data.creditsCompleted)
+  // "On track" is a claim about credits: only make it when credit data exists.
+  const hasCreditData = categories.length > 0 || data.creditsCompleted > 0
   const onTrack = isOnTrack(data.percentComplete, data.gradeLevel)
+  const statusColor = onTrack ? colors.success : colors.warning
+  const barTotal = Math.max(1, data.creditsRequired, data.creditsCompleted)
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scroll}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Progress card */}
-      <Card style={styles.progressCard}>
-        <ProgressRing
-          progress={data.percentComplete}
-          size={112}
-          strokeWidth={10}
-          color={colors.accent2}
-          trackColor="rgba(255,255,255,0.08)"
-        >
-          <View style={styles.ringCenter}>
-            <Text style={styles.ringPct}>{data.percentComplete}%</Text>
-            <Text style={styles.ringLabel}>to graduation</Text>
+    <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+      {/* ─── Hero KPI card - surface1, xxl radius, no border, top-highlight ─── */}
+      <View style={styles.heroCard}>
+        <CardHighlight />
+
+        <View style={styles.heroTop}>
+          <View style={styles.heroCopy}>
+            <Text style={styles.cardLabel}>Graduation progress</Text>
+            <View style={styles.heroValueRow}>
+              <Text style={styles.heroValue}>{data.creditsCompleted}</Text>
+              <Text style={styles.heroValueOf}>/{data.creditsRequired}</Text>
+            </View>
+            <Text style={styles.heroCaption}>
+              {remaining > 0 ? `credits earned · ${remaining} to go` : 'All credits earned'}
+            </Text>
+            {hasCreditData ? (
+              <View style={[styles.statusPill, { backgroundColor: `${statusColor}1F` }]}>
+                <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                <Text style={[styles.statusText, { color: statusColor }]}>
+                  {onTrack ? 'On track' : 'Behind pace'}
+                </Text>
+              </View>
+            ) : null}
           </View>
-        </ProgressRing>
 
-        <View style={styles.progressInfo}>
-          <Text style={styles.progressEyebrow}>GRADUATION PROGRESS</Text>
-          <Text style={[styles.progressStatus, onTrack ? styles.statusOnTrack : styles.statusBehind]}>
-            {onTrack ? 'On track' : 'Behind pace'}
-          </Text>
-          <Text style={styles.progressCaption}>
-            {data.creditsCompleted} of {data.creditsRequired} credits complete.{' '}
-            {remaining > 0 ? `${remaining} to go.` : 'Goal reached!'}
-          </Text>
+          {/* Radial glow behind ring + gradient-stroke ProgressRing */}
+          <View style={styles.ringGlowWrap}>
+            <Svg style={StyleSheet.absoluteFill} width={110} height={110} pointerEvents="none">
+              <Defs>
+                <RadialGradient id="heroGlow" cx="55" cy="55" r="55" gradientUnits="userSpaceOnUse">
+                  <Stop offset="0" stopColor={colors.accent2} stopOpacity="0.22" />
+                  <Stop offset="0.5" stopColor={colors.primary} stopOpacity="0.08" />
+                  <Stop offset="1" stopColor={colors.primary} stopOpacity="0" />
+                </RadialGradient>
+              </Defs>
+              <Rect x="0" y="0" width="110" height="110" fill="url(#heroGlow)" />
+            </Svg>
+            <ProgressRing
+              progress={data.percentComplete}
+              size={96}
+              strokeWidth={9}
+              color={colors.accent2}
+              trackColor="rgba(255,255,255,0.07)"
+              gradientColors={[colors.accent2, colors.primary]}
+            >
+              <Text style={styles.ringPct}>{data.percentComplete}%</Text>
+            </ProgressRing>
+          </View>
         </View>
-      </Card>
 
-      {/* GPA tiles */}
-      <View style={styles.gpaRow}>
-        <Card style={styles.gpaCard}>
-          <Text style={styles.gpaLabel}>WEIGHTED GPA</Text>
-          <Text style={styles.gpaValue}>{data.weightedGpa.toFixed(2)}</Text>
-        </Card>
-        <Card style={styles.gpaCard}>
-          <Text style={styles.gpaLabel}>UNWEIGHTED GPA</Text>
-          <Text style={styles.gpaValue}>{data.unweightedGpa.toFixed(2)}</Text>
-        </Card>
+        <View style={styles.hDivider} />
+
+        {/* Three-metric row - unweighted first, same order and precision as Grades.
+            The API can send null for a GPA that has not been calculated yet. */}
+        <View style={styles.metricRow}>
+          <View style={styles.metric}>
+            <Text style={styles.metricValue}>{formatGpa(data.unweightedGpa ?? null)}</Text>
+            <Text style={styles.metricLabel}>Unweighted</Text>
+          </View>
+          <View style={styles.vDivider} />
+          <View style={styles.metric}>
+            <Text style={styles.metricValue}>{formatGpa(data.weightedGpa ?? null)}</Text>
+            <Text style={styles.metricLabel}>Weighted</Text>
+          </View>
+          <View style={styles.vDivider} />
+          <View style={styles.metric}>
+            <Text style={styles.metricValueGrade}>{ordinal(data.gradeLevel)}</Text>
+            <Text style={styles.metricLabel}>Grade</Text>
+          </View>
+        </View>
       </View>
 
-      {/* Credits by category */}
-      <View style={styles.section}>
-        <Text style={styles.sectionEyebrow}>CREDITS BY CATEGORY</Text>
+      {/* ─── Credits by category - surface1, xxl radius, no border ─── */}
+      <View style={styles.sectionCard}>
+        <CardHighlight />
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Credits by category</Text>
+          <Text style={styles.cardMeta}>
+            {data.creditsCompleted} of {data.creditsRequired}
+          </Text>
+        </View>
         {categories.length > 0 ? (
           <>
-            <View style={styles.pillWrap}>
-              {categories.map(([cat, credits]) => (
-                <View key={cat} style={styles.pill}>
-                  <Text style={styles.pillName}>{cat}</Text>
-                  <Text style={styles.pillCredits}> {credits} cr</Text>
+            <View style={styles.stackTrack}>
+              {categories.map(([cat, credits], i) => (
+                <View
+                  key={cat}
+                  style={{
+                    width: `${(credits / barTotal) * 100}%`,
+                    backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+                  }}
+                />
+              ))}
+            </View>
+            <View style={styles.legend}>
+              {categories.map(([cat, credits], i) => (
+                <View key={cat} style={styles.legendItem}>
+                  <View
+                    style={[styles.legendDot, { backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }]}
+                  />
+                  <Text style={styles.legendName} numberOfLines={1}>
+                    {cat}
+                  </Text>
+                  <Text style={styles.legendValue}>{credits}</Text>
                 </View>
               ))}
             </View>
-            <Card style={styles.totalCreditsCard}>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total credits</Text>
-                <Text style={styles.totalValue}>
-                  {data.creditsCompleted} / {data.creditsRequired}
-                </Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View
-                  style={[
-                    styles.barFill,
-                    {
-                      width: `${Math.min(100, (data.creditsCompleted / Math.max(1, data.creditsRequired)) * 100)}%`,
-                    },
-                  ]}
-                />
-              </View>
-            </Card>
           </>
         ) : (
-          <Card style={styles.emptyCard}>
-            <Text style={styles.emptyText}>
-              Connect your school account to see your transcript data here.
-            </Text>
-          </Card>
+          <Text style={styles.emptyText}>
+            Connect your school account to see your transcript data here.
+          </Text>
         )}
       </View>
 
-      {/* 4-Year Timeline */}
-      <View style={styles.section}>
-        <Text style={styles.sectionEyebrow}>4-YEAR TIMELINE</Text>
-        <View style={styles.timeline}>
-          {data.milestones.map((milestone) => {
+      {/* ─── 4-year plan - surface1, xxl radius, no border ─── */}
+      <View style={styles.sectionCard}>
+        <CardHighlight />
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>4-year plan</Text>
+          {data.graduationYear ? <Text style={styles.cardMeta}>Class of {data.graduationYear}</Text> : null}
+        </View>
+        <View>
+          {data.milestones.map((milestone, i) => {
             const isCurrent = milestone.grade === data.gradeLevel && !milestone.done
-
-            const squareBg = milestone.done
-              ? 'rgba(16,185,129,0.16)'
-              : isCurrent
-                ? colors.primary
-                : 'rgba(255,255,255,0.06)'
-
-            const numberColor = milestone.done
-              ? colors.success
-              : isCurrent
-                ? '#FFFFFF'
-                : colors.textSecondary
-
-            const cardBg = isCurrent
-              ? 'rgba(41,121,255,0.10)'
-              : 'rgba(255,255,255,0.03)'
-
-            const cardBorder = isCurrent ? 'rgba(41,121,255,0.40)' : colors.border
-
+            const isLast = i === data.milestones.length - 1
             return (
-              <View
-                key={milestone.grade}
-                style={[styles.milestoneCard, { backgroundColor: cardBg, borderColor: cardBorder }]}
-              >
-                <View style={[styles.milestoneSquare, { backgroundColor: squareBg }]}>
-                  <Text style={[styles.milestoneNum, { color: numberColor }]}>{milestone.grade}</Text>
+              <View key={milestone.grade} style={styles.step}>
+                <View style={styles.rail}>
+                  <View
+                    style={[
+                      styles.node,
+                      milestone.done && styles.nodeDone,
+                      isCurrent && styles.nodeCurrent,
+                    ]}
+                  >
+                    {milestone.done ? (
+                      <Feather name="check" size={14} color="#FFFFFF" />
+                    ) : (
+                      <Text style={[styles.nodeText, isCurrent && styles.nodeTextCurrent]}>
+                        {milestone.grade}
+                      </Text>
+                    )}
+                  </View>
+                  {!isLast ? (
+                    <View style={[styles.connector, milestone.done && styles.connectorDone]} />
+                  ) : null}
                 </View>
 
-                <View style={styles.milestoneBody}>
+                <View style={[styles.stepBody, !isLast && styles.stepBodySpaced]}>
+                  <View style={styles.stepMetaRow}>
+                    {/* Sentence-case 12px muted - no uppercase, cleaner than eyebrow */}
+                    <Text style={styles.stepGrade}>{ordinal(milestone.grade)} grade</Text>
+                    {isCurrent ? (
+                      <View style={styles.nowChip}>
+                        <Text style={styles.nowChipText}>Now</Text>
+                      </View>
+                    ) : null}
+                  </View>
                   <Text
-                    style={[
-                      styles.milestoneLabel,
-                      isCurrent && styles.milestoneLabelCurrent,
-                      !isCurrent && !milestone.done && styles.milestoneLabelFuture,
-                    ]}
+                    style={[styles.stepLabel, !isCurrent && !milestone.done && styles.stepLabelFuture]}
                     numberOfLines={2}
                   >
                     {milestone.label}
                   </Text>
-                  <Text style={styles.milestoneGradeCaption}>
-                    {ordinal(milestone.grade)} grade
-                  </Text>
                 </View>
-
-                {milestone.done ? (
-                  <Feather name="check" size={16} color={colors.success} />
-                ) : isCurrent ? (
-                  <View style={styles.nowChip}>
-                    <Text style={styles.nowChipText}>Now</Text>
-                  </View>
-                ) : null}
-
               </View>
             )
           })}
         </View>
       </View>
+
     </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
-  loadingWrap: { flex: 1, paddingTop: spacing.lg },
+  loadingWrap: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.screenPadding },
   scroll: {
-    gap: spacing.lg,
-    paddingBottom: FLOATING_TAB_CLEARANCE,
+    gap: spacing.sectionGap,          // 24px between all sections
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: spacing.sm,
+    paddingBottom: SCROLL_BOTTOM_CLEARANCE,
   },
 
-  progressCard: {
+  // ── Shared surface treatment (all cards) ──────────────────────────────────
+  // 1px top-edge highlight inside overflow:hidden - simulates a subtle light source
+  cardHighlightBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: colors.cardHighlight,
+  },
+
+  // ── Hero card ─────────────────────────────────────────────────────────────
+  heroCard: {
+    backgroundColor: colors.surface1,
+    borderRadius: radii.xxl,
+    padding: spacing.cardPadding,
+    gap: spacing.md,
+    overflow: 'hidden',
+  },
+
+  cardLabel: {
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.ms },
+  heroCopy: { flex: 1, alignItems: 'flex-start' },
+  heroValueRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 6 },
+  heroValue: { ...typography.numeric, fontSize: 40, lineHeight: 44, color: colors.text },
+  heroValueOf: { ...typography.numeric, fontSize: 20, color: colors.textMuted, marginLeft: 2 },
+  heroCaption: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
+  statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 99,
+  },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 11.5, fontFamily: fonts.jakartaBold, fontWeight: '700' },
+
+  // Ring glow wrapper - 110px so the radial glow visually bleeds outside the 96px ring
+  ringGlowWrap: {
+    width: 110,
+    height: 110,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringPct: { ...typography.numeric, fontSize: 20, color: colors.text },
+
+  hDivider: { height: 1, backgroundColor: colors.borderSubtle },
+
+  // ── Metric row - equal 20px sizes, muted labels ───────────────────────────
+  metricRow: { flexDirection: 'row', alignItems: 'center' },
+  metric: { flex: 1, alignItems: 'center', gap: 2 },
+  // Both GPA values: numericSm (20px), full text color
+  metricValue: { ...typography.numericSm, color: colors.text },
+  // Grade level: same size, slightly muted (less actionable than GPA)
+  metricValueGrade: { ...typography.numericSm, color: colors.textSecondary },
+  metricLabel: { fontSize: 11, fontFamily: fonts.medium, color: colors.textSecondary },
+  vDivider: { width: 1, height: 32, backgroundColor: colors.borderSubtle },
+
+  // ── Section cards (Credits + 4-year plan) - same surface1 treatment as hero ──
+  sectionCard: {
+    backgroundColor: colors.surface1,
+    borderRadius: radii.xxl,
+    padding: spacing.cardPadding,
     gap: spacing.md,
+    overflow: 'hidden',
   },
-  ringCenter: { alignItems: 'center' },
-  ringPct: {
-    ...typography.numeric,
-    fontSize: 30,
-    color: colors.text,
-  },
-  ringLabel: {
-    fontSize: 10,
-    fontFamily: fonts.regular,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  progressInfo: { flex: 1, gap: 4 },
-  progressEyebrow: {
-    ...typography.label,
-    color: colors.textSecondary,
-  },
-  progressStatus: {
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardTitle: {
     fontSize: 15,
     fontFamily: fonts.jakartaBold,
     fontWeight: '700',
-  },
-  statusOnTrack: { color: colors.accent2 },
-  statusBehind: { color: colors.warning },
-  progressCaption: {
-    fontSize: 12,
-    fontFamily: fonts.regular,
-    color: colors.textSecondary,
-    lineHeight: 17,
-  },
-
-  gpaRow: { flexDirection: 'row', gap: spacing.sm },
-  gpaCard: { flex: 1, gap: 4 },
-  gpaLabel: { ...typography.label, color: colors.textSecondary },
-  gpaValue: {
-    ...typography.numeric,
-    fontSize: 28,
     color: colors.text,
+    letterSpacing: -0.2,
   },
+  cardMeta: { fontSize: 12, fontFamily: fonts.medium, color: colors.textSecondary },
 
-  section: { gap: spacing.sm },
-  sectionEyebrow: { ...typography.label, color: colors.textSecondary },
-
-  pillWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: {
-    height: 32,
+  // Credits stacked bar
+  stackTrack: {
     flexDirection: 'row',
+    gap: 3,
+    height: 10,
+    borderRadius: 99,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 12 },
+  legendItem: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 16 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendName: { flex: 1, ...typography.bodySm, color: colors.textSecondary },
+  legendValue: { ...typography.numeric, fontSize: 13, letterSpacing: 0, color: colors.text },
+
+  emptyText: { ...typography.bodySm, color: colors.textSecondary },
+
+  // ── Stepper ───────────────────────────────────────────────────────────────
+  step: { flexDirection: 'row', gap: spacing.ms },
+  rail: { alignItems: 'center', width: 32 },
+  node: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
+    justifyContent: 'center',
+    borderWidth: 1.5,
     borderColor: colors.border,
   },
-  pillName: {
-    fontSize: 12.5,
-    fontFamily: fonts.semiBold,
+  nodeDone: { backgroundColor: colors.success, borderColor: colors.success },
+  nodeCurrent: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 4,
+    backgroundColor: colors.primary,
+    borderColor: colors.primaryGlow,
+  },
+  nodeText: { ...typography.numeric, fontSize: 12, letterSpacing: 0, color: colors.textMuted },
+  nodeTextCurrent: { color: '#FFFFFF' },
+  connector: { flex: 1, width: 2, marginVertical: 4, borderRadius: 1, backgroundColor: colors.border },
+  connectorDone: { backgroundColor: `${colors.success}80` },
+
+  stepBody: { flex: 1, paddingTop: 4 },
+  stepBodySpaced: { paddingBottom: 20 },
+  stepMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // Sentence-case 12px muted - was uppercase eyebrow; this is cleaner for a timeline
+  stepGrade: {
+    fontSize: 12,
+    fontFamily: fonts.medium,
+    color: colors.textMuted,
+  },
+  stepLabel: {
+    marginTop: 2,
+    fontSize: 15,
+    fontFamily: fonts.jakartaSemiBold,
     fontWeight: '600',
     color: colors.text,
   },
-  pillCredits: {
-    fontSize: 11,
-    fontFamily: fonts.bold,
-    fontWeight: '700',
-    color: colors.accentLight,
-  },
+  stepLabelFuture: { color: colors.textSecondary },
 
-  totalCreditsCard: { gap: 8 },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { fontSize: 13, fontFamily: fonts.medium, color: colors.text },
-  totalValue: { fontSize: 13, fontFamily: fonts.bold, fontWeight: '700', color: colors.text },
-  barTrack: {
-    height: 8,
-    borderRadius: 99,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: 99,
-    backgroundColor: colors.accent2,
-  },
-
-  emptyCard: {},
-  emptyText: {
-    fontSize: 13,
-    fontFamily: fonts.regular,
-    color: colors.textSecondary,
-    lineHeight: 19,
-    textAlign: 'center',
-  },
-
-  timeline: { gap: spacing.sm },
-  milestoneCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.ms,
-    padding: spacing.ms,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  milestoneSquare: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  milestoneNum: {
-    fontSize: 14,
-    fontFamily: fonts.groteskBold,
-    fontWeight: '700',
-  },
-  milestoneBody: { flex: 1 },
-  milestoneLabel: {
-    fontSize: 13,
-    fontFamily: fonts.jakartaBold,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  milestoneLabelCurrent: { color: colors.text },
-  milestoneLabelFuture: { color: colors.textSecondary, fontFamily: fonts.regular, fontWeight: '400' },
-  milestoneGradeCaption: {
-    fontSize: 10,
-    fontFamily: fonts.regular,
-    color: colors.textMuted,
-    marginTop: 1,
-  },
-
-  nowChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 99,
-    backgroundColor: colors.primaryDim,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  nowChipText: {
-    fontSize: 10,
-    fontFamily: fonts.jakartaBold,
-    fontWeight: '700',
-    color: colors.accentLight,
-  },
+  nowChip: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: colors.primaryDim },
+  nowChipText: { fontSize: 11, fontFamily: fonts.jakartaBold, fontWeight: '700', color: colors.accentLight },
 })

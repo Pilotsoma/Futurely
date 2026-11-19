@@ -10,7 +10,7 @@ import ReportCardScreen from '../screens/grades/ReportCardScreen'
 import RoadmapScreen from '../screens/grades/RoadmapScreen'
 import ScheduleScreen from '../screens/grades/ScheduleScreen'
 import TranscriptScreen from '../screens/grades/TranscriptScreen'
-import { colors, fonts } from '../theme/tokens'
+import { renderStackHeader } from '../components/ui/ScreenHeader'
 
 export type GradesStackParamList = {
   GradesHub: undefined
@@ -31,10 +31,9 @@ export default function GradesNavigator(): React.JSX.Element {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.text,
-        headerTitleStyle: { fontFamily: fonts.semiBold, fontWeight: '600' },
-        headerShadowVisible: false,
+        // One JS header on every pushed screen: same look on iOS, Android and web,
+        // and a back chevron even when the screen was opened by deep link.
+        header: (props) => renderStackHeader(props, 'GradesHub'),
       }}
     >
       <Stack.Screen name="GradesHub" component={GradesScreen} options={{ headerShown: false }} />
@@ -43,17 +42,17 @@ export default function GradesNavigator(): React.JSX.Element {
       <Stack.Screen
         name="ContactTeachers"
         component={ContactTeachersScreen}
-        options={{ title: 'Contact Teachers' }}
+        options={{ title: 'Teachers' }}
       />
       <Stack.Screen
         name="GpaSimulator"
         component={GpaSimulatorScreen}
-        options={{ title: 'What-If Calculator' }}
+        options={{ title: 'What-If' }}
       />
       <Stack.Screen
         name="ProgressReport"
         component={ProgressReportScreen}
-        options={{ title: 'Progress Report' }}
+        options={{ title: 'Progress' }}
       />
       <Stack.Screen name="ReportCard" component={ReportCardScreen} options={{ title: 'Report Card' }} />
       <Stack.Screen name="Roadmap" component={RoadmapScreen} options={{ title: 'Roadmap' }} />

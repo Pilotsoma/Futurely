@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import type { NavigatorScreenParams } from '@react-navigation/native'
 import { Feather } from '@expo/vector-icons'
@@ -15,7 +15,8 @@ import SettingsScreen from '../screens/SettingsScreen'
 import type { GradesStackParamList } from './GradesNavigator'
 import type { StudyStackParamList } from './StudyNavigator'
 import type { FutureStackParamList } from './FutureNavigator'
-import { colors } from '../theme/tokens'
+import { colors, fonts } from '../theme/tokens'
+import { TAB_BAR_HEIGHT, TAB_BAR_LIFT, TAB_BAR_MIN_INSET } from '../components/ui/tabBarConstants'
 import { AIContextProvider } from '../components/ai/AIContext'
 import AIFab from '../components/ai/AIFab'
 
@@ -41,6 +42,20 @@ function TabIcon({
   return <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>{children}</View>
 }
 
+// Custom label so the size cap applies: the bar is a fixed 64pt, so the label
+// may grow a little with the OS text size but never enough to clip.
+function TabLabel({ focused, children }: { focused: boolean; children: string }): React.JSX.Element {
+  return (
+    <Text
+      numberOfLines={1}
+      maxFontSizeMultiplier={1.2}
+      style={[styles.tabLabel, focused && styles.tabLabelActive]}
+    >
+      {children}
+    </Text>
+  )
+}
+
 function hideFromTabBar() {
   return {
     tabBarButton: () => null,
@@ -55,10 +70,13 @@ export default function MainNavigator(): React.JSX.Element {
 
   // Floating pill tab bar sits above the device's safe-area bottom, with a
   // small additional offset so it clears gesture handles.
-  const tabBarBottom = Math.max(insets.bottom, 12) + 8
+  const tabBarBottom = Math.max(insets.bottom, TAB_BAR_MIN_INSET) + TAB_BAR_LIFT
 
   return (
     <Tab.Navigator
+      // Settings and AI Chat are hidden tab routes with a back chevron; "history"
+      // makes that chevron return to the tab the user came from.
+      backBehavior="history"
       layout={({ state, navigation, children }) => (
         <AIContextProvider>
           <View style={styles.flex}>
@@ -73,7 +91,9 @@ export default function MainNavigator(): React.JSX.Element {
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarLabelPosition: 'below-icon',
+        tabBarLabel: ({ focused, children }) => <TabLabel focused={focused}>{children}</TabLabel>,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: [
@@ -92,7 +112,7 @@ export default function MainNavigator(): React.JSX.Element {
           tabBarAccessibilityLabel: 'Today',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon focused={focused}>
-              <Feather name="home" size={22} color={color} />
+              <Feather name="home" size={20} color={color} />
             </TabIcon>
           ),
         }}
@@ -106,7 +126,7 @@ export default function MainNavigator(): React.JSX.Element {
           tabBarAccessibilityLabel: 'Grades',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon focused={focused}>
-              <Feather name="bar-chart-2" size={22} color={color} />
+              <Feather name="bar-chart-2" size={20} color={color} />
             </TabIcon>
           ),
         }}
@@ -120,7 +140,7 @@ export default function MainNavigator(): React.JSX.Element {
           tabBarAccessibilityLabel: 'Planner',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon focused={focused}>
-              <Feather name="calendar" size={22} color={color} />
+              <Feather name="calendar" size={20} color={color} />
             </TabIcon>
           ),
         }}
@@ -134,7 +154,7 @@ export default function MainNavigator(): React.JSX.Element {
           tabBarAccessibilityLabel: 'Study',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon focused={focused}>
-              <Feather name="book-open" size={22} color={color} />
+              <Feather name="book-open" size={20} color={color} />
             </TabIcon>
           ),
         }}
@@ -148,7 +168,7 @@ export default function MainNavigator(): React.JSX.Element {
           tabBarAccessibilityLabel: 'Future',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon focused={focused}>
-              <Feather name="compass" size={22} color={color} />
+              <Feather name="compass" size={20} color={color} />
             </TabIcon>
           ),
         }}
@@ -167,9 +187,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     right: 20,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(13,24,41,0.92)',
+    height: TAB_BAR_HEIGHT,
+    borderRadius: TAB_BAR_HEIGHT / 2,
+    // A step above colors.bg (navy-black) at 97%: floats off the deeper base and is
+    // opaque enough that scrolled text does not ghost through.
+    backgroundColor: 'rgba(12,19,34,0.97)',
     borderWidth: 1,
     borderColor: colors.border,
     borderTopWidth: 0,
@@ -186,29 +208,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: 0,
-    // Center icons vertically within the 64pt bar.
-    // react-navigation bottom-tabs adds default label padding; override all of it.
-    height: 64,
+    // Icon pill + label, centred as a pair in the bar. The whole item is the
+    // touch target (full bar height, one fifth of the bar wide).
+    height: TAB_BAR_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
   },
   tabIcon: {
-    // Eliminate any top offset react-navigation bottom-tabs injects when labels are hidden.
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 28,
     marginTop: 0,
     marginBottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Active tab = filled pill behind the icon + bolder, brighter label, so the
+  // state never depends on colour alone.
   iconWrap: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 28,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconWrapActive: {
     backgroundColor: colors.primaryDim,
+  },
+  tabLabel: {
+    fontSize: 11,
+    lineHeight: 13,
+    fontFamily: fonts.medium,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  tabLabelActive: {
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    color: colors.text,
   },
 })

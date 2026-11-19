@@ -102,7 +102,7 @@ export default function AssignmentCard({
         <View className="flex-row flex-wrap items-center gap-2">
           <View className="bg-[#07080F] rounded-[4px] px-2 py-0.5">
             <Text
-              className={`text-[11px] font-[500] uppercase tracking-[0.5px] leading-4 ${completed ? 'text-[#8B8FB5]' : 'text-[#8B8FB5]'}`}
+              className={`text-[11px] font-[500] leading-4 ${completed ? 'text-[#8B8FB5]' : 'text-[#8B8FB5]'}`}
               numberOfLines={1}
             >
               {subject}

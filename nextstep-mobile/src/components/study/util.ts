@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
+import { GENERIC_ERROR_MESSAGE, toUserMessage } from '../../utils/errorMessage'
 
-export function errorMessage(err: unknown, fallback = 'Something went wrong. Please try again.'): string {
-  return err instanceof Error && err.message ? err.message : fallback
+/** Study-screen alias for the shared mapper: never surfaces raw server or developer text. */
+export function errorMessage(err: unknown, fallback: string = GENERIC_ERROR_MESSAGE): string {
+  return toUserMessage(err, fallback)
 }
 
 /**

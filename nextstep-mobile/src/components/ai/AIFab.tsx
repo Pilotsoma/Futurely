@@ -4,6 +4,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { colors } from '../../theme/tokens'
+import {
+  AI_FAB_HIDDEN_ROUTES,
+  FAB_GAP,
+  FAB_SIZE,
+  TAB_BAR_HEIGHT,
+  TAB_BAR_LIFT,
+  TAB_BAR_MIN_INSET,
+} from '../ui/tabBarConstants'
 import { useCurrentAIContext } from './AIContext'
 import { buildChatParams, type AIChatParams } from './aiContextState'
 
@@ -29,18 +37,17 @@ export default function AIFab({ routeName, openChat }: Props): React.JSX.Element
     }
   }, [])
 
-  if (routeName === 'AIChat' || keyboardOpen) return null
+  // One AI entry point per screen: these routes have their own (or need none).
+  if (AI_FAB_HIDDEN_ROUTES.includes(routeName) || keyboardOpen) return null
 
   function onPress(): void {
     requestIdRef.current = Math.max(Date.now(), requestIdRef.current + 1)
     openChat(buildChatParams(ctx, requestIdRef.current))
   }
 
-  // Position FAB so it clears the floating pill tab bar.
-  // Tab bar: bottom = max(insets.bottom, 12) + 8, height = 64.
-  // FAB bottom = tab bar's top + 12 gap.
-  const tabBarBottom = Math.max(insets.bottom, 12) + 8
-  const fabBottom = tabBarBottom + 64 + 12
+  // Sit FAB_GAP above the floating tab bar (same geometry MainNavigator uses).
+  const tabBarBottom = Math.max(insets.bottom, TAB_BAR_MIN_INSET) + TAB_BAR_LIFT
+  const fabBottom = tabBarBottom + TAB_BAR_HEIGHT + FAB_GAP
 
   return (
     <View
@@ -76,9 +83,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   fab: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',

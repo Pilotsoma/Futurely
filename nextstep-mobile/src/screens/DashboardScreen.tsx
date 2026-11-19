@@ -11,21 +11,21 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import { Feather } from '@expo/vector-icons'
+import Svg, { RadialGradient, Defs, Rect, Stop } from 'react-native-svg'
 import { useAuth } from '../context/AuthContext'
 import { useAIContext } from '../components/ai/AIContext'
 import * as studentsApi from '../api/studentsApi'
 import * as gradesApi from '../api/gradesApi'
-import { ApiRequestError } from '../api/client'
+import { toUserMessage } from '../utils/errorMessage'
 import { Screen, FLOATING_TAB_CLEARANCE } from '../components/ui/Screen'
-import { ActionTile } from '../components/ui/ActionTile'
-import { GpaOverviewCard } from '../components/grades/GpaOverviewCard'
+import { InlineGpaStat } from '../components/ui/InlineGpaStat'
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
 import { ErrorRetryBlock } from '../components/ui/ErrorRetryBlock'
 import { useCountUp } from '../hooks/useCountUp'
 import { useDisplayPreferences } from '../preferences/displayPreferences'
-import { GpaSparkline } from '../components/today/GpaSparkline'
 import {
   formatAssignmentDueTime,
+  formatPriorityLabel,
   getAssignmentDestination,
 } from '../features/assignments/dueToday'
 import { buildAlerts, groupDueAssignments } from '../features/today/todayModel'
@@ -34,13 +34,13 @@ import {
   recordGpaReading,
   type GpaReading,
 } from '../features/today/gpaHistory'
-import { formatGpa, toFiniteNumber } from '../features/grades/academicSummary'
+import { toFiniteNumber } from '../features/grades/academicSummary'
 import type { StudentMe } from '../types/student'
 import type { Assignment } from '../types/assignments'
 import type { CurrentGradeCourse, GpaSummary } from '../types/grades'
 import { getCache, lastUpdatedLabel, setCache } from '../utils/offlineCache'
 import type { MainTabParamList } from '../navigation/MainNavigator'
-import { colors, fonts, spacing, typography } from '../theme/tokens'
+import { colors, fonts, radii, spacing, typography } from '../theme/tokens'
 
 type Nav = BottomTabNavigationProp<MainTabParamList>
 
@@ -67,7 +67,7 @@ export default function DashboardScreen(): React.JSX.Element {
   const navigation = useNavigation<Nav>()
   const { user } = useAuth()
   const { hideGpa } = useDisplayPreferences()
-  const { height, width } = useWindowDimensions()
+  const { height } = useWindowDimensions()
   useAIContext('Today', 'Look at what is due and my grades. What should I focus on today?')
   const compact = height < 810
   const veryCompact = height < 710
@@ -126,11 +126,7 @@ export default function DashboardScreen(): React.JSX.Element {
     if (studentResult.status === 'fulfilled') {
       setStudent(studentResult.value)
     } else if (!hasCache.current) {
-      setError(
-        studentResult.reason instanceof ApiRequestError
-          ? studentResult.reason.message
-          : 'Could not load your dashboard.',
-      )
+      setError(toUserMessage(studentResult.reason, 'Could not load your dashboard.'))
     }
 
     if (gpaResult.status === 'fulfilled') {
@@ -141,11 +137,7 @@ export default function DashboardScreen(): React.JSX.Element {
       }
     } else if (!hasCache.current) {
       setGpa(null)
-      setGpaError(
-        gpaResult.reason instanceof ApiRequestError
-          ? gpaResult.reason.message
-          : 'Your GPA could not be loaded.',
-      )
+      setGpaError(toUserMessage(gpaResult.reason, 'Your GPA could not be loaded.'))
       if (userId !== undefined) void loadGpaHistory(userId).then(setGpaHistory)
     }
 
@@ -172,7 +164,7 @@ export default function DashboardScreen(): React.JSX.Element {
       await gradesApi.syncProfile()
       await load()
     } catch (err) {
-      setGpaError(err instanceof ApiRequestError ? err.message : 'Sync failed. Please try again.')
+      setGpaError(toUserMessage(err, 'Sync failed. Please try again.'))
     } finally {
       setSyncing(false)
     }
@@ -224,50 +216,48 @@ export default function DashboardScreen(): React.JSX.Element {
   }
 
   const displayName = (student?.name ?? user?.name ?? 'Student').split(' ')[0]
-  const dueItemsPerRow = width >= 700 ? 2 : 1
-  const currentGpa = toFiniteNumber(gpa?.weightedGpa ?? gpa?.gpa)
   const trendValues = gpaHistory.map((reading) => reading.gpa)
 
-  function renderDueTiles(list: Assignment[], keyPrefix: string, fallbackBadge: string) {
-    const rows = Array.from({ length: Math.ceil(list.length / dueItemsPerRow) }, (_, index) =>
-      list.slice(index * dueItemsPerRow, index * dueItemsPerRow + dueItemsPerRow),
-    )
+  function renderAssignmentRow(assignment: Assignment, keyPrefix: string, fallbackBadge: string) {
+    const destination = getAssignmentDestination(assignment.id)
+    const priority = assignment.priority?.trim()
+    const source = assignment.source?.trim()
+    const isHigh = priority?.toUpperCase() === 'HIGH'
+    const chipLabel = formatPriorityLabel(priority) ?? fallbackBadge
 
     return (
-      <View style={styles.dueGrid}>
-        {rows.map((row, rowIndex) => (
-          <View key={`${keyPrefix}-row-${rowIndex}`} style={styles.dueTileRow}>
-            {row.map((assignment) => {
-              const destination = getAssignmentDestination(assignment.id)
-              const priority = assignment.priority?.trim()
-              const source = assignment.source?.trim()
-
-              return (
-                <ActionTile
-                  key={assignment.id}
-                  title={assignment.title}
-                  subtitle={assignment.subject || 'No subject'}
-                  meta={`Due ${formatAssignmentDueTime(assignment)}${source ? ` · ${source}` : ''}`}
-                  badge={priority || fallbackBadge}
-                  icon="clipboard"
-                  color={priority?.toUpperCase() === 'HIGH' ? '#FF777A' : '#FFC547'}
-                  iconBackground="rgba(245,158,11,0.15)"
-                  disabled={destination === null}
-                  onPress={() => {
-                    if (destination) navigation.navigate('Planner', destination)
-                  }}
-                  accessibilityHint={
-                    destination
-                      ? `Open ${assignment.title} in Planner`
-                      : 'This assignment has no valid destination'
-                  }
-                  testID={`dashboard-${keyPrefix}-tile-${assignment.id}`}
-                />
-              )
-            })}
-          </View>
-        ))}
-      </View>
+      <Pressable
+        key={assignment.id}
+        testID={`dashboard-${keyPrefix}-tile-${assignment.id}`}
+        accessibilityRole="button"
+        accessibilityHint={
+          destination
+            ? `Open ${assignment.title} in Planner`
+            : 'This assignment has no valid destination'
+        }
+        disabled={destination === null}
+        onPress={() => {
+          if (destination) navigation.navigate('Planner', destination)
+        }}
+        style={({ pressed }) => [styles.assignmentRow, pressed && styles.assignmentRowPressed]}
+      >
+        {/* Icon tile */}
+        <View style={[styles.assignmentIcon, { backgroundColor: isHigh ? 'rgba(255,119,122,0.14)' : 'rgba(245,158,11,0.13)' }]}>
+          <Feather name="clipboard" size={15} color={isHigh ? '#FF777A' : '#FFC547'} />
+        </View>
+        {/* Copy */}
+        <View style={styles.assignmentCopy}>
+          <Text style={styles.assignmentTitle} numberOfLines={1}>{assignment.title}</Text>
+          <Text style={styles.assignmentMeta} numberOfLines={1}>
+            {assignment.subject ? `${assignment.subject} · ` : ''}{`Due ${formatAssignmentDueTime(assignment)}`}{source ? ` · ${source}` : ''}
+          </Text>
+        </View>
+        {/* Priority chip */}
+        <View style={[styles.priorityChip, { backgroundColor: isHigh ? 'rgba(255,119,122,0.14)' : 'rgba(245,158,11,0.13)' }]}>
+          <Text style={[styles.priorityChipText, { color: isHigh ? '#FF777A' : '#FFC547' }]} numberOfLines={1}>{chipLabel}</Text>
+        </View>
+        <Feather name="chevron-right" size={15} color={colors.textMuted} />
+      </Pressable>
     )
   }
 
@@ -276,8 +266,6 @@ export default function DashboardScreen(): React.JSX.Element {
       <View pointerEvents="none" style={styles.decorativeLayer}>
         <View style={styles.glowOrbTop} />
         <View style={styles.glowOrbLeft} />
-        <View style={styles.decorativeDotOne} />
-        <View style={styles.decorativeDotTwo} />
       </View>
 
       <ScrollView
@@ -288,15 +276,13 @@ export default function DashboardScreen(): React.JSX.Element {
           veryCompact && styles.pageVeryCompact,
         ]}
       >
+        {/* ── Greeting header ── */}
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
             <Text style={styles.greetingLine}>Good {getTimeOfDay()},</Text>
             <Text style={[styles.greetingName, compact && styles.greetingNameCompact]}>
               {displayName}
             </Text>
-            {!veryCompact ? (
-              <Text style={styles.headerSubtitle}>Your academic command center</Text>
-            ) : null}
           </View>
 
           <View style={styles.headerActions}>
@@ -309,17 +295,9 @@ export default function DashboardScreen(): React.JSX.Element {
             <View style={styles.headerButtons}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Notifications"
-                style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
-              >
-                <Feather name="bell" size={17} color="#B9C6DD" />
-                <View style={styles.notificationDot} />
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
                 accessibilityLabel="Settings"
                 onPress={() => navigation.navigate('Settings')}
-                style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+                style={({ pressed }) => [styles.headerIconButton, pressed && styles.pressed]}
                 testID="dashboard-settings-button"
               >
                 <Feather name="settings" size={17} color="#B9C6DD" />
@@ -328,9 +306,10 @@ export default function DashboardScreen(): React.JSX.Element {
           </View>
         </View>
 
+        {/* ── Needs attention alerts ── */}
         {alerts.visible.length > 0 ? (
           <View style={styles.alertsSection} testID="dashboard-alerts">
-            <Text style={styles.sectionEyebrow}>NEEDS ATTENTION</Text>
+            <Text style={styles.alertsLabel}>Needs attention</Text>
             {alerts.visible.map((alert) => (
               <Pressable
                 key={alert.key}
@@ -366,89 +345,79 @@ export default function DashboardScreen(): React.JSX.Element {
           </View>
         ) : null}
 
-        <GpaOverviewCard
-          summary={gpa}
-          courses={courses}
-          error={gpaError}
-          syncing={syncing}
-          hidden={hideGpa}
-          onPress={() => navigation.navigate('Grades', { screen: 'GpaSimulator' })}
-          onSync={() => void handleResync()}
-          testID="dashboard-gpa-card"
-        />
-
-        {!hideGpa && currentGpa !== null ? (
-          <View style={styles.trendCard} testID="dashboard-gpa-trend">
-            <View style={styles.trendCopy}>
-              <Text style={styles.sectionEyebrow}>GPA TREND</Text>
-              <Text style={styles.trendValue}>{formatGpa(currentGpa)}</Text>
-            </View>
-            {trendValues.length >= 2 ? (
-              <GpaSparkline values={trendValues} />
-            ) : (
-              <Text style={styles.trendEmpty}>Trend appears after your next sync</Text>
-            )}
+        {/* ── GPA hero card ── */}
+        <View style={styles.gpaHero} testID="dashboard-gpa-card-container">
+          {/* Subtle radial glow behind the numbers */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Svg width="100%" height="100%">
+              <Defs>
+                <RadialGradient id="glow" cx="30%" cy="50%" r="60%">
+                  <Stop offset="0%" stopColor="#2979FF" stopOpacity="0.13" />
+                  <Stop offset="100%" stopColor="#2979FF" stopOpacity="0" />
+                </RadialGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" fill="url(#glow)" />
+            </Svg>
           </View>
-        ) : null}
+          {/* Top highlight */}
+          <View style={styles.topHighlight} pointerEvents="none" />
 
-        <View style={styles.dueSection} testID="dashboard-due-today">
-          <View style={styles.dueHeadingRow}>
-            <View>
-              <Text style={styles.sectionEyebrow}>TODAY</Text>
-              <Text style={[styles.cardTitle, compact && styles.cardTitleCompact]}>Due today</Text>
-            </View>
-            <View style={styles.calendarBadge}>
-              <Feather name="calendar" size={17} color="#68A9FF" />
-            </View>
+          {/* Header: "GPA" label + Simulate pill */}
+          <View style={styles.gpaHeroHeader}>
+            <Text style={styles.gpaHeroLabel}>GPA</Text>
+            <Pressable
+              onPress={() => navigation.navigate('Grades', { screen: 'GpaSimulator' })}
+              accessibilityRole="button"
+              accessibilityLabel="Simulate GPA"
+              hitSlop={8}
+              style={({ pressed }) => [styles.simulatePill, pressed && styles.simulatePillPressed]}
+            >
+              <Text style={styles.simulatePillText}>Simulate</Text>
+              <Feather name="chevron-right" size={12} color={colors.violetText} />
+            </Pressable>
           </View>
 
-          {dueToday.length === 0 ? (
-            <View style={styles.clearState} testID="dashboard-due-empty">
-              <View style={styles.clearIcon}>
-                <Feather name="check" size={16} color="#20D3A0" />
-              </View>
-              <View style={styles.clearTextWrap}>
-                <Text style={styles.clearTitle}>All clear for today</Text>
-                {!veryCompact ? (
-                  <Text style={styles.clearSubtitle}>You are fully caught up.</Text>
-                ) : null}
-              </View>
-            </View>
-          ) : (
-            renderDueTiles(dueToday, 'due', 'Due today')
-          )}
+          {gpaError ? (
+            <Text style={styles.gpaInlineError}>{gpaError}</Text>
+          ) : null}
+
+          <InlineGpaStat
+            unweighted={gpa?.unweightedGpa ?? gpa?.gpa ?? null}
+            weighted={gpa?.weightedGpa ?? null}
+            hidden={hideGpa}
+            sparklineValues={trendValues}
+            testID="dashboard-gpa-card"
+          />
+
+          {/* Footer: sync status */}
+          <View style={styles.gpaHeroFooter}>
+            <Text style={styles.gpaHeroSync} numberOfLines={1}>
+              {syncing ? 'Syncing…' : lastUpdatedLabel(savedAt) ?? 'Synced just now'}
+            </Text>
+            <Pressable
+              onPress={() => void handleResync()}
+              accessibilityRole="button"
+              accessibilityLabel="Re-sync grades"
+              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+              style={({ pressed }) => [styles.resyncBtn, pressed && { opacity: 0.65 }]}
+              disabled={syncing}
+            >
+              <Text style={styles.resyncBtnText}>{syncing ? '…' : 'Re-sync'}</Text>
+            </Pressable>
+          </View>
         </View>
 
-        <View style={styles.dueSection} testID="dashboard-due-tomorrow">
-          <View style={styles.dueHeadingRow}>
-            <View>
-              <Text style={styles.sectionEyebrow}>TOMORROW</Text>
-              <Text style={[styles.cardTitle, compact && styles.cardTitleCompact]}>
-                Due tomorrow
-              </Text>
-            </View>
-          </View>
-
-          {dueGroups.tomorrow.length === 0 ? (
-            <View style={styles.clearState} testID="dashboard-tomorrow-empty">
-              <View style={styles.clearTextWrap}>
-                <Text style={styles.clearTitle}>Nothing due tomorrow</Text>
-              </View>
-            </View>
-          ) : (
-            renderDueTiles(dueGroups.tomorrow, 'tomorrow', 'Due tomorrow')
-          )}
-        </View>
-
+        {/* ── Stats row ── */}
         <View style={[styles.statsRow, compact && styles.statsRowCompact]}>
           <Pressable
             style={({ pressed }) => [
               styles.statCard,
               compact && styles.statCardCompact,
-              pressed && styles.pressed,
+              pressed && styles.statPressed,
             ]}
             onPress={() => navigation.navigate('Grades')}
           >
+            <View style={styles.topHighlight} />
             <View style={[styles.statIcon, { backgroundColor: 'rgba(59, 130, 246, 0.14)' }]}>
               <Feather name="book-open" size={16} color="#65A5FF" />
             </View>
@@ -460,12 +429,13 @@ export default function DashboardScreen(): React.JSX.Element {
             style={({ pressed }) => [
               styles.statCard,
               compact && styles.statCardCompact,
-              pressed && styles.pressed,
+              pressed && styles.statPressed,
             ]}
             onPress={() => navigation.navigate('Planner')}
           >
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
-              <Feather name="clock" size={16} color="#9A77FF" />
+            <View style={styles.topHighlight} />
+            <View style={[styles.statIcon, { backgroundColor: colors.violetDim }]}>
+              <Feather name="clock" size={16} color={colors.violetText} />
             </View>
             <Text style={styles.statValue}>{animDueToday}</Text>
             <Text style={styles.statLabel} numberOfLines={1}>Due today</Text>
@@ -475,40 +445,74 @@ export default function DashboardScreen(): React.JSX.Element {
             style={({ pressed }) => [
               styles.statCard,
               compact && styles.statCardCompact,
-              pressed && styles.pressed,
+              pressed && styles.statPressed,
             ]}
             onPress={() => navigation.navigate('Planner')}
           >
+            <View style={styles.topHighlight} />
             <View style={[styles.statIcon, { backgroundColor: 'rgba(245, 158, 11, 0.14)' }]}>
               <Feather name="inbox" size={16} color="#F6AE2D" />
             </View>
             <Text style={styles.statValue}>{animPending}</Text>
-            <Text style={styles.statLabel} numberOfLines={1}>Pending</Text>
+            <Text style={styles.statLabel} numberOfLines={1}>To do</Text>
           </Pressable>
         </View>
 
-        <View style={styles.aiSection}>
-          {!veryCompact ? (
-            <View style={styles.aiLabelRow}>
-              <Text style={styles.sectionEyebrow}>YOUR AI COPILOT</Text>
-              <Feather name="zap" size={14} color="#9D82FF" />
-            </View>
-          ) : null}
+        {/* ── Due today ── */}
+        <View style={styles.dueSectionHeader}>
+          <Text style={styles.dueSectionLabel}>Due today</Text>
+        </View>
+        {dueToday.length === 0 ? (
+          <View style={styles.clearRow} testID="dashboard-due-empty">
+            <Feather name="check-circle" size={16} color="#20D3A0" />
+            <Text style={styles.clearRowText}>All clear, nothing due today</Text>
+          </View>
+        ) : (
+          <View style={styles.assignmentList} testID="dashboard-due-today">
+            {dueToday.map((a, idx) => (
+              <React.Fragment key={a.id}>
+                {renderAssignmentRow(a, 'due', 'Due today')}
+                {idx < dueToday.length - 1 ? <View style={styles.rowDivider} /> : null}
+              </React.Fragment>
+            ))}
+          </View>
+        )}
 
+        {/* ── Due tomorrow ── */}
+        <View style={styles.dueSectionHeader}>
+          <Text style={styles.dueSectionLabel}>Due tomorrow</Text>
+        </View>
+        {dueGroups.tomorrow.length === 0 ? (
+          <View style={styles.clearRow} testID="dashboard-tomorrow-empty">
+            <Feather name="check-circle" size={16} color="#20D3A0" />
+            <Text style={styles.clearRowText}>Nothing due tomorrow</Text>
+          </View>
+        ) : (
+          <View style={styles.assignmentList} testID="dashboard-due-tomorrow">
+            {dueGroups.tomorrow.map((a, idx) => (
+              <React.Fragment key={a.id}>
+                {renderAssignmentRow(a, 'tomorrow', 'Due tomorrow')}
+                {idx < dueGroups.tomorrow.length - 1 ? <View style={styles.rowDivider} /> : null}
+              </React.Fragment>
+            ))}
+          </View>
+        )}
+
+        {/* ── AI composer ── */}
+        <View style={styles.aiSection}>
           <View style={[styles.aiComposer, compact && styles.aiComposerCompact]}>
-            <View pointerEvents="none" style={styles.aiComposerGlow} />
             <View style={styles.aiAvatar}>
               <Feather name="message-circle" size={18} color="#FFFFFF" />
             </View>
             <TextInput
               value={aiPrompt}
               onChangeText={setAiPrompt}
-              placeholder="Ask myFuturely AI..."
-              placeholderTextColor="#71819A"
+              placeholder="Ask about your grades or your week"
+              placeholderTextColor={colors.textMuted}
               style={styles.aiInput}
               returnKeyType="send"
               onSubmitEditing={handleAskAI}
-              accessibilityLabel="Ask myFuturely AI"
+              accessibilityLabel="Ask about your grades or your week"
             />
             <Pressable
               accessibilityRole="button"
@@ -521,11 +525,6 @@ export default function DashboardScreen(): React.JSX.Element {
           </View>
         </View>
 
-        {lastUpdatedLabel(savedAt) ? (
-          <Text style={styles.cacheLabel} accessibilityLiveRegion="polite">
-            {lastUpdatedLabel(savedAt)}
-          </Text>
-        ) : null}
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
       </ScrollView>
     </Screen>
@@ -536,17 +535,16 @@ const styles = StyleSheet.create({
   page: {
     flexGrow: 1,
     width: '100%',
-    gap: 14,
-    paddingTop: 8,
-    paddingBottom: FLOATING_TAB_CLEARANCE,
+    gap: 12,
+    paddingTop: spacing.md,
+    // The AI FAB is hidden on this screen, so only the tab bar needs clearing.
+    paddingBottom: FLOATING_TAB_CLEARANCE + spacing.md,
   },
   pageCompact: {
-    gap: 12,
-    paddingTop: 5,
+    gap: 10,
   },
   pageVeryCompact: {
-    gap: 10,
-    paddingTop: 3,
+    gap: 8,
   },
   decorativeLayer: {
     ...StyleSheet.absoluteFill,
@@ -557,7 +555,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: 'rgba(84, 49, 255, 0.10)',
+    backgroundColor: 'rgba(122, 92, 255, 0.13)',
     top: -142,
     right: -118,
   },
@@ -566,27 +564,9 @@ const styles = StyleSheet.create({
     width: 190,
     height: 190,
     borderRadius: 95,
-    backgroundColor: 'rgba(0, 150, 255, 0.045)',
+    backgroundColor: 'rgba(41, 121, 255, 0.09)',
     top: 340,
     left: -145,
-  },
-  decorativeDotOne: {
-    position: 'absolute',
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(91, 138, 255, 0.46)',
-    top: 104,
-    right: 39,
-  },
-  decorativeDotTwo: {
-    position: 'absolute',
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(143, 98, 255, 0.45)',
-    top: 130,
-    right: 76,
   },
   headerRow: {
     minHeight: 76,
@@ -604,8 +584,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   greetingName: {
-    ...typography.display,
     color: '#F3F6FF',
+    fontFamily: fonts.jakartaBold,
+    fontWeight: '700',
     fontSize: 31,
     lineHeight: 36,
     letterSpacing: -0.8,
@@ -613,12 +594,6 @@ const styles = StyleSheet.create({
   greetingNameCompact: {
     fontSize: 28,
     lineHeight: 32,
-  },
-  headerSubtitle: {
-    ...typography.caption,
-    color: '#697892',
-    marginTop: 1,
-    fontSize: 10,
   },
   headerActions: {
     alignItems: 'flex-end',
@@ -637,10 +612,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   dateChipText: {
-    ...typography.caption,
+    ...typography.bodySm,
     color: '#7AB4FF',
     flexShrink: 1,
-    fontSize: 10,
+    fontSize: 11,
   },
   headerButtons: {
     flexDirection: 'row',
@@ -650,10 +625,15 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 8,
     padding: 14,
-    borderRadius: 20,
+    borderRadius: radii.lg,
     backgroundColor: 'rgba(40, 20, 28, 0.55)',
     borderWidth: 1,
     borderColor: 'rgba(255, 119, 122, 0.22)',
+  },
+  alertsLabel: {
+    ...typography.sectionLabel,
+    color: '#FF9C9E',
+    fontSize: 13,
   },
   alertRow: {
     minHeight: 44,
@@ -665,157 +645,106 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   alertTitle: {
-    ...typography.body,
+    ...typography.bodyMd,
     color: '#EDF3FF',
     fontSize: 13,
   },
   alertDetail: {
-    ...typography.caption,
+    ...typography.bodySm,
     color: '#FF9C9E',
-    fontSize: 10,
+    fontSize: 11,
   },
   alertMore: {
-    ...typography.caption,
+    ...typography.bodySm,
     color: '#8299BA',
     fontSize: 11,
   },
-  trendCard: {
+  // ── GPA hero card ──
+  gpaHero: {
     width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    padding: 14,
-    borderRadius: 20,
-    backgroundColor: 'rgba(17, 31, 52, 0.94)',
-    borderWidth: 1,
-    borderColor: 'rgba(72, 100, 139, 0.30)',
-  },
-  trendCopy: {
-    gap: 2,
-  },
-  trendValue: {
-    ...typography.h2,
-    color: '#EDF3FF',
-    fontSize: 22,
-  },
-  trendEmpty: {
-    ...typography.caption,
-    color: '#8299BA',
-    flexShrink: 1,
-    textAlign: 'right',
-    fontSize: 11,
-  },
-  notificationButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(15, 27, 47, 0.84)',
-    borderWidth: 1,
-    borderColor: 'rgba(86, 111, 148, 0.20)',
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 6,
-    right: 7,
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#7C5CFF',
-    borderWidth: 1,
-    borderColor: '#0A1220',
-  },
-  dueSection: {
-    width: '100%',
-    gap: 11,
-    padding: 14,
-    borderRadius: 20,
-    backgroundColor: 'rgba(17, 31, 52, 0.94)',
-    borderWidth: 1,
-    borderColor: 'rgba(72, 100, 139, 0.30)',
+    borderRadius: radii.xxl,
+    backgroundColor: colors.surface1,
+    overflow: 'hidden',
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 10,
     shadowColor: '#000000',
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.20,
     shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 5 },
     elevation: 4,
   },
-  dueHeadingRow: {
+  gpaHeroHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  sectionEyebrow: {
-    ...typography.label,
-    color: '#8299BA',
-    letterSpacing: 1.05,
-    fontSize: 9,
-  },
-  cardTitle: {
-    ...typography.h2,
-    color: '#EDF3FF',
-    marginTop: 1,
-    fontSize: 19,
-  },
-  cardTitleCompact: {
-    fontSize: 17,
-  },
-  calendarBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(56, 134, 255, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(77, 149, 255, 0.16)',
-  },
-  clearState: {
-    minHeight: 57,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    backgroundColor: 'rgba(7, 31, 36, 0.50)',
-    borderWidth: 1,
-    borderColor: 'rgba(21, 214, 160, 0.12)',
-  },
-  clearIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(21, 214, 160, 0.12)',
-  },
-  clearTextWrap: {
-    flex: 1,
-  },
-  clearTitle: {
-    ...typography.body,
-    color: '#67E1BD',
-    fontFamily: fonts.bold,
-    fontWeight: '700',
+  gpaHeroLabel: {
     fontSize: 13,
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
-  clearSubtitle: {
-    ...typography.caption,
-    color: '#688083',
-    marginTop: 1,
-    fontSize: 10,
-  },
-  dueGrid: {
-    width: '100%',
-    gap: 10,
-  },
-  dueTileRow: {
-    width: '100%',
+  simulatePill: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 10,
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 99,
+    backgroundColor: colors.violetDim,
+    minHeight: 28,
   },
+  simulatePillPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.97 }],
+  },
+  simulatePillText: {
+    fontSize: 12,
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    color: colors.violetText,
+  },
+  gpaInlineError: {
+    ...typography.bodySm,
+    color: colors.error,
+    fontSize: 11,
+  },
+  gpaHeroFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 2,
+  },
+  gpaHeroSync: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: fonts.regular,
+    color: colors.textMuted,
+  },
+  resyncBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.055)',
+  },
+  resyncBtnText: {
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  topHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: colors.cardHighlight,
+  },
+  // ── Stats row ──
   statsRow: {
     width: '100%',
     minHeight: 98,
@@ -835,11 +764,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 10,
     borderRadius: 17,
-    backgroundColor: 'rgba(22,34,53,0.92)',
-    borderWidth: 1,
-    borderColor: 'rgba(39,61,94,0.80)',
+    backgroundColor: colors.surface1,
     shadowColor: '#000000',
-    shadowOpacity: 0.22,
+    shadowOpacity: 0.18,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
@@ -857,27 +784,116 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statValue: {
-    ...typography.numeric,
+    ...typography.numericMd,
     color: '#F4F7FF',
-    fontSize: 22,
-    lineHeight: 24,
   },
   statLabel: {
-    ...typography.caption,
+    ...typography.bodySm,
     color: '#95A3B9',
     textAlign: 'center',
-    fontSize: 10,
-    lineHeight: 12,
+    fontSize: 12,
   },
+  statPressed: {
+    opacity: 0.86,
+    transform: [{ scale: 0.975 }],
+  },
+  // ── Due sections ──
+  dueSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 24,
+    marginBottom: -4,
+  },
+  dueSectionLabel: {
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  assignmentList: {
+    width: '100%',
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface1,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  assignmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 56,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 11,
+  },
+  assignmentRowPressed: {
+    backgroundColor: colors.surface2,
+    opacity: 0.9,
+  },
+  assignmentIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  assignmentCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  assignmentTitle: {
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    color: colors.text,
+    lineHeight: 18,
+  },
+  assignmentMeta: {
+    fontSize: 11,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    lineHeight: 15,
+  },
+  priorityChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    flexShrink: 0,
+  },
+  priorityChipText: {
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
+    fontWeight: '600',
+    lineHeight: 15,
+  },
+  rowDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderSubtle,
+    marginLeft: 14 + 34 + 11, // paddingLeft + iconWidth + gap
+  },
+  clearRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+  },
+  clearRowText: {
+    fontSize: 13,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  // ── AI composer ──
   aiSection: {
     width: '100%',
     gap: 5,
-  },
-  aiLabelRow: {
-    minHeight: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   aiComposer: {
     minHeight: 58,
@@ -899,15 +915,6 @@ const styles = StyleSheet.create({
   aiComposerCompact: {
     minHeight: 52,
     padding: 6,
-  },
-  aiComposerGlow: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    right: -82,
-    top: -77,
-    backgroundColor: 'rgba(91, 66, 255, 0.14)',
   },
   aiAvatar: {
     width: 39,
@@ -945,11 +952,21 @@ const styles = StyleSheet.create({
     opacity: 0.80,
     transform: [{ scale: 0.987 }],
   },
-  cacheLabel: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm },
+  headerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 27, 47, 0.84)',
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+
   inlineError: {
-    ...typography.caption,
+    ...typography.bodySm,
     color: colors.error,
     textAlign: 'center',
-    fontSize: 10,
+    fontSize: 11,
   },
 })

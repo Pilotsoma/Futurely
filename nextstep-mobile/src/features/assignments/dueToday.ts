@@ -1,4 +1,5 @@
 import type { Assignment } from '../../types/assignments'
+import { formatClockTime } from '../../utils/formatTime'
 
 const PRIORITY_ORDER: Record<string, number> = {
   HIGH: 0,
@@ -44,8 +45,16 @@ export function getDueTodayAssignments(
     })
 }
 
+/** Priorities are stored as HIGH / MEDIUM / LOW; show them as "High" / "Medium" / "Low". */
+export function formatPriorityLabel(priority: string | null | undefined): string | null {
+  const trimmed = priority?.trim()
+  if (!trimmed) return null
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
+}
+
 export function formatAssignmentDueTime(assignment: Assignment): string {
-  if (assignment.dueTime?.trim()) return assignment.dueTime.trim()
+  const explicitTime = formatClockTime(assignment.dueTime)
+  if (explicitTime !== null) return explicitTime
 
   const dueDate = validDate(assignment.dueDate)
   if (!dueDate) return 'Time unavailable'

@@ -12,7 +12,7 @@ export const colors = {
   primaryDark: '#1B4DB0',
 
   // Backgrounds
-  background: '#0D1829',
+  background: '#070C16',
   surface:    '#162235',
   surface2:   '#1C2D47',
 
@@ -23,7 +23,7 @@ export const colors = {
   // Text
   textPrimary:   '#E8EEFF',
   textSecondary: '#96AACC',
-  textMuted:     '#52698A',
+  textMuted:     '#8A96AD',
 
   // Status
   success: '#10B981',

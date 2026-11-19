@@ -26,7 +26,7 @@ module.exports = {
     extend: {
       colors: {
         // ── Dark (default) tokens — match darkTheme in tokens.ts ──────────────
-        bg:             '#0D1829',
+        bg:             '#070C16',
         surface:        '#162235',
         'surface-2':    '#1C2D47',
         'surface-3':    '#233456',
@@ -37,7 +37,7 @@ module.exports = {
         'accent-blue':  '#00E5FF',
         text:           '#E8EEFF',
         'text-secondary': '#96AACC',
-        'text-muted':   '#52698A',
+        'text-muted':   '#8A96AD',
         success:        '#10B981',
         warning:        '#F59E0B',
         orange:         '#F97316',

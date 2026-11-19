@@ -25,7 +25,11 @@ import * as collegesApi from '../../api/collegesApi'
 import * as gradesApi from '../../api/gradesApi'
 import * as studentsApi from '../../api/studentsApi'
 import { ApiRequestError } from '../../api/client'
+import { EmptyState } from '../ui/EmptyState'
+import { ErrorRetryBlock } from '../ui/ErrorRetryBlock'
 import { LoadingSkeleton } from '../ui/LoadingSkeleton'
+import { formatGpa } from '../../features/grades/academicSummary'
+import { toUserMessage } from '../../utils/errorMessage'
 import type {
   CollegeInsights,
   CollegeListItem,
@@ -33,8 +37,9 @@ import type {
 } from '../../types/colleges'
 import type { GpaSummary } from '../../types/grades'
 import type { StudentMe } from '../../types/student'
-import { colors, fonts, spacing } from '../../theme/tokens'
-import { FLOATING_TAB_CLEARANCE } from '../ui/tabBarConstants'
+import { colors, fonts, radii, spacing, typography } from '../../theme/tokens'
+import { ProgressRing } from '../ui/ProgressRing'
+import { SCROLL_BOTTOM_CLEARANCE } from '../ui/tabBarConstants'
 
 type InsightState =
   | { status: 'loading' }
@@ -56,6 +61,14 @@ const CATEGORY_COLORS: Record<ActionCategory, string> = {
   essay: colors.purple,
   extracurricular: colors.orange,
   strategy: colors.info,
+}
+
+const CATEGORY_LABELS: Record<ActionCategory, string> = {
+  test: 'Test',
+  gpa: 'GPA',
+  essay: 'Essay',
+  extracurricular: 'Extracurricular',
+  strategy: 'Strategy',
 }
 
 const PRIORITY_COLORS: Record<ActionPriority, string> = {
@@ -164,7 +177,10 @@ export function CollegesPanel(): React.JSX.Element {
 
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  // `error` is for actions (add, remove); `loadError` is for loading the list, so a failed
+  // load shows one error block instead of an error line above a false "no colleges" state.
   const [error, setError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<CollegeSearchResult[]>([])
@@ -181,6 +197,7 @@ export function CollegesPanel(): React.JSX.Element {
   const load = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true)
     setError(null)
+    setLoadError(null)
     try {
       const [savedResult, studentResult, gpaResult] = await Promise.all([
         collegesApi.listSavedColleges(),
@@ -191,7 +208,7 @@ export function CollegesPanel(): React.JSX.Element {
       setStudent(studentResult)
       setGpa(gpaResult)
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Could not load your college list.')
+      setLoadError(toUserMessage(err, "We couldn't load your college list."))
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -282,7 +299,7 @@ export function CollegesPanel(): React.JSX.Element {
       setSaved((current) => [...current, added])
       clearSearch()
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Could not add this college.')
+      setError(toUserMessage(err, "We couldn't add this college. Please try again."))
     } finally {
       setAddingUnitId(null)
     }
@@ -326,8 +343,7 @@ export function CollegesPanel(): React.JSX.Element {
       const data = await collegesApi.getCollegeInsights(item.id)
       setInsightStates((current) => ({ ...current, [item.id]: { status: 'success', data } }))
     } catch (err) {
-      const message =
-        err instanceof ApiRequestError ? err.message : 'AI insights are unavailable right now.'
+      const message = toUserMessage(err, 'AI insights are unavailable right now.')
       setInsightStates((current) => ({
         ...current,
         [item.id]: {
@@ -368,6 +384,10 @@ export function CollegesPanel(): React.JSX.Element {
     [expandedId, insightStates, removingId, saved],
   )
 
+  // A failed refresh over an existing list is a dismissible banner; a failed first load
+  // (nothing to show) is the full error block in the list's empty slot instead.
+  const bannerError = error ?? (saved.length > 0 ? loadError : null)
+
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
@@ -399,28 +419,36 @@ export function CollegesPanel(): React.JSX.Element {
         renderItem={renderCollegeCard}
         ItemSeparatorComponent={() => <View style={styles.cardGap} />}
         ListEmptyComponent={
-          <View style={styles.emptyCard}>
-            <Feather name="bookmark" size={24} color={colors.accentLight} />
-            <Text style={styles.emptyTitle}>No colleges added yet</Text>
-            <Text style={styles.emptyDescription}>
-              Search above and add schools you want to compare. Your personalized fit scores will appear here.
-            </Text>
+          <View style={styles.emptyWrap}>
+            {loadError ? (
+              <ErrorRetryBlock
+                message={loadError}
+                onRetry={() => void load(true)}
+                retrying={refreshing}
+              />
+            ) : (
+              <EmptyState
+                icon="bookmark"
+                title="No colleges added yet"
+                message="Search above to add a school. Its fit score shows here."
+              />
+            )}
           </View>
         }
         ListHeaderComponent={
           <View style={styles.headerWrap}>
-            {/* Stats row */}
+            {/* Stats row - numericSm (20px) values, 11px labels */}
             <View style={styles.statsCard}>
-              <StatItem label="UW GPA" value={stats.unweighted > 0 ? stats.unweighted.toFixed(2) : '—'} />
+              <StatItem label="Unweighted" value={formatGpa(stats.unweighted > 0 ? stats.unweighted : null)} />
               <View style={styles.statDivider} />
-              <StatItem label="W GPA" value={stats.weighted > 0 ? stats.weighted.toFixed(2) : '—'} />
+              <StatItem label="Weighted" value={formatGpa(stats.weighted > 0 ? stats.weighted : null)} />
               <View style={styles.statDivider} />
               <StatItem label="SAT" value={stats.sat?.toString() ?? '—'} />
               <View style={styles.statDivider} />
               <StatItem label="Added" value={String(saved.length)} />
             </View>
 
-            {!stats.hasAcademicData ? (
+            {!stats.hasAcademicData && !loadError ? (
               <View style={styles.warningCard}>
                 <Feather name="info" size={15} color={colors.warning} />
                 <Text style={styles.warningText}>
@@ -430,7 +458,7 @@ export function CollegesPanel(): React.JSX.Element {
               </View>
             ) : null}
 
-            {/* Search */}
+            {/* Search bar - 14px input text minimum */}
             <View style={styles.searchBar}>
               <Feather name="search" size={18} color={colors.textMuted} />
               <TextInput
@@ -520,12 +548,16 @@ export function CollegesPanel(): React.JSX.Element {
               </View>
             ) : null}
 
-            {error ? (
+            {bannerError ? (
               <View style={styles.errorCard}>
                 <Feather name="alert-circle" size={16} color={colors.error} />
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.errorText}>{bannerError}</Text>
                 <Pressable
-                  onPress={() => setError(null)}
+                  onPress={() => {
+                    setError(null)
+                    setLoadError(null)
+                  }}
+                  hitSlop={8}
                   style={styles.errorClose}
                   accessibilityRole="button"
                   accessibilityLabel="Dismiss error"
@@ -549,8 +581,8 @@ interface StatItemProps {
 function StatItem({ label, value }: StatItemProps): React.JSX.Element {
   return (
     <View style={styles.statItem}>
-      <Text style={styles.statLabel}>{label}</Text>
       <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
     </View>
   )
 }
@@ -577,10 +609,13 @@ const CollegeCard = React.memo(function CollegeCard({
   const score = finiteNumber(item.score)
   const color = fitColor(item.label, score)
   const location = collegeLocation(item)
-  const progressWidth = `${Math.max(0, Math.min(score ?? 0, 100))}%` as const
 
   return (
-    <View style={[styles.collegeCard, expanded && { borderColor: `${colors.primary}77` }]}>
+    <View style={styles.collegeCard}>
+      {/* 1px top-edge highlight - same surface treatment as roadmap cards */}
+      <View style={styles.cardTopHighlight} pointerEvents="none" />
+
+      {/* Single clean row: score ring | name + meta | chevron */}
       <Pressable
         onPress={onToggle}
         style={({ pressed }) => [styles.collegeMain, pressed && styles.pressed]}
@@ -588,72 +623,46 @@ const CollegeCard = React.memo(function CollegeCard({
         accessibilityLabel={`${expanded ? 'Collapse' : 'Expand'} AI insights for ${item.name}`}
       >
         <View style={styles.collegeContent}>
-          {/* Top row: name + actions */}
-          <View style={styles.collegeTopRow}>
-            <View style={styles.collegeCopy}>
-              <Text style={styles.collegeName} numberOfLines={2}>
-                {item.name}
-              </Text>
-              {location ? (
-                <Text style={styles.collegeLocation} numberOfLines={1}>
-                  {location}
-                </Text>
-              ) : null}
-            </View>
-
-            <View style={styles.collegeActions}>
-              <Pressable
-                disabled={removing}
-                onPress={(event) => {
-                  event.stopPropagation()
-                  onRemove()
-                }}
-                style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${item.name}`}
-                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-              >
-                {removing ? (
-                  <ActivityIndicator size="small" color={colors.error} />
-                ) : (
-                  <Feather name="trash-2" size={15} color={colors.error} />
-                )}
-              </Pressable>
-              <Feather
-                name={expanded ? 'chevron-up' : 'chevron-down'}
-                size={17}
-                color={colors.textMuted}
-              />
-            </View>
-          </View>
-
-          {/* Likelihood row */}
-          <View style={styles.fitRow}>
-            <View style={styles.fitCopy}>
-              <Text style={styles.fitEyebrow}>LIKELIHOOD</Text>
-              <Text style={[styles.fitLabel, { color }]}>
-                {item.label ?? (score !== null ? 'College fit' : 'Add GPA & SAT')}
-              </Text>
-            </View>
-
-            <View style={styles.scoreBox}>
+          {/* Left: 52px score ring with number inside, captioned so the number has a unit */}
+          <View style={styles.scoreColumn}>
+            <ProgressRing
+              progress={score ?? 0}
+              size={52}
+              strokeWidth={5}
+              color={color}
+              trackColor="rgba(255,255,255,0.08)"
+            >
               {score !== null ? (
-                <>
-                  <Text style={[styles.scoreValue, { color }]}>{Math.round(score)}</Text>
-                  <Text style={styles.scoreOutOf}>/100</Text>
-                </>
+                <Text style={[styles.scoreRingValue, { color }]}>{Math.round(score)}</Text>
               ) : (
-                <>
-                  <Text style={styles.noScoreValue}>—</Text>
-                  <Text style={styles.scoreOutOf}>no score</Text>
-                </>
+                <Text style={styles.scoreRingEmpty}>—</Text>
               )}
+            </ProgressRing>
+            {score !== null ? <Text style={styles.scoreCaption}>fit score</Text> : null}
+          </View>
+
+          {/* Center: name + location + fit chip */}
+          <View style={styles.collegeInfo}>
+            <Text style={styles.collegeName} numberOfLines={1}>{item.name}</Text>
+            <View style={styles.collegeMeta}>
+              {location ? (
+                <Text style={styles.collegeLocation} numberOfLines={1}>{location}</Text>
+              ) : null}
+              <View style={[styles.fitChip, { backgroundColor: `${color}1F`, flexShrink: 0 }]}>
+                <View style={[styles.fitDot, { backgroundColor: color }]} />
+                <Text style={[styles.fitLabel, { color }]}>
+                  {item.label ?? (score !== null ? 'College fit' : 'Add GPA & SAT')}
+                </Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: progressWidth, backgroundColor: color }]} />
-          </View>
+          {/* Right: chevron - 44pt touch area via the parent Pressable */}
+          <Feather
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={17}
+            color={colors.textMuted}
+          />
         </View>
       </Pressable>
 
@@ -661,6 +670,21 @@ const CollegeCard = React.memo(function CollegeCard({
         <View style={styles.insightsPanel}>
           <View style={styles.insightsDivider} />
           <InsightContent state={insightState} onRetry={onRetry} />
+          {/* Remove from list - quiet destructive action in expanded view only */}
+          <Pressable
+            disabled={removing}
+            onPress={onRemove}
+            style={({ pressed }) => [styles.removeListBtn, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={removing ? 'Removing from list' : undefined}
+            accessibilityState={{ disabled: removing, busy: removing }}
+          >
+            {removing ? (
+              <ActivityIndicator size="small" color={colors.error} />
+            ) : (
+              <Text style={styles.removeListText}>Remove from list</Text>
+            )}
+          </Pressable>
         </View>
       ) : null}
     </View>
@@ -693,6 +717,7 @@ function InsightContent({ state, onRetry }: InsightContentProps): React.JSX.Elem
         {state.retryable ? (
           <Pressable
             onPress={onRetry}
+            hitSlop={6}
             style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel="Retry loading insights"
@@ -712,14 +737,14 @@ function InsightContent({ state, onRetry }: InsightContentProps): React.JSX.Elem
     <View style={styles.insightContent}>
       <View style={styles.aiInsightHeader}>
         <Feather name="zap" size={15} color={colors.accentLight} />
-        <Text style={styles.aiInsightTitle}>Personalized fit analysis</Text>
+        <Text style={styles.aiInsightTitle}>Why this score</Text>
       </View>
 
       <Text style={styles.narrative}>{data.narrativeSummary}</Text>
 
       {steps.length > 0 ? (
         <View style={styles.actionSection}>
-          <Text style={styles.actionSectionLabel}>ACTION STEPS</Text>
+          <Text style={styles.actionSectionLabel}>Action steps</Text>
           <View style={styles.actionList}>
             {steps.map((step, index) => {
               const categoryColor = CATEGORY_COLORS[step.category]
@@ -734,7 +759,7 @@ function InsightContent({ state, onRetry }: InsightContentProps): React.JSX.Elem
                       ]}
                     >
                       <Text style={[styles.categoryBadgeText, { color: categoryColor }]}>
-                        {step.category.toUpperCase()}
+                        {CATEGORY_LABELS[step.category]}
                       </Text>
                     </View>
                     <View
@@ -773,7 +798,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   loadingWrap: { flex: 1, paddingTop: spacing.lg },
   scrollContent: {
-    paddingBottom: FLOATING_TAB_CLEARANCE,
+    paddingBottom: SCROLL_BOTTOM_CLEARANCE,
   },
   headerWrap: {
     gap: spacing.lg,
@@ -781,15 +806,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
   },
-  pressed: { opacity: 0.82 },
+  pressed: { opacity: 0.86, transform: [{ scale: 0.975 }] },
 
+  // Stats card - surface1, no border, numericSm values, 11px labels
   statsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 18,
+    backgroundColor: colors.surface1,
+    borderRadius: radii.lg,
     overflow: 'hidden',
     minHeight: 72,
   },
@@ -797,30 +821,25 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 2,
     paddingHorizontal: 6,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   statLabel: {
-    fontSize: 9.5,
-    fontFamily: fonts.jakartaBold,
-    fontWeight: '700',
+    fontSize: 11,
+    fontFamily: fonts.medium,
     color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
     textAlign: 'center',
   },
   statValue: {
-    fontSize: 19,
-    fontFamily: fonts.groteskBold,
-    fontWeight: '700',
+    // numericSm: 20px Jakarta ExtraBold, tabular-nums
+    ...typography.numericSm,
     color: colors.text,
-    letterSpacing: -0.4,
   },
   statDivider: {
     width: 1,
-    height: 36,
-    backgroundColor: colors.border,
+    height: 28,
+    backgroundColor: colors.borderSubtle,
   },
 
   warningCard: {
@@ -833,14 +852,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${colors.warning}3D`,
   },
+  // 11px minimum - was 10.5
   warningText: {
     flex: 1,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
-    fontSize: 10.5,
-    lineHeight: 15.5,
+    fontSize: 11,
+    lineHeight: 16,
   },
 
+  // Search bar - 14px input text minimum
   searchBar: {
     height: 48,
     flexDirection: 'row',
@@ -857,7 +878,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     color: colors.text,
     fontFamily: fonts.regular,
-    fontSize: 13,
+    fontSize: 14,
   },
   clearButton: {
     width: 30,
@@ -898,11 +919,12 @@ const styles = StyleSheet.create({
   searchResultName: {
     color: colors.text,
     fontFamily: fonts.semiBold,
-    fontSize: 11.5,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: '600',
   },
-  searchResultMeta: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9, lineHeight: 12 },
+  // 11px minimum - was 9
+  searchResultMeta: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 11, lineHeight: 15 },
   searchResultScore: {
     minWidth: 25,
     textAlign: 'right',
@@ -933,7 +955,8 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 14,
   },
-  noSearchResultsText: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 10.5 },
+  // 11px minimum - was 10.5
+  noSearchResultsText: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 11 },
 
   errorCard: {
     flexDirection: 'row',
@@ -945,22 +968,50 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${colors.error}42`,
   },
-  errorText: { flex: 1, color: colors.error, fontFamily: fonts.regular, fontSize: 10.5, lineHeight: 15 },
+  // 11px minimum - was 10.5
+  errorText: { flex: 1, color: colors.error, fontFamily: fonts.regular, fontSize: 11, lineHeight: 16 },
   errorClose: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
 
   cardGap: { height: 10 },
+  // Single-row card - surface1, no border, top-highlight consistent with roadmap cards
   collegeCard: {
     overflow: 'hidden',
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface1,
     marginHorizontal: spacing.screenPadding,
   },
-  collegeMain: { width: '100%' },
-  collegeContent: { paddingHorizontal: 15, paddingTop: 14, paddingBottom: 13 },
-  collegeTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  collegeCopy: { flex: 1, minWidth: 0, gap: 3 },
+  cardTopHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: colors.cardHighlight,
+  },
+  collegeMain: { width: '100%', minHeight: 44 },
+  // Single-row layout: ring | info | chevron
+  collegeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  // Score ring label (inside the 52px ring)
+  scoreRingValue: {
+    fontFamily: fonts.jakartaExtraBold,
+    fontWeight: '800',
+    fontSize: 13,
+    lineHeight: 15,
+    letterSpacing: -0.3,
+    fontVariant: ['tabular-nums' as const],
+  },
+  scoreColumn: { alignItems: 'center', gap: 3, flexShrink: 0 },
+  scoreCaption: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 14, color: colors.textSecondary },
+  scoreRingEmpty: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
+  // Info column: name on top, location + fit chip below
+  collegeInfo: { flex: 1, minWidth: 0, gap: 4 },
+  collegeMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   collegeName: {
     color: colors.text,
     fontFamily: fonts.jakartaBold,
@@ -969,51 +1020,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.15,
   },
-  collegeLocation: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12, lineHeight: 15 },
-  collegeActions: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0, width: 72 },
-  removeButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+  collegeLocation: {
+    flexShrink: 1,
+    minWidth: 0,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    lineHeight: 16,
   },
-
-  fitRow: {
-    marginTop: 10,
+  fitChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 99,
   },
-  fitCopy: { flex: 1, minWidth: 0, gap: 4 },
-  fitEyebrow: {
-    fontSize: 9,
-    fontFamily: fonts.jakartaBold,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  fitLabel: { fontFamily: fonts.semiBold, fontSize: 11, fontWeight: '600' },
-  scoreBox: { width: 72, alignItems: 'flex-end', flexShrink: 0 },
-  scoreValue: {
-    fontFamily: fonts.groteskBold,
-    fontSize: 28,
-    lineHeight: 30,
-    fontWeight: '700',
-    letterSpacing: -0.8,
-  },
-  noScoreValue: {
-    color: colors.textMuted,
-    fontFamily: fonts.groteskBold,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '700',
-  },
-  scoreOutOf: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 8.5, lineHeight: 11 },
+  fitDot: { width: 5, height: 5, borderRadius: 3 },
+  fitLabel: { fontFamily: fonts.jakartaBold, fontSize: 11, fontWeight: '700' },
 
-  progressTrack: { height: 6, marginTop: 9, overflow: 'hidden', borderRadius: 99, backgroundColor: colors.surface2 },
-  progressFill: { height: '100%', borderRadius: 99 },
+  // Remove from list - quiet destructive text button in expanded panel
+  removeListBtn: {
+    marginTop: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  removeListText: {
+    fontFamily: fonts.medium,
+    fontWeight: '500',
+    fontSize: 13,
+    color: `${colors.error}CC`,
+  },
 
   insightsPanel: { paddingHorizontal: 15, paddingBottom: 14 },
   insightsDivider: { height: 1, marginBottom: 12, backgroundColor: colors.border },
@@ -1030,8 +1069,10 @@ const styles = StyleSheet.create({
     borderColor: `${colors.warning}33`,
   },
   insightErrorCopy: { flex: 1, minWidth: 0, gap: 3 },
-  insightErrorTitle: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 10.5, fontWeight: '600' },
-  insightErrorMessage: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 8.5, lineHeight: 12 },
+  // 11px minimum - was 10.5
+  insightErrorTitle: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 11, fontWeight: '600' },
+  // 11px minimum - was 8.5
+  insightErrorMessage: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 11, lineHeight: 16 },
   retryButton: {
     minHeight: 32,
     flexDirection: 'row',
@@ -1043,20 +1084,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  retryText: { color: colors.accentLight, fontFamily: fonts.semiBold, fontSize: 9, fontWeight: '600' },
+  // 11px minimum - was 9
+  retryText: { color: colors.accentLight, fontFamily: fonts.semiBold, fontSize: 11, fontWeight: '600' },
 
   insightContent: { gap: 12 },
   aiInsightHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  aiInsightTitle: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 11.5, fontWeight: '600' },
-  narrative: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 10.5, lineHeight: 16.5 },
+  // 12px - was 11.5
+  aiInsightTitle: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 12, fontWeight: '600' },
+  // 12px (bodySm) - was 10.5
+  narrative: { color: colors.textSecondary, fontFamily: fonts.regular, fontSize: 12, lineHeight: 18 },
   actionSection: { gap: 8 },
+  // 11px minimum - was 9
   actionSectionLabel: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: fonts.jakartaBold,
     fontWeight: '700',
     color: colors.textMuted,
-    letterSpacing: 0.7,
-    textTransform: 'uppercase',
   },
   actionList: { gap: 8 },
   actionCard: {
@@ -1069,29 +1112,19 @@ const styles = StyleSheet.create({
   },
   actionBadges: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   categoryBadge: { maxWidth: '70%', paddingHorizontal: 7, paddingVertical: 4, borderRadius: 6, borderWidth: 1 },
-  categoryBadgeText: { fontFamily: fonts.jakartaBold, fontSize: 7.5, fontWeight: '700', letterSpacing: 0.45 },
+  // 11px minimum - was 7.5
+  categoryBadgeText: { fontFamily: fonts.jakartaBold, fontSize: 11, fontWeight: '700' },
   priorityBadge: { paddingHorizontal: 7, paddingVertical: 4, borderRadius: 6, borderWidth: 1 },
-  priorityBadgeText: { fontFamily: fonts.jakartaBold, fontSize: 7.5, fontWeight: '700' },
-  actionText: { color: colors.text, fontFamily: fonts.regular, fontSize: 10, lineHeight: 15.5 },
+  // 11px minimum - was 7.5
+  priorityBadgeText: { fontFamily: fonts.jakartaBold, fontSize: 11, fontWeight: '700' },
+  // 11px minimum - was 10
+  actionText: { color: colors.text, fontFamily: fonts.regular, fontSize: 11, lineHeight: 17 },
   insightMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  insightMetaText: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 8.5 },
+  // 11px minimum - was 8.5
+  insightMetaText: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 11 },
   cachedBadge: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 5, borderWidth: 1, borderColor: colors.border },
-  cachedBadgeText: { color: colors.textMuted, fontFamily: fonts.medium, fontSize: 7.5, fontWeight: '500' },
+  // 11px minimum - was 7.5
+  cachedBadgeText: { color: colors.textMuted, fontFamily: fonts.medium, fontSize: 11, fontWeight: '500' },
 
-  emptyCard: {
-    alignItems: 'center',
-    paddingHorizontal: spacing.screenPadding,
-    paddingVertical: 34,
-    gap: 10,
-    marginHorizontal: spacing.screenPadding,
-  },
-  emptyTitle: { color: colors.text, fontFamily: fonts.jakartaBold, fontSize: 15, fontWeight: '700' },
-  emptyDescription: {
-    maxWidth: 280,
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 10.5,
-    lineHeight: 15.5,
-    textAlign: 'center',
-  },
+  emptyWrap: { paddingHorizontal: spacing.screenPadding },
 })

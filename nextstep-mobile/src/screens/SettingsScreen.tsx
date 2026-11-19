@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,7 +11,8 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { useFocusEffect } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import { Feather } from '@expo/vector-icons'
 
 import { useAuth } from '../context/AuthContext'
@@ -22,6 +22,10 @@ import * as canvasApi from '../api/canvasApi'
 import { normalizeCanvasUrl } from '../utils/canvasUrl'
 import { ApiRequestError } from '../api/client'
 import { Screen, FLOATING_TAB_CLEARANCE } from '../components/ui/Screen'
+import { ScreenHeader } from '../components/ui/ScreenHeader'
+import { confirmDestructiveAction } from '../utils/confirm'
+import { toUserMessage } from '../utils/errorMessage'
+import type { MainTabParamList } from '../navigation/MainNavigator'
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton'
 import { ErrorRetryBlock } from '../components/ui/ErrorRetryBlock'
 import type { PortalStatus } from '../types/grades'
@@ -41,25 +45,7 @@ import {
   fonts,
   radii,
   spacing,
-  typography,
 } from '../theme/tokens'
-
-function confirmDestructiveAction(
-  title: string,
-  message: string,
-  confirmLabel: string,
-  onConfirm: () => void,
-): void {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    if (window.confirm(`${title}\n\n${message}`)) onConfirm()
-    return
-  }
-
-  Alert.alert(title, message, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: confirmLabel, style: 'destructive', onPress: onConfirm },
-  ])
-}
 
 const DISCONNECTED_CANVAS: CanvasStatus = {
   connected: false,
@@ -145,7 +131,7 @@ function getCanvasConnections(status: CanvasStatus | null): CanvasConnection[] {
 }
 
 interface SectionHeaderProps {
-  eyebrow: string
+  eyebrow?: string
   title: string
   description?: string
   icon: React.ComponentProps<typeof Feather>['name']
@@ -176,9 +162,11 @@ function SectionHeader({
       </View>
 
       <View style={styles.sectionHeaderCopy}>
-        <Text allowFontScaling={false} style={styles.sectionEyebrow}>
-          {eyebrow}
-        </Text>
+        {eyebrow ? (
+          <Text allowFontScaling={false} style={styles.sectionEyebrow}>
+            {eyebrow}
+          </Text>
+        ) : null}
         <Text allowFontScaling={false} style={styles.sectionTitle}>
           {title}
         </Text>
@@ -344,6 +332,7 @@ function SettingRow({
 
 export default function SettingsScreen(): React.JSX.Element {
   const { user, signOut, deleteAccount } = useAuth()
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>()
 
   const [student, setStudent] = useState<StudentMe | null>(null)
   const [portalStatus, setPortalStatus] = useState<PortalStatus | null>(null)
@@ -443,11 +432,7 @@ export default function SettingsScreen(): React.JSX.Element {
       )
       setFutureDecision(studentResult.profile?.futureDecision ?? '')
     } catch (err) {
-      setError(
-        err instanceof ApiRequestError
-          ? err.message
-          : 'Could not load your settings.',
-      )
+      setError(toUserMessage(err, 'Could not load your settings.'))
     } finally {
       setLoading(false)
     }
@@ -701,9 +686,17 @@ export default function SettingsScreen(): React.JSX.Element {
     }
   }
 
+  // Settings is a hidden tab route: back returns to the tab the user came
+  // from (tab history), or Today when it was opened by a direct link.
+  function goBackToPreviousTab(): void {
+    if (navigation.canGoBack()) navigation.goBack()
+    else navigation.navigate('Dashboard')
+  }
+
   if (loading) {
     return (
-      <Screen edges={['top', 'left', 'right', 'bottom']}>
+      <Screen edges={['left', 'right', 'bottom']}>
+        <ScreenHeader variant="stack" title="Settings" onBack={goBackToPreviousTab} />
         <View style={styles.loadingWrap}>
           <LoadingSkeleton rows={5} rowHeight={90} />
         </View>
@@ -713,7 +706,8 @@ export default function SettingsScreen(): React.JSX.Element {
 
   if (error && !student) {
     return (
-      <Screen edges={['top', 'left', 'right', 'bottom']}>
+      <Screen edges={['left', 'right', 'bottom']}>
+        <ScreenHeader variant="stack" title="Settings" onBack={goBackToPreviousTab} />
         <ErrorRetryBlock
           message={error}
           onRetry={() => {
@@ -735,7 +729,9 @@ export default function SettingsScreen(): React.JSX.Element {
     .join(' · ')
 
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']} padded={false}>
+    <Screen edges={['left', 'right', 'bottom']} padded={false}>
+      {/* Outside the scroll view so the back chevron stays pinned. */}
+      <ScreenHeader variant="stack" title="Settings" padded onBack={goBackToPreviousTab} />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -746,24 +742,6 @@ export default function SettingsScreen(): React.JSX.Element {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.pageHeader}>
-            <View style={styles.pageHeaderIcon}>
-              <Feather name="settings" size={21} color={colors.primary} />
-            </View>
-
-            <View style={styles.pageHeaderCopy}>
-              <Text allowFontScaling={false} style={styles.pageEyebrow}>
-                ACCOUNT & PREFERENCES
-              </Text>
-              <Text allowFontScaling={false} style={styles.pageTitle}>
-                Settings
-              </Text>
-              <Text style={styles.pageSubtitle}>
-                Manage your academic profile, integrations and account.
-              </Text>
-            </View>
-          </View>
-
           <View style={styles.profileCard}>
             <View style={styles.avatar}>
               <Text allowFontScaling={false} style={styles.avatarText}>
@@ -781,19 +759,13 @@ export default function SettingsScreen(): React.JSX.Element {
               <Text allowFontScaling={false} style={styles.profileEmail}>
                 {student?.email ?? user?.email}
               </Text>
-              {student?.id ? (
-                <Text allowFontScaling={false} style={styles.futurelyId}>
-                  myFuturely ID: {student.id}
-                </Text>
-              ) : null}
             </View>
           </View>
 
           <View style={styles.card}>
             <SectionHeader
-              eyebrow="ACADEMIC INFO"
               title="College profile"
-              description="These details improve college-fit scoring and AI guidance."
+              description="Used for your college fit scores."
               icon="award"
               tint="#A78BFA"
             />
@@ -804,7 +776,7 @@ export default function SettingsScreen(): React.JSX.Element {
                   label="SAT Score"
                   value={satScore}
                   onChangeText={setSatScore}
-                  placeholder="400–1600"
+                  placeholder="400 to 1600"
                   keyboardType="number-pad"
                 />
               </View>
@@ -814,7 +786,7 @@ export default function SettingsScreen(): React.JSX.Element {
                   label="ACT Score"
                   value={actScore}
                   onChangeText={setActScore}
-                  placeholder="1–36"
+                  placeholder="1 to 36"
                   keyboardType="number-pad"
                 />
               </View>
@@ -885,7 +857,7 @@ export default function SettingsScreen(): React.JSX.Element {
             ) : null}
 
             <PrimaryButton
-              label="Save academic profile"
+              label="Save"
               icon="save"
               onPress={() => void handleSaveProfile()}
               loading={savingProfile}
@@ -894,7 +866,6 @@ export default function SettingsScreen(): React.JSX.Element {
 
           <View style={styles.card}>
             <SectionHeader
-              eyebrow="SCHOOL PORTAL"
               title="Grades connection"
               description="Your portal supplies grades, counselor and graduation details."
               icon="link"
@@ -912,14 +883,6 @@ export default function SettingsScreen(): React.JSX.Element {
                     >
                       Connected
                     </Text>
-                    <View style={styles.systemBadge}>
-                      <Text
-                        allowFontScaling={false}
-                        style={styles.systemBadgeText}
-                      >
-                        {portalStatus.systemType ?? 'Portal'}
-                      </Text>
-                    </View>
                   </View>
 
                   <Text
@@ -938,13 +901,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 <View style={styles.actionRow}>
                   <View style={styles.actionRowPrimary}>
                     <PrimaryButton
-                      label={
-                        portalSyncing
-                          ? 'Re-syncing'
-                          : `Re-sync from ${
-                              portalStatus.systemType ?? 'portal'
-                            }`
-                      }
+                      label={portalSyncing ? 'Re-syncing' : 'Re-sync grades'}
                       icon="refresh-cw"
                       onPress={() => void handlePortalSync()}
                       loading={portalSyncing}
@@ -985,7 +942,6 @@ export default function SettingsScreen(): React.JSX.Element {
 
           <View style={styles.card}>
             <SectionHeader
-              eyebrow="PLANNER INTEGRATION"
               title="Canvas"
               description="Sync Canvas assignments directly into your Planner."
               icon="calendar"
@@ -1237,9 +1193,8 @@ export default function SettingsScreen(): React.JSX.Element {
 
           <View style={styles.card}>
             <SectionHeader
-              eyebrow="APPEARANCE"
               title="Display preferences"
-              description="Personalize how myFuturely appears on this device."
+              description="Choose how myFuturely looks on this device."
               icon="eye"
               tint="#60A5FA"
             />
@@ -1407,7 +1362,6 @@ export default function SettingsScreen(): React.JSX.Element {
 
           <View style={styles.card}>
             <SectionHeader
-              eyebrow="SUPPORT"
               title="Help & account"
               icon="help-circle"
               tint="#38BDF8"
@@ -1466,7 +1420,7 @@ export default function SettingsScreen(): React.JSX.Element {
 
           <View style={[styles.card, styles.dangerZoneCard]}>
             <SectionHeader
-              eyebrow="DANGER ZONE"
+              eyebrow="Danger zone"
               title="Delete account"
               description="Permanently delete your account and all associated data."
               icon="alert-triangle"
@@ -1557,49 +1511,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     paddingBottom: FLOATING_TAB_CLEARANCE,
     gap: spacing.lg,
-  },
-
-  pageHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  pageHeaderIcon: {
-    width: 46,
-    height: 46,
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    backgroundColor: `${colors.primary}18`,
-    borderWidth: 1,
-    borderColor: `${colors.primary}45`,
-  },
-  pageHeaderCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  pageEyebrow: {
-    color: '#7893BC',
-    fontFamily: fonts.bold,
-    fontSize: 8.5,
-    fontWeight: '700',
-    letterSpacing: 1.15,
-  },
-  pageTitle: {
-    marginTop: 2,
-    ...typography.title,
-    color: colors.text,
-  },
-  pageSubtitle: {
-    marginTop: 4,
-    color: '#8798B1',
-    fontFamily: fonts.regular,
-    fontSize: 11.5,
-    lineHeight: 17,
   },
 
   profileCard: {
@@ -1655,13 +1569,6 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     lineHeight: 13,
   },
-  futurelyId: {
-    marginTop: 3,
-    color: '#91A3BD',
-    fontFamily: fonts.regular,
-    fontSize: 8.5,
-    lineHeight: 11,
-  },
 
   card: {
     gap: 14,
@@ -1693,9 +1600,8 @@ const styles = StyleSheet.create({
   sectionEyebrow: {
     color: '#7188AB',
     fontFamily: fonts.bold,
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontSize: 10,
+    fontWeight: '600',
   },
   sectionTitle: {
     marginTop: 2,
@@ -1705,6 +1611,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     fontWeight: '700',
   },
+
   sectionDescription: {
     marginTop: 3,
     color: '#7F91AA',
@@ -1727,10 +1634,8 @@ const styles = StyleSheet.create({
   fieldLabel: {
     color: '#8496B2',
     fontFamily: fonts.bold,
-    fontSize: 8.5,
-    fontWeight: '700',
-    letterSpacing: 0.75,
-    textTransform: 'uppercase',
+    fontSize: 9.5,
+    fontWeight: '600',
   },
   input: {
     minHeight: 47,
@@ -1753,23 +1658,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
+  // Read-only facts: plain label/value rows, so they do not read as inputs.
   readOnlyItem: {
     flex: 1,
     minWidth: 0,
     gap: 3,
-    padding: 11,
-    borderRadius: 13,
-    backgroundColor: '#142238',
-    borderWidth: 1,
-    borderColor: '#273E5D',
   },
   readOnlyLabel: {
     color: '#92A5C0',
     fontFamily: fonts.bold,
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 0.65,
-    textTransform: 'uppercase',
+    fontSize: 9,
+    fontWeight: '600',
   },
   readOnlyValue: {
     color: '#E7ECF8',
@@ -1801,6 +1700,8 @@ const styles = StyleSheet.create({
   compactButton: {
     paddingHorizontal: 12,
   },
+  // colors.primary (#2979FF) under this 10.5px white label is 3.97:1, below the 4.5:1 that
+  // e2e/accessibility.spec.ts enforces on /settings, so the darker blue stays.
   primaryButton: {
     backgroundColor: colors.primaryDark,
     borderColor: '#143e8e',
@@ -1882,20 +1783,6 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '700',
   },
-  systemBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: '#192A43',
-    borderWidth: 1,
-    borderColor: '#304C70',
-  },
-  systemBadgeText: {
-    color: '#9FB2CC',
-    fontFamily: fonts.semiBold,
-    fontSize: 7.5,
-    fontWeight: '600',
-  },
   connectionUrl: {
     color: '#7E91AB',
     fontFamily: fonts.regular,
@@ -1903,7 +1790,7 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   lastSynced: {
-    color: '#5F7390',
+    color: colors.textMuted,
     fontFamily: fonts.regular,
     fontSize: 8,
     lineHeight: 11,

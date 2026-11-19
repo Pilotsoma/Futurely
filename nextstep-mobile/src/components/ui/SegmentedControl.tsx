@@ -1,6 +1,6 @@
 import React from 'react'
 import { Pressable, View, Text, StyleSheet } from 'react-native'
-import { colors, fonts, typography } from '../../theme/tokens'
+import { colors, fonts, touchTarget, typography } from '../../theme/tokens'
 
 interface SegmentedControlProps<T extends string> {
   segments: readonly T[]
@@ -12,18 +12,14 @@ interface SegmentedControlProps<T extends string> {
 // track: low-opacity white bg + border, radius 14, padding 4;
 // active segment: frosted-glass white bg, radius 10, bold text in colors.text;
 // inactive: colors.textSecondary.
-// Outer touch target is at least 44pt tall via hitSlop on the outer track.
+// Each segment is 44pt tall, so no hitSlop is needed.
 export function SegmentedControl<T extends string>({
   segments,
   value,
   onChange,
 }: SegmentedControlProps<T>): React.JSX.Element {
   return (
-    <View
-      style={styles.track}
-      accessibilityRole="tablist"
-      hitSlop={{ top: 3, bottom: 3 }}
-    >
+    <View style={styles.track} accessibilityRole="tablist">
       {segments.map((segment) => {
         const active = segment === value
         return (
@@ -33,6 +29,9 @@ export function SegmentedControl<T extends string>({
             onPress={() => onChange(segment)}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
+            // react-native-web does not turn accessibilityState into aria-selected
+            // for role=tab, so set it explicitly (native reads accessibilityState).
+            aria-selected={active}
           >
             <Text style={[styles.label, active && styles.labelActive]}>{segment}</Text>
           </Pressable>
@@ -54,13 +53,13 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
-    height: 38,
+    height: touchTarget,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   segmentActive: {
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   label: {
     ...typography.h3,

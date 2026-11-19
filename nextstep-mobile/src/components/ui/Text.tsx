@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text as RNText, type StyleProp, type TextStyle, type TextProps as RNTextProps } from 'react-native'
 
-type Variant = 'display' | 'heading' | 'h2' | 'h3' | 'body' | 'caption' | 'label'
+type Variant = 'display' | 'heading' | 'h2' | 'h3' | 'body' | 'caption' | 'label' | 'eyebrow'
 
 interface TextProps extends Omit<RNTextProps, 'style'> {
   variant?: Variant
@@ -12,7 +12,7 @@ interface TextProps extends Omit<RNTextProps, 'style'> {
 }
 
 // Weight classes carry font-family (not fontWeight) — the app's typefaces
-// (Inter, Space Grotesk) are loaded as separate static files per weight, and
+// (Inter, Plus Jakarta Sans) are loaded as separate static files per weight, and
 // custom fonts largely ignore the `fontWeight` style prop on both platforms.
 const variantClasses: Record<Variant, string> = {
   display: 'text-[32px] font-sans-extrabold tracking-[-0.5px] text-[#EDEEFF] leading-[36px]',
@@ -21,7 +21,8 @@ const variantClasses: Record<Variant, string> = {
   h3: 'text-[16px] font-sans-semibold text-[#EDEEFF] leading-[22px]',
   body: 'text-[15px] font-sans text-[#EDEEFF] leading-6',
   caption: 'text-[12px] font-sans text-[#8B8FB5] leading-5',
-  label: 'text-[12px] font-sans-semibold uppercase tracking-[0.8px] text-[#8B8FB5] leading-5',
+  label: 'text-[12px] font-sans-semibold text-[#8B8FB5] leading-5',
+  eyebrow: 'text-[12px] font-sans-semibold text-[#8A96AD] leading-[14px]',
 }
 
 // Screens across the app set an inline `fontWeight` (e.g. `{ fontWeight: '700' }`)

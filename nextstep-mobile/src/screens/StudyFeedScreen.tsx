@@ -3,9 +3,10 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { Feather } from '@expo/vector-icons'
 import * as feedApi from '../api/feedApi'
-import { ApiRequestError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
-import { Screen, FLOATING_TAB_CLEARANCE } from '../components/ui/Screen'
+import { Screen, SCROLL_BOTTOM_CLEARANCE } from '../components/ui/Screen'
+import { ErrorRetryBlock } from '../components/ui/ErrorRetryBlock'
+import { toUserMessage } from '../utils/errorMessage'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -26,7 +27,9 @@ export default function StudyFeedScreen(): React.JSX.Element {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
+  // `error` is a failed feed load; `actionError` is a failed post/comment/delete.
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const [composeText, setComposeText] = useState('')
   const [posting, setPosting] = useState(false)
@@ -50,7 +53,7 @@ export default function StudyFeedScreen(): React.JSX.Element {
         setPage(1)
         setHasMore(result.hasMore)
       } catch (err) {
-        setError(err instanceof ApiRequestError ? err.message : 'Could not load the feed.')
+        setError(toUserMessage(err, 'Could not load the feed.'))
       } finally {
         setLoading(false)
       }
@@ -64,6 +67,15 @@ export default function StudyFeedScreen(): React.JSX.Element {
       void load(tab)
     }, [load, tab]),
   )
+
+  // Switching tabs drops the other tab's posts, so a failed load can never leave
+  // the wrong list on screen (or hide the error behind it).
+  function selectTab(next: Tab): void {
+    if (next === tab) return
+    setPosts([])
+    setExpandedPostId(null)
+    setTab(next)
+  }
 
   async function loadMore(): Promise<void> {
     if (!hasMore) return
@@ -82,12 +94,13 @@ export default function StudyFeedScreen(): React.JSX.Element {
   async function handlePost(): Promise<void> {
     if (!composeText.trim()) return
     setPosting(true)
+    setActionError(null)
     try {
       const created = await feedApi.createPost({ body: composeText.trim() })
       setPosts((prev) => [created, ...prev])
       setComposeText('')
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Could not create your post.')
+      setActionError(toUserMessage(err, 'Could not create your post.'))
     } finally {
       setPosting(false)
     }
@@ -140,7 +153,7 @@ export default function StudyFeedScreen(): React.JSX.Element {
         prev.map((p) => (p.id === postId ? { ...p, _count: { ...p._count, comments: p._count.comments + 1 } } : p)),
       )
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Could not add your comment.')
+      setActionError(toUserMessage(err, 'Could not add your comment.'))
     }
   }
 
@@ -151,7 +164,7 @@ export default function StudyFeedScreen(): React.JSX.Element {
       await feedApi.deletePost(post.id)
     } catch (err) {
       setPosts(previous)
-      setError(err instanceof ApiRequestError ? err.message : 'Could not delete your post.')
+      setActionError(toUserMessage(err, 'Could not delete your post.'))
     }
   }
 
@@ -238,24 +251,41 @@ export default function StudyFeedScreen(): React.JSX.Element {
 
   if (loading) {
     return (
-      <Screen edges={['top', 'left', 'right', 'bottom']}>
+      <Screen edges={['left', 'right', 'bottom']}>
         <LoadingSkeleton rows={4} />
       </Screen>
     )
   }
 
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']}>
-      <Text style={styles.title}>Study Feed</Text>
+    <Screen edges={['left', 'right', 'bottom']}>
       <View style={styles.tabRow}>
-        <Button label="All" variant={tab === 'all' ? 'primary' : 'secondary'} onPress={() => setTab('all')} style={styles.tabButton} />
+        <Button label="All" variant={tab === 'all' ? 'primary' : 'secondary'} onPress={() => selectTab('all')} style={styles.tabButton} />
         <Button
           label="Following"
           variant={tab === 'following' ? 'primary' : 'secondary'}
-          onPress={() => setTab('following')}
+          onPress={() => selectTab('following')}
           style={styles.tabButton}
         />
       </View>
+
+      <Card style={styles.composeCard}>
+        <Input value={composeText} onChangeText={setComposeText} placeholder="Share something with the study feed..." multiline />
+        <Button label="Post" onPress={() => void handlePost()} loading={posting} />
+      </Card>
+
+      {actionError ? (
+        <Text style={styles.error} accessibilityRole="alert">
+          {actionError}
+        </Text>
+      ) : null}
+
+      {/* A failed reload over existing posts: keep the posts, flag that they may be stale. */}
+      {error && posts.length > 0 ? (
+        <Text style={styles.error} accessibilityRole="alert">
+          {error}
+        </Text>
+      ) : null}
 
       <Input label="Find people" value={searchQuery} onChangeText={(v) => void handleSearch(v)} placeholder="Search by name" />
 
@@ -287,15 +317,29 @@ export default function StudyFeedScreen(): React.JSX.Element {
         </Card>
       ) : null}
 
-      <Card style={styles.composeCard}>
-        <Input value={composeText} onChangeText={setComposeText} placeholder="Share something with the study feed..." multiline />
-        <Button label="Post" onPress={() => void handlePost()} loading={posting} />
-      </Card>
-
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      {posts.length === 0 ? (
-        <EmptyState icon="message-circle" title="No posts yet" message="Be the first to share something." />
+      {/* One of error / empty / content: a failed load never sits above an empty state. */}
+      {error && posts.length === 0 ? (
+        <View style={styles.stateBlock}>
+          <ErrorRetryBlock
+            message={error}
+            onRetry={() => {
+              setLoading(true)
+              void load(tab)
+            }}
+          />
+        </View>
+      ) : posts.length === 0 ? (
+        <View style={styles.stateBlock}>
+          <EmptyState
+            icon="message-circle"
+            title="No posts yet"
+            message={
+              tab === 'following'
+                ? 'Posts from people you follow show up here.'
+                : 'Be the first to share something.'
+            }
+          />
+        </View>
       ) : (
         <FlatList
           data={posts}
@@ -403,8 +447,7 @@ const PostCard = React.memo(function PostCard({
 })
 
 const styles = StyleSheet.create({
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
-  tabRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  tabRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   tabButton: { flex: 1 },
   searchResults: { gap: spacing.xs, marginTop: spacing.sm },
   profileCard: { gap: spacing.xs, marginTop: spacing.sm, alignItems: 'center' },
@@ -412,7 +455,8 @@ const styles = StyleSheet.create({
   profileStats: { ...typography.caption, color: colors.textSecondary },
   composeCard: { gap: spacing.sm, marginVertical: spacing.md },
   error: { ...typography.caption, color: colors.error, marginBottom: spacing.sm },
-  listContent: { gap: spacing.md, paddingBottom: FLOATING_TAB_CLEARANCE },
+  stateBlock: { marginTop: spacing.md },
+  listContent: { gap: spacing.md, paddingTop: spacing.md, paddingBottom: SCROLL_BOTTOM_CLEARANCE },
   postCard: { gap: spacing.sm },
   postHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
